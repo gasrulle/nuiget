@@ -354,13 +354,12 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
 
     return (
         <div className="nuiget-installed">
-            <Toolbar label="Bulk actions" data-testid="installed-toolbar">
+            <Toolbar label="Bulk actions" data-testid="installed-toolbar" end={<Button data-testid="uninstall-selected-button" disabled={count === 0} onClick={() => setConfirming(true)}>
+                {`Uninstall selected (${count})`}
+            </Button>}>
                 <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} onClick={selectAll}>
                     Select all
                 </Button>
-                <span className="nuiget-toolbar-end"><Button data-testid="uninstall-selected-button" disabled={count === 0} onClick={() => setConfirming(true)}>
-                    {`Uninstall selected (${count})`}
-                </Button></span>
             </Toolbar>
             {/* The tree is the tab's scroller (D48, UX-P2.1e). */}
             <div className="nuiget-installed-lists">

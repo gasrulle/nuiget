@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
-import { IconButton } from './IconButton';
+import { IconButton, type IconButtonProps } from './IconButton';
 import { TrashIcon } from './icons';
+import { installStylesheet } from './testSupport';
 
 describe('IconButton', () => {
     it('has the accessible name it is given', async () => {
@@ -39,5 +40,29 @@ describe('IconButton', () => {
     it('has no axe violations', async () => {
         const { container } = render(<IconButton label="Uninstall Serilog"><TrashIcon /></IconButton>);
         expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('has no className or style prop', () => {
+        // @ts-expect-error A feature places an icon button and never styles it (ADR-010).
+        const styled: IconButtonProps = { label: 'A', children: null, className: 'x' };
+        expect(styled.label).toBe('A');
+        // @ts-expect-error A feature places an icon button and never styles it (ADR-010).
+        const inline: IconButtonProps = { label: 'B', children: null, style: {} };
+        expect(inline.label).toBe('B');
+    });
+
+    it('the 22 px box, its 24 px target, the glyph colour and the hover fill come from the stylesheet', () => {
+        const remove = installStylesheet();
+        const rule = (selector: string): string => {
+            const found = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]).find(entry => (entry as CSSStyleRule).selectorText === selector);
+            return (found as CSSStyleRule | undefined)?.style.cssText ?? '';
+        };
+        expect(rule('.nuiget-icon-button')).toContain('inline-size: var(--nuiget-icon-button-size, var(--nuiget-action-size))');
+        expect(rule('.nuiget-icon-button')).toContain('color: var(--nuiget-icon-button-color, var(--nuiget-color-icon))');
+        expect(rule('.nuiget-icon-button')).toContain('border: var(--nuiget-line-width) solid transparent');
+        expect(rule('.nuiget-icon-button::after')).toContain('inset: calc((var(--nuiget-icon-button-size, var(--nuiget-action-size)) - var(--nuiget-target-min)) / 2)');
+        expect(rule('.nuiget-icon-button:hover')).toContain('--nuiget-icon-button-bg: var(--nuiget-color-toolbar-hover-bg)');
+        expect(rule('.nuiget-icon-button:disabled')).toContain('--nuiget-icon-button-color: var(--nuiget-color-fg-disabled)');
+        remove();
     });
 });

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Package rows match the Extensions view: 72 px, two lines, a larger icon and no line between rows**
 - **Buttons and check boxes look like VS Code's own**
 - **Drop-downs and text boxes look like VS Code's own**
+- **Tabs, toolbars and icon buttons look like VS Code's own**
 
 ### Fixed
 - **Scrollbars in the package manager are thin again**

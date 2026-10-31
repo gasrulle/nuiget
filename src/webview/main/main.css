@@ -44,7 +44,8 @@ body {
 }
 
 .nuiget-source-health {
-    color: var(--nuiget-color-warning);
+    --nuiget-icon-button-color: var(--nuiget-color-icon-warning);
+    display: inline-flex;
 }
 
 /* The revalidation bar lies over the bottom edge, so the list does not move when it comes and goes. */
@@ -79,14 +80,7 @@ body {
     background: var(--nuiget-color-bg-sidebar);
 }
 
-/*
- * The common left inset (P9.fix-6): the tab label starts at the inset (the tab has its own padding and a 1 px border),
- * and so does the chevron of every section header of the list pane; the details pane and the sidebar keep theirs.
- */
-.nuiget-main-list .nuiget-tablist {
-    padding-inline-start: calc(var(--nuiget-inset) - var(--nuiget-space-4) - var(--nuiget-space-hairline));
-}
-
+/* The common left inset (P9.fix-6): the chevron of every section header of the list pane starts at it; the details pane and the sidebar keep theirs. */
 .nuiget-main-list .nuiget-section-toggle {
     padding-inline-start: var(--nuiget-inset);
 }
@@ -111,9 +105,6 @@ body {
 
 .nuiget-installed > .nuiget-toolbar {
     flex: none;
-    padding: var(--nuiget-space-2) var(--nuiget-inset);
-    /* The primary action ends at the list's right edge (P9.fix-4). */
-    padding-inline-end: var(--nuiget-space-3);
 }
 
 .nuiget-installed-lists,

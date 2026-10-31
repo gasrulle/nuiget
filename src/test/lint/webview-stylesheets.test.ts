@@ -66,9 +66,15 @@ export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'im
  * compact row is as high as the target.
  */
 export function findSmallTargets(css: string): string[] {
-    return parseRules(css)
+    const rules = parseRules(css);
+    // DS-HEIGHT-8's other form: an absolutely placed ::after that widens the hit to the target.
+    const widened = (prelude: string): boolean => {
+        const after = rules.find(rule => rule.prelude === `${prelude}::after`)?.declarations ?? [];
+        return after.includes('position: absolute') && after.some(declaration => /^inset:.*var\(--nuiget-target-min\)/.test(declaration));
+    };
+    return rules
         .filter(rule => rule.declarations.some(declaration => /^cursor:\s*pointer$/.test(declaration)))
-        .filter(rule => !rule.declarations.some(declaration => /^min-height:\s*var\(--nuiget-target-min\)$/.test(declaration)))
+        .filter(rule => !rule.declarations.some(declaration => /^min-height:\s*var\(--nuiget-target-min\)$/.test(declaration)) && !widened(rule.prelude))
         .map(rule => rule.prelude);
 }
 
@@ -114,7 +120,7 @@ describe('2.0 webview stylesheets', () => {
         expect(defectsOf('classPrefix')).toEqual([]);
     });
 
-    it('every pointer target is at least --nuiget-target-min high, and the sash takes the pointer over that width', () => {
+    it('every pointer target is at least --nuiget-target-min high or widens its hit to it with an ::after (DS-HEIGHT-8), and the sash takes the pointer over that width', () => {
         expect(stylesheets().flatMap(file => findSmallTargets(readFileSync(file, 'utf8')).map(prelude => `${file}: ${prelude}`))).toEqual([]);
         // The sash is drawn thin; its ::after is the target, widened to the target size on both sides of the line.
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
@@ -131,8 +137,12 @@ describe('2.0 webview stylesheets', () => {
             '.nuiget-chip { cursor: pointer; }',
             '.nuiget-button { cursor: pointer; min-height: var(--nuiget-target-min); }',
             '.nuiget-button:disabled { cursor: default; }',
+            '.nuiget-icon { cursor: pointer; }',
+            '.nuiget-icon::after { position: absolute; inset: calc((var(--nuiget-action-size) - var(--nuiget-target-min)) / 2); }',
+            '.nuiget-wide { cursor: pointer; }',
+            '.nuiget-wide::after { position: absolute; }',
         ].join('\n');
-        expect(findSmallTargets(css)).toEqual(['.nuiget-tag', '.nuiget-chip']);
+        expect(findSmallTargets(css)).toEqual(['.nuiget-tag', '.nuiget-chip', '.nuiget-wide']);
     });
 
     it('the scrollbars are drawn with the scrollbar tokens', () => {
@@ -172,7 +182,8 @@ describe('2.0 webview stylesheets', () => {
         const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const declarationsOf = (rules: ReturnType<typeof parseRules>, match: (prelude: string) => boolean): string[] => rules.filter(rule => match(rule.prelude)).flatMap(rule => rule.declarations);
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-button')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-button-border)');
-        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-tab')).toContain('border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-icon-button')).toContain('border: var(--nuiget-line-width) solid transparent');
+        expect(declarationsOf(primitives, prelude => prelude === '.nuiget-icon-button:hover')).toContain('border-color: var(--nuiget-color-toolbar-hover-outline)');
         expect(declarationsOf(primitives, prelude => prelude.includes('.nuiget-row-icon img'))).toContain('outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)');
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-dialog-layer')).toContain('background: var(--nuiget-color-scrim)');
         expect(declarationsOf(primitives, prelude => prelude === '.nuiget-select-input')).toEqual(expect.arrayContaining([
@@ -191,17 +202,23 @@ describe('2.0 webview stylesheets', () => {
         expect(primitives.filter(rule => rule.prelude.includes(' svg') && rule.prelude.includes('authors')).flatMap(rule => rule.declarations).filter(declaration => declaration.startsWith('color:'))).toEqual([]);
     });
 
-    it('the focus colour marks keyboard focus and nothing else (DS-COLOR-5), but for the two uses their items remove', () => {
+    it('the focus colour marks keyboard focus and nothing else (DS-COLOR-5), but for the one use its item removes', () => {
         const files = [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css'];
         const elsewhere = files.flatMap(file => parseRules(readFileSync(file, 'utf8')))
             .filter(rule => rule.declarations.some(declaration => declaration.includes('--nuiget-color-focus') && !/^outline/.test(declaration)))
             .map(rule => rule.prelude.replace(/\s+/g, ' '));
-        expect(elsewhere).toEqual(['.nuiget-sash:hover, .nuiget-sash:focus-visible', '.nuiget-tab[aria-selected="true"]']);
+        expect(elsewhere).toEqual(['.nuiget-sash:hover, .nuiget-sash:focus-visible']);
         // Each use names its owner; when the owner is done the use must be gone.
         const tracker = readFileSync('docs/plans/STATUS-ux.md', 'utf8');
-        for (const owner of ['P3.9', 'P2.5']) {
+        for (const owner of ['P3.9']) {
             expect(new RegExp(`^\\| ${owner.replace('.', '\\.')} \\|[^|]*\\|[^|]*\\| done \\|`, 'm').test(tracker), `${owner} is done: remove its use of the focus colour`).toBe(false);
         }
+    });
+
+    it('a tab rings after a click, inside, as the main panel\'s rows do (DS-FOCUS-3)', () => {
+        const shared = parseRules(readFileSync(PRIMITIVES, 'utf8')).find(rule => rule.prelude.includes('.nuiget-select-input:focus-visible'));
+        expect(shared?.prelude).toContain('.nuiget-tab:focus');
+        expect(shared?.prelude).not.toContain('.nuiget-tab:focus-visible');
     });
 
     it('selects and text fields ring at offset one stroke inside (DS-FOCUS-1)', () => {
@@ -225,7 +242,7 @@ describe('2.0 webview stylesheets', () => {
             .filter(rule => rule.declarations.includes('outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)'))
             .flatMap(rule => rule.prelude.split(',').map(selector => selector.trim())));
         for (const selector of [
-            '.nuiget-button:focus-visible', '.nuiget-tab:focus-visible', '.nuiget-icon-button:focus-visible',
+            '.nuiget-button:focus-visible', '.nuiget-tab:focus', '.nuiget-icon-button:focus-visible',
             '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-select-input:focus-visible', '.nuiget-text-field:focus-visible',
             '.nuiget-readme-copy:focus-visible', '.nuiget-checkbox-input:focus-visible',
         ]) {

@@ -109,4 +109,23 @@ describe('Toolbar', () => {
         const { container } = render(<BulkToolbar selected={0} />);
         expect(await axe(container)).toHaveNoViolations();
     });
+
+    it('renders the end slot after the controls; ArrowRight, End and Home reach it in document order', async () => {
+        const user = userEvent.setup();
+        render(<Toolbar label="Bulk" end={<button type="button">Uninstall</button>}><button type="button">Select all</button><button type="button">Clear</button></Toolbar>);
+        const toolbar = screen.getByRole('toolbar', { name: 'Bulk' });
+        const end = screen.getByRole('button', { name: 'Uninstall' });
+        expect(toolbar.lastElementChild).toHaveClass('nuiget-toolbar-end');
+        expect(toolbar.lastElementChild).toContainElement(end);
+        const first = screen.getByRole('button', { name: 'Select all' });
+        await user.click(screen.getByRole('button', { name: 'Clear' }));
+        await user.keyboard('{ArrowRight}');
+        expect(end).toHaveFocus();
+        await user.keyboard('{ArrowRight}');
+        expect(first).toHaveFocus();
+        await user.keyboard('{End}');
+        expect(end).toHaveFocus();
+        await user.keyboard('{Home}');
+        expect(first).toHaveFocus();
+    });
 });

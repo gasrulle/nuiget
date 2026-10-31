@@ -511,4 +511,18 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(looks.button).toMatchObject({ fontSize: '13px', padding: '0px 12px 0px 12px' });
         expect(looks.absent).toBeNull();
     });
+
+    it('reads the icon buttons and the tabs (UX-P2.5)', () => {
+        document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,600,700">
+          <div role="tablist" data-testid="tab-bar" data-rect="0,0,600,36"><button role="tab" aria-selected="true" data-testid="installed-tab" data-rect="6,0,100,36">Installed</button><button role="tab" aria-selected="false" data-testid="updates-tab" data-rect="100,0,200,36">Updates</button></div>
+          <div class="nuiget-section-header" data-variant="pane" data-rect="0,40,600,62"><button class="nuiget-icon-button" data-testid="refresh-button" data-rect="570,41,590,61"><svg data-rect="572,43,588,59"></svg></button></div>
+          <div class="nuiget-listbox" role="listbox" data-rect="0,70,600,300"><div class="nuiget-row-actions nuiget-row-actions--current" data-rect="560,70,600,92"><button class="nuiget-icon-button" aria-label="Uninstall" data-rect="572,70,594,92"><svg data-rect="575,73,591,89"></svg></button></div></div>
+        </main>`;
+        const facts = collect().heights;
+        expect(facts.iconButtons).toMatchObject([
+            { inHeader: true, width: 20, height: 20, label: 'refresh-button', glyph: { w: 16, h: 16 }, band: undefined, multi: false },
+            { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
+        ]);
+        expect(facts.tabs.map(tab => [tab.id, tab.selected])).toEqual([['installed-tab', true], ['updates-tab', false]]);
+    });
 });

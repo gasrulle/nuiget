@@ -14,16 +14,15 @@ export interface IconButtonProps {
     disabled?: boolean;
     /** `-1` for a button that is reachable by pointer only (the actions of a row). */
     tabIndex?: number;
-    className?: string;
     'data-testid'?: string;
 }
 
 /** A button that shows an icon and is named by `label`. Its target is at least 24 px in both directions. */
-export function IconButton({ label, children, onClick, onMouseDown, pressed, disabled, tabIndex, className, 'data-testid': testId }: IconButtonProps): React.JSX.Element {
+export function IconButton({ label, children, onClick, onMouseDown, pressed, disabled, tabIndex, 'data-testid': testId }: IconButtonProps): React.JSX.Element {
     return (
         <button
             type="button"
-            className={className ? `nuiget-icon-button ${className}` : 'nuiget-icon-button'}
+            className="nuiget-icon-button"
             aria-label={label}
             title={label}
             aria-pressed={pressed}

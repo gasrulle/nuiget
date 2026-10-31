@@ -317,7 +317,7 @@ frontend test file is skipped and says so.
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
 `LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
 `Popover`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `Select`, `TextField`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
-that ends in an axe run. `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
+that ends in an axe run. `Toolbar` owns its insets and places a bulk toolbar's primary in its `end` slot; `IconButton` takes its size, colour and fill from the `--nuiget-icon-button-*` carriers, which a section header and a row's actions set for it (UX-P2.5). `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
 so a rendering error shows the empty state "Something went wrong in this view." with Reload, which remounts the store
 and the view, and the entry reports the error to the host as `ui/reportError`, which the host writes to the output
 channel (each field capped at 4000 characters, redacted by the logger).

@@ -4,6 +4,7 @@ import { axe } from 'jest-axe';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Tabs, type TabItem } from './Tabs';
+import { installStylesheet } from './testSupport';
 
 type MainTab = 'installed' | 'updates' | 'browse';
 
@@ -106,6 +107,22 @@ describe('Tabs', () => {
             </Tabs>,
         );
         expect(screen.getByRole('tab')).toHaveAccessibleName('Installed 3 1 package with known vulnerabilities');
+        expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Installed 3');
         expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('the strip height, the label type and the selected line come from the stylesheet', () => {
+        const remove = installStylesheet();
+        const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]) as CSSStyleRule[];
+        const rule = (selector: string): string => rules.find(entry => entry.selectorText === selector)?.style.cssText ?? '';
+        expect(rule('.nuiget-tablist')).toContain('block-size: var(--nuiget-tab-strip-height)');
+        expect(rule('.nuiget-tab')).toContain('font-size: var(--nuiget-font-size-sm)');
+        expect(rule('.nuiget-tab')).toContain('text-transform: uppercase');
+        expect(rule('.nuiget-tab')).toContain('color: var(--nuiget-color-tab-inactive-fg)');
+        expect(rule('.nuiget-tab[aria-selected="true"]')).toContain('border-block-end-color: var(--nuiget-color-tab-indicator)');
+        expect(rule('.nuiget-tab[aria-selected="true"]')).toContain('color: var(--nuiget-color-tab-active-fg)');
+        const own = rules.filter(entry => entry.selectorText?.startsWith('.nuiget-tab') && !entry.selectorText.includes(','));
+        expect(own.filter(entry => /--nuiget-color-(focus|contrast-border)/.test(entry.style.cssText))).toEqual([]);
+        remove();
     });
 });

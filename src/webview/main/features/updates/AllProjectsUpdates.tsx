@@ -304,13 +304,12 @@ export function AllProjectsUpdates({ filter, announce }: ListView): React.JSX.El
 
     return (
         <div className="nuiget-installed nuiget-installed--sections nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar">
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={total === 0} onClick={() => setConfirming(true)}>
+                {chosenCount > 0 ? `Update selected (${chosenCount})` : `Update all (${candidateTotal})`}
+            </Button>}>
                 <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateTotal === 0} onClick={selectAll}>
                     Select all
                 </Button>
-                <span className="nuiget-toolbar-end"><Button data-testid="update-all-button" disabled={total === 0} onClick={() => setConfirming(true)}>
-                    {chosenCount > 0 ? `Update selected (${chosenCount})` : `Update all (${candidateTotal})`}
-                </Button></span>
             </Toolbar>
             {updates.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>Some package sources could not be checked; the lists may be incomplete.</Banner>

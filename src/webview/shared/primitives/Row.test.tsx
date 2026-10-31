@@ -81,6 +81,24 @@ describe('Row', () => {
         expect(screen.getByTestId('row-action-uninstall')).toHaveAttribute('tabindex', '-1');
     });
 
+    it('the actions of the current or a selected row carry the band\'s icon carrier', () => {
+        const actions = (props: Partial<RowProps>): Element | null => {
+            const { container, unmount } = renderRow({ actions: <button type="button" tabIndex={-1}>A</button>, ...props });
+            const found = container.querySelector('.nuiget-row-actions');
+            unmount();
+            return found;
+        };
+        expect(actions({ current: true, selected: true })).toHaveClass('nuiget-row-actions--current');
+        expect(actions({ selected: true })).toHaveClass('nuiget-row-actions--selected');
+        expect(actions({})?.className).toBe('nuiget-row-actions');
+        const remove = installStylesheet();
+        const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]) as CSSStyleRule[];
+        for (const selector of ['.nuiget-row-actions--current', '.nuiget-row-actions--selected']) {
+            expect(rules.find(entry => entry.selectorText === selector)?.style.cssText).toContain('--nuiget-icon-button-color');
+        }
+        remove();
+    });
+
     it('clicking an action keeps focus on the option', () => {
         const onClick = vi.fn();
         renderRow({ actions: uninstall(onClick) });

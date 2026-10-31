@@ -154,6 +154,7 @@
 
 /* Selection follows the list's focus (DS-COLOR-2). */
 .nuiget-listbox:focus-within {
+    --nuiget-row-selection-icon: var(--nuiget-color-list-active-icon);
     --nuiget-row-selection-bg: var(--nuiget-color-list-active-bg);
     --nuiget-row-selection-fg: var(--nuiget-color-list-active-fg);
 }
@@ -163,6 +164,7 @@
  * colour and a check mark) and the current row whose details are shown (`aria-current`, the selection colour).
  */
 .nuiget-listbox[aria-multiselectable="true"] {
+    --nuiget-row-selected-icon: var(--nuiget-color-icon);
     --nuiget-row-selected-bg: var(--nuiget-color-list-inactive-bg);
     --nuiget-row-selected-fg: var(--nuiget-color-list-inactive-fg);
 }
@@ -417,6 +419,15 @@
     visibility: var(--nuiget-row-actions-visibility, hidden);
 }
 
+/* The selected row's action glyph (DS-ICON-2, D52's band): the actions are the option's sibling, so the row names its state here. */
+.nuiget-row-actions--current {
+    --nuiget-icon-button-color: var(--nuiget-row-selection-icon, var(--nuiget-color-icon));
+}
+
+.nuiget-row-actions--selected {
+    --nuiget-icon-button-color: var(--nuiget-row-selected-icon, var(--nuiget-row-selection-icon, var(--nuiget-color-icon)));
+}
+
 /* Over the option's end slot, inside the band (DS-ROW-3, DS-INSET-3). */
 .nuiget-row--comfortable .nuiget-row-actions {
     position: absolute;
@@ -433,7 +444,7 @@
 .nuiget-icon-button:focus-visible,
 .nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,
-.nuiget-tab:focus-visible,
+.nuiget-tab:focus,
 .nuiget-dialog:focus-visible,
 .nuiget-popover:focus-visible {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
@@ -449,28 +460,49 @@
 
 /* ── IconButton ── */
 
+/* Three carriers: --nuiget-icon-button-size (a pane header), -color (a selected row, disabled) and -bg (hover, pressed). DS-HEIGHT-8, DS-ICON-2, DS-COLOR-3, DS-COLOR-6. */
 .nuiget-icon-button {
+    position: relative;
     display: inline-flex;
+    flex: none;
     align-items: center;
     justify-content: center;
-    min-width: var(--nuiget-target-min);
-    min-height: var(--nuiget-target-min);
+    box-sizing: border-box;
+    inline-size: var(--nuiget-icon-button-size, var(--nuiget-action-size));
+    block-size: var(--nuiget-icon-button-size, var(--nuiget-action-size));
     padding: 0;
-    border: 0;
-    border-radius: var(--nuiget-radius-sm);
-    background: transparent;
-    color: var(--nuiget-color-fg-muted);
+    border: var(--nuiget-line-width) solid transparent;
+    border-radius: var(--nuiget-radius-action);
+    background: var(--nuiget-icon-button-bg, transparent);
+    color: var(--nuiget-icon-button-color, var(--nuiget-color-icon));
     cursor: pointer;
     transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
 }
 
-.nuiget-icon-button:hover,
-.nuiget-icon-button[aria-pressed="true"] {
-    color: var(--nuiget-color-fg);
+/* The 24 px pointer target around the 22 px box (DS-HEIGHT-8). */
+.nuiget-icon-button::after {
+    content: "";
+    position: absolute;
+    inset: calc((var(--nuiget-icon-button-size, var(--nuiget-action-size)) - var(--nuiget-target-min)) / 2);
 }
 
+/* The dashed line is high contrast's (DS-COLOR-3, DS-FOCUS-4); the token is transparent elsewhere. */
+.nuiget-icon-button:hover {
+    --nuiget-icon-button-bg: var(--nuiget-color-toolbar-hover-bg);
+    border-style: dashed;
+    border-color: var(--nuiget-color-toolbar-hover-outline);
+}
+
+.nuiget-icon-button:active,
+.nuiget-icon-button[aria-pressed="true"] {
+    --nuiget-icon-button-bg: var(--nuiget-color-toolbar-active-bg);
+}
+
+/* After :hover at equal specificity, so a disabled button keeps no fill. */
 .nuiget-icon-button:disabled {
-    color: var(--nuiget-color-fg-muted);
+    --nuiget-icon-button-bg: transparent;
+    --nuiget-icon-button-color: var(--nuiget-color-fg-disabled);
+    border-color: transparent;
     cursor: default;
 }
 
@@ -534,6 +566,13 @@
 }
 
 /* ── SectionHeader ── */
+
+/* DS-HEIGHT-8's 20 px box in a sidebar section header. */
+/* The hit stays inside the document (DS-OVERFLOW-6) until P3.7a's 6 px end inset. */
+.nuiget-section-header[data-variant="pane"] {
+    --nuiget-icon-button-size: var(--nuiget-action-size-compact);
+    padding-inline-end: calc((var(--nuiget-target-min) - var(--nuiget-action-size-compact)) / 2);
+}
 
 .nuiget-section-header {
     display: flex;
@@ -999,37 +1038,57 @@
     min-height: 0;
 }
 
+/* The label lands on the inset; the details pane sets the carrier at P3.3b. */
 .nuiget-tablist {
     display: flex;
     flex: none;
-    gap: var(--nuiget-space-1);
+    box-sizing: border-box;
+    block-size: var(--nuiget-tab-strip-height);
+    min-inline-size: 0;
+    padding-inline: calc(var(--nuiget-tab-strip-inset, var(--nuiget-inset)) - var(--nuiget-space-4) - var(--nuiget-space-1));
     border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
+/* The Extensions editor navbar's label: 11/400, uppercase, padding 10. No box in high contrast (DS-HC-1); its selected and hovered lines are P3.9's. */
 .nuiget-tab {
     display: inline-flex;
     align-items: center;
-    gap: var(--nuiget-space-2);
+    gap: var(--nuiget-space-3);
+    min-inline-size: 0;
     min-height: var(--nuiget-target-min);
-    padding: 0 var(--nuiget-space-4);
-    /* Boxed by the contrast line in a high-contrast theme (unset elsewhere); the selection's underline comes after it. */
-    border: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border);
-    border-block-end: var(--nuiget-space-1) solid transparent;
+    padding: 0 calc(var(--nuiget-space-4) + var(--nuiget-space-1));
+    border: 0;
+    border-block-end: var(--nuiget-line-width) solid transparent;
     background: transparent;
-    color: var(--nuiget-color-fg-muted);
+    color: var(--nuiget-color-tab-inactive-fg);
     font: inherit;
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: var(--nuiget-font-weight-regular);
+    text-transform: uppercase;
     cursor: pointer;
     transition: color var(--nuiget-duration-fast) var(--nuiget-easing);
 }
 
-.nuiget-tab:hover {
-    color: var(--nuiget-color-fg);
+.nuiget-tab-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* Selected is said by the line and the colour together, so it is not told by colour alone. */
+.nuiget-tab-count,
+.nuiget-tab-badge {
+    display: inline-flex;
+    flex: none;
+}
+
+.nuiget-tab:hover {
+    color: var(--nuiget-color-tab-active-fg);
+}
+
 .nuiget-tab[aria-selected="true"] {
-    border-block-end-color: var(--nuiget-color-focus);
-    color: var(--nuiget-color-fg);
+    border-block-end-color: var(--nuiget-color-tab-indicator);
+    color: var(--nuiget-color-tab-active-fg);
 }
 
 .nuiget-tabpanel {
@@ -1041,14 +1100,20 @@
 
 /* ── Toolbar ── */
 
+/* DS-INSET-2: 4 above and below its 26 px controls, the surface inset at both ends; the below-minimum behaviours land with the pane's minimum, P2.7. */
 .nuiget-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--nuiget-space-2);
+    padding: var(--nuiget-space-2) var(--nuiget-toolbar-inset, var(--nuiget-inset));
 }
 
 /* A control pushed to the end of the row, such as the primary action of a list's bulk toolbar (P9.fix-4). */
 .nuiget-toolbar-end {
+    display: flex;
+    flex: 0 1 auto;
+    gap: var(--nuiget-space-2);
+    min-inline-size: 0;
     margin-inline-start: auto;
 }

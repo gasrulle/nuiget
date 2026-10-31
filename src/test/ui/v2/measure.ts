@@ -46,8 +46,6 @@ export const TOLERANCES = {
     containment: 0,
     /** Persistent chrome: the same rectangle in every state of a surface, theme, width and look (D34). */
     chrome: 0.5,
-    /** PF-4: P9.fix-4's own tolerance for the primary toolbar button's right edge against the list's (H9). */
-    primaryEdge: 8,
     /** A computed font size against its ramp step: the Design System's own 0.1 (DS-TYPE-2/6/7/8, DS-HEIGHT-10's font). */
     fontExact: 0.1,
 } as const;
@@ -151,6 +149,8 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
 
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+/** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
+const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
@@ -163,12 +163,13 @@ const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'mai
 const V50_WIDTHS: Readonly<Record<number, string>> = { 220: 'P2.7' };
 
 export const RULES: readonly RuleDefinition[] = [
-    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
+    // The tab label has no box at the 220 cell until P2.7's pane minimum.
+    rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7' } }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': { pending: 'P2.6' }, ...asGrid1 }, tolerance: TOLERANCES.proximity }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
-    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: { pending: 'P2.5' }, headers: { pending: 'P2.6' }, 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: { pending: 'P2.6' }, 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
@@ -176,11 +177,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-1', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-2', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
-    rule('DS-HEIGHT-4', { helper: 3, scopes: on('P2.5', ...MAIN), tolerance: TOLERANCES.height }),
+    // The strip is hidden while browsing (MS-8's exemption).
+    rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-8', { helper: 3, scopes: on('P2.5', ...MAIN, 'sources', 'sidebar'), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-10', { helper: 3, scopes: on('P2.6', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
@@ -189,11 +191,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
-    rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.primaryEdge, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
+    rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingWidths: V50_WIDTHS }),
-    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: { pending: 'P2.6' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: on('P2.6', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -205,18 +207,22 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
+    // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
+    rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
+    rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
-    rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: { pending: 'P2.5' }, sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...on('P2.7', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: { pending: 'P2.5' }, tabs: { pending: 'P2.5' }, details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    // The list pane's declared minimum and the below-minimum behaviours of §8 land with P2.7's DS-OVERFLOW-1 `main`.
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment, pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
@@ -241,10 +247,10 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
-    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES } }),
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'], pendingStates: { 'main-transitive-expanded': 'P2.6' } }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
-    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'] }, states: ['main-installed-details', 'main-updates'] }),
+    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
@@ -353,7 +359,8 @@ export interface Heights {
     detailsTabs: number | undefined;
     buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string; hovered: boolean; secondary: boolean; background: string }>;
     inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string }>;
-    iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number } }>;
+    iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number }; label: string; glyph: { w: number; h: number } | undefined; colour: string; background: string; radius: string; disabled: boolean; hovered: boolean; band: 'current' | 'selected' | undefined; listFocused: boolean; multi: boolean; severity: boolean }>;
+    tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
@@ -511,6 +518,10 @@ export interface EndOfP0 {
     listSelection: { active: string; inactive: string };
     /** UX-P2.3b: the secondary button's hover and rest fills, as computed colours. */
     buttonSecondary: { hover: string; rest: string };
+    /** UX-P2.5: the icon and tab roles, as computed colours. */
+    iconColours: { icon: string; active: string; disabled: string; warning: string };
+    tabColours: { active: string; inactive: string; indicator: string };
+    actionRadius: string;
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
     /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
@@ -813,7 +824,24 @@ const heights = {
         const after = getComputedStyle(el, '::after');
         const widened = after.content && after.content !== 'none' && after.position === 'absolute';
         const hit = widened ? { width: round(rect.width - px(after.left) - px(after.right)), height: round(rect.height - px(after.top) - px(after.bottom)) } : { width: round(rect.width), height: round(rect.height) };
-        return { inHeader: Boolean(el.closest('[data-variant="pane"]')), width: round(rect.width), height: round(rect.height), hit };
+        const style = getComputedStyle(el);
+        const svg = el.querySelector('svg');
+        const glyph = svg ? rectOf(svg) : undefined;
+        return {
+            inHeader: Boolean(el.closest('[data-variant="pane"]')), width: round(rect.width), height: round(rect.height), hit,
+            label: el.dataset.testid ?? el.getAttribute('aria-label') ?? '',
+            glyph: glyph ? { w: round(glyph.width), h: round(glyph.height) } : undefined,
+            colour: style.color, background: style.backgroundColor, radius: style.borderTopLeftRadius,
+            disabled: el.matches(':disabled'), hovered: el.matches(':hover'),
+            band: el.closest('.nuiget-row-actions--current') ? 'current' : el.closest('.nuiget-row-actions--selected') ? 'selected' : undefined,
+            listFocused: Boolean(el.closest('.nuiget-listbox:focus-within')),
+            multi: Boolean(el.closest('.nuiget-listbox[aria-multiselectable="true"]')),
+            severity: Boolean(el.closest('.nuiget-source-health')),
+        };
+    }),
+    tabs: shown('[role="tab"]').map(el => {
+        const style = getComputedStyle(el);
+        return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor };
     }),
     checkBoxes: shown('input[type="checkbox"], .nuiget-row-check').map(el => {
         const style = getComputedStyle(el);
@@ -1124,6 +1152,9 @@ const endOfP0 = {
     rows: endRows,
     listSelection: { active: computedColour('--vscode-list-activeSelectionBackground'), inactive: computedColour('--vscode-list-inactiveSelectionBackground') },
     buttonSecondary: { hover: computedColour('--nuiget-color-button-secondary-hover-bg'), rest: computedColour('--nuiget-color-button-secondary-bg') },
+    iconColours: { icon: computedColour('--nuiget-color-icon'), active: computedColour('--nuiget-color-list-active-icon'), disabled: computedColour('--nuiget-color-fg-disabled'), warning: computedColour('--nuiget-color-icon-warning') },
+    tabColours: { active: computedColour('--nuiget-color-tab-active-fg'), inactive: computedColour('--nuiget-color-tab-inactive-fg'), indicator: computedColour('--nuiget-color-tab-indicator') },
+    actionRadius: getComputedStyle(root).getPropertyValue('--nuiget-radius-action').trim(),
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
     detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
@@ -1478,6 +1509,10 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
         case 'DS-HEIGHT-5': {
             const strip = definition.id === 'DS-HEIGHT-4' ? heights.tabStrip : heights.detailsTabs;
             if (strip === undefined) {
+                // The Browse view takes the Tabs root's place, MS-8's exemption.
+                if (definition.id === 'DS-HEIGHT-4' && layout.browsing) {
+                    return { value: 'tab strip not shown (browsing)', pass: true };
+                }
                 return { value: NOT_MEASURABLE, pass: false };
             }
             const check = heightCheck('', [strip], HEIGHTS.tabStrip, tolerance, { widget: 'extensionNavbar', workbench });
@@ -1615,8 +1650,8 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                 return { value: `${NOT_MEASURABLE} (no primary toolbar button)`, pass: false };
             }
             return {
-                value: layout.primaryEdges.map(pair => `${pair.list}: button ${pair.button}, scroll port ${pair.listRight} (${tenth(pair.listRight - pair.button)}; listbox ${pair.listboxRight})`).join('; '),
-                pass: layout.primaryEdges.every(pair => Math.abs(pair.listRight - pair.button) <= tolerance),
+                value: layout.primaryEdges.map(pair => `${pair.list}: button ${pair.button}, inset line ${tenth(pair.listRight - MAIN_INSET)} (scroll port ${pair.listRight} − ${MAIN_INSET}; listbox ${pair.listboxRight})`).join('; '),
+                pass: layout.primaryEdges.every(pair => Math.abs(pair.listRight - MAIN_INSET - pair.button) <= tolerance),
             };
         }
         case 'MS-8': {
@@ -1661,9 +1696,15 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
             if (scope === 'rows' && actions(false).length > 0) {
                 parts.push(check('row actions', actions(false), TRAILING.rowAction));
             }
+            if (scope === 'toolbars') {
+                const ends = layout.toolbars.flatMap(toolbar => (toolbar.insets === undefined ? [] : [toolbar.insets.end]));
+                if (ends.length > 0) {
+                    parts.push(check('toolbar end', ends, TRAILING.surface));
+                }
+            }
             if (scope === 'headers') {
                 const groups = layout.sections.filter(section => section.variant === 'group' && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
-                const surfaces = [...(layout.mainHeader === undefined ? [] : [layout.mainHeader.end]), ...layout.toolbars.flatMap(toolbar => (toolbar.insets === undefined ? [] : [toolbar.insets.end]))];
+                const surfaces = layout.mainHeader === undefined ? [] : [layout.mainHeader.end];
                 if (groups.length > 0) {
                     parts.push(check('group headers', groups, TRAILING.surface));
                 }
@@ -1800,6 +1841,47 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             });
             return { value: deltas.map(entry => `${entry.state} painted ${entry.delta} from the band`).join('; '), pass: deltas.every(entry => entry.delta <= tolerance) };
         }
+        case 'DS-ICON-2': {
+            const buttons = layout.heights.iconButtons;
+            if (buttons.length === 0) {
+                return notMeasurable('no icon button');
+            }
+            // The severity role: no named state shows the sources health button until P3.10's error cells.
+            const { icon, active, disabled, warning } = facts.iconColours;
+            const roleOf = (button: (typeof buttons)[number]): [string, string] => {
+                if (button.disabled) {
+                    return ['disabled disabledForeground', disabled];
+                }
+                if (button.severity) {
+                    return ['severity problemsWarningIcon.foreground', warning];
+                }
+                if (button.listFocused && (button.band === 'current' || (button.band === 'selected' && !button.multi))) {
+                    return ['current row list.activeSelectionIconForeground', active];
+                }
+                return ['colour icon.foreground', icon];
+            };
+            const glyphs = buttons.flatMap(button => (button.glyph === undefined ? [] : [`${button.glyph.w}×${button.glyph.h}`]));
+            const off = buttons.filter(button => button.colour !== roleOf(button)[1]);
+            const glyphsPass = buttons.every(button => button.glyph !== undefined && near(button.glyph.w, 16, tolerance) && near(button.glyph.h, 16, tolerance));
+            return {
+                value: `glyph ${tally(glyphs)} (target 16×16); ${tally(buttons.map(button => roleOf(button)[0]))}${off.length === 0 ? '' : `; off: ${off.map(button => `${button.label} ${button.colour} (expected ${roleOf(button)[0]})`).join(', ')}`}`,
+                pass: glyphsPass && off.length === 0,
+            };
+        }
+        case 'DS-COLOR-4': {
+            const tabs = layout.heights.tabs;
+            const selected = tabs.filter(tab => tab.selected);
+            if (selected.length === 0) {
+                return notMeasurable('no tab');
+            }
+            const others = tabs.filter(tab => !tab.selected);
+            const { active, inactive, indicator } = facts.tabColours;
+            return {
+                value: `selected ${selected.map(tab => `[${tab.id}]`).join(', ')}: panelTitle.activeForeground, line ${tally(selected.map(tab => tab.lineWidth))} panelTitle.activeBorder; ${others.length} other: panelTitle.inactiveForeground, no line`,
+                pass: selected.every(tab => tab.colour === active && tab.lineWidth === 1 && tab.lineColour === indicator)
+                    && others.every(tab => tab.colour === inactive && (tab.lineWidth === 0 || tab.lineColour === 'rgba(0, 0, 0, 0)')),
+            };
+        }
         case 'DS-RADIUS-1': {
             const { buttons, inputs } = layout.heights;
             if (buttons.length === 0 && inputs.length === 0) {
@@ -1815,7 +1897,11 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-COLOR-6': {
             if (scope === 'icon-buttons') {
-                return notMeasurable('no helper until P2.5');
+                const off = layout.heights.iconButtons.filter(button => button.disabled);
+                if (off.length === 0) {
+                    return notMeasurable('no disabled icon button');
+                }
+                return { value: `disabled ${off.length}: colour ${tally(off.map(button => button.colour))} (target disabledForeground)`, pass: off.every(button => button.colour === facts.iconColours.disabled) };
             }
             const disabled = layout.heights.buttons.filter(button => button.disabled);
             if (disabled.length === 0) {
@@ -1864,14 +1950,27 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const bands = comfortable.map(row => row.radius);
             const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon.radius]));
             const checks = layout.heights.checkBoxes.map(box => box.radius);
+            const actions = layout.heights.iconButtons.map(button => button.radius);
             return {
-                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})${checks.length === 0 ? '' : `; check ${tally(checks)} (target ${CONTROL_STYLES.checkBoxRadius})`}`,
-                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius) && checks.every(radius => radius === CONTROL_STYLES.checkBoxRadius),
+                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})${checks.length === 0 ? '' : `; check ${tally(checks)} (target ${CONTROL_STYLES.checkBoxRadius})`}${actions.length === 0 ? '' : `; icon-button ${tally(actions)} (target ${facts.actionRadius})`}`,
+                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius) && checks.every(radius => radius === CONTROL_STYLES.checkBoxRadius) && actions.every(radius => radius === facts.actionRadius),
             };
         }
         case 'DS-COLOR-5': {
-            if (scope === 'tabs' || scope === 'sash') {
-                return notMeasurable(`no helper until ${scope === 'tabs' ? 'P2.5' : 'P3.9'}`);
+            if (scope === 'sash') {
+                return notMeasurable('no helper until P3.9');
+            }
+            if (scope === 'tabs') {
+                const tabs = layout.heights.tabs;
+                const selected = tabs.filter(tab => tab.selected);
+                if (selected.length === 0) {
+                    return notMeasurable('no selected tab');
+                }
+                const others = tabs.filter(tab => !tab.selected);
+                return {
+                    value: `tabs: selected line in panelTitle.activeBorder; ${others.length} others unlined`,
+                    pass: selected.every(tab => tab.lineColour === facts.tabColours.indicator) && others.every(tab => tab.lineWidth === 0 || tab.lineColour === 'rgba(0, 0, 0, 0)'),
+                };
             }
             if (facts.rows.length === 0) {
                 return notMeasurable('no row');
@@ -1930,6 +2029,9 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const kind = scope === 'details' ? 'details' : scope === 'tabs' ? 'tabs' : 'toolbars';
             const containers = facts.controlsOut.filter(entry => entry.container === kind);
             if (containers.length === 0) {
+                if (kind === 'tabs' && layout.browsing) {
+                    return { value: 'tab strip not shown (browsing)', pass: true };
+                }
                 return notMeasurable(`no ${kind}`);
             }
             return {

@@ -119,6 +119,12 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...nonText('checkbox-fg', 'checkbox-bg', 'checkbox-select-bg'),
     { fg: 'checkbox-border', bg: 'widget-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49; F1a): checkbox.border on the dialog surface reads 1.5 / 1.6 in Dark and Light Modern', themes: ['dark-modern', 'light-modern'] } },
     ...text('button-fg', 'button-bg'),
+    // UX-P2.5: the tabs on the list pane, the icon glyphs on their surfaces and on the band.
+    ...text('tab-active-fg', 'bg-sidebar'),
+    ...text('tab-inactive-fg', 'bg-sidebar'),
+    ...nonText('tab-indicator', 'bg-sidebar'),
+    ...nonText('icon', 'bg', 'bg-sidebar'),
+    ...nonText('list-active-icon', 'list-active-bg'),
     // UX-P2.4: the select and the text field, on their fills and on the surface.
     ...text('dropdown-fg', 'dropdown-bg'),
     ...text('input-fg', 'input-bg'),

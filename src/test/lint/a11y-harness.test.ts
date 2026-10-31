@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
 /**
@@ -39,8 +39,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // The design-advisor ruling of 2026-10-25 (UX-P0.25): the resolve pass decided the three undecided contrast cases of
         // UX-P0.23 in every state (run 40152178889), so no result is pending.
         expect(AXE_PENDING).toEqual([]);
-        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar']);
-        expect(acceptedSelectors()).toEqual(['.nuiget-row-option']);
+        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button']);
+        expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button']);
+        expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button']);
     });
 
     it('accepts a violation a decision declares only on its selector or its surface', () => {
@@ -75,6 +76,12 @@ describe('the accessibility harness (UX-P0.23)', () => {
             '[axe] main-installed-single: incomplete aria-hidden-focus ×1: .d (pending P2.1a)',
         ]);
         expect(found.failures).toEqual(['violation button-name ×5']);
+        // UX-P2.5: an icon button's `target-size` incomplete is declared by DS-HEIGHT-8's hit; a node off the selector still fails.
+        const icons = (onSelector: number) => result({ incomplete: [rule('target-size', [{ target: '.f' }, { target: '.g' }], 2, undefined, { '.nuiget-icon-button': onSelector })] });
+        const declared = axeLines('main-updates', 'main', icons(2), 'hard', []);
+        expect(declared.failures).toEqual([]);
+        expect(declared.lines[1]).toContain('incomplete target-size ×2 on .nuiget-icon-button (accepted-as-design: DECISIONS.md 2026-10-31');
+        expect(axeLines('main-updates', 'main', icons(1), 'hard', []).failures).toEqual(['incomplete target-size ×2']);
         // Contrast axe cannot decide outside the details pane is not tolerated, also when only the nodes past the cap are
         // outside (the script counts them before it caps the list); every node inside is, however many.
         const outside = axeLines('main-installed-details', 'main', result({ incomplete: [rule('color-contrast', [{ insideDetails: true }, { insideDetails: false }]), rule('color-contrast', [{ insideDetails: true }], 9, 1)] }), 'hard', []);
@@ -349,6 +356,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         });
         expect(momentLines('hover-main', 'light-2026', facts, 'hard', [{ where: 'hover-main', theme: 'light-2026', rule: 'color-contrast', item: 'P4.6' }]).failures).toEqual([]);
         // Axe's check messages follow the sample, as the full run's lines carry them.
+        expect(momentLines('hover-sidebar', 'dark-modern', { violations: [], passes: 15, acceptedTargets: 1 }, 'hard', []).lines[0]).toBe('[contrast] hover-sidebar@dark-modern: 15 nodes passed, 0 violations, 0 pairs measured, accepted target-size 1 on .nuiget-icon-button (hard)');
         const withReasons = { violations: [{ rule: 'target-size' as const, count: 3, sample: 'li:nth-child(2) > a', reasons: [{ text: 'Target has insufficient size (16px by 16px, should be at least 24px by 24px)', count: 3 }] }], passes: 5 };
         expect(momentLines('readme', 'dark-modern', withReasons, 'hard', [{ where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' }]).lines[1])
             .toBe('[contrast] readme@dark-modern: violation target-size ×3: li:nth-child(2) > a; "Target has insufficient size (16px by 16px, should be at least 24px by 24px)" ×3 (pending P3.4)');

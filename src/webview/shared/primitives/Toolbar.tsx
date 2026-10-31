@@ -6,6 +6,8 @@ export interface ToolbarProps {
     label: string;
     /** Buttons and checkboxes, in the order the arrow keys visit them. */
     children: React.ReactNode;
+    /** The control pushed to the end of the row, the primary action of a bulk toolbar; the arrow keys visit it after the children. */
+    end?: React.ReactNode;
     'data-testid'?: string;
 }
 
@@ -18,10 +20,9 @@ const TEXT_FIELD = 'input:not([type]), input[type="text"], input[type="search"],
  * field they move the caret, and an arrow leaves the field at the edge of the text. The
  * toolbar remembers the control that last had focus; when it is disabled or removed, the first one takes over.
  * The tab stop is kept on the controls themselves, so the controls are ordinary children: buttons that change,
- * appear or disappear do not have to know they are in a toolbar. A control with the class `nuiget-toolbar-end` is
- * pushed to the end of the row; the arrow keys still visit the controls in document order.
+ * appear or disappear do not have to know they are in a toolbar.
  */
-export function Toolbar({ label, children, 'data-testid': testId }: ToolbarProps): React.JSX.Element {
+export function Toolbar({ label, children, end, 'data-testid': testId }: ToolbarProps): React.JSX.Element {
     const ref = useRef<HTMLDivElement>(null);
     const active = useRef<HTMLElement | null>(null);
 
@@ -84,7 +85,7 @@ export function Toolbar({ label, children, 'data-testid': testId }: ToolbarProps
 
     return (
         <div ref={ref} className="nuiget-toolbar" role="toolbar" aria-label={label} data-testid={testId} onFocus={onFocus} onKeyDown={onKeyDown}>
-            {children}
+            {children}{end === undefined ? null : <div className="nuiget-toolbar-end">{end}</div>}
         </div>
     );
 }

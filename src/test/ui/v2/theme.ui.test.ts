@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key } from 'vscode-extension-tester';
-import { CONTRAST_STATUS, type ContrastRun, LAYER_SELECTOR, type Moment, type MomentFacts, momentLines, type Resolved, RESOLVE_CONTRAST, RUN_CONTRAST, TEXTS_UNDER } from './a11y';
+import { acceptedTargetSelectors, CONTRAST_STATUS, type ContrastRun, LAYER_SELECTOR, type Moment, type MomentFacts, momentLines, type Resolved, RESOLVE_CONTRAST, RUN_CONTRAST, TEXTS_UNDER } from './a11y';
 import { selectTheme as pickTheme } from './layout';
 import { enterMainWebview, openMainPanel } from './mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForTestIdGone } from './sidebarWebview';
@@ -10,7 +10,7 @@ import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarV
 /**
  * The theme pass of the 2.0 webviews (plan item P5.11, ruling of 2026-10-16), on the VSIX that `npm run test:ui` packages:
  * under six of VS Code's built-in themes (dark, light, both high-contrast themes and the 2026 pair), axe-core runs inside the main panel and the sidebar, and neither has a
- * `color-contrast` or a `target-size` (24 px) violation. jsdom cannot measure contrast: the colours exist only in VS
+ * `color-contrast` or a `target-size` (24 px) violation (an icon button's hit is DS-HEIGHT-8's measurement, `AXE_ACCEPTED`). jsdom cannot measure contrast: the colours exist only in VS
  * Code, which sets the `--vscode-*` variables and the body class of the theme. That the rule ran is part of the
  * assertion; what axe could not decide is written to the log. Forced colours are not emulated (the tokens lint holds
  * that block). The first theme is put back afterwards; nothing is installed or removed.
@@ -31,7 +31,7 @@ const THEMES = [
 
 type Theme = (typeof THEMES)[number];
 
-interface AxeNode { target: string[]; summary: string; insideDetails: boolean }
+interface AxeNode { target: string[]; summary: string; insideDetails: boolean; accepted?: string }
 interface AxeSummary {
     violations: Record<string, AxeNode[]>;
     passes: Record<string, number>;
@@ -44,8 +44,10 @@ const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.j
 /** Runs in the webview: axe on the two rules, answered as a summary small enough for the WebDriver channel. */
 const RUN_AXE = `
     const done = arguments[arguments.length - 1];
+    const acceptedTargets = arguments[0];
     const details = document.querySelector('[data-testid="package-details-panel"]');
     const nodes = list => list.map(node => ({
+        accepted: acceptedTargets.find(selector => { const el = document.querySelector(String(node.target[0])); return el !== null && el.matches(selector); }),
         target: node.target.map(String),
         summary: node.failureSummary || node.any.map(check => check.message).join('; '),
         insideDetails: details !== null && node.target.length === 1 && details.contains(document.querySelector(String(node.target[0]))),
@@ -86,20 +88,20 @@ async function contrastAt(scope: string | null, outsideDetailsOnly: boolean, tex
     }
     await waitForTransitions();
     await driver.manage().setTimeouts({ script: 120_000 });
-    const run = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, scope, outsideDetailsOnly)) as ContrastRun;
+    const run = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, scope, outsideDetailsOnly, acceptedTargetSelectors())) as ContrastRun;
     if (run.error !== undefined) {
         return { violations: [], passes: 0, notMeasurable: `axe.run failed: ${run.error}` };
     }
     let undecided = run.undecided;
     if (textsUnder && scope !== null) {
-        const page = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, null, true)) as ContrastRun;
+        const page = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, null, true, acceptedTargetSelectors())) as ContrastRun;
         if (page.error !== undefined) {
             return { violations: [], passes: 0, notMeasurable: `axe.run over the page failed: ${page.error}` };
         }
         undecided = [...new Set([...undecided, ...(await driver.executeScript<string[]>(TEXTS_UNDER, scope, page.undecided))])];
     }
     const resolved = undecided.length > 0 ? JSON.parse(await driver.executeAsyncScript<string>(RESOLVE_CONTRAST, undecided, LAYER_SELECTOR)) as Resolved : undefined;
-    return { violations: run.violations, passes: run.passes, resolved };
+    return { violations: run.violations, passes: run.passes, acceptedTargets: run.acceptedTargets, resolved };
 }
 
 /** Prints a moment's `[contrast]` lines and collects its failures. */
@@ -254,7 +256,7 @@ async function runAxe(): Promise<AxeSummary> {
         await driver.executeScript(AXE_SOURCE);
     }
     await driver.manage().setTimeouts({ script: 120_000 });
-    const answer = JSON.parse(await driver.executeAsyncScript<string>(RUN_AXE)) as AxeSummary & { error?: string };
+    const answer = JSON.parse(await driver.executeAsyncScript<string>(RUN_AXE, acceptedTargetSelectors())) as AxeSummary & { error?: string };
     expect(answer.error, 'axe.run').to.equal(undefined);
     return answer;
 }
@@ -267,14 +269,27 @@ function expectNoViolations(surface: string, theme: Theme, summary: AxeSummary):
         `passes ${JSON.stringify(summary.passes)}; incomplete ${incomplete.length}${incomplete.length > 0 ? `\n  ${incomplete.join('\n  ')}` : ''}`);
     // What axe could not decide is the details pane's content below its visible part (ruling (9) of P5.12b): only the
     // contrast rule, and only inside `package-details-panel`; anything else is a finding, whatever the count.
-    for (const [rule, list] of Object.entries(summary.incomplete)) {
+    const acceptedIncomplete = (summary.incomplete['target-size'] ?? []).filter(node => node.accepted !== undefined);
+    if (acceptedIncomplete.length > 0) {
+        console.warn(`[theme] ${where}: accepted target-size incomplete ${acceptedIncomplete.length} on ${acceptedIncomplete[0].accepted}`);
+    }
+    for (const [rule, all] of Object.entries(summary.incomplete)) {
+        const list = rule === 'target-size' ? all.filter(node => node.accepted === undefined) : all;
+        if (list.length === 0) {
+            continue;
+        }
         expect(rule, `incomplete rule in the ${where}`).to.equal('color-contrast');
         for (const node of list) {
             expect(node.insideDetails, `incomplete node outside the details pane in the ${where}: ${node.target.join(' ')}`).to.equal(true);
         }
     }
     expect(summary.violations['color-contrast'] ?? [], `color-contrast violations in the ${where}`).to.deep.equal([]);
-    expect(summary.violations['target-size'] ?? [], `target-size violations in the ${where}`).to.deep.equal([]);
+    const targets = summary.violations['target-size'] ?? [];
+    const accepted = targets.filter(node => node.accepted !== undefined);
+    if (accepted.length > 0) {
+        console.warn(`[theme] ${where}: accepted target-size ${accepted.length} on ${accepted[0].accepted}`);
+    }
+    expect(targets.filter(node => node.accepted === undefined), `target-size violations in the ${where}`).to.deep.equal([]);
     // "No violations" also holds for a rule that did not run: the contrast rule has to have checked text.
     expect(summary.passes['color-contrast'] ?? 0, `color-contrast nodes that passed in the ${where}`).to.be.at.least(10);
 }
@@ -316,7 +331,7 @@ describe('2.0 theme pass', () => {
     });
 
     /**
-     * In a high-contrast theme the buttons, the tabs, the project selector and the check boxes are drawn with the
+     * In a high-contrast theme the buttons, the project selector and the check boxes are drawn with the
      * theme's contrast border (P9.11): read `--vscode-contrastBorder` through a probe and compare each control's line.
      */
     async function expectContrastBorders(where: string): Promise<void> {
@@ -329,10 +344,11 @@ describe('2.0 theme pass', () => {
             const contrast = getComputedStyle(probe).color;
             probe.remove();
             const line = selector => getComputedStyle(document.querySelector(selector)).borderTopColor;
-            return { contrast, button: line('.nuiget-button'), tab: line('.nuiget-tab'), select: line('.nuiget-select-input'), checkbox: line('.nuiget-main-toggle input') };
+            return { contrast, button: line('.nuiget-button'), select: line('.nuiget-select-input'), checkbox: line('.nuiget-main-toggle input') };
         `);
         expect(lines.contrast, `${where}: the contrast border`).to.not.equal('rgba(0, 0, 0, 0)');
-        for (const control of ['button', 'tab', 'select', 'checkbox']) {
+        // Tabs draw no box in high contrast (DS-HC-1); the selected tab's solid and the hovered tab's dashed lines are checked at P3.9.
+        for (const control of ['button', 'select', 'checkbox']) {
             expect(lines[control], `${where}: ${control} border`).to.equal(lines.contrast);
         }
     }

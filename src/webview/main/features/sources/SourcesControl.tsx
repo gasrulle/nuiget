@@ -51,16 +51,15 @@ export function SourcesControl({ announce }: SourcesControlProps): React.JSX.Ele
             </Select>
             <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
             {failed.length > 0 ? (
-                <IconButton
+                <span className="nuiget-source-health"><IconButton
                     label={`${failed.length} source${failed.length === 1 ? '' : 's'} unreachable. Retry`}
                     data-testid="source-health-indicator"
-                    className="nuiget-source-health"
                     onClick={() => {
                         bus.request('sources/refresh', {}).catch(() => undefined);
                     }}
                 >
                     <WarningIcon />
-                </IconButton>
+                </IconButton></span>
             ) : null}
             <SourceSettingsDialog open={open} onClose={() => setOpen(false)} announce={announce} />
         </>

@@ -142,16 +142,17 @@ describe('2.0 main panel: Installed tab', () => {
         }
     });
 
-    it('the Uninstall selected button sits at the list\'s right edge (P9.fix-4)', async function () {
+    it('the Uninstall selected button ends on the list\'s inset line (P9.fix-4, MS-1, UX-P2.5)', async function () {
         this.timeout(180_000);
         await findByTestId('package-row-newtonsoft.json', 120_000);
-        const edges = await driverOf().executeScript<{ button: number; list: number }>(`
+        const edges = await driverOf().executeScript<{ button: number; list: number; inset: number }>(`
             return {
+                inset: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nuiget-inset')),
                 button: document.querySelector('[data-testid="uninstall-selected-button"]').getBoundingClientRect().right,
                 list: document.querySelector('[data-testid="installed-list"]').getBoundingClientRect().right,
             };`);
         console.warn('[P9.fix-4] uninstall-selected-button right edge: ' + JSON.stringify(edges));
-        expect(Math.abs(edges.button - edges.list), 'from the primary button to the list\'s right edge').to.be.at.most(8);
+        expect(Math.abs(edges.list - edges.inset - edges.button), 'from the primary button to the list\'s inset line (MS-1)').to.be.at.most(1);
     });
 
     it('the Transitive group row opens with what the project gets through its references, right under the last direct row (P9.0, P9.fix-2, UX-P2.1e)', async function () {

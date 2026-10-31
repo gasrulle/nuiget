@@ -172,7 +172,7 @@ export function Row(props: RowProps): React.JSX.Element {
                 </span>
             </div>
             {disabled ? null : (
-                <div className="nuiget-row-actions" aria-hidden="true" onMouseDown={keepFocusOnOption}>
+                <div className={`nuiget-row-actions${current ? ' nuiget-row-actions--current' : selected ? ' nuiget-row-actions--selected' : ''}`} aria-hidden="true" onMouseDown={keepFocusOnOption}>
                     {busy ? <Spinner /> : actions}
                 </div>
             )}

@@ -142,7 +142,7 @@ export const AXE_PENDING: readonly AxePending[] = [];
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {
     rule: string;
-    kind: 'violation';
+    kind: 'violation' | 'incomplete';
     selector?: string;
     surface?: 'main' | 'sidebar';
     ruling: string;
@@ -155,16 +155,24 @@ export const AXE_ACCEPTED: readonly AxeAccepted[] = [
     { rule: 'label-content-name-mismatch', kind: 'violation', selector: '.nuiget-row-option', ruling: 'DECISIONS.md 2026-10-25: the row keeps its triad' },
     // The view's title is the host's pane header, as for every native pane; the main panel keeps its h1.
     { rule: 'page-has-heading-one', kind: 'violation', surface: 'sidebar', ruling: 'DECISIONS.md 2026-10-25: the sidebar view has no h1' },
+    // The hit is an ::after inside the button, which axe's getBoundingClientRect cannot see; DS-HEIGHT-8 measures it in every
+    // state, so this reading blinds nothing (UX-P2.5).
+    { rule: 'target-size', kind: 'violation', selector: '.nuiget-icon-button', ruling: 'DECISIONS.md 2026-10-31: an icon button paints 22 (20 in a pane header) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
+    // A tabindex=-1 icon button makes axe ask whether it is a target; it is, by pointer, and its hit is DS-HEIGHT-8's.
+    { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-icon-button', ruling: 'DECISIONS.md 2026-10-31: an icon button paints 22 (20 in a pane header) and hits 24 through its ::after, which axe cannot read; DS-HEIGHT-8 measures the hit in every state' },
 ];
 
 /** The selectors `RUN_FULL_AXE` counts nodes against. */
 export const acceptedSelectors = (accepted: readonly AxeAccepted[] = AXE_ACCEPTED): string[] =>
-    accepted.flatMap(entry => (entry.selector === undefined ? [] : [entry.selector]));
+    [...new Set(accepted.flatMap(entry => (entry.selector === undefined ? [] : [entry.selector])))];
 
-/** The acceptance that covers a violation: every node on its selector, or the state's surface. */
-const acceptedFor = (rule: AxeRule, surface: 'main' | 'sidebar', accepted: readonly AxeAccepted[]): { entry: AxeAccepted; where: string } | undefined => {
+/** The selectors the theme pass drops from its `target-size` violations: the one registry, read for that rule alone. */
+export const acceptedTargetSelectors = (): string[] => acceptedSelectors(AXE_ACCEPTED.filter(entry => entry.rule === 'target-size'));
+
+/** The acceptance that covers a result: every node on its selector, or the state's surface. */
+const acceptedFor = (rule: AxeRule, surface: 'main' | 'sidebar', accepted: readonly AxeAccepted[], kind: AxeAccepted['kind']): { entry: AxeAccepted; where: string } | undefined => {
     for (const entry of accepted) {
-        if (entry.rule !== rule.id) {
+        if (entry.rule !== rule.id || entry.kind !== kind) {
             continue;
         }
         if (entry.selector !== undefined && (rule.accepted?.[entry.selector] ?? 0) === rule.count) {
@@ -196,7 +204,7 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
     const sample = (rule: AxeRule): string =>
         `${rule.nodes.slice(0, 2).map(node => node.target).join(', ')}${rule.reasons.length > 0 ? `; ${rule.reasons.map(reason => `"${reason.text}" ×${reason.count}`).join('; ')}` : ''}`;
     for (const rule of result.violations) {
-        const declared = acceptedFor(rule, surface, accepted);
+        const declared = acceptedFor(rule, surface, accepted, 'violation');
         if (declared !== undefined) {
             lines.push(`[axe] ${state}: violation ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.entry.ruling})`);
             continue;
@@ -216,6 +224,11 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
         // UX-P0.25: the resolve pass decided or measured every undecided node outside the pane; its `[contrast]` lines judge them.
         if (rule.id === 'color-contrast' && resolvedContrast !== undefined && resolvedContrast.unresolved === 0) {
             lines.push(`[axe] ${state}: color-contrast left ${rule.outsideDetails} undecided outside the details pane, all decided by the resolve pass ([contrast] lines)`);
+            continue;
+        }
+        const declared = acceptedFor(rule, surface, accepted, 'incomplete');
+        if (declared !== undefined) {
+            lines.push(`[axe] ${state}: incomplete ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.entry.ruling})`);
             continue;
         }
         const pending = pendingFor(state, 'incomplete', rule.id, registry);
@@ -665,11 +678,14 @@ export function pairContrast(pair: ContrastPair): { ratio: number; threshold: nu
  * Runs in the webview, asynchronously: the theme pass's two rules (`color-contrast`, `target-size`) over `arguments[0]` (a
  * selector, or the whole document when null), answering the violations, the number of `color-contrast` nodes that passed and
  * the targets it left undecided (those inside the details pane left out when `arguments[1]`, the A5 tolerance until P3.4).
+ * A `target-size` node on a selector of `arguments[2]` (`acceptedTargetSelectors`) is counted in `acceptedTargets`, not a violation.
  */
 export const RUN_CONTRAST = `
 const done = arguments[arguments.length - 1];
 ${REASONS_OF}
-const [scope, outsideDetailsOnly] = arguments;
+const [scope, outsideDetailsOnly, acceptedTargets = []] = arguments;
+const isAccepted = node => { try { const el = document.querySelector(String(node.target[0])); return el !== null && acceptedTargets.some(selector => el.matches(selector)); } catch (error) { return false; } };
+const keptNodes = rule => (rule.id === 'target-size' ? rule.nodes.filter(node => !isAccepted(node)) : rule.nodes);
 const details = document.querySelector('[data-testid="package-details-panel"]');
 const inDetails = target => { try { const el = document.querySelector(target); return details !== null && el !== null && details.contains(el); } catch (error) { return false; } };
 axe.run(scope ? { include: [scope] } : document, {
@@ -677,7 +693,8 @@ axe.run(scope ? { include: [scope] } : document, {
     rules: { 'target-size': { enabled: true } },
     resultTypes: ['violations', 'passes', 'incomplete'],
 }).then(results => done(JSON.stringify({
-    violations: results.violations.map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', '), reasons: reasonsOf(rule.nodes) })),
+    acceptedTargets: results.violations.filter(rule => rule.id === 'target-size').reduce((sum, rule) => sum + rule.nodes.length - keptNodes(rule).length, 0),
+    violations: results.violations.map(rule => ({ ...rule, nodes: keptNodes(rule) })).filter(rule => rule.nodes.length > 0).map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', '), reasons: reasonsOf(rule.nodes) })),
     passes: results.passes.filter(rule => rule.id === 'color-contrast').reduce((sum, rule) => sum + rule.nodes.length, 0),
     undecided: results.incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes).map(node => node.target.map(String).join(' ')).filter(target => !outsideDetailsOnly || !inDetails(target)),
 })), error => done(JSON.stringify({ violations: [], passes: 0, undecided: [], error: String(error) })));
@@ -705,6 +722,7 @@ return targets.filter(target => {
 /** What `RUN_CONTRAST` answers. */
 export interface ContrastRun {
     violations: MomentFacts['violations'];
+    acceptedTargets?: number;
     passes: number;
     undecided: string[];
     error?: string;
@@ -789,6 +807,8 @@ export function resolvedLines(state: string, theme: string, resolved: Resolved, 
 export interface MomentFacts {
     violations: Array<{ rule: 'color-contrast' | 'target-size'; count: number; sample: string; reasons?: Array<{ text: string; count: number }> }>;
     passes: number;
+    /** `target-size` nodes on an `AXE_ACCEPTED` selector, not violations. */
+    acceptedTargets?: number;
     resolved?: Resolved;
     /** Why the moment could not be measured (a README the network did not deliver), or undefined. */
     notMeasurable?: string;
@@ -807,7 +827,7 @@ export function momentLines(moment: Moment, theme: string, facts: MomentFacts, s
     const lines: string[] = [];
     const failures: string[] = [];
     const pairs = facts.resolved?.pairs.length ?? 0;
-    lines.push(`[contrast] ${where}: ${facts.passes} nodes passed, ${facts.violations.reduce((sum, entry) => sum + entry.count, 0)} violations, ${pairs} pairs measured (${statusText(status)})`);
+    lines.push(`[contrast] ${where}: ${facts.passes} nodes passed, ${facts.violations.reduce((sum, entry) => sum + entry.count, 0)} violations, ${pairs} pairs measured${facts.acceptedTargets ? `, accepted target-size ${facts.acceptedTargets} on ${acceptedTargetSelectors().join(', ')}` : ''} (${statusText(status)})`);
     for (const violation of facts.violations) {
         const reasons = (violation.reasons ?? []).map(reason => `; "${reason.text}" ×${reason.count}`).join('');
         lines.push(`[contrast] ${where}: violation ${violation.rule} ×${violation.count}: ${violation.sample}${reasons} (${suffix(violation.rule)})`);

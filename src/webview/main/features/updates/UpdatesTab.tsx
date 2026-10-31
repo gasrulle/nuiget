@@ -216,13 +216,12 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
 
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar">
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
+                {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
+            </Button>}>
                 <Button variant="secondary" data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
                     Select all
                 </Button>
-                <span className="nuiget-toolbar-end"><Button data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
-                    {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
-                </Button></span>
             </Toolbar>
             {updates.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>
