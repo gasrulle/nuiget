@@ -19,13 +19,40 @@ body {
     line-height: var(--nuiget-line-height);
 }
 
+/* Artboard A's header: one box for the control row and the search row, 8/8 around and 8 between, the divider role under it (DS-DIVIDER-4). */
 .nuiget-main-header {
+    position: relative;
     display: flex;
     flex: none;
+    flex-direction: column;
+    row-gap: var(--nuiget-space-4);
+    padding: var(--nuiget-space-4) var(--nuiget-inset);
+    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-divider);
+}
+
+.nuiget-main-header-row {
+    display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-4) var(--nuiget-inset) var(--nuiget-space-2);
+}
+
+/* Every wrapped control line ends at the inset (DS-INSET-3 c). */
+.nuiget-main-controls {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    min-inline-size: 0;
+    gap: var(--nuiget-space-4);
+}
+
+/* The gear and refresh 4 apart, one group. */
+.nuiget-main-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
 }
 
 .nuiget-main-toggle {
@@ -35,12 +62,12 @@ body {
     min-height: var(--nuiget-target-min);
 }
 
-/* The heading takes the free space, so the controls sit at the end of the header (1.x). */
+/* DS-TYPE-7, DS-TYPE-9. */
 .nuiget-main-title {
+    flex: none;
     margin: 0;
-    margin-inline-end: auto;
     font-size: var(--nuiget-font-size-md);
-    font-weight: 600;
+    font-weight: var(--nuiget-font-weight-semibold);
 }
 
 .nuiget-source-health {
@@ -48,19 +75,15 @@ body {
     display: inline-flex;
 }
 
-/* The revalidation bar lies over the bottom edge, so the list does not move when it comes and goes. */
-/* A line under the search row separates the header from the lists (1.x); the revalidation bar lies above it, in the padding. */
 .nuiget-main-search {
-    position: relative;
     flex: none;
-    padding: var(--nuiget-space-2) var(--nuiget-inset);
-    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
-.nuiget-main-search .nuiget-progress {
+/* The revalidation bar lies over the header's bottom edge, so the list does not move when it comes and goes. */
+.nuiget-main-progress {
     position: absolute;
     inset-inline: var(--nuiget-inset);
-    bottom: 0;
+    inset-block-end: 0;
 }
 
 /* The list takes the share the sash reports; the details take the rest. */

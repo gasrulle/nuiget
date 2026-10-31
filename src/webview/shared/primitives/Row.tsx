@@ -81,7 +81,7 @@ export interface RowProps extends RowPlacement {
  * over its end. The name is the name and the version; the badges, authors, description and status describe the option. The tooltip `id version`
  * sits on the text column: on the option a `title` would become its description.
  */
-export function Row(props: RowProps): React.JSX.Element {
+export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): React.JSX.Element {
     const { itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef, onToggle, level, posInSet } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const ids = {
@@ -178,4 +178,4 @@ export function Row(props: RowProps): React.JSX.Element {
             )}
         </div>
     );
-}
+});

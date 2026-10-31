@@ -149,7 +149,7 @@
     content: '';
     position: absolute;
     inset: 0 var(--nuiget-pane-header-margin-x) auto;
-    border-block-start: var(--nuiget-line-width) solid var(--nuiget-color-section-header-border);
+    border-block-start: var(--nuiget-line-width) solid var(--nuiget-color-divider);
 }
 
 /* Fixed at the pane-header height so the estimate equals the row (UX-P2.2). */
@@ -1127,7 +1127,7 @@
     block-size: var(--nuiget-tab-strip-height);
     min-inline-size: 0;
     padding-inline: calc(var(--nuiget-tab-strip-inset, var(--nuiget-inset)) - var(--nuiget-space-4) - var(--nuiget-space-1));
-    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-border);
+    border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-divider);
 }
 
 /* The Extensions editor navbar's label: 11/400, uppercase, padding 10. No box in high contrast (DS-HC-1); its selected and hovered lines are P3.9's. */

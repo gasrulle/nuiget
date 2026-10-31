@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
-import { useMessageBus } from '../shared/bus/useMessageBus';
 import { Banner, cssVars, LiveStatus, ProgressBar, Sash } from '../shared/primitives';
 import { parseSearchQuery } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useConfig } from '../shared/store/config';
 import { useInstalled } from '../shared/store/installed';
-import { useOps } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
 import { BrowseResults } from './BrowseResults';
 import { InstalledSection } from './InstalledSection';
 import { UpdatesSection } from './UpdatesSection';
-import { describeOutcome } from './outcomes';
+import { useFirstUsefulRenderMark, useShellChrome } from '../shared/shellChrome';
 import type { ViewStateStore } from '../shared/viewState';
 
 /** What the view keeps across reloads in the webview's own state (`getState`/`setState`). */
@@ -58,35 +56,17 @@ const BROWSE_MIN_LENGTH = 2;
  * is loading, what a search found, and how every operation ended, on whichever surface it started.
  */
 export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}): React.JSX.Element {
-    const bus = useMessageBus();
     const installed = useInstalled();
     // `workbench.tree.indent` indents the All Projects levels; the settings come once asked (the config slice is lazy).
     const { config, enable: enableConfig } = useConfig();
     useEffect(() => enableConfig(), [enableConfig]);
-    const { last } = useOps();
     const { search: runSearch, clear: clearSearch } = useSearch();
     const [query, setQuery] = useState('');
-    const [said, setSaid] = useState<{ message: string | null; count: number }>({ message: null, count: 0 });
-    const searchRef = useRef<HTMLInputElement>(null);
+    const { announce, live, searchRef } = useShellChrome();
     const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [layout, setLayout] = useState<SidebarLayout>(() => readLayout(viewState));
 
-    // The two marks the host logs when `nuiget.enablePerformanceLogging` is on (N81): once each, under StrictMode too.
-    const markedReady = useRef(false);
-    useEffect(() => {
-        if (!markedReady.current) {
-            markedReady.current = true;
-            bus.request('perf/mark', { name: 'webviewReady', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
-        }
-    }, [bus]);
-    const markedRender = useRef(false);
-    const firstListShown = installed.status === 'ready' && installed.result !== undefined;
-    useEffect(() => {
-        if (firstListShown && !markedRender.current) {
-            markedRender.current = true;
-            bus.request('perf/mark', { name: 'firstUsefulRender', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
-        }
-    }, [bus, firstListShown]);
+    useFirstUsefulRenderMark(installed.status === 'ready' && installed.result !== undefined);
     // Kept when a change ends (a toggle, a key on the sash, the end of a drag): `setState` posts to VS Code, and a drag
     // would otherwise post once per pointer step.
     const keepLayout = (next: SidebarLayout): void => {
@@ -101,20 +81,6 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
         setLayout(next);
         keepLayout(next);
     };
-
-    const announce = useCallback((message: string): void => setSaid(previous => ({ message, count: previous.count + 1 })), []);
-
-    // The host asks for the search box when the view is shown again.
-    useEffect(() => bus.onEvent('ui/focusSearch', () => searchRef.current?.focus()), [bus]);
-
-    const sequence = last?.sequence;
-    useEffect(() => {
-        if (last !== undefined) {
-            announce(describeOutcome(last.outcome));
-        }
-        // One announcement per outcome: `sequence` goes up with each, `last` is what it belongs to.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sequence, announce]);
 
     const parsed = parseSearchQuery(query);
     // `@vulnerable` is no mode here: the text is searched for like any other.
@@ -201,7 +167,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                     ) : null}
                 </>
             )}
-            <LiveStatus message={said.message} repeat={said.count} />
+            <LiveStatus message={live.message} repeat={live.repeat} />
         </main>
     );
 }

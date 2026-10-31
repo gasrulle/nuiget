@@ -40,8 +40,7 @@ The main panel header shows the title "Manage NuGet packages", the Restore after
 Include prerelease check boxes, the project and source selectors (a source the host could not reach
 is marked "(unreachable)", and a warning button beside the gear retries it) and a refresh button
 that is disabled while it runs. Its controls have the workbench's sizes (buttons and selects 26 px with a 12 px label,
-check boxes 18 px). When it does not fit, it wraps; below that the check boxes' labels give way to icon toggles with
-tooltips, and the title hides last.
+check boxes 18 px). When it does not fit, it wraps and every control line ends at the inset.
 
 Layout rhythm, both surfaces: content starts at one inset (16 px in the main panel: the title, the search box, the
 tab labels, the toolbars, the section chevrons and the row content); every header and toolbar has equal start and end
@@ -268,7 +267,7 @@ project has several and one block per project in All Projects; no version select
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |
-| `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh): its insets, height and wrapping are measured on it |
+| `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh) and its search row: its insets, height and wrapping are measured on it |
 | `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
 | `section-box-<name>` | The box of a section header (chevron, title, spinner, badges, actions, count), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
 | `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |

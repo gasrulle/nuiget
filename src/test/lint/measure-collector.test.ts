@@ -372,7 +372,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(facts.rows[0].band).toEqual({ left: 0, top: 136, right: 600, bottom: 214 });
         expect(facts.factLefts).toEqual([[700, 704]]);
         expect(facts.copyEnds).toEqual([{ kind: 'empty', text: 'Select a package' }]);
-        expect(facts.controlsOut.map(entry => [entry.container, entry.out, entry.total])).toEqual([['toolbars', 0, 2], ['tabs', 0, 0]]);
+        expect(facts.controlsOut.map(entry => [entry.container, entry.out, entry.total])).toEqual([['main-header', 0, 0], ['toolbars', 0, 2], ['tabs', 0, 0]]);
 
         // The type, the details header, the list pane, overflow menus and min-content widths.
         document.head.insertAdjacentHTML('beforeend', '<style id="end-of-p0">main, main * { font-family: sans-serif; } main { line-height: 18.2px; } .nuiget-row--compact { line-height: 22px; } .nuiget-row-version, .nuiget-row-authors { font-size: 11px; color: rgb(157, 157, 157); }</style>');
@@ -549,5 +549,27 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const hovered = collect();
         expect(hovered.heights.iconButtons.map(button => button.hovered)).toEqual([true, false]);
         expect(Object.keys(hovered.endOfP0.iconColours)).toContain('hoverBg');
+    });
+
+    it('reads a gap between content boxes, a select slot, a classic count badge and the rows of the main header (UX-P2.7a)', () => {
+        document.documentElement.style.setProperty('--nuiget-icon-size-md', '16px');
+        document.documentElement.style.setProperty('--nuiget-target-min', '24px');
+        document.body.innerHTML = `<main class="nuiget-main" data-testid="nuiget-app" data-rect="0,0,600,700">
+          <header data-testid="main-header" data-rect="0,0,600,77" style="padding-bottom: 8px; border-bottom-width: 1px; border-bottom-style: solid"><div data-rect="16,8,584,34"><h1 class="nuiget-main-title" data-rect="16,12,120,30" data-text="16,12,120,30">NuGet</h1><select class="nuiget-select-input" data-testid="project-selector" style="padding-right: 22px" data-rect="300,8,584,34"></select></div><div data-rect="16,42,584,68"></div></header>
+          <div class="nuiget-main-split" data-rect="0,77,600,700"><span class="nuiget-badge nuiget-badge--count" style="padding: 3px 5px" data-rect="10,80,30,100" data-text="15,83,25,97">3</span></div>
+        </main>`;
+        const layout = collect();
+        expect(layout.blockGaps).toContain(8);
+        expect(layout.slots).toMatchObject([{ label: '[project-selector]', value: 22, overlay: 16, rest: 6, onRamp: true }]);
+        expect(layout.offRamp.join()).not.toContain('project-selector');
+        expect(layout.classicBadges).toBe(1);
+        (document.querySelector('.nuiget-badge--count') as HTMLElement).style.padding = '4px 6px';
+        expect(collect().offRamp.join()).toContain('.nuiget-badge padding 4px 6px 4px 6px');
+        expect(layout.mainHeader).toMatchObject({ top: 8, bottom: 8 });
+        expect(layout.endOfP0.titles.panel).toBeDefined();
+        expect(layout.endOfP0.headings.map(heading => heading.tag)).toEqual(['h1']);
+        expect(layout.endOfP0.dividers.header).toBeDefined();
+        document.documentElement.style.removeProperty('--nuiget-icon-size-md');
+        document.documentElement.style.removeProperty('--nuiget-target-min');
     });
 });

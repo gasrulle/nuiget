@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
@@ -55,6 +55,10 @@ describe('main panel shell', () => {
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
         rerender(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list again</p>} /></StoreProvider></StrictMode>);
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+        // Browse unmounts the tabs; leaving it does not mark again.
+        fireEvent.change(search(), { target: { value: 'serilog' } });
+        fireEvent.change(search(), { target: { value: '' } });
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
     });
 
     it('the Updates tab shows no 0', async () => {
@@ -81,10 +85,10 @@ describe('main panel shell', () => {
     it('renders the header, the search box, the tabs, the split and one live region', async () => {
         await mountReady();
         expect(screen.getByRole('main')).toHaveAttribute('data-testid', 'nuiget-app');
-        // The header box of the measurements (UX-P0.10) holds the title and the selectors; the search box is below it.
+        // The header box of the measurements (UX-P0.10) holds the title, the selectors and the search row (UX-P2.7).
         expect(screen.getByTestId('main-header').tagName).toBe('HEADER');
         expect(screen.getByTestId('main-header')).toContainElement(screen.getByRole('heading', { level: 1 }));
-        expect(screen.getByTestId('main-header')).not.toContainElement(search());
+        expect(screen.getByTestId('main-header')).toContainElement(search());
         expect(screen.getByRole('search')).toContainElement(search());
         expect(screen.getByRole('checkbox', { name: 'Restore after operations' })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).not.toBeChecked();

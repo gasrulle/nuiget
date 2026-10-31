@@ -156,20 +156,14 @@ const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
-/**
- * V50: at the editor minimum the tab strip's count badge extends the document sideways (CI run 40084340281,
- * `.nuiget-badge 198.3,224.5 24.1×17.5`); P2.7 flips it with DS-OVERFLOW-1@main (UX-P0.14 ruling).
- */
-const V50_WIDTHS: Readonly<Record<number, string>> = { 220: 'P2.7' };
-
 export const RULES: readonly RuleDefinition[] = [
     // The tab label has no box at the 220 and 400 cells until P2.7's pane minimum.
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
-    rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
-    rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': { pending: 'P2.7' }, ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
+    rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
+    rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.proximity }),
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': { pending: 'P2.7' }, details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
-    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
@@ -195,9 +189,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
-    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, pendingWidths: V50_WIDTHS }),
-    // The main header's trailing control ends on the inset once P2.7 gives the header its rhythm; printed here, flipped there.
-    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': { pending: 'P2.7' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
+    rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -216,6 +209,10 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.6b (design trigger 6).
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7b' } }, tolerance: TOLERANCES.containment }),
+    // UX-P2.7 (design trigger 6).
+    rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3a' }, dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
     rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.containment }),
@@ -229,9 +226,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
-    rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...on('P2.7', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     // The list pane's declared minimum and the below-minimum behaviours of §8 land with P2.7's DS-OVERFLOW-1 `main`.
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment, pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment, pendingWidths: { 220: 'P2.7', 400: 'P2.7' } }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
@@ -436,6 +433,9 @@ export interface Layout {
     offRampCount: number;
     /** Gaps between consecutive visible children of the block containers. */
     blockGaps: number[];
+    /** DS-GRID-1: end paddings under an overlaid glyph or button, judged by their rest; classic count badges read as the workbench's. */
+    slots?: Array<{ label: string; value: number; overlay: number; rest: number; onRamp: boolean; field: boolean }>;
+    classicBadges?: number;
     sections: SectionBox[];
     toolbars: Array<{ id: string; insets: Insets | undefined }>;
     mainHeader: Insets | undefined;
@@ -548,6 +548,10 @@ export interface EndOfP0 {
     /** UX-P2.6: DS-HC-1's line, and DS-TYPE-5's uppercase headers. */
     contrastBorder: string;
     uppercaseHeaders: boolean;
+    /** UX-P2.7: DS-TYPE-7, DS-TYPE-9 and DS-DIVIDER-4. */
+    titles: { panel: TitleFacts | undefined; details: TitleFacts | undefined; dialog: TitleFacts | undefined };
+    headings: Array<{ tag: string; weight: string; sectionTitle: boolean }>;
+    dividers: { key: string; header: string | undefined; tabStrips: string[]; groupLines: string[] };
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
     /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
@@ -556,7 +560,7 @@ export interface EndOfP0 {
      * Per container, its controls: `out` counts a visible one outside its rect and, when no visible control opens a menu
      * (`aria-haspopup`), a hidden one; `hidden` counts the hidden ones.
      */
-    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details'; label: string; out: number; hidden: number; menu: boolean; total: number }>;
+    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number }>;
     /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
     minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
     /** Per facts block of the details pane, the lefts of its values. */
@@ -700,6 +704,8 @@ const scope = dialog ?? root;
 // Helper 1, DS-GRID-1: every padding, margin and gap on the ramp.
 const offRamp = [];
 let offRampCount = 0;
+const slots = [];
+let classicBadges = 0;
 let examined = 0;
 const props = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'row-gap', 'column-gap'];
 for (const el of [scope, ...scope.querySelectorAll('*')]) {
@@ -708,11 +714,35 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
     const style = getComputedStyle(el);
     // getComputedStyle resolves an auto margin to its used px; the typed computed value keeps the keyword.
     const typed = el.computedStyleMap ? el.computedStyleMap() : null;
+    // The classic count badge's 3/5 is the workbench's monaco-count-badge (DS-HEIGHT-10), not a step of the 4-based ramp.
+    const classicBadge = document.documentElement.dataset.look !== 'modern' && el.classList.contains('nuiget-badge--count');
+    if (classicBadge) {
+        classicBadges++;
+        const padding = [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].join(' ');
+        if (padding !== ${JSON.stringify(CONTROL_STYLES.countBadge.classic.padding)}) {
+            offRampCount++;
+            if (offRamp.length < 12) offRamp.push(label(el) + ' padding ' + padding);
+        }
+    }
     for (const prop of props) {
+        if (classicBadge && prop.startsWith('padding')) continue;
         const raw = style.getPropertyValue(prop);
         if (raw === 'normal' || raw === 'auto' || raw === '') continue;
         if (typed && String(typed.get(prop)) === 'auto') continue;
         const value = Math.abs(px(raw));
+        // A slot under an overlaid glyph or button is not spacing: its rest is judged (DS-GRID-1).
+        if (prop === 'padding-right' || prop === 'padding-inline-end') {
+            const rootStyle = getComputedStyle(document.documentElement);
+            const select = el.classList.contains('nuiget-select-input');
+            const field = el.classList.contains('nuiget-text-field');
+            const unit = field ? px(rootStyle.getPropertyValue('--nuiget-target-min')) : 0;
+            const overlay = select ? px(rootStyle.getPropertyValue('--nuiget-icon-size-md')) : field && unit > 0 ? value - (value % unit) : 0;
+            if (overlay > 0) {
+                const rest = round(value - overlay);
+                if (!slots.some(slot => slot.label === label(el) && slot.value === value)) slots.push({ label: label(el), value, overlay, rest, onRamp: ramp.some(step => Math.abs(rest - step) <= tolerance), field });
+                continue;
+            }
+        }
         if (prop.startsWith('margin') && value > 40) continue;
         if (!ramp.some(step => Math.abs(value - step) <= tolerance)) {
             offRampCount++;
@@ -720,13 +750,14 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
         }
     }
 }
-// Helper 1, DS-GRID-2a: block gaps between consecutive visible children.
+// Helper 1, DS-GRID-2a: the gaps between consecutive visible children's content boxes.
 const blockGaps = [];
 const containers = dialog ? [dialog] : rootTestId === 'nuiget-app' ? [...document.querySelectorAll('.nuiget-main, .nuiget-main-list, .nuiget-installed')] : [root];
 for (const container of containers) {
     const children = [...container.children].filter(visible).filter(el => getComputedStyle(el).position !== 'absolute' && getComputedStyle(el).position !== 'fixed');
     for (let i = 1; i < children.length; i++) {
-        const gap = children[i].getBoundingClientRect().top - children[i - 1].getBoundingClientRect().bottom;
+        // The space between content boxes, the facing borders not counted: a padded stack's rhythm (DS-GRID-2 a, UX-P2.7).
+        const gap = children[i].getBoundingClientRect().top + px(getComputedStyle(children[i]).paddingTop) - children[i - 1].getBoundingClientRect().bottom + px(getComputedStyle(children[i - 1]).paddingBottom);
         if (gap >= -0.5) blockGaps.push(round(gap));
     }
 }
@@ -798,6 +829,16 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
         ...headerFacts(box),
     };
 });
+// DS-INSET-2: the main header's top and bottom against its row boxes; start and end as the leaf union reads them.
+const mainHeaderInsets = () => {
+    const insets = contentInsets(header);
+    if (!insets) return insets;
+    const rows = [...header.children].filter(visible).filter(el => !/absolute|fixed/.test(getComputedStyle(el).position));
+    if (rows.length === 0) return insets;
+    const outer = header.getBoundingClientRect();
+    const style = getComputedStyle(header);
+    return { ...insets, top: round(rows[0].getBoundingClientRect().top - outer.top - px(style.borderTopWidth)), bottom: round(outer.bottom - px(style.borderBottomWidth) - rows[rows.length - 1].getBoundingClientRect().bottom) };
+};
 const toolbars = [...scope.querySelectorAll('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]')].filter(visible).map(box => ({ id: box.dataset.testid, insets: contentInsets(box) }));
 const header = scope.querySelector('[data-testid="main-header"]');
 const sidebarHeader = rootTestId === 'nuiget-sidebar' ? root.querySelector('.nuiget-sidebar-header') : null;
@@ -1044,6 +1085,12 @@ const documentOverflow = {
 // UX-P0.13: the facts of the rules registered at the end of P0 (design-advisor ruling of 2026-10-24).
 const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
 const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
+const titleFacts = selector => {
+    const el = root.querySelector(selector);
+    if (!visible(el)) return undefined;
+    const style = getComputedStyle(el);
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight };
+};
 // The computed form of a --vscode-* colour; a probe element, removed at once.
 const computedColour = name => {
     const probe = document.createElement('span');
@@ -1124,6 +1171,7 @@ const controlsIn = (kind, container) => {
     return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length };
 };
 const controlsOut = [
+    ...shown('[data-testid="main-header"]').map(el => controlsIn('main-header', el)),
     ...shown('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]').map(el => controlsIn('toolbars', el)),
     ...shown('[data-testid="tab-bar"]').map(el => controlsIn('tabs', el)),
     ...shown('.nuiget-details-actions').map(el => controlsIn('details', el)),
@@ -1212,6 +1260,14 @@ const endOfP0 = {
     actionRadius: getComputedStyle(root).getPropertyValue('--nuiget-radius-action').trim(),
     contrastBorder: computedColour('--vscode-contrastBorder'),
     uppercaseHeaders: document.documentElement.hasAttribute('data-uppercase-headers'),
+    titles: { panel: titleFacts('.nuiget-main-title'), details: titleFacts('.nuiget-details-title'), dialog: titleFacts('.nuiget-dialog-title') },
+    headings: shown('h1, h2, h3, h4').filter(el => !el.closest('[data-testid="readme-content"]')).map(el => ({ tag: el.tagName.toLowerCase(), weight: getComputedStyle(el).fontWeight, sectionTitle: el.classList.contains('nuiget-section-heading') })),
+    dividers: {
+        key: computedColour('--vscode-settings-headerBorder'),
+        header: visible(header) ? getComputedStyle(header).borderBottomColor : undefined,
+        tabStrips: shown('.nuiget-tablist').map(el => getComputedStyle(el).borderBottomColor),
+        groupLines: shown('.nuiget-row-group--divided').map(el => getComputedStyle(el, '::before').borderTopColor),
+    },
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
     detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
@@ -1269,7 +1325,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: contentInsets(header), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -2114,7 +2170,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             }
             return { value: facts.sideways.length === 0 ? 'no sideways scroll' : `sideways: ${facts.sideways.join('; ')}`, pass: facts.sideways.length === 0 };
         case 'DS-OVERFLOW-3': {
-            const kind = scope === 'details' ? 'details' : scope === 'tabs' ? 'tabs' : 'toolbars';
+            const kind = scope === 'details' ? 'details' : scope === 'tabs' ? 'tabs' : scope === 'main-header' ? 'main-header' : 'toolbars';
             const containers = facts.controlsOut.filter(entry => entry.container === kind);
             if (containers.length === 0) {
                 if (kind === 'tabs' && layout.browsing) {
@@ -2245,6 +2301,30 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout:
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
     const { focus, focusColours } = facts;
     switch (definition.id) {
+        case 'DS-TYPE-7': {
+            const parts = [['panel', facts.titles.panel, 13], ['details', facts.titles.details, 18], ['dialog', facts.titles.dialog, 18]] as const;
+            const shownTitles = parts.filter(([, title]) => title !== undefined);
+            if (shownTitles.length === 0) {
+                return notMeasurable('no title');
+            }
+            const meets = ([, title, size]: (typeof parts)[number]) => title !== undefined && near(Number.parseFloat(title.fontSize), size, tolerance) && title.fontWeight === '600';
+            return { value: shownTitles.map(([name, title, size]) => `${name} ${title?.fontSize}/${title?.fontWeight} (target ${size}px/600)`).join('; '), pass: shownTitles.every(meets) };
+        }
+        case 'DS-TYPE-9': {
+            if (facts.headings.length === 0) {
+                return notMeasurable('no heading');
+            }
+            const off = facts.headings.filter(heading => !(heading.weight === '400' || heading.weight === '600' || (heading.weight === '700' && heading.sectionTitle && look === 'classic')));
+            return { value: `headings ${facts.headings.length}: ${tally(facts.headings.map(heading => `${heading.tag} ${heading.weight}`))}${off.length === 0 ? '' : `; off: ${off.map(heading => `${heading.tag} ${heading.weight}`).join(', ')}`}`, pass: off.length === 0 };
+        }
+        case 'DS-DIVIDER-4': {
+            const { key, header, tabStrips, groupLines } = facts.dividers;
+            if (header === undefined) {
+                return notMeasurable('no header');
+            }
+            const all = [header, ...tabStrips, ...groupLines];
+            return { value: `header ${header}, tab strips ${tabStrips.length === 0 ? 'none' : tally(tabStrips)}, group lines ${groupLines.length === 0 ? 'none' : tally(groupLines)} = settings.headerBorder ${key}`, pass: all.every(colour => colour === key) };
+        }
         case 'DS-TYPE-5': {
             const titled = layout.sections.filter(section => section.hasTitle === true && section.title !== undefined && (scope === 'sidebar' || section.variant !== 'pane'));
             if (titled.length === 0) {
@@ -2462,7 +2542,12 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
             if (layout.examined === 0) {
                 return { value: NOT_MEASURABLE, pass: false };
             }
-            return { value: layout.offRampCount === 0 ? '0 off-ramp' : `${layout.offRampCount} off-ramp (${layout.offRamp.join('; ')})`, pass: layout.offRampCount === 0 };
+            {
+                const slots = layout.slots ?? [];
+                const slotText = slots.length === 0 ? '' : `; slots ${slots.map(slot => (slot.field ? `${slot.label} ${slot.value} (${slot.overlay / 24} × 24 + ${slot.rest})` : `${slot.label} ${slot.value} (${slot.overlay} + ${slot.rest})`)).join(', ')}`;
+                const badgeText = layout.classicBadges ? `; classic count badges ${layout.classicBadges} at 3/5` : '';
+                return { value: `${layout.offRampCount === 0 ? '0 off-ramp' : `${layout.offRampCount} off-ramp (${layout.offRamp.join('; ')})`}${slotText}${badgeText}`, pass: layout.offRampCount === 0 && slots.every(slot => slot.onRamp) };
+            }
         case 'DS-GRID-2a': {
             if (layout.blockGaps.length === 0) {
                 return { value: NOT_MEASURABLE, pass: false };
@@ -2551,6 +2636,12 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         default:
             return undefined;
     }
+}
+
+/** A title's computed size and weight. */
+export interface TitleFacts {
+    fontSize: string;
+    fontWeight: string;
 }
 
 /** A header of a list's tree (DS-INSET-2, DS-INSET-3 `headers`): a group box, or any box inside a group row. */
