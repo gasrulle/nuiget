@@ -188,11 +188,11 @@ P0 item provides.
 | DS-ICON-2, -3 | computed styles, 3 | icon buttons / package icons | — | P2.5 / P2.2 | DS-ICON-3 hard since UX-P2.2; DS-ICON-2 pending P2.5 |
 | DS-ICON-4 | 3 computed styles | `main-installed-details`, `main-transitive-details` | V51, V62 | P1.4b | hard at P1.4b |
 | DS-COLOR-1 | computed colours | main / each screen | — | P2.8b / its P3 item | pending |
-| DS-COLOR-2 | unfocused-list state | rows | — | P2.2 | `rows` hard since UX-P2.2; the hovered-selected clause waits for P2.8a's state, the check-mark clause for P2.3 |
+| DS-COLOR-2 | unfocused-list state | rows | — | P2.2 | `rows` hard since UX-P2.2; the hovered-selected clause waits for P2.8a's state, the check-mark clause hard since UX-P2.3 |
 | DS-COLOR-3, -4 | hover, computed colours | icon buttons, tabs | — | P2.5 | pending |
 | DS-COLOR-5 | computed colours | rows / tabs | — | P2.2 / P2.5 | `rows` hard since UX-P2.2 (probe and lint); `tabs` pending P2.5, `sash` pending P3.9 |
 | DS-COLOR-6 | computed opacity and colours | text buttons / icon buttons and action labels | V38 | P2.3 / P2.5 | text buttons hard since UX-P2.3; icon buttons pending P2.5 |
-| DS-COLOR-7 | computed colours | buttons | — | P2.3 | pending |
+| DS-COLOR-7 | computed colours | buttons | — | P2.3 | hard since UX-P2.3 in `main-installed-toolbar-hover` |
 | DS-DENSITY-1 | 3 | main / sidebar | — | P2.2 / P3.7a | main hard since UX-P2.2; sidebar P3.7a pending |
 | DS-OVERFLOW-1 | 5, 6 at minimum widths | main / details / sidebar | — | P2.7 / P3.3b / P3.7a | pending |
 | DS-OVERFLOW-2 | 6 | headers (section-header boxes in main, details, sidebar) | V3 | P2.6 | pending (vacuous on the probe) |
@@ -219,7 +219,7 @@ P0 item provides.
 | DS-TYPE-8 | lint (`em`/`%` font-size) and computed badge size | all | V17 | lint: P1.1 · badges: P2.6 | lint hard at P1.1 (`webview-stylesheets.test.ts`, `relativeFontSize`); badges later |
 | DS-TYPE-9 | computed styles | main, details, dialogs | V61 | details headings: P3.3a · panel title: P2.7 · details title: P3.3b · dialog titles: P3.5 | later |
 | DS-RADIUS-1 | computed styles | all | V20 | buttons: P2.3 · selects and text fields: P2.4 | buttons hard since UX-P2.3; selects and text fields pending P2.4, sources P3.6 |
-| DS-RADIUS-2 | computed styles | all | V47 | rows and package icon: P2.2 · check box: P2.3 · icon buttons: P2.5 · badges: P2.6 · popup: P3.2 · layers: P3.5 · sidebar headers: P3.7a · scrollbar: P3.9 | `rows` (band and package icon) hard since UX-P2.2; later |
+| DS-RADIUS-2 | computed styles | all | V47 | rows and package icon: P2.2 · check box: P2.3 · icon buttons: P2.5 · badges: P2.6 · popup: P3.2 · layers: P3.5 · sidebar headers: P3.7a · scrollbar: P3.9 | `rows` (band, package icon and, since UX-P2.3, check box) hard since UX-P2.2; later |
 | DS-DIVIDER-5 | computed colours | dialogs | V19 | P3.5 | later |
 | DS-DIVIDER-6 | computed styles and a 300 ms runtime check | details | V16 | P3.9 | later |
 | DS-SCROLL-1 | P0.22's scrollbar probe (`offsetWidth − clientWidth`, thumb colour, `scrollbar-color` of `:root`) | all | V15 | registered by P0.22 as `pending: P3.9` (classic 10 px from P0.22; Modern UI 8 px needs P1.1's look token) | pending P3.9 (helper 3 in `measure.ts` reads the thickness and `:root`'s `scrollbar-color`; the thumb's pixel is the `[probe] scrollbar` line) |

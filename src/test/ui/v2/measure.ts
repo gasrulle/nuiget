@@ -204,6 +204,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.3 (design trigger 6). DS-RADIUS-1's selects and text fields are P2.4's.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: { pending: 'P2.4' }, sidebar: { pending: 'P2.4' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P2.5' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
+    rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: { pending: 'P2.6' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -348,7 +349,7 @@ export interface Heights {
     comfortablePitches: number[];
     tabStrip: number | undefined;
     detailsTabs: number | undefined;
-    buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string }>;
+    buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string; hovered: boolean; secondary: boolean; background: string }>;
     inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number }>;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number } }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
@@ -499,9 +500,15 @@ export interface EndOfP0 {
         outline: Outline; focused: boolean;
         /** UX-P2.2b: the facts of DS-COLOR-2, DS-DIVIDER-1, DS-RADIUS-2 and DS-COLOR-5 on this row. */
         background: string; radius: string; lineWidth: number; multi: boolean; listFocused: boolean; focusPainted: number;
+        /** UX-P2.3b: the row's check mark, undefined without one or for a mark that cannot join a bulk action. */
+        check: { fill: string; border: string } | undefined;
+        /** The mark cannot join a bulk action: its line stays disabledForeground (DS-HEIGHT-9). */
+        checkOff: boolean;
     }>;
     /** UX-P2.2b: the theme's selection colours, as computed colours. */
     listSelection: { active: string; inactive: string };
+    /** UX-P2.3b: the secondary button's hover and rest fills, as computed colours. */
+    buttonSecondary: { hover: string; rest: string };
     listPaneWidth: number | undefined;
     detailsHeader: { insets: Insets | undefined; titleLeft: number | undefined; tabLabelLeft: number | undefined } | undefined;
     /** The root and the scroll containers outside a list that scroll sideways: `label scrollWidth>clientWidth`. */
@@ -796,7 +803,7 @@ const heights = {
     }),
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
-    buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), disabled: el.matches(':disabled'), opacity: style.opacity, fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
+    buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), disabled: el.matches(':disabled'), opacity: style.opacity, hovered: el.matches(':hover'), secondary: el.classList.contains('nuiget-button--secondary'), background: style.backgroundColor, fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
     inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el) }))),
     iconButtons: shown('.nuiget-icon-button').map(el => {
         const rect = rectOf(el);
@@ -979,6 +986,12 @@ const paintsFocus = el => {
         || style.boxShadow.includes(focusBorder) || style.backgroundColor === focusBorder
         || ['Top', 'Right', 'Bottom', 'Left'].some(side => px(style['border' + side + 'Width']) > 0 && style['border' + side + 'Color'] === focusBorder);
 };
+const checkOf = option => {
+    const mark = option.querySelector('.nuiget-row-check');
+    if (!visible(mark) || mark.classList.contains('nuiget-row-check--off')) return undefined;
+    const style = getComputedStyle(mark);
+    return { fill: style.backgroundColor, border: style.borderTopColor };
+};
 const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
     const option = row.querySelector('.nuiget-row-option') ?? row;
     const icon = option.querySelector('.nuiget-row-icon');
@@ -1008,6 +1021,8 @@ const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
         multi: Boolean(list) && list.getAttribute('aria-multiselectable') === 'true',
         listFocused: Boolean(list) && list.contains(document.activeElement),
         focusPainted: focused ? 0 : [row, ...row.querySelectorAll('*')].filter(el => visible(el) && paintsFocus(el)).length,
+        check: checkOf(option),
+        checkOff: visible(option.querySelector('.nuiget-row-check--off')),
     };
 });
 const detailsHeaderEl = scope.querySelector('.nuiget-details-header');
@@ -1106,6 +1121,7 @@ const disabled = [...new Set([...scope.querySelectorAll('[aria-disabled="true"]'
 const endOfP0 = {
     rows: endRows,
     listSelection: { active: computedColour('--vscode-list-activeSelectionBackground'), inactive: computedColour('--vscode-list-inactiveSelectionBackground') },
+    buttonSecondary: { hover: computedColour('--nuiget-color-button-secondary-hover-bg'), rest: computedColour('--nuiget-color-button-secondary-bg') },
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
     detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
@@ -1799,16 +1815,27 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             }
             return { value: `disabled ${disabled.length}: opacity ${tally(disabled.map(button => button.opacity))} (target 0.4)`, pass: disabled.every(button => button.opacity === '0.4') };
         }
+        case 'DS-COLOR-7': {
+            const hovered = layout.heights.buttons.find(button => button.hovered && button.secondary);
+            if (hovered === undefined) {
+                return notMeasurable('no hovered secondary button');
+            }
+            const { hover, rest } = facts.buttonSecondary;
+            return { value: `hovered secondary ${hovered.background} (target ${hover}, rest ${rest})`, pass: hovered.background === hover && hovered.background !== rest };
+        }
         case 'DS-COLOR-2': {
-            // Hovered-selected: not measurable until P2.8a's state; the check-mark clause (D52) waits for P2.3.
+            // Hovered-selected: not measurable until P2.8a's state.
             const rows = comfortable.filter(row => row.state === 'current' || row.state === 'selected');
             if (rows.length === 0) {
                 return notMeasurable('no selected or current row');
             }
             const targetOf = (row: (typeof rows)[number]) => (row.state === 'selected' && row.multi ? facts.listSelection.inactive : row.listFocused ? facts.listSelection.active : facts.listSelection.inactive);
+            const { fill, border } = layout.heights.checkSelect;
+            const inSelect = (row: (typeof rows)[number]) => row.check === undefined || (sameColour(row.check.fill, fill) && sameColour(row.check.border, border));
+            const checkText = (row: (typeof rows)[number]) => (row.checkOff ? '; check off, not read for checkbox.select*' : row.check === undefined ? '' : inSelect(row) ? '; check in checkbox.select*' : `; check not in checkbox.select* (${row.check.fill}/${row.check.border})`);
             return {
-                value: rows.map(row => `${row.state} ${row.background} (target ${targetOf(row)}, list ${row.listFocused ? 'focused' : 'not focused'})`).join('; '),
-                pass: rows.every(row => row.background === targetOf(row)),
+                value: rows.map(row => `${row.state} ${row.background} (target ${targetOf(row)}, list ${row.listFocused ? 'focused' : 'not focused'})${checkText(row)}`).join('; '),
+                pass: rows.every(row => row.background === targetOf(row) && inSelect(row)),
             };
         }
         case 'DS-DIVIDER-1': {
@@ -1828,9 +1855,10 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const target = facts.lookTokens['--nuiget-radius-row'];
             const bands = comfortable.map(row => row.radius);
             const icons = comfortable.flatMap(row => (row.icon === undefined ? [] : [row.icon.radius]));
+            const checks = layout.heights.checkBoxes.map(box => box.radius);
             return {
-                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})`,
-                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius),
+                value: `band ${tally(bands)} (target ${target}); icon ${icons.length === 0 ? 'hidden' : tally(icons)} (target ${END_OF_P0.iconRadius})${checks.length === 0 ? '' : `; check ${tally(checks)} (target ${CONTROL_STYLES.checkBoxRadius})`}`,
+                pass: bands.every(radius => radius === target) && icons.every(radius => radius === END_OF_P0.iconRadius) && checks.every(radius => radius === CONTROL_STYLES.checkBoxRadius),
             };
         }
         case 'DS-COLOR-5': {

@@ -111,8 +111,10 @@ describe('the named states (UX-P0.8)', () => {
         expect(MATRIX_THEMES).toEqual(Object.keys(THEMES));
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
-            expect(files, theme).toHaveLength(64);
-            expect(new Set(files).size).toBe(64);
+            // main-installed-toolbar-hover is not in a high-contrast shard: a secondary button's hover equals its rest there (UX-P2.3).
+            const expected = theme.includes('high-contrast') ? 64 : 67;
+            expect(files, theme).toHaveLength(expected);
+            expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
         }
         const widths = new Set(matrixCaptures('dark-modern').map(({ state, capture }) => `${state.surface}:${capture.width}`));
@@ -129,9 +131,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400).
-        expect(files).toHaveLength(40);
-        expect(new Set(files).size).toBe(40);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover.
+        expect(files).toHaveLength(41);
+        expect(new Set(files).size).toBe(41);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

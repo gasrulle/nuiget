@@ -190,6 +190,9 @@ const cancelDialog = async (): Promise<void> => {
     await waitForTestIdGone('confirm-dialog', 10_000);
 };
 
+/** The states whose subject is the pointer: the shot leaves it where it is. */
+const HOVER_STATES = ['main-installed-hover', 'main-installed-toolbar-hover'];
+
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
     'main-installed-all': {
@@ -250,6 +253,13 @@ const REACH: Record<string, Reach> = {
             const option = await optionOf('package-row-serilog');
             await driverOf().actions().move({ origin: option }).perform();
             await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
+        },
+    },
+    'main-installed-toolbar-hover': {
+        reach: async () => {
+            await gatewayInstalled();
+            await driverOf().actions().move({ origin: await findByTestId('select-all-button', 30_000) }).perform();
+            await until('document.querySelector(\'[data-testid="select-all-button"]\').matches(":hover")', 'the Select all button under the pointer', 10_000);
         },
     },
     'main-installed-focus': {
@@ -410,7 +420,7 @@ interface Shot {
  */
 async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     const file = captureFile(state.name, capture);
-    if (state.name !== 'main-installed-hover') {
+    if (!HOVER_STATES.includes(state.name)) {
         await leaveWebview();
         await driverOf().actions().move({ x: 1, y: 1 }).perform();
     }

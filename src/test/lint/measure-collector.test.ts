@@ -158,7 +158,14 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         button.style.opacity = '0.4';
         button.setAttribute('data-rect', '16,80,100,106');
         (document.querySelector('[data-testid="nuiget-app"]') as HTMLElement).append(button);
-        expect(collect().heights.buttons.at(-1)).toMatchObject({ disabled: true, opacity: '0.4' });
+        expect(collect().heights.buttons.at(-1)).toMatchObject({ disabled: true, opacity: '0.4', secondary: false, hovered: false });
+        button.classList.add('nuiget-button--secondary');
+        expect(collect().heights.buttons.at(-1)).toMatchObject({ secondary: true });
+        const matches = button.matches.bind(button);
+        Object.defineProperty(button, 'matches', { value: (selector: string) => selector === ':hover' || matches(selector) });
+        expect(collect().heights.buttons.at(-1)).toMatchObject({ hovered: true, secondary: true });
+        expect(Object.keys(collect().endOfP0.buttonSecondary)).toEqual(['hover', 'rest']);
+        expect(collect().endOfP0.rows[0].check).toEqual(expect.objectContaining({ fill: expect.any(String), border: expect.any(String) }));
         row.setAttribute('aria-selected', 'false');
         row.setAttribute('aria-current', 'true');
         const marks = () => collect().heights.checkBoxes.filter(box => box.selected !== undefined).length;
@@ -166,6 +173,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         check.classList.add('nuiget-row-check--off');
         expect(marks()).toBe(0);
         expect(collect().heights.checkBoxes.filter(box => box.off === true)).toHaveLength(1);
+        expect(collect().endOfP0.rows[0]).toMatchObject({ check: undefined, checkOff: true });
     });
 
     it('a hidden badge is not counted (DS-ROW-6, UX-P2.2)', () => {
