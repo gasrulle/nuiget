@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "41294610738",
+  "run": "41306445646",
   "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
