@@ -1379,6 +1379,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await (await driverOf().switchTo().activeElement()).sendKeys(Key.chord(Key.SHIFT, Key.F10));
             });
             if (LANE === 'ui') {
+                await leaveWebview();
                 await openSidebarView();
                 await enterSidebarWebview();
                 await read('sidebar right-click', enterSidebarWebview, async () => driverOf().actions().contextClick(await optionOf('package-row-serilog')).perform());
