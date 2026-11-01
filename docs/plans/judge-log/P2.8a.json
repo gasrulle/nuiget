@@ -439,6 +439,162 @@
           "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b)"
         }
       ]
+    },
+    {
+      "runId": "41272646314",
+      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "tree": "aac3a22",
+      "look": "modern",
+      "workflow": "wf_a3b10b78-11e",
+      "note": "Judged against the corrected artboard (run 41271425370). The composed selection and details no longer stand: the spec's declaration closed P2.5, P2.6, P2.7 and run 41264720311's #D1 and #D2.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/41272646314/main-installed-single.dark-modern.932.png",
+          "sha256": "9bcf720cddf173a132d9dd9ee23dff3714c598125a3ad59931990af8056ac637",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 20,
+        "standing": 4,
+        "blocking": 1,
+        "refuted": 5,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D5",
+          "state": "main-installed-single",
+          "finding": "[states] The check box label spells 'Include prerelease', which the microcopy's noun rule does not allow: 'Pre-Release' in Title Case labels and 'pre-release' in sentences. The artboard draws the same spelling, so the defect is against the rule text, not against the artboard.",
+          "severity": "minor",
+          "box": [
+            444,
+            12,
+            143,
+            18
+          ],
+          "rule": "judge-only"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "state": "main-installed-single",
+          "finding": "The selected Installed tab draws a full 1 px focusBorder rectangle on all four sides at rest (x 6-145, y 77-112), where the artboard's tab has only the 1 px bottom underline, so the tab reads as a boxed control rather than a native navbar tab with its active underline.",
+          "reason": "The ring is visible (0078d4 on all four sides, x 6-144, y 77-111), but it is the focus ring of a tab the state's setup clicked: hard DS-FOCUS-1 reads 'tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1', DS-FOCUS-3 keeps rings after a click in the main panel, and hard DS-COLOR-4 reads 'line 1 panelTitle.activeBorder'."
+        },
+        {
+          "id": "native-5",
+          "state": "main-installed-single",
+          "finding": "Rows whose package has no icon of its own show a saturated orange open-box graphic (rows at y 337, 481, 553, 625, 769), where the artboard draws a neutral tile with a monochrome package glyph, adding a loud decorative colour to the list that no workbench list uses for a default icon.",
+          "reason": "The orange box is visible, but .nuiget-row-icon is a masked region in the capture's sidecar ('nuget.org icons are resolved by the host per run', leaving the default icon on a failed fetch), so rubric §6 excludes it; hard DS-ICON-3 reads 36×36 ×14 and no rule sets the default icon's colour."
+        },
+        {
+          "id": "native-8",
+          "state": "main-installed-single",
+          "finding": "The filter glyph in the search box is visibly larger and heavier (about 16 px) than the artboard's roughly 12 px funnel at the same end position; DS-ICON-2's 16 px action size supports the capture, so the artboard and the rule disagree here.",
+          "reason": "The capture's funnel is larger than the artboard's, but hard DS-ICON-2 measures 'glyph 16×16 ×3 (target 16×16)', so the capture meets the rule and the artboard's smaller drawing is not a defect in the product."
+        },
+        {
+          "id": "states-7",
+          "state": "main-installed-single",
+          "finding": "The Installed tab draws a full 1 px focus-coloured ring around its whole box in this rest state, while the artboard shows that tab with only its bottom underline. The capture has an interaction state the artboard does not draw, though the ring's form would be correct if the tab really holds focus.",
+          "reason": "The ring is visible, but the tab holds focus from the state's click on installed-tab: hard DS-FOCUS-1 reads 'outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)' and DS-FOCUS-3 keeps the ring after a click in the main panel; the artboard draws focus on a row in another scene."
+        },
+        {
+          "id": "states-8",
+          "state": "main-installed-single",
+          "finding": "The header's Refresh action draws a two-arrow sync-style glyph where the artboard draws the single circular arrow, and the settings action draws a gear where the artboard's glyph reads as a rayed sun, so the two header actions do not match the artboard's icons.",
+          "reason": "The crop shows a gear and a two-arrow glyph, which are the settings-gear and sync codicons of docs/design/icons.json as DS-ICON-1 requires; hard DS-ICON-2 reads 16×16 in icon.foreground, the spec names no glyph, and §6 excludes glyph-outline comparison with the artboard."
+        }
+      ],
+      "closedFromEarlierLogs": [],
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] Package names in the first six rows ellipsize at about x 270, against about x 310 for the artboard's non-current rows, leaving roughly 40 px empty at the row end, so all six read the identical 'Microsoft.Extensions....' and even Microsoft.Extensions.Http, whole in the artboard, is cut; the name no longer truncates last or identifies the package as an Extensions row would. | [native] The Newtonsoft.Json row and the rows below it stop their text column about 28 px short of the artboard: the name reads 'Newtonsoft.J...' beside the Vulnerable badge (artboard: whole name, badge at x 227-293), and authors cut to 'James Newton-Ki...' and 'Serilog Contribut...' where the artboard shows them whole and 'Michael Wolfende...' where it reaches 'Michael Wolfenden, Ap...'; no long version forces this. | [geometry] The rows' text column ends about x 282 at rest, against about x 310 in the artboard, because an action slot about 29 px wide stays reserved on rows that show no action. Six rows read as the same 'Microsoft.Extensions....' (name ink ends at x 268, artboard x 288-308). 'Newtonsoft.J...' is cut with its badge ending at x 281 (artboard shows 'Newtonsoft.Json' with the badge ending at x 293). Authors ellipsize beside short versions ('James Newton-Ki...', 'Serilog Contribut...'), which the spec allows only when a long version leaves no room, and the long-version row keeps only a bare '...' after its Verified mark (artboard 'Micro...'). | [states] The six Microsoft.Extensions.* rows cut their names at about x 270, where the artboard's rows run to about x 310, so all six read as the identical 'Microsoft.Extensions....'. Even 'Microsoft.Extensions.Http', which the artboard shows whole, is cut, and the packages cannot be told apart at 1:1. | [states] The Newtonsoft row shows 'Newtonsoft.J...' beside the Vulnerable badge, whose end is at x 282, while the artboard draws 'Newtonsoft.Json' whole with the badge ending at about x 294. The text column stops short of the width the artboard gives it. | [states] The facts lines cut the authors earlier than the artboard: 'James Newton-Ki...' against the artboard's whole 'James Newton-King', 'Serilog Contribut...' against whole 'Serilog Contributors', and 'Michael Wolfende...' against 'Michael Wolfenden, Ap...'. The preview-version row shows only an ellipsis after the Verified mark where the artboard keeps 'Micro...', so no author text is left.",
+          "severity": "blocking",
+          "box": [
+            98,
+            190,
+            213,
+            613
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "owner": "P2.8a",
+          "ruling": "Every comfortable row reserves the action slot (6 + 22 + 8) at its end and the action overlays it: the Extensions row keeps its action bar in flow on every row (extensions.json ext_parts[10] 314–342 inside 48–348, DS-ROW-3), UX-P2.2's ruling (DO 12 pre-rules this finding) and DECISIONS 2026-10-31. Artboard A's rows 2–15 end at 6 and draw a text column 28 px wider than the design's; the artboard is corrected at P2.8b's first render. design-advisor, UX-P2.8a-b follow-up 5."
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The split between list and details paints a 4 px band in #313131 (x 326-329) at rest, where the artboard has a 1 px #2b2b2b line at x 327 and the rule asks for a 1 px separator with a transparent sash, so the pane split looks like a thick grey bar butting against the scrollbar, not a workbench sash. | [geometry] The split between the list and details panes paints a solid 4 px band in #313131 at x 326-329, y 77-802, where the artboard draws a 1 px #2b2b2b separator at x 327 and DS-DIVIDER-6 requires a 1 px separator with a transparent sash. As a result the list column is 1 px narrower than the spec's 327 (thumb x 318-325 vs 319-326, Uninstall Selected x 165-309 vs spec 164-310), and the details surface starts at x 330 instead of the spec's 328.",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.9. On an element this item did not restyle, by the owner's row.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b)"
+        },
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard and the copy rule have Title Case 'Select All' and 'Uninstall Selected (0)' as workbench button labels do. | [states] The toolbar button reads 'Select all' in sentence case, where the artboard and the microcopy list give the Title Case label 'Select All'. | [states] The disabled bulk button reads 'Uninstall selected (0)' in sentence case, where the artboard and the microcopy list give the Title Case label 'Uninstall Selected (0)'.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            294,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P3.11 (DS-COPY-1: Title Case labels).",
+          "ruling": "design-advisor, UX-P2.8a-a follow-up 4"
+        },
+        {
+          "id": "main-installed-single#D4",
+          "state": "main-installed-single",
+          "finding": "[native] The details empty state 'Select a package to see its details.' is centred in the pane (text x 518-744), where a workbench welcome view has left-aligned sentences at a 20 px side padding (x 348 here). | [geometry] The details pane's empty message 'Select a package to see its details.' is centred in the pane (ink from x 517 to about x 744, centre about x 631, pane x 330-932), where DS-STATE-3 requires left-aligned text at 20 px side padding, which would start it near x 348 (the spec's details inset). | [states] The details pane's empty message 'Select a package to see its details.' is centred in the pane (ink about x 518 to 744, pane centre x 630), but an empty state follows welcome-view content: left-aligned with 20 px side padding.",
+          "severity": "major",
+          "box": [
+            517,
+            94,
+            228,
+            15
+          ],
+          "rule": "DS-STATE-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "Ordered to UX-P2.8b. On an element this item did not restyle, by the owner's row.",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b)"
+        }
+      ]
     }
   ]
 }
