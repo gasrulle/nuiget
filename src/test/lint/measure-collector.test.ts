@@ -396,8 +396,8 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(more.fonts.others).toEqual(['serif']);
             expect(more.descriptionForeground).toBe('#9d9d9d');
             expect(more.metaText).toEqual([
-                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: true },
-                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: true },
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: false, selected: true },
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: true, selected: true },
             ]);
             // Without a menu the hidden tab control is out of reach.
             tabBar.querySelector('[aria-haspopup]')?.remove();
@@ -571,5 +571,18 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.endOfP0.dividers.header).toBeDefined();
         document.documentElement.style.removeProperty('--nuiget-icon-size-md');
         document.documentElement.style.removeProperty('--nuiget-target-min');
+    });
+
+    it('reads the rows with a muted check mark, their status and their group (UX-P2.8a)', () => {
+        document.body.innerHTML = `<main class="nuiget-main" data-testid="nuiget-app" data-rect="0,0,600,700">
+          <div class="nuiget-row" data-row-kind="group" data-testid="group-row-direct" data-rect="0,0,600,22"></div>
+          <div class="nuiget-row" data-rect="0,22,600,94"><div class="nuiget-row-option" data-rect="0,22,600,94"><span class="nuiget-row-check nuiget-row-check--off" data-rect="4,30,20,46"></span><span class="nuiget-row-status" data-rect="40,30,200,46">Read-only</span></div></div>
+          <div class="nuiget-row" data-row-kind="group" data-testid="group-row-transitive" data-rect="0,94,600,116"></div>
+          <div class="nuiget-row" data-rect="0,116,600,188"><div class="nuiget-row-option" data-rect="0,116,600,188"><span class="nuiget-row-check nuiget-row-check--off" data-rect="4,124,20,140"></span></div></div>
+        </main>`;
+        expect(collect().endOfP0.unselectable).toEqual([
+            { label: '.nuiget-row-option', status: 'Read-only', transitive: false },
+            { label: '.nuiget-row-option', status: '', transitive: true },
+        ]);
     });
 });

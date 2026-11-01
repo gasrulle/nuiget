@@ -309,6 +309,8 @@
 
 /* No opacity: at 0.7 the muted colour falls below 4.5:1 on Light Modern (theme.ui.test.ts). */
 .nuiget-row-authors {
+    /* The Extensions publisher, 11/600 (DS-TYPE-6). */
+    font-weight: var(--nuiget-font-weight-semibold);
     min-width: 0;
     overflow: hidden;
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));

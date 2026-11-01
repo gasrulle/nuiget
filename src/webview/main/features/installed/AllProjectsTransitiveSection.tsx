@@ -1,5 +1,5 @@
 import type React from 'react';
-import { Badge, Banner, EmptyState, SectionHeader, Skeleton, type GroupPlacement } from '../../../shared/primitives';
+import { Badge, Banner, EmptyState, ProgressBar, SectionHeader, Skeleton, type GroupPlacement } from '../../../shared/primitives';
 import type { AllProjectsState } from '../../../shared/store/allProjects';
 import { metadataKey } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
@@ -22,10 +22,10 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
     }
     const chunks = [...transitive.chunks.values()];
     if (transitive.status === 'loading' && chunks.length === 0) {
-        return { items, message: <Skeleton density="comfortable" /> };
+        return { items, message: <><ProgressBar label="Loading transitive packages" data-testid="transitive-progress" /><Skeleton density="comfortable" /></> };
     }
     if (transitive.status === 'error' && chunks.length === 0) {
-        return { items, message: <Banner severity="error" action={{ label: 'Retry', onClick: transitive.refresh }}>{`The transitive packages could not be listed: ${transitive.error?.message ?? 'unknown error'}`}</Banner> };
+        return { items, message: <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: transitive.refresh }}>{`The transitive packages could not be listed: ${transitive.error?.message ?? 'unknown error'}`}</Banner> };
     }
     const rows = aggregateTransitive(transitive.chunks.values());
     for (const row of rows) {
@@ -55,7 +55,7 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
                         {`The assets files of ${transitive.errored.length} ${transitive.errored.length === 1 ? 'project' : 'projects'} could not be read.`}
                     </Banner>
                 ) : null}
-                {rows.length === 0 ? <EmptyState message="No transitive dependencies." /> : null}
+                {rows.length === 0 ? <EmptyState message="No transitive dependencies." data-testid="transitive-empty" /> : null}
             </>
         ),
     };

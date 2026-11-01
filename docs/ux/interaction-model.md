@@ -271,6 +271,7 @@ project has several and one block per project in All Projects; no version select
 | `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
 | `section-box-<name>` | The box of a section header (chevron, title, spinner, badges, actions, count), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
 | `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |
+| `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
 
@@ -323,7 +324,6 @@ is a project or section name lower-cased, as above.
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Installed slice | `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading and revalidating), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages header |
 | Installed slice | `installed-progress-<name>`, `installed-empty-<name>`, `installed-error-<name>`, `installed-unsupported-<name>`, `installed-provisional-<name>` | The same markers for one project's section under All Projects |
-| Installed slice | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive section's progress bar, empty state ("No transitive dependencies.") and inline error |
 | Updates | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's progress bar, empty state and inline error |
 | Browse and details | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' progress bar, empty state ("No results for "x".") and inline error |
 | Browse and details | `search-suggestions-loading`, `search-suggestions-empty`, `search-suggestions-error` | The quick-search popup's loading row, no-results row and error row |

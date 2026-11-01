@@ -685,7 +685,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   `AllProjectsTransitiveSection.tsx` build these rows and their messages for `InstalledTab`; the aggregation is in
   `transitiveAggregate.ts`. Comfortable rows with the icon, authors and Verified mark of the lite metadata, no description
   and a muted check mark (a transitive row is current, never selected); a row opens `TransitiveDetails`. A Restore banner
-  (`transitive-restore-banner`) above the tree when the assets file is missing. In All Projects the aggregate is asked on
+  (`transitive-restore-banner`) above the tree when the assets file is missing; the group's 2 px progress bar, empty state
+  and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). In All Projects the aggregate is asked on
   expand, its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)

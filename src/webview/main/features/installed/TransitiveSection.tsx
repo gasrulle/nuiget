@@ -1,7 +1,7 @@
 import type React from 'react';
 import type { PackageMetadataLite, TransitivePackage } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
-import { Badge, Banner, EmptyState, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
+import { Badge, Banner, EmptyState, ProgressBar, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 
@@ -57,7 +57,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
     let message: React.ReactNode = null;
     if (result === undefined) {
         message = state.error
-            ? <Banner severity="error" action={{ label: 'Retry', onClick: state.refresh }}>{`The transitive packages could not be listed: ${state.error.message}`}</Banner>
+            ? <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: state.refresh }}>{`The transitive packages could not be listed: ${state.error.message}`}</Banner>
             : <Skeleton density="comfortable" />;
     } else if (!result.dataSourceAvailable) {
         message = (
@@ -66,11 +66,12 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
             </Banner>
         );
     } else if (result.errorKind !== undefined) {
-        message = <Banner severity="error" action={{ label: 'Retry', onClick: state.refresh }}>{ERRORS[result.errorKind]}</Banner>;
+        message = <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: state.refresh }}>{ERRORS[result.errorKind]}</Banner>;
     } else if (total === 0) {
-        message = <EmptyState message="No transitive dependencies." />;
+        message = <EmptyState message="No transitive dependencies." data-testid="transitive-empty" />;
     }
-    return { items, message };
+    const loading = (result === undefined && !state.error) || state.revalidating;
+    return { items, message: loading ? <><ProgressBar label="Loading transitive packages" data-testid="transitive-progress" />{message}</> : message };
 }
 
 /** The content of a transitive group row: the framework as a badge where the row stands for one. */

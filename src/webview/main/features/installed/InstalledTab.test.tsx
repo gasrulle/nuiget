@@ -318,6 +318,48 @@ describe('main panel: Installed tab', () => {
         aboveTree(screen.getByText('No transitive dependencies.'));
     });
 
+    it('a row that cannot be uninstalled says why in text (DS-STATE-7)', async () => {
+        await mountWith([pkg('Implicit', { isImplicit: true }), pkg('FromProps', { declaration: 'props' }), pkg('Serilog')]);
+        expect(optionOf('Implicit')).toHaveAccessibleDescription(/Added by the SDK/);
+        expect(optionOf('FromProps')).toHaveAccessibleDescription(/From a props file/);
+        expect(optionOf('Serilog')).not.toHaveAccessibleDescription(/Added by|props file|Read-only/);
+    });
+
+    it('every row of an unsupported project reads Read-only', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, [pkg('Serilog')]), unsupported: { reason: 'sdk-too-old', message: 'Needs SDK 10' } }, 1));
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Read-only/);
+    });
+
+    it('the bulk buttons say why only while they are disabled (DS-STATE-7)', async () => {
+        const user = userEvent.setup();
+        await mountWith([pkg('Serilog')]);
+        expect(uninstallSelected()).toHaveAttribute('title', 'Select packages to uninstall them together.');
+        expect(screen.getByTestId('select-all-button')).not.toHaveAttribute('title');
+        await user.click(screen.getByTestId('select-all-button'));
+        expect(uninstallSelected()).not.toHaveAttribute('title');
+    });
+
+    it('Select all says why when no row can join a bulk action', async () => {
+        await mountWith([pkg('Implicit', { isImplicit: true })]);
+        expect(screen.getByTestId('select-all-button')).toHaveAttribute('title', 'No package in this list can join a bulk action.');
+    });
+
+    it('the transitive group renders its progress, empty and error hooks', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(screen.getByTestId('transitive-progress')).toHaveAttribute('aria-label', 'Loading transitive packages');
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [], errorKind: 'parse-failed' }, 1));
+        expect(screen.queryByTestId('transitive-progress')).toBeNull();
+        expect(screen.getByTestId('transitive-error')).toHaveTextContent('The assets file of the project could not be read');
+        await user.click(within(screen.getByTestId('transitive-error')).getByRole('button', { name: 'Retry' }));
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, dataSourceAvailable: true, frameworks: [] }, 2));
+        expect(screen.getByTestId('transitive-empty')).toHaveTextContent('No transitive dependencies.');
+    });
+
     it('another project closes Transitive, and a transitive selection that comes back is the current row', async () => {
         const user = userEvent.setup();
         const host = await mountWith(THREE, true);

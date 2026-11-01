@@ -74,7 +74,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             icon={src === undefined ? undefined : <img src={src} alt="" />}
             busy={busy}
             selectable={!readOnly}
-            status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : undefined}
+            status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : readOnlyReason(entry, result)}
             badges={<>
                 {entry.isImplicit ? <Badge label="SDK" title="Added by the .NET SDK; cannot be uninstalled" /> : null}
                 {entry.declaration === 'props' ? <Badge label="props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}
@@ -89,6 +89,17 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             )}
         />
     );
+}
+
+/** Why a row cannot join a bulk action, in text (DS-STATE-7). */
+function readOnlyReason(entry: InstalledPackage, result: InstalledResult): string | undefined {
+    if (entry.isImplicit) {
+        return 'Added by the SDK';
+    }
+    if (entry.declaration === 'props') {
+        return 'From a props file';
+    }
+    return result.unsupported === undefined ? undefined : 'Read-only';
 }
 
 /** A project's status on its group row: `Unsupported` and `provisional`, as text. */

@@ -111,8 +111,8 @@ describe('the named states (UX-P0.8)', () => {
         expect(MATRIX_THEMES).toEqual(Object.keys(THEMES));
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
-            // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b).
-            const expected = theme.includes('high-contrast') ? 64 : 70;
+            // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
+            const expected = theme.includes('high-contrast') ? 64 : 73;
             expect(files, theme).toHaveLength(expected);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
@@ -131,9 +131,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover.
-        expect(files).toHaveLength(42);
-        expect(new Set(files).size).toBe(42);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current.
+        expect(files).toHaveLength(43);
+        expect(new Set(files).size).toBe(43);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

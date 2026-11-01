@@ -142,6 +142,8 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, "@installed zz-no-such-package" in the search box; the list has no option and says "No installed package matches".', [LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-installed-hover', 'main', [primary('main')],
         'Gateway selected, the pointer on the Serilog row; the row matches :hover.', [LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-installed-hover-current', 'main', [primary('main')],
+        'Gateway selected, Newtonsoft.Json made current (the details show "Dependencies"), then the pointer on its row; the current row under :hover keeps the selection colour (DS-COLOR-2) (a details state: the pane shows Newtonsoft.Json).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-toolbar-hover', 'main', [primary('main')],
         'Gateway selected, the Select all button under the pointer (DS-COLOR-7).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-refresh-hover', 'main', [primary('main')],
@@ -262,8 +264,8 @@ const namedWidth = (state: NamedState): number | undefined => {
  */
 export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture: Capture }> {
     // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (the
-    // dashed line is P3.9's): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3).
-    const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover') && theme.includes('high-contrast'));
+    // dashed line is P3.9's): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3). No hovered current row is captured there (UX-P2.8a).
+    const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover' || state.name === 'main-installed-hover-current') && theme.includes('high-contrast'));
     return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B') && shown(state)).flatMap(state => {
         const fixed = namedWidth(state);
         const widths = fixed !== undefined ? [fixed] : state.surface === 'main' ? PANEL_WIDTHS : SIDEBAR_WIDTHS;

@@ -20,7 +20,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     endOfP0: {
         rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, titles: { panel: undefined, details: undefined, dialog: undefined }, headings: [], dividers: { key: '', header: undefined, tabStrips: [], groupLines: [] }, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
-        focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [],
+        focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [], unselectable: [],
     },
     testIds: {},
     scrollbar: { rootColor: '', slider: '', scrollers: [] },
@@ -125,7 +125,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         expect(scopes('DS-INSET-4')).toEqual({ details: { pending: 'P3.3b' } });
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
-        expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } });
+        expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } });
+        expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
         expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-ROW-6')).toEqual(mainHard());
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
@@ -164,7 +165,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates']);
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
-        expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': { pending: 'P2.8a' }, 'main-updates': { pending: 'P2.8a' }, browse: { pending: 'P2.8a' }, details: { pending: 'P3.3b' } });
+        expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } });
         // UX-P0.22 (V15): the token scrollbars in every group, pending on P3.9 (Modern UI's 8 px needs P1.1's look token).
         expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, { pending: 'P3.9' }])));
         // Each rule's tolerance is one of D34's.
@@ -193,6 +194,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(groups['main-quicksearch-open']).toBe('browse');
         expect(groups['main-installed-details']).toBe('details');
         expect(groups['main-details-readme']).toBe('details');
+        expect(groups['main-installed-hover-current']).toBe('details');
         expect(groups['main-installed-bulk-dialog']).toBe('dialogs');
         expect(groups['sidebar-update-all-dialog']).toBe('dialogs');
         expect(groups['sidebar-sections']).toBe('sidebar');
@@ -524,6 +526,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // DS-ROW-2: one icon and name column.
         expect(value('main-transitive-expanded', facts({ rows: [row(), row({ nameLeft: 100 })] }), 'DS-ROW-2@main-transitive-expanded')).toMatchObject({ pass: false, value: 'icon left spread 0, name left spread 2 (2 rows)' });
         expect(value('main-transitive-expanded', facts({ rows: [row(), row()] }), 'DS-ROW-2@main-transitive-expanded')).toMatchObject({ pass: true });
+        // A pane under the row breakpoint measures the name clause alone (DS-ROW-6, UX-P2.8a).
+        const noIcon = (nameLeft: number) => row({ icon: undefined, nameLeft });
+        expect(value('main-installed-single', facts({ rows: [noIcon(30), noIcon(30)] }), 'DS-ROW-2@main-installed-single')).toMatchObject({ pass: true, value: 'icon column hidden (DS-ROW-6), name left spread 0 (2 rows)' });
+        expect(value('main-installed-single', facts({ rows: [noIcon(0), noIcon(100)] }), 'DS-ROW-2@main-installed-single')).toMatchObject({ pass: false });
         // DS-ROW-3: the painted box of a selected row is the band.
         expect(value('main-installed-details', facts({ rows: [row({ state: 'current', painted: { ...band, left: 4, right: 396 } })] }), 'DS-ROW-3@main-installed-details')).toMatchObject({ pass: false, value: 'current painted 4 from the band' });
         expect(value('main-installed-hover', facts({ rows: [row({ state: 'hover', painted: band })] }), 'DS-ROW-3@main-installed-hover')).toMatchObject({ pass: true });
@@ -657,6 +663,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const meta = (fontSize: number, colour = 'rgb(157, 157, 157)') => [{ kind: 'meta', fontSize, colour, selected: false }];
         expect(value('main-installed-single', facts({ metaText: meta(11), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ metaText: meta(11.5), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
+        // The authors are the Extensions publisher's 11/600 (UX-P2.8a).
+        const authors = (fontWeight: string) => [...meta(11), { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false, fontWeight, authors: true }];
+        expect(value('main-installed-single', facts({ metaText: authors('600'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
+            .toMatchObject({ pass: true, value: 'meta 11 ×2 (target 11); 0 meta off descriptionForeground; authors 600 (target 600)' });
+        expect(value('main-installed-single', facts({ metaText: authors('400'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
         // The computed 11.05 of the run is within the rule's own 0.1.
         expect(value('main-installed-single', facts({ metaText: meta(11.05), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-browse-details', facts({ metaText: [...meta(11), { kind: 'description', fontSize: 11.05, colour: 'rgb(157, 157, 157)', selected: false }], descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-browse-details'))
@@ -713,10 +724,22 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('main-installed-details', facts({ rows: [row('current', ring(0, 'none', orange, 0))] }), 'DS-FOCUS-4@main-installed-details/rows', 'modern', 'dark-high-contrast'))
             .toMatchObject({ pass: false, value: 'selected 0 none rgb(243, 133, 24) (target 1 dotted #f38518); focused none (target 1 solid); hovered not measurable (no high-contrast hover state)' });
         // DS-STATE-7: every disabled affordance says why.
-        expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: 'Select packages first.' }] }), 'DS-STATE-7@main-installed-single')).toMatchObject({ pass: true, status: { pending: 'P2.8a' } });
+        expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: 'Select packages first.' }] }), 'DS-STATE-7@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: '' }, { label: '.nuiget-row-option', reason: 'Implicitly referenced by an SDK.' }] }), 'DS-STATE-7@main-installed-single'))
-            .toMatchObject({ pass: false, value: '2 disabled, 1 without a reason: [uninstall-selected-button]' });
-        expect(at('main-installed-details', facts({}), 'DS-STATE-7@main-installed-details')).toMatchObject({ pass: false, value: 'not measurable (no disabled affordance)', status: { pending: 'P3.3b' } });
+            .toMatchObject({ pass: false, value: '2 disabled, 0 unselectable (0 under Transitive), 1 without a reason: [uninstall-selected-button]' });
+        // A page with nothing disabled is a pass of a universal rule (UX-P2.8a).
+        expect(at('main-updates', facts({}), 'DS-STATE-7@main-updates')).toMatchObject({ pass: true, value: '0 disabled', status: 'hard' });
+        expect(at('main-installed-details', facts({}), 'DS-STATE-7@main-installed-details')).toMatchObject({ pass: true, value: '0 disabled', status: { pending: 'P3.3b' } });
+        // A muted check mark is a disabled affordance: the row says why in text, or its Transitive group does.
+        const muted = (status: string, transitive = false) => ({ label: '.nuiget-row-option', status, transitive });
+        expect(at('main-transitive-expanded', facts({ unselectable: [muted('Implicitly referenced by the SDK')] }), 'DS-STATE-7@main-transitive-expanded'))
+            .toMatchObject({ pass: true, value: '0 disabled, 1 unselectable (0 under Transitive), 0 without a reason' });
+        expect(at('main-transitive-expanded', facts({ unselectable: [muted('')] }), 'DS-STATE-7@main-transitive-expanded'))
+            .toMatchObject({ pass: false, value: '0 disabled, 1 unselectable (0 under Transitive), 1 without a reason: .nuiget-row-option' });
+        expect(at('main-transitive-expanded', facts({ unselectable: [muted('', true)] }), 'DS-STATE-7@main-transitive-expanded'))
+            .toMatchObject({ pass: true, value: '0 disabled, 1 unselectable (1 under Transitive), 0 without a reason' });
+        expect(at('main-installed-single', facts({ disabled: [{ label: '[uninstall-selected-button]', reason: 'Select packages to uninstall them together.' }] }), 'DS-STATE-7@main-installed-single'))
+            .toMatchObject({ pass: true });
     });
 
     it('compares a state\'s elements with its artboard spec within 1 px at the spec\'s width (helper 8, UX-P0.13)', () => {

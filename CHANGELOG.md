@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Section headers and badges look like VS Code's own**
 - **The header of the package manager lines up with VS Code's spacing and dividers**
 - **Narrow package lists keep their tabs and buttons readable**
+- **Packages that cannot be uninstalled say why in the list**
+- **Author names stand out in package lists**
 
 ### Fixed
 - **Scrollbars in the package manager are thin again**

@@ -191,7 +191,7 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-refresh-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
@@ -253,6 +253,15 @@ const REACH: Record<string, Reach> = {
             const option = await optionOf('package-row-serilog');
             await driverOf().actions().move({ origin: option }).perform();
             await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
+        },
+    },
+    'main-installed-hover-current': {
+        reach: async () => {
+            await gatewayInstalled();
+            await currentDetails('package-row-newtonsoft.json');
+            const option = await optionOf('package-row-newtonsoft.json');
+            await driverOf().actions().move({ origin: option }).perform();
+            await until('document.querySelector(\'[data-testid="package-row-newtonsoft.json"] .nuiget-row-option\').matches(":hover")', 'the current row under the pointer', 10_000);
         },
     },
     'main-installed-toolbar-hover': {

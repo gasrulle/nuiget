@@ -197,7 +197,7 @@ export const RULES: readonly RuleDefinition[] = [
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8a' }, details: { pending: 'P2.8a' }, browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide }),
+    rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES, pendingStates: { 'main-browse-details': 'P3.2' } }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
@@ -218,7 +218,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
-    rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused'] }),
+    rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused', 'main-installed-hover-current'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -256,7 +256,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
-    rule('DS-STATE-7', { helper: 5, scopes: { ...on('P2.8a', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -279,7 +279,8 @@ export function stateGroup(state: string): StateGroup {
     if (state.startsWith('main-sources')) {
         return 'sources';
     }
-    if (state.endsWith('-details') || state === 'main-details-readme') {
+    // The current row's details are shown: the pane's rules are the details group's (UX-P2.8a).
+    if (state.endsWith('-details') || state === 'main-details-readme' || state === 'main-installed-hover-current') {
         return 'details';
     }
     if (state.startsWith('main-browse-') || state.startsWith('main-quicksearch-')) {
@@ -575,7 +576,9 @@ export interface EndOfP0 {
     rootLineHeight: number | undefined;
     /** The computed line-height of each compact row. */
     compactLineHeights: number[];
-    metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean }>;
+    metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean; fontWeight?: string; authors?: boolean }>;
+    /** DS-STATE-7: the rows whose check mark is muted, and what says why. */
+    unselectable: Array<{ label: string; status: string; transitive: boolean }>;
     descriptionForeground: string;
     copyEnds: Array<{ kind: 'empty' | 'banner'; text: string }>;
     /** UX-P0.14: the focused element (`document.activeElement`, the body excepted) and its outline (DS-FOCUS-1..3). */
@@ -1213,7 +1216,7 @@ const lookTokens = Object.fromEntries(${JSON.stringify(LOOK_TOKENS)}.map(name =>
 const rootLine = px(getComputedStyle(root).lineHeight);
 const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-meta, .nuiget-row-description').map(el => {
     const style = getComputedStyle(el);
-    return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) };
+    return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, fontWeight: style.fontWeight, authors: el.classList.contains('nuiget-row-authors'), selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) };
 });
 const copyEnds = [
     ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
@@ -1248,6 +1251,14 @@ const disabled = [...new Set([...scope.querySelectorAll('[aria-disabled="true"]'
     const ids = (el.getAttribute('aria-describedby') || '').split(/\\s+/).filter(Boolean);
     const described = ids.map(id => { const target = document.getElementById(id); return target ? target.textContent.trim() : ''; }).join(' ').trim();
     return { label: label(el), reason: described || (el.getAttribute('title') || '').trim() };
+});
+const unselectable = shown('.nuiget-row-check--off').map(check => {
+    const option = check.closest('.nuiget-row-option');
+    const row = option.closest('.nuiget-row');
+    let group = row.previousElementSibling;
+    while (group && group.getAttribute('data-row-kind') !== 'group') group = group.previousElementSibling;
+    const transitive = /^group-row-transitive/.test(group?.dataset.testid || '');
+    return { label: label(option), status: (option.querySelector('.nuiget-row-status')?.textContent || '').trim(), transitive };
 });
 const endOfP0 = {
     rows: endRows,
@@ -1291,6 +1302,7 @@ const endOfP0 = {
         contrastActiveBorder: rootVars.getPropertyValue('--vscode-contrastActiveBorder').trim(),
     },
     disabled,
+    unselectable,
 };
 // UX-P0.13 helper 8: every element under the root with a test id, read as the artboard export reads its panel
 // (zz-artboards.ui.test.ts, SPEC): document order, a repeated id numbered #2, #3, rects relative to the root.
@@ -1936,14 +1948,16 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             };
         }
         case 'DS-ROW-2': {
-            const rows = comfortable.filter(row => row.icon !== undefined && row.nameLeft !== undefined);
-            if (rows.length < 2) {
+            const named = comfortable.filter(row => row.nameLeft !== undefined);
+            const iconed = comfortable.filter(row => row.icon !== undefined);
+            if (named.length < 2) {
                 return notMeasurable('fewer than 2 comfortable rows');
             }
             const spread = (values: number[]) => tenth(Math.max(...values) - Math.min(...values));
-            const icon = spread(rows.map(row => row.icon?.left ?? 0));
-            const name = spread(rows.map(row => row.nameLeft ?? 0));
-            return { value: `icon left spread ${icon}, name left spread ${name} (${rows.length} rows)`, pass: icon <= tolerance && name <= tolerance };
+            const name = spread(named.map(row => row.nameLeft ?? 0));
+            const iconSpread = iconed.length < 2 ? undefined : spread(iconed.map(row => row.icon?.left ?? 0));
+            const iconPart = iconSpread === undefined ? 'icon column hidden (DS-ROW-6)' : `icon left spread ${iconSpread}`;
+            return { value: `${iconPart}, name left spread ${name} (${named.length} rows)`, pass: name <= tolerance && (iconSpread === undefined || iconSpread <= tolerance) };
         }
         case 'DS-ROW-3': {
             const rows = facts.rows.filter(row => row.state !== 'rest' && row.painted !== undefined && row.compact === (scope === 'sidebar'));
@@ -2219,9 +2233,11 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const description = facts.metaText.filter(text => text.kind === 'description');
             const offColour = meta.filter(text => !text.selected && !sameColour(text.colour, facts.descriptionForeground)).length;
             const sizes = (texts: typeof meta) => tally(texts.map(text => text.fontSize));
+            const authors = meta.filter(text => text.authors === true);
+            const authorsClause = authors.length === 0 ? '' : `; authors ${tally(authors.map(text => text.fontWeight ?? ''))} (target 600)`;
             return {
-                value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${offColour} meta off descriptionForeground`,
-                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= tolerance) && offColour === 0,
+                value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${offColour} meta off descriptionForeground${authorsClause}`,
+                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= tolerance) && offColour === 0 && authors.every(text => text.fontWeight === '600'),
             };
         }
         case 'DS-ROW-4': {
@@ -2439,12 +2455,13 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout:
             if (facts.fonts.root === '') {
                 return notMeasurable('no page');
             }
-            if (facts.disabled.length === 0) {
-                return notMeasurable('no disabled affordance');
+            const { unselectable } = facts;
+            if (facts.disabled.length === 0 && unselectable.length === 0) {
+                return { value: '0 disabled', pass: true };
             }
-            const silent = facts.disabled.filter(entry => entry.reason === '');
+            const silent = [...facts.disabled.filter(entry => entry.reason === ''), ...unselectable.filter(row => !row.transitive && row.status === '')];
             return {
-                value: `${facts.disabled.length} disabled, ${silent.length} without a reason${silent.length > 0 ? `: ${tally(silent.map(entry => entry.label))}` : ''}`,
+                value: `${facts.disabled.length} disabled, ${unselectable.length} unselectable (${unselectable.filter(row => row.transitive).length} under Transitive), ${silent.length} without a reason${silent.length > 0 ? `: ${tally(silent.map(entry => entry.label))}` : ''}`,
                 pass: silent.length === 0,
             };
         }

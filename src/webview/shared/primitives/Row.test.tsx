@@ -257,6 +257,11 @@ describe('Row layout (P9.2, D46)', () => {
 
     const follows = (first: Element, second: Element): boolean => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
 
+    it('the authors span carries the class that weighs it 600 (DS-TYPE-6)', () => {
+        renderRow({ density: 'comfortable', authors: 'Microsoft' });
+        expect(screen.getByText('Microsoft')).toHaveClass('nuiget-row-authors');
+    });
+
     it('a Browse row shows three lines: name and badges, the description, then version · downloads · authors', async () => {
         const { container } = renderRow({
             density: 'comfortable', meta: '2.5M downloads', authors: 'Serilog Contributors', verified: true,
