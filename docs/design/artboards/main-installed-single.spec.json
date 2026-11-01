@@ -6,17 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "40086847213",
+  "run": "41268958580",
+  "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 607,
+          "x": 594,
           "y": 8,
-          "w": 144,
+          "w": 157,
           "h": 26
         },
-        "inset": 614,
+        "inset": 601,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -89,7 +90,7 @@
           "h": 26
         },
         "inset": 23,
-        "padding": "0px 28px 0px 6px",
+        "padding": "0px 24px 0px 6px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
@@ -122,7 +123,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 104.5,
+          "w": 136.6,
           "h": 35
         },
         "inset": 16,
@@ -139,12 +140,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 110.5,
+          "x": 142.6,
           "y": 77,
-          "w": 95.3,
+          "w": 101,
           "h": 35
         },
-        "inset": 120.5,
+        "inset": 152.6,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
@@ -163,10 +164,11 @@
           "h": 26
         },
         "inset": 25,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -184,10 +186,11 @@
           "h": 26
         },
         "inset": 173,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -203,7 +206,7 @@
           "x": 0,
           "y": 147,
           "w": 327,
-          "h": 666
+          "h": 656
         },
         "inset": 0,
         "padding": "0px 0px 0px 0px",
@@ -214,7 +217,7 @@
         "rect": {
           "x": 16,
           "y": 147,
-          "w": 272,
+          "w": 258.3,
           "h": 28
         },
         "inset": 16,
@@ -227,11 +230,11 @@
           "--nuiget-header-transform"
         ]
       },
-      "package-row-newtonsoft.json": {
+      "package-row-microsoft.extensions.dependencyinjection.abstractions": {
         "rect": {
           "x": 0,
           "y": 175,
-          "w": 327,
+          "w": 319,
           "h": 72
         },
         "inset": 16,
@@ -250,25 +253,26 @@
       },
       "row-action-uninstall": {
         "rect": {
-          "x": 299,
+          "x": 291,
           "y": 200,
           "w": 22,
           "h": 22
         },
-        "inset": 299,
+        "inset": 291,
         "padding": "0px 0px 0px 0px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-list-active-icon"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
-      "package-row-serilog": {
+      "package-row-microsoft.extensions.configuration.environmentvariables": {
         "rect": {
           "x": 0,
           "y": 247,
-          "w": 327,
+          "w": 319,
           "h": 72
         },
         "inset": 16,
@@ -285,8 +289,8 @@
       "section-header-transitive": {
         "rect": {
           "x": 16,
-          "y": 320,
-          "w": 295,
+          "y": 1256,
+          "w": 287,
           "h": 28
         },
         "inset": 16,
@@ -304,7 +308,7 @@
           "x": 328,
           "y": 77,
           "w": 604,
-          "h": 736
+          "h": 726
         },
         "inset": 328,
         "padding": "0px 0px 0px 0px",
@@ -313,12 +317,12 @@
       },
       "uninstall-button": {
         "rect": {
-          "x": 560.4,
+          "x": 552.4,
           "y": 130.2,
           "w": 70.3,
           "h": 26
         },
-        "inset": 569.4,
+        "inset": 561.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -330,13 +334,14 @@
           "--nuiget-color-button-secondary-fg",
           "--nuiget-font-size-label",
           "--nuiget-control-line-height"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "version-selector": {
         "rect": {
           "x": 411.4,
           "y": 160.2,
-          "w": 141,
+          "w": 133,
           "h": 26
         },
         "inset": 418.4,
@@ -350,16 +355,17 @@
           "--nuiget-radius-control",
           "--nuiget-color-dropdown-bg",
           "--nuiget-color-dropdown-fg"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "install-update-button": {
         "rect": {
-          "x": 560.4,
+          "x": 552.4,
           "y": 160.2,
           "w": 70.3,
           "h": 26
         },
-        "inset": 569.4,
+        "inset": 561.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -372,7 +378,8 @@
           "--nuiget-font-size-label",
           "--nuiget-control-line-height",
           "--nuiget-opacity-disabled"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "details-tab-details": {
         "rect": {
@@ -389,7 +396,8 @@
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",
           "--nuiget-tab-transform"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "details-tab-readme": {
         "rect": {
@@ -407,32 +415,34 @@
           "--nuiget-color-tab-active-fg",
           "--nuiget-tab-font-size",
           "--nuiget-tab-transform"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "readme-content": {
         "rect": {
           "x": 328,
           "y": 242.2,
           "w": 604,
-          "h": 570.8
+          "h": 560.8
         },
         "inset": 348,
         "padding": "20px 20px 20px 20px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-inset-details"
-        ]
+        ],
+        "composed": "main-details-readme"
       }
     },
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 607,
+          "x": 594,
           "y": 8,
-          "w": 144,
+          "w": 157,
           "h": 26
         },
-        "inset": 614,
+        "inset": 601,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -505,7 +515,7 @@
           "h": 26
         },
         "inset": 23,
-        "padding": "0px 28px 0px 6px",
+        "padding": "0px 24px 0px 6px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
@@ -538,7 +548,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 104.5,
+          "w": 138.5,
           "h": 35
         },
         "inset": 16,
@@ -555,12 +565,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 110.5,
+          "x": 144.5,
           "y": 77,
-          "w": 95.3,
+          "w": 102.3,
           "h": 35
         },
-        "inset": 120.5,
+        "inset": 154.5,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
@@ -579,10 +589,11 @@
           "h": 26
         },
         "inset": 25,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -600,10 +611,11 @@
           "h": 26
         },
         "inset": 173,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -630,7 +642,7 @@
         "rect": {
           "x": 16,
           "y": 147,
-          "w": 272,
+          "w": 255,
           "h": 22
         },
         "inset": 16,
@@ -643,11 +655,11 @@
           "--nuiget-header-transform"
         ]
       },
-      "package-row-newtonsoft.json": {
+      "package-row-microsoft.extensions.dependencyinjection.abstractions": {
         "rect": {
           "x": 0,
           "y": 169,
-          "w": 327,
+          "w": 317,
           "h": 72
         },
         "inset": 16,
@@ -666,25 +678,26 @@
       },
       "row-action-uninstall": {
         "rect": {
-          "x": 299,
+          "x": 289,
           "y": 194,
           "w": 22,
           "h": 22
         },
-        "inset": 299,
+        "inset": 289,
         "padding": "0px 0px 0px 0px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-list-active-icon"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
-      "package-row-serilog": {
+      "package-row-microsoft.extensions.configuration.environmentvariables": {
         "rect": {
           "x": 0,
           "y": 241,
-          "w": 327,
+          "w": 317,
           "h": 72
         },
         "inset": 16,
@@ -701,8 +714,8 @@
       "section-header-transitive": {
         "rect": {
           "x": 16,
-          "y": 314,
-          "w": 295,
+          "y": 1250,
+          "w": 285,
           "h": 22
         },
         "inset": 16,
@@ -729,12 +742,12 @@
       },
       "uninstall-button": {
         "rect": {
-          "x": 560.4,
+          "x": 552.4,
           "y": 130.2,
           "w": 70.3,
           "h": 26
         },
-        "inset": 569.4,
+        "inset": 561.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -746,13 +759,14 @@
           "--nuiget-color-button-secondary-fg",
           "--nuiget-font-size-label",
           "--nuiget-control-line-height"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "version-selector": {
         "rect": {
           "x": 411.4,
           "y": 160.2,
-          "w": 141,
+          "w": 133,
           "h": 26
         },
         "inset": 418.4,
@@ -766,16 +780,17 @@
           "--nuiget-radius-control",
           "--nuiget-color-dropdown-bg",
           "--nuiget-color-dropdown-fg"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "install-update-button": {
         "rect": {
-          "x": 560.4,
+          "x": 552.4,
           "y": 160.2,
           "w": 70.3,
           "h": 26
         },
-        "inset": 569.4,
+        "inset": 561.4,
         "padding": "0px 8px 0px 8px",
         "gap": "normal normal",
         "tokens": [
@@ -788,7 +803,8 @@
           "--nuiget-font-size-label",
           "--nuiget-control-line-height",
           "--nuiget-opacity-disabled"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "details-tab-details": {
         "rect": {
@@ -805,7 +821,8 @@
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",
           "--nuiget-tab-transform"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "details-tab-readme": {
         "rect": {
@@ -823,7 +840,8 @@
           "--nuiget-color-tab-active-fg",
           "--nuiget-tab-font-size",
           "--nuiget-tab-transform"
-        ]
+        ],
+        "composed": "main-details-readme"
       },
       "readme-content": {
         "rect": {
@@ -837,7 +855,8 @@
         "gap": "normal normal",
         "tokens": [
           "--nuiget-inset-details"
-        ]
+        ],
+        "composed": "main-details-readme"
       }
     }
   }
