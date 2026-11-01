@@ -73,9 +73,9 @@
   },
   "main-installed-details.dark-modern.400.png": {
     "status": "baseline",
-    "run": "41251431515",
-    "sha256": "787cdb72afa43fab77f31068c52d1cd4a220d697c9e292826360f642097f0dac",
-    "sidecarSha256": "2e934c588b4d3041c16b1735a82de66406976dcd103901bc03d6d8c3e6e91e1a"
+    "run": "41255841039",
+    "sha256": "d1e842fe84b49accdee010c97f40563ad203f8d342327e7af99a1f311a864e8b",
+    "sidecarSha256": "115c24400a78f0ca9e6a3cab9aa5a343f787c8c12b98e2e2b96cda963800ef53"
   },
   "main-installed-details.light-modern.1200.png": {
     "status": "baseline",
@@ -157,21 +157,21 @@
   },
   "main-installed-single.dark-modern.220.png": {
     "status": "baseline",
-    "run": "41251431515",
-    "sha256": "b6eb97001d59af6e25645264eb69f7f44dacb9fe8be57e258c39edda651e62a7",
-    "sidecarSha256": "18b8d40b5b628ce0a4bf0f978c4941763dbecfc7958612536116cddaa0cdad20"
+    "run": "41255841039",
+    "sha256": "74535d063fa60e4219815076ae499b8530269c74ff4c593736e69c75bdbbac66",
+    "sidecarSha256": "bdcfcdeb3250c2775f723d5b956151ff195bab2470347e566f1d8f3303bf19b5"
   },
   "main-installed-single.dark-modern.400.png": {
     "status": "baseline",
-    "run": "41251431515",
-    "sha256": "a5e104e77b3c6eee92d5d57113ed2958a62e6b1596625943cee790b7a0f78ee8",
-    "sidecarSha256": "54db0ebc4a81380f3467fd1fb3fe3d8fe3f64252e8159d3bb614a9f113bb3bb6"
+    "run": "41255841039",
+    "sha256": "e10b4f2d4245c577a78f2195ae10609e0c3f2a2f60ab8af225e533ef3df83ed5",
+    "sidecarSha256": "ff7d708249027cb888d880c1a97224ccf560ca15d1000bb84899583f22002467"
   },
   "main-installed-single.dark-modern.600.png": {
     "status": "baseline",
-    "run": "41251431515",
-    "sha256": "85dc0e9a19cbdd05ca46582658dbac06f09a96f79828a62bcf5146a3121b962d",
-    "sidecarSha256": "ea470e08f8e3f48addcfbd6408afc8e7a4825f8b96af08b0e510122c354cb142"
+    "run": "41255841039",
+    "sha256": "e7876b2fd3e2be54b099adbeebcb8812b58b1ff8a7ed91f8b01c7881b4578cef",
+    "sidecarSha256": "6bb2eff804ae4454441fa27b06946e81b86f5568c9a2043295a3a5cbb0e8b570"
   },
   "main-installed-single.dark-modern.800.png": {
     "status": "baseline",
