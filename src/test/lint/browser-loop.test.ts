@@ -79,10 +79,10 @@ describe('browser-loop: the command line (UX-P0.28)', () => {
 });
 
 describe('browser-loop: prepare and theme (UX-P0.28)', () => {
-    it('restores every project of the dense workspace but the unsupported one', () => {
+    it('restores every project of the dense workspace but the unsupported and the unresolved one', () => {
         const fixture = path.join(root, DEFAULT_FIXTURE);
         expect(restoreTargets(fixture).map(file => path.relative(fixture, file).split(path.sep).join('/'))).toEqual([
-            'app/Catalog/Catalog.csproj', 'app/Gateway/Gateway.csproj', 'tools/Utility/Utility.csproj',
+            'app/Catalog/Catalog.csproj', 'app/Gateway/Gateway.csproj', 'tools/Empty/Empty.csproj', 'tools/Utility/Utility.csproj',
         ]);
     });
 

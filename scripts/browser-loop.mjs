@@ -5,7 +5,7 @@
 //   node scripts/browser-loop.mjs stop [--port <port>]
 //
 // UX-P0.28. `prepare` copies the fixture (default the dense workspace) to `<data>/fixture` afresh, without its `bin/` and
-// `obj/` folders, restores every project in it except `Unsupported/` (its SDK 8 pin keeps it unsupported), installs the
+// `obj/` folders, restores every project in it except `Unsupported/` (its SDK 8 pin keeps it unsupported) and `Unresolved/` (`$(UndefinedVersion)` cannot restore, NU1015), installs the
 // VSIX into `<data>/server-data` with `code-server --install-extension --force`, checks that the extensions directory holds
 // nUIget alone at the version of `package.json` (upstream #341226: another extension can break activation) and writes the
 // Machine settings file, the one server-side settings file the web client reads. `theme` rewrites that file's
@@ -129,14 +129,14 @@ export function parseArgs(argv) {
 /** The Machine settings file under a data directory. */
 export const machineSettingsFile = data => path.join(data, 'server-data', 'data', 'Machine', 'settings.json');
 
-/** Every project file under `dir` that `prepare` restores: all but those under an `Unsupported` folder, in path order. */
+/** Every project file under `dir` that `prepare` restores: all but those under an `Unsupported` or `Unresolved` folder, in path order. */
 export function restoreTargets(dir) {
     const found = [];
     const walk = folder => {
         for (const name of readdirSync(folder).sort()) {
             const full = path.join(folder, name);
             if (statSync(full).isDirectory()) {
-                if (name !== 'bin' && name !== 'obj' && name !== 'Unsupported') {
+                if (name !== 'bin' && name !== 'obj' && name !== 'Unsupported' && name !== 'Unresolved') {
                     walk(full);
                 }
             } else if (name.endsWith('.csproj')) {

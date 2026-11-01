@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -98,6 +98,32 @@ function uiJob(): string {
     const end = workflow.slice(start + 1).search(/\n {2}[a-z][\w-]*:\n/);
     return end === -1 ? workflow.slice(start) : workflow.slice(start, start + 1 + end);
 }
+
+describe('the two projects of the Installed state cells (UX-P2.8b)', () => {
+    const EMPTY = read('tools/Empty/Empty.csproj');
+    const UNRESOLVED = read('tools/Unresolved/Unresolved.csproj');
+
+    it('has an empty project: no reference at all', () => {
+        expect(items(EMPTY, 'PackageReference')).toEqual([]);
+        expect(EMPTY).not.toContain('Version=');
+    });
+
+    it('has a project with exactly one reference whose version cannot be told', () => {
+        const references = items(UNRESOLVED, 'PackageReference');
+        expect(references.filter(item => item.version?.includes('$('))).toHaveLength(1);
+        expect(references.filter(item => !item.version?.includes('$('))).toHaveLength(1);
+    });
+
+    it('keeps them under tools, out of the props file of app', () => {
+        expect(existsSync(path.join(ROOT, 'app/Empty'))).toBe(false);
+        expect(existsSync(path.join(ROOT, 'app/Unresolved'))).toBe(false);
+    });
+
+    it('restores Empty in the ui job; Unresolved cannot restore (NU1015) and stays out', () => {
+        expect(uiJob()).toContain('dotnet restore tools/Empty/Empty.csproj');
+        expect(uiJob()).not.toContain('tools/Unresolved');
+    });
+});
 
 describe('the UI job and the dense fixture agree (UX-P0.7)', () => {
     it('installs the exact SDK that the Unsupported global.json pins, beside SDK 10', () => {

@@ -312,6 +312,7 @@ jobs:
           dotnet restore app/Gateway/Gateway.csproj
           dotnet restore app/Catalog/Catalog.csproj
           dotnet restore tools/Utility/Utility.csproj
+          dotnet restore tools/Empty/Empty.csproj
           (cd tools/Unsupported && dotnet restore Unsupported.csproj)
 
       # A failed SDK resolution would make the Unsupported project read as supported, and its states would pass.
@@ -444,6 +445,7 @@ jobs:
           dotnet restore app/Gateway/Gateway.csproj
           dotnet restore app/Catalog/Catalog.csproj
           dotnet restore tools/Utility/Utility.csproj
+          dotnet restore tools/Empty/Empty.csproj
           (cd tools/Unsupported && dotnet restore Unsupported.csproj)
 
       - name: Check that the Unsupported project resolves SDK 8.0.425
@@ -532,6 +534,7 @@ jobs:
           dotnet restore app/Gateway/Gateway.csproj
           dotnet restore app/Catalog/Catalog.csproj
           dotnet restore tools/Utility/Utility.csproj
+          dotnet restore tools/Empty/Empty.csproj
           (cd tools/Unsupported && dotnet restore Unsupported.csproj)
 
       - name: Check that the Unsupported project resolves SDK 8.0.425
@@ -641,6 +644,7 @@ jobs:
           dotnet restore app/Gateway/Gateway.csproj
           dotnet restore app/Catalog/Catalog.csproj
           dotnet restore tools/Utility/Utility.csproj
+          dotnet restore tools/Empty/Empty.csproj
           (cd tools/Unsupported && dotnet restore Unsupported.csproj)
 
       - name: Check that the Unsupported project resolves SDK 8.0.425
@@ -727,6 +731,7 @@ jobs:
           dotnet restore app/Gateway/Gateway.csproj
           dotnet restore app/Catalog/Catalog.csproj
           dotnet restore tools/Utility/Utility.csproj
+          dotnet restore tools/Empty/Empty.csproj
           (cd tools/Unsupported && dotnet restore Unsupported.csproj)
 
       - name: Check that the Unsupported project resolves SDK 8.0.425
