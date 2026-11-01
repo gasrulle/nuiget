@@ -214,6 +214,7 @@ if (LANE === 'ui' && LOOK === 'modern') {
                 fs.writeFileSync(path.join(out, `${entry.state}.spec.json`), JSON.stringify({
                     state: entry.state, theme: entry.themes[0], width: entry.widths[0].panel, source: `docs/design/${entry.source}`, vscode: VSBrowser.instance.version, chromium,
                     platform: process.platform, run: process.env.GITHUB_RUN_ID ?? 'local',
+                    ...(Object.values(looks)[0]?.composition ? { composition: Object.values(looks)[0]?.composition } : {}),
                     looks: Object.fromEntries(Object.entries(looks).map(([look, spec]) => [look, spec.elements])),
                 }, null, 2) + '\n');
                 const counts = [...new Set(Object.values(looks).map(spec => Object.keys(spec.elements).length))];
