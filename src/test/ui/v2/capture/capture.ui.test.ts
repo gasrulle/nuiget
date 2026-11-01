@@ -1355,10 +1355,17 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                     const found = await script<string[]>('return [...document.querySelectorAll(".context-view .monaco-menu .action-label")].map(label => label.textContent.trim()).filter(Boolean);');
                     return found.length > 0 ? found : undefined;
                 }, `the labels of ${where}`, 15_000);
-                await driverOf().actions().sendKeys(Key.ESCAPE).perform();
-                await enter();
-                await until('!document.body.classList.contains("vscode-context-menu-visible")', `the menu of ${where} closed`, 15_000);
                 console.warn(`[menu] ${LANE} ${where}: ${labels.join(', ')}`);
+                // Closed from where the keyboard is: the menu in the top document, which has the focus; never by an item.
+                await poll(async () => {
+                    const menus = await driverOf().findElements(By.css('.context-view .monaco-menu'));
+                    if (menus.length === 0) {
+                        return true;
+                    }
+                    await menus[0].sendKeys(Key.ESCAPE);
+                    return undefined;
+                }, `the menu of ${where} closed`, 15_000);
+                await enter();
                 if (labels.join(', ') !== expected) {
                     throw new Error(`[menu] ${where}: ${labels.join(', ')}; expected ${expected}`);
                 }
