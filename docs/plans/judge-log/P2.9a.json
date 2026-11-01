@@ -1,0 +1,243 @@
+{
+  "item": "P2.9a",
+  "runs": [
+    {
+      "runId": "41319633060",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "ade20113",
+      "look": "modern",
+      "workflow": "wf_3df261e5-3f9",
+      "note": "P2.9a moves no pixel: [diff] 54 at 0 px. main-installed-single 932 (02545da7…) and sidebar-sections 300 (628dce03…) are byte-identical to the judged run 41313169910: not re-run. main-updates and main-browse-results differ in bytes inside their masked live regions alone (0 px): one panel each, per the design ruling's DO 8, against main-installed-single's 932 artboard for lack of their own. Nothing new: every standing finding goes to its existing owner.",
+      "captures": {
+        "main-updates": {
+          "png": "captures/41319633060/main-updates.dark-modern.1200.png",
+          "sha256": "b9dbef6d948c691be02e0b51169388937ed5beb3e9ff23b603ff620ddca6d857",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-browse-results": {
+          "png": "captures/41319633060/main-browse-results.dark-modern.1200.png",
+          "sha256": "4fc313b9adf4f8c8742161653e80744d5fa709de13a1c571b1219859947b5574",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 17,
+        "standing": 8,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-browse-results#D5",
+          "state": "main-browse-results",
+          "finding": "[states] The first row's black, transparent package icon is drawn directly on the dark list background with no tile behind it, unlike the tile the artboard draws behind its 36 px icons, so the rocket nearly disappears into the surface.",
+          "severity": "minor",
+          "box": [
+            16,
+            95,
+            36,
+            36
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-browse-results",
+              "finding": "The first row's black, transparent package icon is drawn directly on the dark list background with no tile behind it, unlike the tile the artboard draws behind its 36 px icons, so the rocket nearly disappears into the surface.",
+              "severity": "minor",
+              "box": [
+                16,
+                95,
+                36,
+                36
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the black rocket directly on the list background, sampled at rgb 24,24,24 inside the icon box where the artboard's tile reads about rgb 43,43,43, so it is dim but visible; no rule or measurement covers the tile and the artboard only shows it behind its fallback glyph, so this stays minor and separate from D3.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "refuted": [],
+      "findings": [
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] The split between the list and details panes is a solid 4 px band in #313131 at x 420-423, from y 77 to the bottom, directly against the scrollbar; the artboard draws a single 1 px #2b2b2b separator (x 327) and DS-DIVIDER-6 requires a 1 px separator with a transparent sash at rest, so it reads as a heavy bar rather than a workbench split. | [geometry] The split between the list and details panes is a solid 4 px band (x 420-423, #313131) over the full pane height, while the artboard draws a 1 px #2b2b2b separator at x 327 directly after the scrollbar, with the details panel starting right after it (spec package-details-panel x 328 after list w 327); DS-DIVIDER-6 requires a 1 px separator with a transparent 4 px sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent with `sash.hoverBorder` after 300 ms"
+        },
+        {
+          "id": "main-updates#D4",
+          "state": "main-updates",
+          "finding": "[native] Every package without its own icon shows a saturated orange box glyph with no tile, where the artboard draws a muted package codicon on a dark 36 px tile; this column of orange marks is the loudest colour in the view, is used as decoration rather than a workbench role, and makes the list read as less built-in than the artboard. | [states] Packages without their own icon show a saturated orange box glyph with no tile, where the artboard draws the same kind of row (including the Microsoft.Extensions rows) with a neutral grey 36 px tile and a monochrome package outline, so colour appears in the icon column that the artboard does not have.",
+          "severity": "major",
+          "box": [
+            46,
+            165,
+            36,
+            620
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P7.1",
+          "evidence": "NEW rule of the UX-P2.8b log: a package without a fetched icon shows the `package` codicon on a neutral tile, never the brand image; owner P7.1 (design-advisor, UX-P2.8b-a follow-up 2)",
+          "ruling": "NEW rule of the UX-P2.8b log: a package without a fetched icon shows the `package` codicon on a neutral tile, never the brand image; owner P7.1 (design-advisor, UX-P2.8b-a follow-up 2)"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case; the artboard's same button (select-all-button) reads \"Select All\", and button labels are Title Case. | [states] The toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button at the same place and the microcopy list both read \"Select All\" (Title Case).",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8a-a follow-up 4"
+        },
+        {
+          "id": "main-updates#D3",
+          "state": "main-updates",
+          "finding": "[native] The primary toolbar button reads \"Update all (14)\" in sentence case; button labels are Title Case (\"Update All\"), as the artboard's primary toolbar button in the same position (\"Uninstall Selected (0)\") is. | [states] The toolbar's primary button reads \"Update all (14)\" in sentence case, where button labels must be Title Case and the microcopy list names it \"Update All\"; the artboard's matching toolbar button is Title Case too (\"Uninstall Selected (0)\").",
+          "severity": "major",
+          "box": [
+            296,
+            117,
+            109,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8a-a follow-up 4"
+        },
+        {
+          "id": "main-browse-results#D1",
+          "state": "main-browse-results",
+          "finding": "[native] Browse rows start the icon at x 16 and the name at x 68, with no check column kept, while the artboard's rows and this run's Installed capture put the icon at x 46 and the name at x 98, so the icon and name columns jump 30 px between views of one pane. | [states] Browse rows drop the check column: the package icon starts at x 16 and the name at x 68, while the Installed rows of this pane (artboard and spec, check box at 16, icon at 46, name at 98) sit 30 px further in, so the icon and name columns jump when the view changes, against the rule that a row without a check box keeps the check column's space.",
+          "severity": "major",
+          "box": [
+            16,
+            86,
+            100,
+            708
+          ],
+          "rule": "DS-ROW-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.2",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b): DS-ROW-2 `browse` is pending P3.2 in `measure.ts`; the Browse list's columns are that item's",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b): DS-ROW-2 `browse` is pending P3.2 in `measure.ts`; the Browse list's columns are that item's"
+        },
+        {
+          "id": "main-browse-results#D2",
+          "state": "main-browse-results",
+          "finding": "[native] The split between list and details paints a continuous 4 px band (x 420-423, rgb 49,49,49) directly against the scrollbar thumb, where the artboard draws a 1 px divider (x 327, rgb 43,43,43) and the spec's sash is transparent at rest, so it reads as a heavy bar rather than a workbench separator. | [geometry] The split between the list and details panes paints a solid 4 px stripe (x 420-423, rgb 49,49,49, y 77-802). The artboard draws a 1 px separator (x 327, rgb 43,43,43), the spec puts the details panel 1 px after the list (list ends 327, details starts 328), and the rule asks for a 1 px separator with a transparent sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent with `sash.hoverBorder` after 300 ms"
+        },
+        {
+          "id": "main-browse-results#D3",
+          "state": "main-browse-results",
+          "finding": "[native] Rows without a package icon of their own show a saturated orange 3D box, where the artboard draws a neutral dark tile with the monochrome package codicon, so a column of decorative colour makes the list read less like a built-in view. | [states] Rows without their own icon show a saturated orange cube, where the artboard draws its package fallback as a neutral monochrome package codicon on a dark 36 px tile; the fallback is a custom coloured glyph where a codicon exists, and it is repeated down the list as decoration.",
+          "severity": "major",
+          "box": [
+            16,
+            166,
+            38,
+            630
+          ],
+          "rule": "DS-ICON-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P7.1",
+          "evidence": "NEW rule of the UX-P2.8b log: a package without a fetched icon shows the `package` codicon on a neutral tile, never the brand image; owner P7.1 (design-advisor, UX-P2.8b-a follow-up 2)",
+          "ruling": "NEW rule of the UX-P2.8b log: a package without a fetched icon shows the `package` codicon on a neutral tile, never the brand image; owner P7.1 (design-advisor, UX-P2.8b-a follow-up 2)"
+        },
+        {
+          "id": "main-browse-results#D4",
+          "state": "main-browse-results",
+          "finding": "[native] The Installed badge (20 px, y 86-105) stretches the first row's name line, so its name-to-description gap is 10 px of ink against 8 px in the badge-less row below, and its text lines sit 1 px off the 72 px pitch of the other rows. | [geometry] The first row's text, the only row with a badge, does not sit on the rows' shared lines: its name is 1 px higher and its description and facts lines 1 px lower than in the plain rows (name ink at +12 vs +13, description +34 vs +33, facts +51 vs +50 from the band top). The 20 px Installed badge appears to stretch line 1 past its 20 px box, whereas the artboard's 19 px Vulnerable badge row keeps the same text lines as its plain neighbour.",
+          "severity": "minor",
+          "box": [
+            68,
+            86,
+            312,
+            52
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.2",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b): the Browse row's anatomy and its Installed badge are P3.2's",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b): the Browse row's anatomy and its Installed badge are P3.2's"
+        }
+      ]
+    }
+  ]
+}
