@@ -157,7 +157,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(noRow.map(state => appliesTo(definition, state)), id).toEqual([false, false, false]);
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
-        expect(scopes('SPEC')).toEqual({ header: { pending: 'P2.8a' }, list: { pending: 'P2.8a' }, details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
+        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
@@ -771,14 +771,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const at = (scope: string, testIds: Record<string, SpecElement>, given: SpecLook | undefined = spec, width = 932) =>
             measureLines('main-installed-single', layout({ testIds }), 'modern', {}, undefined, width, given).find(line => line.name === `SPEC@main-installed-single/${scope}`);
         // Within 1 px, tokens not compared.
-        expect(at('header', { 'project-selector': element(600.5, 8, 150, 26) })).toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '1/1 within 1' });
+        expect(at('header', { 'project-selector': element(600.5, 8, 150, 26) })).toMatchObject({ pass: true, status: 'hard', value: '1/1 within 1' });
         // A header id off by 2 is named, and missing is never a pass.
         expect(at('header', { 'project-selector': element(602, 8, 150, 26) })).toMatchObject({ pass: false, value: '0/1 within 1; off: project-selector Δx 2 Δinset 2' });
         expect(at('header', {})).toMatchObject({ pass: false, value: '0/1 within 1; missing: project-selector' });
         // A padding off is named on a control; a row's strings are not compared, its rect is.
         expect(at('header', { 'project-selector': element(600, 8, 150, 26, '2px 0px 0px 0px') })).toMatchObject({ pass: false, value: '1/1 within 1; style: project-selector padding 2px 0px 0px 0px (spec 0px 0px 0px 0px)' });
         // A composed id outside its state and a below-the-fold id are not required; the row's padding differs and passes.
-        expect(at('list', list)).toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
+        expect(at('list', list)).toMatchObject({ pass: true, status: 'hard', value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
         expect(at('list', { ...list, 'package-row-first': element(0, 247, 327, 72) })).toMatchObject({ pass: false, value: expect.stringContaining('off: package-row-first Δy 72') });
         // An id a later item owns prints and leaves the verdict.
         expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
