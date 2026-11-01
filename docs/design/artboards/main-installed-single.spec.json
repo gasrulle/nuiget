@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "41268958580",
+  "run": "41271425370",
   "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
@@ -123,7 +123,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 136.6,
+          "w": 138.6,
           "h": 35
         },
         "inset": 16,
@@ -140,12 +140,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 142.6,
+          "x": 144.6,
           "y": 77,
-          "w": 101,
+          "w": 103,
           "h": 35
         },
-        "inset": 152.6,
+        "inset": 154.6,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
@@ -217,7 +217,7 @@
         "rect": {
           "x": 16,
           "y": 147,
-          "w": 258.3,
+          "w": 256.3,
           "h": 28
         },
         "inset": 16,
@@ -548,7 +548,7 @@
         "rect": {
           "x": 6,
           "y": 77,
-          "w": 138.5,
+          "w": 136.5,
           "h": 35
         },
         "inset": 16,
@@ -565,12 +565,12 @@
       },
       "updates-tab": {
         "rect": {
-          "x": 144.5,
+          "x": 142.5,
           "y": 77,
           "w": 102.3,
           "h": 35
         },
-        "inset": 154.5,
+        "inset": 152.5,
         "padding": "0px 10px 0px 10px",
         "gap": "6px 6px",
         "tokens": [
