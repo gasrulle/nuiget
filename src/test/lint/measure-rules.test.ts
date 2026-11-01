@@ -12,7 +12,7 @@ const noHeights: Heights = {
 };
 
 const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {}): Layout => ({
-    root: true, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined,
+    root: true, height: 803, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined,
     sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined,
     centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
     overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [],
@@ -157,7 +157,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(noRow.map(state => appliesTo(definition, state)), id).toEqual([false, false, false]);
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
-        expect(scopes('SPEC')).toEqual({ 'main-installed': { pending: 'P2.8a' } });
+        expect(scopes('SPEC')).toEqual({ header: { pending: 'P2.8a' }, list: { pending: 'P2.8a' }, details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
@@ -210,7 +210,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
                 const width = rule.widths?.[0] ?? 1200;
                 const theme = rule.themes?.[0] ?? 'dark-modern';
                 const state = CANDIDATES.find(candidate => appliesTo(rule, candidate, width, theme) && rule.scopeStates?.[scope]?.includes(candidate) !== false
-                    && (stateGroup(candidate) === scope || elementGroups(stateGroup(candidate), candidate).includes(scope as never))) as string;
+                    // SPEC's scopes divide the artboard's ids, whatever the state's group (UX-P2.8a).
+                    && (rule.helper === 8 || stateGroup(candidate) === scope || elementGroups(stateGroup(candidate), candidate).includes(scope as never))) as string;
                 expect(state, `a state for ${rule.id}/${scope}`).toBeDefined();
                 const name = stateGroup(state) === scope ? `${rule.id}@${state}` : `${rule.id}@${state}/${scope}`;
                 const line = measureLines(state, layout(), 'modern', {}, undefined, width, undefined, theme).find(candidate => candidate.name === name);
@@ -514,8 +515,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             row('Polly', { compact: true, nameCut: true, versionShown: false }), row('Serilog.Sinks.Console', { compact: true, nameCut: true, versionCut: true }),
             row('Newtonsoft.Json', { compact: true, nameCut: true }),
         ] });
-        expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '2 rows, 2 names cut; badges clipped 0' });
-        expect(lineOf('main-installed-single', layout({ rows: [row('Newtonsoft.Json', { badgesShown: 1, badgesClipped: 1 })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 1' });
+        expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: expect.stringMatching(/^2 rows, 2 names cut; badges clipped 0; version whole ×\d$/) });
+        expect(lineOf('main-installed-single', layout({ rows: [row('Newtonsoft.Json', { badgesShown: 1, badgesClipped: 1 })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: expect.stringMatching(/^1 rows, 0 names cut; badges clipped 1; version whole ×\d$/) });
+        // The facts line yields the authors, never the version (judge main-installed-single#D7, UX-P2.8a).
+        expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: false })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0; version whole ×1' });
+        expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: true })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 0; version whole ×0, 1 cut' });
         expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: { pending: 'P3.7a' }, value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
     });
 
@@ -607,7 +611,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const clipFacts = (badgesShown: number, badgesClipped: number) => ({ list: 'installed-list', compact: false, name: 'Newtonsoft.Json', nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown, badgesClipped, actionsEnd: undefined });
         const narrowHidden = { ...facts({ rows: [row({ icon: small })], listPaneWidth: 210 }), rows: [clipFacts(0, 0)] };
         expect(value('main-installed-single', narrowHidden, 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true, value: 'pane 210: icon 24 (target 24); badges hidden ×1' });
-        expect(value('main-installed-single', narrowHidden, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0' });
+        expect(value('main-installed-single', narrowHidden, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: expect.stringMatching(/^1 rows, 0 names cut; badges clipped 0; version whole ×\d$/) });
         const narrowShown = { ...narrowHidden, rows: [clipFacts(1, 0)] };
         expect(value('main-installed-single', narrowShown, 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: false });
         const wideClipped = { ...facts({ rows: [row()], listPaneWidth: 420 }), rows: [clipFacts(1, 1)] };
@@ -750,22 +754,40 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: true });
     });
 
-    it('compares a state\'s elements with its artboard spec within 1 px at the spec\'s width (helper 8, UX-P0.13)', () => {
+    it('compares a state\'s elements with its artboard spec within 1 px at the spec\'s width, scope by scope (helper 8, UX-P0.13, UX-P2.8a)', () => {
         const element = (x: number, y: number, w: number, h: number, padding = '0px 0px 0px 0px'): SpecElement => ({ rect: { x, y, w, h }, inset: x, padding, gap: 'normal normal' });
-        const spec: SpecLook = { 'tab-bar': { ...element(0, 40, 932, 35), tokens: ['--nuiget-inset'] }, 'installed-list': element(0, 110, 932, 693), 'package-row-serilog#2': element(0, 182, 932, 72, '0px 16px 0px 16px') };
-        const at = (testIds: Record<string, SpecElement>, given: SpecLook | undefined, width = 932) =>
-            measureLines('main-installed-single', layout({ testIds }), 'modern', {}, undefined, width, given).find(line => line.name === 'SPEC@main-installed-single');
-        // Every element within 1 px, tokens not compared: pending on the screen item.
-        expect(at({ 'tab-bar': element(0.5, 40, 932, 35), 'installed-list': element(0, 110, 932, 693.8), 'package-row-serilog#2': element(0, 182, 932, 72, '0px 16px 0px 16px') }, spec))
-            .toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '3/3 within 1' });
-        // A missing id, a rect 2 px off and a padding off are each named.
-        expect(at({ 'tab-bar': element(0, 40, 932, 35), 'installed-list': element(0, 110, 932, 683), 'package-row-serilog#2': element(0, 182, 932, 72) }, spec)).toMatchObject({
-            pass: false, value: '2/3 within 1; off: installed-list Δh -10; style: package-row-serilog#2 padding 0px 0px 0px 0px (spec 0px 16px 0px 16px)',
-        });
-        expect(at({ 'tab-bar': element(2, 40, 932, 35) }, spec)).toMatchObject({ pass: false, value: '0/3 within 1; missing: installed-list, package-row-serilog#2; off: tab-bar Δx 2 Δinset 2' });
+        const spec: SpecLook = {
+            'project-selector': { ...element(600, 8, 150, 26), tokens: ['--nuiget-inset'] },
+            'installed-list': element(0, 147, 327, 656),
+            'package-row-first': element(0, 175, 327, 72, '0px 6px 0px 16px'),
+            'section-header-transitive': element(0, 1200, 327, 28),
+            'uninstall-selected-button': element(164, 117, 147, 26),
+            'row-action-uninstall': { ...element(299, 200, 22, 22), composed: 'main-details-readme' },
+            'package-details-panel': element(328, 77, 604, 726),
+            'uninstall-button': { ...element(560, 130, 80, 26), composed: 'main-details-readme' },
+            'readme-content': { ...element(328, 242, 604, 561), composed: 'main-details-readme' },
+        };
+        const list = { 'installed-list': element(0, 147, 327, 656), 'package-row-first': element(0, 175, 327, 72), 'uninstall-selected-button': element(164, 117, 147, 26) };
+        const at = (scope: string, testIds: Record<string, SpecElement>, given: SpecLook | undefined = spec, width = 932) =>
+            measureLines('main-installed-single', layout({ testIds }), 'modern', {}, undefined, width, given).find(line => line.name === `SPEC@main-installed-single/${scope}`);
+        // Within 1 px, tokens not compared.
+        expect(at('header', { 'project-selector': element(600.5, 8, 150, 26) })).toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '1/1 within 1' });
+        // A header id off by 2 is named, and missing is never a pass.
+        expect(at('header', { 'project-selector': element(602, 8, 150, 26) })).toMatchObject({ pass: false, value: '0/1 within 1; off: project-selector Δx 2 Δinset 2' });
+        expect(at('header', {})).toMatchObject({ pass: false, value: '0/1 within 1; missing: project-selector' });
+        // A padding off is named on a control; a row's strings are not compared, its rect is.
+        expect(at('header', { 'project-selector': element(600, 8, 150, 26, '2px 0px 0px 0px') })).toMatchObject({ pass: false, value: '1/1 within 1; style: project-selector padding 2px 0px 0px 0px (spec 0px 0px 0px 0px)' });
+        // A composed id outside its state and a below-the-fold id are not required; the row's padding differs and passes.
+        expect(at('list', list)).toMatchObject({ pass: true, status: { pending: 'P2.8a' }, value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
+        expect(at('list', { ...list, 'package-row-first': element(0, 247, 327, 72) })).toMatchObject({ pass: false, value: expect.stringContaining('off: package-row-first Δy 72') });
+        // An id a later item owns prints and leaves the verdict.
+        expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
+        // The later scopes print on their owners.
+        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: false, status: { pending: 'P3.3b' }, value: '0/1 within 1; composed (main-details-readme): uninstall-button; off: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
+        expect(at('readme', {})).toMatchObject({ status: { pending: 'P3.4' }, value: 'composed (main-details-readme): readme-content' });
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
-        expect(at({}, undefined)).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
-        expect(at({}, spec, 800)).toBeUndefined();
+        expect(measureLines('main-installed-single', layout({ testIds: {} }), 'modern', {}, undefined, 932, undefined).find(line => line.name === 'SPEC@main-installed-single/header')).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
+        expect(at('header', {}, spec, 800)).toBeUndefined();
     });
 
     it('holds DS-SCROLL-1 to the look\'s bar thickness in every scrolling list and the root\'s scrollbar-color reset (UX-P0.22)', () => {

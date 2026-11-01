@@ -24,7 +24,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -115,6 +115,8 @@ export interface RuleDefinition {
      * `pendingStates` (design-advisor ruling of 2026-10-24, UX-P0.14, V50). A width matches within 1 px.
      */
     pendingWidths?: Readonly<Record<number, string>>;
+    /** SPEC: the ids a later item owns, printed and left out of the verdict (UX-P2.8a). */
+    pendingIds?: Readonly<Record<string, string>>;
     /**
      * States the rule has no subject in by design (an empty list, a popup over the list), so it prints nothing there
      * instead of `not measurable`; never a state the rule fails in (design-advisor ruling of 2026-10-24, UX-P0.18).
@@ -247,7 +249,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { 'main-installed': { pending: 'P2.8a' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932] }),
+    rule('SPEC', { helper: 8, scopes: { header: { pending: 'P2.8a' }, list: { pending: 'P2.8a' }, details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -455,6 +457,8 @@ export interface Layout {
     detailsButtons: { uninstall: { left: number; height: number } | undefined; update: { left: number; height: number } | undefined };
     /** The webview's width (PF-3a's 1200). */
     width: number;
+    /** The root's height: a spec element at or below it is below the fold (SPEC, UX-P2.8a). */
+    height: number;
     rows: RowFacts[];
     chrome: Chrome;
     /** The top of the first Installed or Updates row (MS-8's first-row y). */
@@ -509,6 +513,8 @@ export interface SpecElement {
     gap: string;
     /** The artboard's `--nuiget-*` names; not compared (UX-P0.27a's ruling, DO 10). */
     tokens?: string[];
+    /** The state this element is compared in, when the artboard composes it beyond the state it specifies (UX-P2.8a). */
+    composed?: string;
 }
 
 /** The elements of one look of an artboard spec, by test id (a repeated id as `id#2`). */
@@ -519,6 +525,8 @@ export interface ArtboardSpec {
     state: string;
     theme: string;
     width: number;
+    /** What the artboard draws beyond the state's rest (UX-P2.8a). */
+    composition?: string;
     looks: Partial<Record<'modern' | 'classic', SpecLook>>;
 }
 
@@ -1318,8 +1326,10 @@ const endOfP0 = {
 const rootBox = root.getBoundingClientRect();
 const testIds = {};
 for (const el of root.querySelectorAll('[data-testid]')) {
-    const r = el.getBoundingClientRect();
-    const s = getComputedStyle(el);
+    // A row's wrapper is presentational: the option is the band the spec draws (UX-P2.2, UX-P2.8a).
+    const box = /^package-row-/.test(el.dataset.testid) ? el.querySelector('.nuiget-row-option') || el : el;
+    const r = box.getBoundingClientRect();
+    const s = getComputedStyle(box);
     let key = el.dataset.testid;
     for (let n = 2; key in testIds; n++) key = el.dataset.testid + '#' + n;
     testIds[key] = {
@@ -1344,7 +1354,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1904,9 +1914,12 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
             const clipped = rows.reduce((sum, row) => sum + (row.compact ? 0 : row.badgesClipped), 0);
             const plain = rows.filter(row => !row.nameEllipsis).length;
             const cut = rows.filter(row => row.nameCut).length;
+            // The facts line yields the authors, never the version (judge main-installed-single#D7, UX-P2.8a).
+            const comfortableVersions = rows.filter(row => !row.compact && row.versionShown);
+            const versionCut = comfortableVersions.filter(row => row.versionCut).length;
             return {
-                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}`}`,
-                pass: early.length === 0 && plain === 0 && clipped === 0,
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}`,
+                pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0,
             };
         }
         default:
@@ -2495,15 +2508,29 @@ function sameLength(actual: string, expected: string, tolerance: number): boolea
  * within the tolerance, and its padding and gap equal within it. The spec's `tokens` are the artboard's names, not the
  * token file's, and are not compared (UX-P0.27a's ruling, DO 10).
  */
-function evaluateSpec(layout: Layout, spec: SpecLook | undefined, tolerance: number): { value: string; pass: boolean } {
+/** SPEC's scopes by test id; `list` is every other id (UX-P2.8a). */
+const SPEC_SCOPE_IDS: Readonly<Partial<Record<Scope, readonly string[]>>> = {
+    header: ['project-selector', 'source-selector', 'source-settings', 'refresh-button', 'search-input'],
+    details: ['package-details-panel', 'uninstall-button', 'version-selector', 'install-update-button', 'details-tab-details', 'details-tab-readme'],
+    readme: ['readme-content'],
+};
+const SPEC_NAMED = Object.values(SPEC_SCOPE_IDS).flat();
+
+function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: RuleDefinition, scope: Scope, state: string): { value: string; pass: boolean } {
+    const tolerance = definition.tolerance;
     if (spec === undefined) {
         return { value: `${NOT_MEASURABLE} (no artboard spec for this capture's theme and width)`, pass: false };
     }
-    const ids = Object.keys(spec);
-    const missing = ids.filter(id => layout.testIds[id] === undefined);
+    const inScope = Object.keys(spec).filter(id => (scope === 'list' ? !SPEC_NAMED.includes(id) : SPEC_SCOPE_IDS[scope]?.includes(id)));
+    const composed = inScope.filter(id => spec[id].composed !== undefined && spec[id].composed !== state);
+    const belowFold = inScope.filter(id => !composed.includes(id) && spec[id].rect.y >= layout.height);
+    const required = inScope.filter(id => !composed.includes(id) && !belowFold.includes(id));
+    const missing = required.filter(id => layout.testIds[id] === undefined);
     const off: string[] = [];
+    const later: string[] = [];
     const styleOff: string[] = [];
-    for (const id of ids) {
+    let pendingCount = 0;
+    for (const id of required) {
         const actual = layout.testIds[id];
         if (actual === undefined) {
             continue;
@@ -2514,8 +2541,19 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, tolerance: num
             h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset),
         };
         const named = Object.entries(deltas).filter(([, delta]) => Math.abs(delta) > tolerance);
+        const owner = definition.pendingIds?.[id];
         if (named.length > 0) {
-            off.push(`${id} ${named.map(([key, delta]) => `Δ${key} ${delta}`).join(' ')}`);
+            const text = `${id} ${named.map(([key, delta]) => `Δ${key} ${delta}`).join(' ')}`;
+            if (owner === undefined) {
+                off.push(text);
+            } else {
+                later.push(`pending ${owner}: ${text}`);
+                pendingCount++;
+            }
+        }
+        // A row's option overlays its action in the end slot where the artboard lays it out in flow: rect and inset compare, the strings do not.
+        if (/^package-row-/.test(id)) {
+            continue;
         }
         const lengths = (text: string) => text.split(' ');
         const padding = lengths(actual.padding).every((length, index) => sameLength(length, lengths(expected.padding)[index] ?? '', tolerance));
@@ -2524,8 +2562,14 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, tolerance: num
             styleOff.push(`${id}${padding ? '' : ` padding ${actual.padding} (spec ${expected.padding})`}${gap ? '' : ` gap ${actual.gap} (spec ${expected.gap})`}`);
         }
     }
-    const within = ids.length - missing.length - off.length;
-    const parts = [`${within}/${ids.length} within ${tolerance}`];
+    const within = required.length - missing.length - off.length - pendingCount;
+    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}`] : [];
+    if (composed.length > 0) {
+        parts.push(`composed (${spec[composed[0]].composed}): ${composed.join(', ')}`);
+    }
+    if (belowFold.length > 0) {
+        parts.push(`below the fold: ${belowFold.join(', ')}`);
+    }
     if (missing.length > 0) {
         parts.push(`missing: ${missing.join(', ')}`);
     }
@@ -2535,6 +2579,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, tolerance: num
     if (styleOff.length > 0) {
         parts.push(`style: ${styleOff.join('; ')}`);
     }
+    parts.push(...later);
     return { value: parts.join('; '), pass: missing.length === 0 && off.length === 0 && styleOff.length === 0 };
 }
 
@@ -2545,7 +2590,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
     }
     if (definition.helper === 8) {
-        return evaluateSpec(layout, spec, tolerance);
+        return evaluateSpec(layout, spec, definition, scope, state);
     }
     const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
         ?? evaluateFocusAndState(definition, scope, layout, look) ?? evaluateType(definition, layout, look);
@@ -2711,7 +2756,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
         if (!appliesTo(definition, state, width ?? layout.width, theme)) {
             continue;
         }
-        for (const scope of [group, ...elementGroups(group, state)] as Scope[]) {
+        for (const scope of (definition.helper === 8 ? Object.keys(definition.scopes) : [group, ...elementGroups(group, state)]) as Scope[]) {
             const declared = definition.scopes[scope];
             if (declared === undefined || definition.scopeStates?.[scope]?.includes(state) === false) {
                 continue;

@@ -583,6 +583,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().rows[0].authors).toMatchObject({ width: 100, room: 154 });
     });
 
+    it('measures a row hook on its option and records the root\'s height (SPEC, UX-P2.8a)', () => {
+        document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,932,803"><div class="nuiget-row" data-testid="package-row-serilog" data-rect="0,100,327,172"><div class="nuiget-row-option" style="padding-left: 16px" data-rect="0,101,319,172"></div></div></main>`;
+        const layout = collect();
+        expect(layout.height).toBe(803);
+        expect(layout.testIds['package-row-serilog']).toMatchObject({ rect: { x: 0, y: 101, w: 319, h: 71 }, inset: 16 });
+    });
+
     it('reads the rows with a muted check mark, their status and their group (UX-P2.8a)', () => {
         document.body.innerHTML = `<main class="nuiget-main" data-testid="nuiget-app" data-rect="0,0,600,700">
           <div class="nuiget-row" data-row-kind="group" data-testid="group-row-direct" data-rect="0,0,600,22"></div>
