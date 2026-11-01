@@ -23,6 +23,7 @@ import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
 import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { registerOperationFeedback } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
+import { registerRowMenuCommands } from './host/rowMenu';
 import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
 import { sweepLegacyState } from './host/legacyState';
 import { SidebarHost } from './host/SidebarHost';
@@ -352,6 +353,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         MainPanelHost.createOrShow(services, { projectPath: projectPathFromCommandArg(arg), initialTab: 'installed' });
     });
     register('nuiget.refreshPackages', () => catalog.invalidate({ kind: 'workspace' }, 'manual-refresh'));
+    registerRowMenuCommands(services, register);
     register('nuiget.sidebar.selectSource', () => sidebar.showSourcePicker());
     register('nuiget.sidebar.selectProject', () => sidebar.showProjectPicker());
     register('nuiget.sidebar.togglePrerelease', () => sidebar.togglePrerelease());

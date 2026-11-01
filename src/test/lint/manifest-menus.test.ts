@@ -75,9 +75,27 @@ describe('package.json menus', () => {
         }
     });
 
-    it('the command palette hides the sidebar-only commands', () => {
+    it('the row menu names both webviews and shows each command on its sections, read-only rows without a write (UX-P2.9a)', () => {
+        const entries = (menus as Record<string, Array<{ command: string; when?: string; group?: string }>>)['webview/context'];
+        const clause = (command: string): string => entries.find(entry => entry.command === `nuiget.row.${command}`)?.when ?? '';
+        const both = "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && ";
+        const ANY = "(webviewSection == 'installedRow' || webviewSection == 'updateRow' || webviewSection == 'browseRow' || webviewSection == 'transitiveRow')";
+        expect(Object.fromEntries(entries.map(entry => [entry.command.replace('nuiget.row.', ''), [entry.when, entry.group]]))).toEqual({
+            installLatest: [`${both}webviewSection == 'browseRow' && (!nuiget.installed || nuiget.partial)`, '1_write@1'],
+            installVersion: [`${both}webviewSection == 'browseRow' && (!nuiget.installed || nuiget.partial)`, '1_write@2'],
+            updateLatest: [`${both}webviewSection == 'updateRow' && !nuiget.floating && !nuiget.readOnly`, '1_write@3'],
+            updateVersion: [`${both}webviewSection == 'updateRow' && !nuiget.readOnly`, '1_write@4'],
+            changeVersion: [`${both}(webviewSection == 'installedRow' || (webviewSection == 'browseRow' && nuiget.installed)) && !nuiget.readOnly`, '1_write@5'],
+            uninstall: [`${both}(webviewSection == 'installedRow' || webviewSection == 'updateRow' || (webviewSection == 'browseRow' && nuiget.installed)) && !nuiget.readOnly`, '1_write@6'],
+            copyId: [both + ANY, '2_copy@1'],
+            viewDetails: [both + ANY, '3_view@1'],
+        });
+        expect(clause('uninstall')).toContain('!nuiget.readOnly');
+    });
+
+    it('the command palette hides the sidebar-only and row menu commands', () => {
         const hidden = (menus.commandPalette ?? []).filter(entry => entry.when === 'false').map(entry => entry.command).sort();
-        const sidebarOnly = manifest.contributes.commands.map(entry => entry.command).filter(command => command.startsWith('nuiget.sidebar.'));
+        const sidebarOnly = manifest.contributes.commands.map(entry => entry.command).filter(command => command.startsWith('nuiget.sidebar.') || command.startsWith('nuiget.row.'));
         expect(hidden).toEqual([...sidebarOnly, 'nuiget.refreshPackages'].sort());
         // What the palette offers: the manager and the two cache commands.
         const offered = manifest.contributes.commands.map(entry => entry.command).filter(command => !hidden.includes(command));

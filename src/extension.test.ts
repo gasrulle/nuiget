@@ -153,7 +153,7 @@ describe('extension (2.0 composition root)', () => {
         await start();
 
         const registered = mockCommands.registerCommand.mock.calls.map(call => call[0]);
-        expect(contributed).toHaveLength(12);
+        expect(contributed).toHaveLength(20);
         expect([...registered].sort()).toEqual([...contributed].sort());
     });
 

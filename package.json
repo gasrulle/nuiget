@@ -139,6 +139,38 @@
             {
                 "command": "nuiget.clearSdkVersionCache",
                 "title": "nUIget: Clear SDK Version Cache"
+            },
+            {
+                "command": "nuiget.row.installLatest",
+                "title": "Install Latest Version"
+            },
+            {
+                "command": "nuiget.row.installVersion",
+                "title": "Install Version..."
+            },
+            {
+                "command": "nuiget.row.uninstall",
+                "title": "Uninstall"
+            },
+            {
+                "command": "nuiget.row.changeVersion",
+                "title": "Change Version..."
+            },
+            {
+                "command": "nuiget.row.updateLatest",
+                "title": "Update to Latest Version"
+            },
+            {
+                "command": "nuiget.row.updateVersion",
+                "title": "Update to Version..."
+            },
+            {
+                "command": "nuiget.row.copyId",
+                "title": "Copy Package ID"
+            },
+            {
+                "command": "nuiget.row.viewDetails",
+                "title": "View Package Details"
             }
         ],
         "menus": {
@@ -177,6 +209,38 @@
                 },
                 {
                     "command": "nuiget.sidebar.refresh",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.installLatest",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.installVersion",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.uninstall",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.changeVersion",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.updateLatest",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.updateVersion",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.copyId",
+                    "when": "false"
+                },
+                {
+                    "command": "nuiget.row.viewDetails",
                     "when": "false"
                 }
             ],
@@ -241,6 +305,48 @@
                     "command": "nuiget.sidebar.openFullView",
                     "when": "view == nuiget.sidebarView",
                     "group": "navigation@5"
+                }
+            ],
+            "webview/context": [
+                {
+                    "command": "nuiget.row.installLatest",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && webviewSection == 'browseRow' && (!nuiget.installed || nuiget.partial)",
+                    "group": "1_write@1"
+                },
+                {
+                    "command": "nuiget.row.installVersion",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && webviewSection == 'browseRow' && (!nuiget.installed || nuiget.partial)",
+                    "group": "1_write@2"
+                },
+                {
+                    "command": "nuiget.row.updateLatest",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && webviewSection == 'updateRow' && !nuiget.floating && !nuiget.readOnly",
+                    "group": "1_write@3"
+                },
+                {
+                    "command": "nuiget.row.updateVersion",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && webviewSection == 'updateRow' && !nuiget.readOnly",
+                    "group": "1_write@4"
+                },
+                {
+                    "command": "nuiget.row.changeVersion",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && (webviewSection == 'installedRow' || (webviewSection == 'browseRow' && nuiget.installed)) && !nuiget.readOnly",
+                    "group": "1_write@5"
+                },
+                {
+                    "command": "nuiget.row.uninstall",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && (webviewSection == 'installedRow' || webviewSection == 'updateRow' || (webviewSection == 'browseRow' && nuiget.installed)) && !nuiget.readOnly",
+                    "group": "1_write@6"
+                },
+                {
+                    "command": "nuiget.row.copyId",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && (webviewSection == 'installedRow' || webviewSection == 'updateRow' || webviewSection == 'browseRow' || webviewSection == 'transitiveRow')",
+                    "group": "2_copy@1"
+                },
+                {
+                    "command": "nuiget.row.viewDetails",
+                    "when": "(webviewId == 'nugetManager' || webviewId == 'nuiget.sidebarView') && (webviewSection == 'installedRow' || webviewSection == 'updateRow' || webviewSection == 'browseRow' || webviewSection == 'transitiveRow')",
+                    "group": "3_view@1"
                 }
             ]
         },
