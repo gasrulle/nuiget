@@ -28,7 +28,7 @@ export interface HostServices {
     readonly sources: SourceProvider;
     /** Fired after any operation completes (either surface); hosts forward it as `ops/completed`. */
     readonly onOperationCompleted: Event<OperationOutcome | BulkOutcome>;
-    /** `queue.onProgress`; hosts forward it as `ops/progress`. */
+    /** `queue.onProgress` and what the host reports of the operations it submits itself (ADR-013 Decision 5); hosts forward it as `ops/progress`. */
     readonly onOperationProgress: Event<OperationProgress>;
     readonly onConfigChanged: Event<ExtensionConfig>;
     readonly onProjectsChanged: Event<Project[]>;
@@ -36,6 +36,8 @@ export interface HostServices {
     invalidate(scope: InvalidationScope, reason: InvalidationReason): void;
     /** Emit a completed operation to every surface. */
     announceOperation(outcome: OperationOutcome | BulkOutcome): void;
+    /** Report the progress of an operation the host submitted itself, which no request's stream carries. */
+    announceProgress(progress: OperationProgress): void;
     config(): ExtensionConfig;
     /** Workspace folder (fsPath) containing `projectPath`, or the first folder when none is given; `undefined` without a workspace. */
     workspaceFolderFor(projectPath?: string): string | undefined;
@@ -164,6 +166,12 @@ export function loggerFor(channel: vscode.LogOutputChannel): Logger {
         error: (message, ...args) => channel.error(message as string, ...args),
     };
 }
+
+/** One event out of several, for one listener. */
+export const mergeEvents = <T>(...events: Array<Event<T>>): Event<T> => listener => {
+    const subscriptions = events.map(event => event(listener));
+    return { dispose: () => subscriptions.forEach(subscription => subscription.dispose()) };
+};
 
 /** Small typed broadcast hub used by `extension.ts` to implement `HostServices` events. */
 export class HostEvents {

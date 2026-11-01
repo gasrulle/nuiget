@@ -7,8 +7,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { redact } from '../core/logging';
-import { ALL_PROJECTS, type ContextMenuRequest } from '../protocol';
-import { operations, settleOperation, sourceDirectory } from './handlers';
+import { ALL_PROJECTS, type ContextMenuRequest, type OperationKind } from '../protocol';
+import { operations, sourceDirectory, submitFromHost } from './handlers';
 import { MainPanelHost } from './MainPanelHost';
 import { pickProjectsForInstall, pickSingleProject, pickVersion, type ContextMenuAction } from './pickers';
 import type { HostServices } from './services';
@@ -76,6 +76,7 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
         return false;
     }
 
+    const facts = (kind: OperationKind, projectPaths: string[]) => ({ kind, projectPaths, packageIds: [request.packageId] });
     const snapshot = services.session.snapshot;
     const sourceUrl = request.sourceUrl ?? (snapshot.selectedSource === 'all' ? undefined : snapshot.selectedSource);
     const versionFor = async (fallback?: string) => {
@@ -111,9 +112,9 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
                 if (!await confirmCentralChange(services, targets[0], request.packageId, version)) {
                     return false;
                 }
-                await settleOperation(services, operations.install(services, { projectPath: targets[0], packageId: request.packageId, version, sourceUrl }));
+                await submitFromHost(services, operations.install(services, { projectPath: targets[0], packageId: request.packageId, version, sourceUrl }), facts('install', [targets[0]]));
             } else {
-                await settleOperation(services, operations.bulkInstall(services, { projectPaths: targets, packageId: request.packageId, version }));
+                await submitFromHost(services, operations.bulkInstall(services, { projectPaths: targets, packageId: request.packageId, version }), facts('install', targets));
             }
             return true;
         }
@@ -123,14 +124,14 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
             return false;
         }
         if (action === 'uninstall') {
-            await settleOperation(services, operations.remove(services, { projectPath: target, packageId: request.packageId }));
+            await submitFromHost(services, operations.remove(services, { projectPath: target, packageId: request.packageId }), facts('remove', [target]));
             return true;
         }
         const version = await versionFor();
         if (!version || !await confirmCentralChange(services, target, request.packageId, version)) {
             return false;
         }
-        await settleOperation(services, operations.install(services, { projectPath: target, packageId: request.packageId, version, sourceUrl }));
+        await submitFromHost(services, operations.install(services, { projectPath: target, packageId: request.packageId, version, sourceUrl }), facts('install', [target]));
         return true;
     }
 
@@ -140,13 +141,13 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
             if (!await confirmCentralChange(services, projectPath, request.packageId, request.latestVersion)) {
                 return false;
             }
-            await settleOperation(services, operations.install(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }));
+            await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('install', [projectPath]));
             return true;
         case 'update-latest':
             if (!request.latestVersion || !await confirmCentralChange(services, projectPath, request.packageId, request.latestVersion)) {
                 return false;
             }
-            await settleOperation(services, operations.update(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }));
+            await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('update', [projectPath]));
             return true;
         case 'install-version':
         case 'change-version':
@@ -156,14 +157,14 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
                 return false;
             }
             if (action === 'update-version') {
-                await settleOperation(services, operations.update(services, { projectPath, packageId: request.packageId, version, sourceUrl }));
+                await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('update', [projectPath]));
             } else {
-                await settleOperation(services, operations.install(services, { projectPath, packageId: request.packageId, version, sourceUrl }));
+                await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('install', [projectPath]));
             }
             return true;
         }
         case 'uninstall':
-            await settleOperation(services, operations.remove(services, { projectPath, packageId: request.packageId }));
+            await submitFromHost(services, operations.remove(services, { projectPath, packageId: request.packageId }), facts('remove', [projectPath]));
             return true;
         default:
             return false;

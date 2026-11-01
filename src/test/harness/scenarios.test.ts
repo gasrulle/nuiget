@@ -143,6 +143,38 @@ describe('two-surface harness', () => {
         expect(recomputation.seen).toBe(2);
     });
 
+    it('queued menu operation marks the row busy', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        // One install held inside `dotnet package add`; the menu's uninstall waits behind it.
+        const add = h.dotnet.hold(dotnetCalls.packageAdd());
+        const running = h.operate('sidebar', 'ops/install', { projectPath: A, packageId: 'P1', version: '1.0.0' });
+        await h.settle(() => expect(add.seen).toBe(1));
+        const done = h.command('nuiget.row.uninstall', { webviewSection: 'installedRow', packageId: 'Serilog', projectPath: A, installedVersion: '3.0.0', preventDefaultContextMenuItems: true, webview: 'nuiget.sidebarView' });
+        const queued = { status: 'queued', kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] };
+        await h.settle(() => {
+            for (const webview of [sidebar, main]) {
+                expect(webview.events('ops/progress')).toContainEqual(expect.objectContaining(queued));
+            }
+        });
+        expect(h.statusBar.text).toBe('$(sync~spin) nUIget: 1 running, 1 queued');
+        const reports = (): Array<{ opId: string; status: string }> => sidebar.events('ops/progress') as Array<{ opId: string; status: string }>;
+        const { opId } = reports().find(report => report.status === 'queued' && (report as unknown as { kind: string }).kind === 'remove') as { opId: string };
+        expect(opId).toMatch(UUID);
+
+        add.release();
+        await running.response;
+        await done;
+        await h.settle(() => expect(sidebar.completed().filter(outcome => outcome.opId === opId).map(statusOf)).toEqual(['completed']));
+        const statuses = reports().filter(report => report.opId === opId).map(report => report.status);
+        expect(statuses[0]).toBe('queued');
+        expect(statuses).toContain('running');
+    });
+
     it('queue saturation + exception after admission: the seventh is refused with its ticket, a throwing operation fails and the queue goes on', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];

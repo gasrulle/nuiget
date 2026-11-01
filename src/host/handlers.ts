@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { OperationTicket } from '../core/contracts';
 import type { WorkflowOptions } from '../core/ops';
-import { ALL_PROJECTS, type BulkOutcome, type OperationOutcome, type OperationProgress, type RequestPayload } from '../protocol';
+import { ALL_PROJECTS, type BulkOutcome, type OperationKind, type OperationOutcome, type OperationProgress, type RequestPayload } from '../protocol';
 import { ABORT_DISPOSED, HostRequestError, type WebviewHost } from './WebviewHost';
 import type { HostServices } from './services';
 
@@ -159,6 +159,17 @@ export async function settleOperation<T extends OperationOutcome | BulkOutcome>(
     services.announceOperation(outcome);
     invalidateAfter(services, outcome);
     return outcome;
+}
+
+/**
+ * An operation the host submitted itself (the row menu): no request's stream carries its progress and the queue reports
+ * running work only, so every surface hears here that it waits (ADR-013 Decision 5). A refused ticket reports nothing.
+ */
+export async function submitFromHost<T extends OperationOutcome | BulkOutcome>(services: HostServices, ticket: OperationTicket<T>, facts: { kind: OperationKind; projectPaths: string[]; packageIds: string[] }): Promise<T> {
+    if (ticket.admitted) {
+        services.announceProgress({ opId: ticket.opId, status: 'queued', ...facts });
+    }
+    return settleOperation(services, ticket);
 }
 
 /**

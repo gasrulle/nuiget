@@ -69,6 +69,20 @@ describe('ops slice', () => {
         expect(text('last')).toBe('1 op1 completed');
     });
 
+    it('a queued report of an operation the host submitted marks the row on a surface that ran nothing; running merges into it, the outcome ends it', () => {
+        const facts = { kind: 'remove' as const, projectPaths: [A], packageIds: ['Moq'] };
+        let state = opsReducer(INITIAL_OPS, { type: 'progress', progress: progress('menu', 'queued', facts) });
+        expect(busyPackages(state).size).toBe(1);
+        state = opsReducer(state, { type: 'progress', progress: progress('menu', 'running') });
+        expect(state.active.size).toBe(1);
+        expect(busyPackages(state).size).toBe(1);
+        state = opsReducer(state, { type: 'completed', outcome: removed('menu') });
+        expect(busyPackages(state).size).toBe(0);
+        // A report that arrives after the outcome is an ended operation's.
+        state = opsReducer(state, { type: 'progress', progress: progress('menu', 'queued', facts) });
+        expect(busyPackages(state).size).toBe(0);
+    });
+
     it('R5: a terminal progress report ends the operation; a restore marks no package', async () => {
         const host = mount();
         for (const [index, status] of (['completed', 'partial', 'failed', 'cancelled', 'rejected'] as const).entries()) {

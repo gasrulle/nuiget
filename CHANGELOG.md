@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Installed tab shows where it is loading, and empty or unsupported projects say so in place**
 
 ### Fixed
+- **A package stays marked busy while its operation waits in the queue**
 - **Scrollbars in the package manager are thin again**
 - **No second scrollbar on the Installed tab in All Projects or with the transitive section expanded**
 

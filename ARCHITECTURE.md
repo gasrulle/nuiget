@@ -557,8 +557,8 @@ starts; the other slices ask when they have something to ask for.
   with its transitive rows, `updates`, `browse`) keeps its own selection: `select()` stores it under the view of its
   origin and shows that view, `showView(view)` (called by `MainShell` when the tab or Browse changes; a stable
   callback) shows the view's own selection, asking its versions and details again, and Browse always starts empty.
-- `ops`: operations in progress, by operation id, from `ops/progress` (`running`, `restoring`; the host sends
-  no `queued` event) and, on the surface that asked, from the call: `run(type, payload)` records the operation
+- `ops`: operations in progress, by operation id, from `ops/progress` (the queue's `running`, `restoring`, and `submitFromHost`'s `queued` for an operation the host submits itself)
+  and, on the surface that asked, from the call: `run(type, payload)` records the operation
   at once under an id of the surface, with its kind and the projects and packages read from the payload
   (`touchedBy`), moves it under the host's `opId` with the first chunk of the request (the `queued` chunk of an
   operation that waits) and removes both when the request settles (N61). The last outcome comes from

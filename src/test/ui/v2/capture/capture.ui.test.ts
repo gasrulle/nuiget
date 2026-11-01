@@ -1336,6 +1336,49 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         });
     }
 
+    // UX-P2.9b: the menu is the workbench's, read from the top document; on Linux with the custom title bar it is HTML (ruling).
+    if ((LANE === 'ui' && LOOK === 'modern') || LANE === 'floor') {
+        it('the row menu opens on right-click and Shift+F10 (UX-P2.9b)', async function () {
+            this.timeout(240_000);
+            if (process.platform !== 'linux') {
+                console.warn(`[menu] ${LANE}: not read on ${process.platform}: a native menu cannot be read or closed from the suite`);
+                return;
+            }
+            const manifest = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8')) as { contributes: { commands: Array<{ command: string; title: string }> } };
+            const titleOf = (name: string): string => manifest.contributes.commands.find(entry => entry.command === `nuiget.row.${name}`)?.title ?? name;
+            const expected = ['changeVersion', 'uninstall', 'copyId', 'viewDetails'].map(titleOf).join(', ');
+            const read = async (where: string, enter: () => Promise<void>, open: () => Promise<void>): Promise<void> => {
+                await open();
+                await until('document.body.classList.contains("vscode-context-menu-visible")', `the menu of ${where} visible`, 15_000);
+                await leaveWebview();
+                const labels = await poll(async () => {
+                    const found = await script<string[]>('return [...document.querySelectorAll(".context-view .monaco-menu .action-label")].map(label => label.textContent.trim()).filter(Boolean);');
+                    return found.length > 0 ? found : undefined;
+                }, `the labels of ${where}`, 15_000);
+                await driverOf().actions().sendKeys(Key.ESCAPE).perform();
+                await enter();
+                await until('!document.body.classList.contains("vscode-context-menu-visible")', `the menu of ${where} closed`, 15_000);
+                console.warn(`[menu] ${LANE} ${where}: ${labels.join(', ')}`);
+                if (labels.join(', ') !== expected) {
+                    throw new Error(`[menu] ${where}: ${labels.join(', ')}; expected ${expected}`);
+                }
+            };
+            await freshMainPanel();
+            await gatewayInstalled();
+            const row = 'package-row-newtonsoft.json';
+            await read('right-click', enterMainWebview, async () => driverOf().actions().contextClick(await optionOf(row)).perform());
+            await read('Shift+F10', enterMainWebview, async () => {
+                await (await optionOf(row)).click();
+                await (await driverOf().switchTo().activeElement()).sendKeys(Key.chord(Key.SHIFT, Key.F10));
+            });
+            if (LANE === 'ui') {
+                await openSidebarView();
+                await enterSidebarWebview();
+                await read('sidebar right-click', enterSidebarWebview, async () => driverOf().actions().contextClick(await optionOf('package-row-serilog')).perform());
+            }
+        });
+    }
+
     if (LANE === 'ui' && LOOK === 'modern') {
         // UX-P0.24 (H48): the keyboard paths of interaction model §5, each screen from scratch in Dark Modern at its default
         // width; a key that writes on today's tree (Enter on a main Updates row, Enter or Delete on a sidebar or Installed row,

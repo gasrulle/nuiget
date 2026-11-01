@@ -24,7 +24,7 @@ import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { registerOperationFeedback } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
 import { registerRowMenuCommands } from './host/rowMenu';
-import { HostEvents, createWorkflowDeps, loggerFor, readExtensionConfig, type HostServices } from './host/services';
+import { HostEvents, createWorkflowDeps, loggerFor, mergeEvents, readExtensionConfig, type HostServices } from './host/services';
 import { sweepLegacyState } from './host/legacyState';
 import { SidebarHost } from './host/SidebarHost';
 import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type NuGetSource, type Project } from './protocol';
@@ -136,11 +136,12 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
         context, logger, session, catalog, queue, workflows, mutator, sources,
         contextFor: projectPath => contexts.get(projectPath, workspaceFolderFor(projectPath), { configChain: false }).then(result => result.context),
         onOperationCompleted: events.operationCompleted.event,
-        onOperationProgress: queue.onProgress,
+        onOperationProgress: mergeEvents(queue.onProgress, events.operationProgress.event),
         onConfigChanged: events.configChanged.event,
         onProjectsChanged: events.projectsChanged.event,
         invalidate: (scope, reason) => catalog.invalidate(scope, reason),
         announceOperation: outcome => events.operationCompleted.fire(outcome),
+        announceProgress: progress => events.operationProgress.fire(progress),
         config: readExtensionConfig,
         workspaceFolderFor,
     };

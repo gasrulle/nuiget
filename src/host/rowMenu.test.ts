@@ -5,7 +5,7 @@ import type { HostServices } from './services';
 import { isRowMenuContext, registerRowMenuCommands } from './rowMenu';
 
 const handlers = vi.hoisted(() => ({
-    settleOperation: vi.fn(async () => undefined),
+    submitFromHost: vi.fn(async () => undefined),
     operations: { install: vi.fn((_s, p) => ({ kind: 'install', ...p })), update: vi.fn((_s, p) => ({ kind: 'update', ...p })), remove: vi.fn((_s, p) => ({ kind: 'remove', ...p })), bulkInstall: vi.fn((_s, p) => ({ kind: 'bulkInstall', ...p })) },
     sourceDirectory: vi.fn(() => '/w'),
 }));
@@ -48,7 +48,7 @@ describe('the row menu commands (UX-P2.9a)', () => {
             await commands.get('nuiget.row.uninstall')?.(bad);
         }
         expect(warn).toHaveBeenCalledTimes(7);
-        expect(handlers.settleOperation).not.toHaveBeenCalled();
+        expect(handlers.submitFromHost).not.toHaveBeenCalled();
     });
 
     it('each command submits its typed operation', async () => {
@@ -61,7 +61,7 @@ describe('the row menu commands (UX-P2.9a)', () => {
         expect(handlers.operations.install).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ projectPath: A, version: '2.0.0' }));
         await commands.get('nuiget.row.changeVersion')?.(row());
         expect(pickers.pickVersion).toHaveBeenCalled();
-        expect(handlers.settleOperation).toHaveBeenCalledTimes(4);
+        expect(handlers.submitFromHost).toHaveBeenCalledTimes(4);
     });
 
     it('a central row confirms in a modal naming the projects; Cancel submits nothing', async () => {
@@ -70,17 +70,17 @@ describe('the row menu commands (UX-P2.9a)', () => {
         ask.mockResolvedValueOnce(undefined);
         await commands.get('nuiget.row.updateLatest')?.(row({ webviewSection: 'updateRow', 'nuiget.central': true }));
         expect(ask).toHaveBeenCalledWith(expect.stringContaining('central version'), expect.objectContaining({ modal: true, detail: expect.stringContaining('A') }), 'Update central version');
-        expect(handlers.settleOperation).not.toHaveBeenCalled();
+        expect(handlers.submitFromHost).not.toHaveBeenCalled();
         ask.mockResolvedValueOnce('Update central version' as never);
         await commands.get('nuiget.row.updateLatest')?.(row({ webviewSection: 'updateRow', 'nuiget.central': true }));
-        expect(handlers.settleOperation).toHaveBeenCalledTimes(1);
+        expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
     });
 
     it('a transitive row copies and shows, and writes nothing', async () => {
         const { commands, warn } = setUp();
         await commands.get('nuiget.row.uninstall')?.(row({ webviewSection: 'transitiveRow' }));
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(handlers.settleOperation).not.toHaveBeenCalled();
+        expect(handlers.submitFromHost).not.toHaveBeenCalled();
         await commands.get('nuiget.row.viewDetails')?.(row({ webviewSection: 'transitiveRow' }));
         expect(panel.MainPanelHost.navigateToPackage).toHaveBeenCalledWith(expect.anything(), 'Serilog', '2.0.0');
         await commands.get('nuiget.row.copyId')?.(row({ webviewSection: 'transitiveRow' }));
@@ -101,7 +101,7 @@ describe('the row menu commands (UX-P2.9a)', () => {
         const { commands, warn } = setUp();
         await commands.get('nuiget.row.uninstall')?.(row({ 'nuiget.readOnly': true }));
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(handlers.settleOperation).not.toHaveBeenCalled();
+        expect(handlers.submitFromHost).not.toHaveBeenCalled();
         await commands.get('nuiget.row.copyId')?.(row({ 'nuiget.readOnly': true }));
         expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Serilog');
     });
@@ -110,7 +110,7 @@ describe('the row menu commands (UX-P2.9a)', () => {
         const { commands } = setUp();
         await commands.get('nuiget.row.installLatest')?.(row({ webviewSection: 'browseRow', latestVersion: undefined }));
         await commands.get('nuiget.row.installLatest')?.(row({ webviewSection: 'browseRow', projectPath: ALL_PROJECTS, latestVersion: undefined }));
-        expect(handlers.settleOperation).not.toHaveBeenCalled();
+        expect(handlers.submitFromHost).not.toHaveBeenCalled();
     });
 
     it('an All Projects install leaves out a project with a central entry and names it', async () => {
@@ -130,9 +130,9 @@ describe('the row menu commands (UX-P2.9a)', () => {
         const { commands } = setUp();
         await commands.get('nuiget.row.installLatest')?.(row({ webviewSection: 'browseRow', projectPath: ALL_PROJECTS }));
         expect(pickers.pickProjectsForInstall).toHaveBeenCalled();
-        expect(handlers.settleOperation).toHaveBeenCalledTimes(1);
+        expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
         await commands.get('nuiget.row.uninstall')?.(row({ projectPath: ALL_PROJECTS }));
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Select a specific project for this action.');
-        expect(handlers.settleOperation).toHaveBeenCalledTimes(1);
+        expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
     });
 });

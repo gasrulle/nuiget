@@ -19,7 +19,7 @@ import {
     type SessionSnapshot,
 } from '../protocol';
 import { createMockExtensionContext } from '../test/__mocks__/vscode';
-import { invalidateAfter, registerSharedHandlers, REPORTED_ERROR_LIMIT } from './handlers';
+import { invalidateAfter, registerSharedHandlers, REPORTED_ERROR_LIMIT, submitFromHost } from './handlers';
 import { createWorkflowDeps, HostEvents, renderWebviewHtml, type HostServices } from './services';
 import { SidebarHost } from './SidebarHost';
 import { WebviewHost, type WebviewLike } from './WebviewHost';
@@ -111,6 +111,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         onProjectsChanged: events.projectsChanged.event,
         invalidate,
         announceOperation,
+        announceProgress: vi.fn(),
         config: () => ({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 8, isWindows: false }),
         workspaceFolderFor: () => workspaceFolder,
     };
@@ -711,6 +712,26 @@ describe('services', () => {
             restores: [{ projectPath: appPath, ok: true }, { projectPath: libPath, ok: true }, { projectPath: other, ok: true }],
         });
         expect(invalidate.mock.calls[0]).toEqual([{ kind: 'project', projectPaths: [appPath, libPath, other] }, 'operation']);
+    });
+});
+
+describe('submitFromHost', () => {
+    const outcome = { opId: 'op', status: 'completed', kind: 'remove', projectPath: '/p', packageId: 'P' } as OperationOutcome;
+    const facts = { kind: 'remove' as const, projectPaths: ['/p'], packageIds: ['P'] };
+
+    it('an admitted ticket reports queued with its facts, then settles as any operation does', async () => {
+        const { services, announceOperation } = makeServices();
+        await expect(submitFromHost(services, { opId: 'op', admitted: true, completion: Promise.resolve(outcome), cancel: () => undefined }, facts)).resolves.toBe(outcome);
+        expect(services.announceProgress).toHaveBeenCalledExactlyOnceWith({ opId: 'op', status: 'queued', ...facts });
+        expect(announceOperation).toHaveBeenCalledWith(outcome);
+    });
+
+    it('a refused ticket reports nothing, and its outcome still reaches the surfaces', async () => {
+        const { services, announceOperation } = makeServices();
+        const refused = { ...outcome, status: 'rejected' } as OperationOutcome;
+        await submitFromHost(services, { opId: 'op', admitted: false, completion: Promise.resolve(refused), cancel: () => undefined }, facts);
+        expect(services.announceProgress).not.toHaveBeenCalled();
+        expect(announceOperation).toHaveBeenCalledWith(refused);
     });
 });
 

@@ -16,6 +16,8 @@ export const CONTRIBUTED_COMMANDS = [
     'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.togglePrereleaseOff', 'nuiget.sidebar.toggleRestore',
     'nuiget.sidebar.toggleRestoreOff', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView', 'nuiget.clearHttpCache',
     'nuiget.clearSdkVersionCache',
+    'nuiget.row.installLatest', 'nuiget.row.installVersion', 'nuiget.row.uninstall', 'nuiget.row.changeVersion',
+    'nuiget.row.updateLatest', 'nuiget.row.updateVersion', 'nuiget.row.copyId', 'nuiget.row.viewDetails',
 ];
 
 /** The view type of the 2.0 main panel (`MainPanelHost.viewType`). */
