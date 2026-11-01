@@ -391,10 +391,18 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('holds PF-3a to authors that are not cut, at the 1200 px panel only', () => {
-        const row = (name: string, authorsCut: boolean | undefined, list = 'installed-list') => ({ list, compact: false, name, nameCut: false, nameEllipsis: true, authorsCut, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined });
-        const rows = (cut: boolean, width = 1200) => layout({ width, rows: [row('Serilog', false), row('Dapper', cut), row('Moq', undefined), row('Polly', true, 'updates-list')] });
+        const row = (name: string, authors: { width: number; need: number; room: number } | undefined, list = 'installed-list') => ({ list, compact: false, name, nameCut: false, nameEllipsis: true, authors, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined });
+        const fits = { width: 120, need: 120, room: 140 };
+        const defect = { width: 100, need: 150, room: 140 };
+        const rows = (cut: boolean, width = 1200, dapper = cut ? defect : fits) => layout({ width, rows: [row('Serilog', fits), row('Dapper', dapper), row('Moq', undefined), row('Polly', defect, 'updates-list')] });
         expect(lineOf('main-installed-single', rows(false), 'PF-3a@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: '2 authors, none cut' });
-        expect(lineOf('main-installed-single', rows(true), 'PF-3a@main-installed-single')).toMatchObject({ pass: false, value: 'cut: Dapper (of 2)' });
+        expect(lineOf('main-installed-single', rows(true), 'PF-3a@main-installed-single')).toMatchObject({ pass: false, value: 'cut: Dapper (100 of 140) (of 2)' });
+        // A span that fills the room its line leaves and still overflows is the Extensions ellipsis, not the defect (UX-P2.8a).
+        expect(lineOf('main-installed-single', rows(true, 1200, { width: 140, need: 231, room: 140 }), 'PF-3a@main-installed-single'))
+            .toMatchObject({ pass: true, value: '2 authors, none cut; 1 wider than its line, ellipsized (Dapper 231 > 140)' });
+        // scrollWidth is an integer and the rect is not: 136 against 135.8 is not a clip.
+        expect(lineOf('main-installed-single', rows(true, 1200, { width: 135.8, need: 136, room: 247.3 }), 'PF-3a@main-installed-single')).toMatchObject({ pass: true, value: '2 authors, none cut' });
+        expect(lineOf('main-installed-single', rows(true, 1200, { width: 140, need: 231, room: 140.4 }), 'PF-3a@main-installed-single')).toMatchObject({ pass: true });
         expect(lineOf('main-installed-single', rows(true, 932), 'PF-3a@main-installed-single')).toBeUndefined();
         // The capture's own width decides, not the webview's.
         expect(measureLines('main-installed-single', rows(true, 1185), 'modern', {}, undefined, 1200).find(line => line.name === 'PF-3a@main-installed-single')).toMatchObject({ pass: false });
@@ -478,7 +486,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {
-        const row = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'installed-list', compact: false, name, nameCut: false, nameEllipsis: true, authorsCut: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides });
+        const row = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'installed-list', compact: false, name, nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides });
         const built = layout({
             rows: [row('Serilog', { actionsEnd: 6 }), row('Moq', { actionsEnd: 2 }), row('Polly', { compact: true, actionsEnd: 6 })],
             sections: [{ id: 'direct', variant: 'group', insets: undefined, above: undefined, below: undefined, trailingEnd: 16 }, { id: 'installed', variant: 'pane', insets: undefined, above: undefined, below: undefined, trailingEnd: 2 }],
@@ -596,7 +604,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ rows: [{ ...rest, focusPainted: 1 }] }), 'DS-COLOR-5@main-installed-single/rows')).toMatchObject({ pass: false });
         // DS-ROW-6 hides the label badges at most 250; DS-ROW-5 fails a clipped one above (UX-P2.2).
         const small = { left: 46, right: 70, w: 24, h: 24, centre: 136, radius: '2px' };
-        const clipFacts = (badgesShown: number, badgesClipped: number) => ({ list: 'installed-list', compact: false, name: 'Newtonsoft.Json', nameCut: false, nameEllipsis: true, authorsCut: undefined, versionShown: true, versionCut: false, badgesShown, badgesClipped, actionsEnd: undefined });
+        const clipFacts = (badgesShown: number, badgesClipped: number) => ({ list: 'installed-list', compact: false, name: 'Newtonsoft.Json', nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown, badgesClipped, actionsEnd: undefined });
         const narrowHidden = { ...facts({ rows: [row({ icon: small })], listPaneWidth: 210 }), rows: [clipFacts(0, 0)] };
         expect(value('main-installed-single', narrowHidden, 'DS-ROW-6@main-installed-single')).toMatchObject({ pass: true, value: 'pane 210: icon 24 (target 24); badges hidden ×1' });
         expect(value('main-installed-single', narrowHidden, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0' });

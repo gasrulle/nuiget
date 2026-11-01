@@ -287,14 +287,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
 
     it('collects the rows, the chrome, the overflow offenders and the PF-2 and PF-4 edges (helpers 5 and 6)', () => {
         const layout = collect();
-        expect(layout.rows.map(row => [row.list, row.compact, row.name, row.nameEllipsis, row.authorsCut, row.versionShown, row.versionCut, row.badgesShown, row.actionsEnd])).toEqual([
-            ['installed-list', false, 'Serilog', true, false, true, false, 1, 10], ['installed-list', false, 'Moq', true, undefined, false, false, 0, undefined],
+        expect(layout.rows.map(row => [row.list, row.compact, row.name, row.nameEllipsis, row.authors === undefined, row.versionShown, row.versionCut, row.badgesShown, row.actionsEnd])).toEqual([
+            ['installed-list', false, 'Serilog', true, false, true, false, 1, 10], ['installed-list', false, 'Moq', true, true, false, false, 0, undefined],
         ]);
-        // Authors wider than their box are cut (PF-3a's input).
+        // The width the authors' text needs (PF-3a's input).
         const authors = document.querySelector('.nuiget-row-authors') as HTMLElement;
         Object.defineProperty(authors, 'scrollWidth', { value: 150 });
-        Object.defineProperty(authors, 'clientWidth', { value: 120 });
-        expect(collect().rows[0].authorsCut).toBe(true);
+        expect(collect().rows[0].authors).toMatchObject({ width: 120, need: 150 });
         expect(layout.chrome).toEqual({ 'main-header': { left: 0, top: 0, width: 600, height: 40 }, search: undefined, 'tab-bar': { left: 0, top: 40, width: 600, height: 30 } });
         expect(layout.firstRow).toBe(136);
         // Only section headers are DS-OVERFLOW-2's containers here: the tab label and its count overlapping is not counted.
@@ -571,6 +570,17 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.endOfP0.dividers.header).toBeDefined();
         document.documentElement.style.removeProperty('--nuiget-icon-size-md');
         document.documentElement.style.removeProperty('--nuiget-target-min');
+    });
+
+    it('reads the room the facts line leaves the authors (PF-3a, UX-P2.8a)', () => {
+        const page = (authorsRight: number) => `<main data-testid="nuiget-app" data-rect="0,0,600,700"><div class="nuiget-row nuiget-row--comfortable" data-rect="0,0,600,72"><div class="nuiget-row-option" data-rect="0,0,600,72">
+          <span class="nuiget-row-line" style="column-gap: 6px" data-rect="0,40,200,56"><span class="nuiget-row-version" data-rect="0,40,40,56">2.1.35</span><span class="nuiget-row-authors" data-rect="46,40,${authorsRight},56">Sam Saffron</span></span>
+        </div></div></main>`;
+        document.body.innerHTML = page(200);
+        expect(collect().rows[0].authors).toMatchObject({ width: 154, room: 154 });
+        // A span clipped short of its room: the defect's shape.
+        document.body.innerHTML = page(146);
+        expect(collect().rows[0].authors).toMatchObject({ width: 100, room: 154 });
     });
 
     it('reads the rows with a muted check mark, their status and their group (UX-P2.8a)', () => {

@@ -394,7 +394,8 @@ export interface RowFacts {
     nameCut: boolean;
     nameEllipsis: boolean;
     /** Undefined when the row shows no authors. */
-    authorsCut: boolean | undefined;
+    /** Undefined when the row shows no authors: the span's width, the width its text needs, and the room its line leaves it (the line's content width less its other children and the gaps). */
+    authors: { width: number; need: number; room: number } | undefined;
     versionShown: boolean;
     /** The version ellipsized itself (it collapses before the name, DS-ROW-5). */
     versionCut: boolean;
@@ -966,13 +967,21 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
     const version = option.querySelector('.nuiget-row-version');
     const actions = [...row.querySelectorAll('.nuiget-row-actions > *')].filter(visible);
     const list = row.closest('.nuiget-listbox');
+    const line = authors ? authors.parentElement : null;
+    const authorsFacts = visible(authors) && line ? (() => {
+        const lineStyle = getComputedStyle(line);
+        const others = [...line.children].filter(el => el !== authors && visible(el));
+        const gap = px(lineStyle.columnGap);
+        const room = rectOf(line).width - px(lineStyle.paddingLeft) - px(lineStyle.paddingRight) - px(lineStyle.borderLeftWidth) - px(lineStyle.borderRightWidth) - others.reduce((sum, el) => sum + rectOf(el).width, 0) - gap * others.length;
+        return { width: round(rectOf(authors).width), need: round(authors.scrollWidth), room: round(room) };
+    })() : undefined;
     return {
         list: list && list.dataset.testid ? list.dataset.testid : '',
         compact: row.classList.contains('nuiget-row--compact'),
         name: name ? name.textContent : '',
         nameCut: visible(name) && name.scrollWidth > name.clientWidth,
         nameEllipsis: Boolean(name) && getComputedStyle(name).textOverflow === 'ellipsis',
-        authorsCut: visible(authors) ? authors.scrollWidth > authors.clientWidth : undefined,
+        authors: authorsFacts,
         versionShown: visible(version),
         versionCut: visible(version) && version.scrollWidth > version.clientWidth,
         badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,
@@ -1764,12 +1773,17 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
             };
         }
         case 'PF-3a': {
-            const rows = layout.rows.filter(row => row.list === 'installed-list' && row.authorsCut !== undefined);
+            type Row = Layout['rows'][number];
+            const rows = layout.rows.filter((row): row is Row & { authors: NonNullable<Row['authors']> } => row.list === 'installed-list' && row.authors !== undefined);
             if (rows.length === 0) {
                 return { value: `${NOT_MEASURABLE} (no authors)`, pass: false };
             }
-            const cut = rows.filter(row => row.authorsCut).map(row => row.name);
-            return { value: cut.length === 0 ? `${rows.length} authors, none cut` : `cut: ${cut.join(', ')} (of ${rows.length})`, pass: cut.length === 0 };
+            // 0.5 is the rounding between a rect and the integer scrollWidth, and between two rects. Clipped with room left is the defect (P9.fix-3); a span that fills its room is the Extensions ellipsis.
+            const clipped = rows.filter(row => row.authors.need - row.authors.width > 0.5);
+            const cut = clipped.filter(row => row.authors.room - row.authors.width > 0.5);
+            const ellipsized = clipped.filter(row => !cut.includes(row));
+            const tail = ellipsized.length === 0 ? '' : `; ${ellipsized.length} wider than its line, ellipsized (${ellipsized.map(row => `${row.name} ${row.authors.need} > ${row.authors.room}`).join(', ')})`;
+            return { value: cut.length === 0 ? `${rows.length} authors, none cut${tail}` : `cut: ${cut.map(row => `${row.name} (${row.authors.width} of ${row.authors.room})`).join(', ')} (of ${rows.length})${tail}`, pass: cut.length === 0 };
         }
         case 'PF-4': {
             if (layout.primaryEdges.length === 0) {
