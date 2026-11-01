@@ -145,9 +145,9 @@
   },
   "main-installed-loading.dark-modern.1200.png": {
     "status": "approved",
-    "run": "41310624436",
-    "sha256": "c38ef46049c4e96e7502b977c16acf80db1f128f1578c64ddd6aae04b180aa0f",
-    "sidecarSha256": "6697c6b2d2e92f50542a2564805efdea64599a3e37e9e23a451f08359f3af689"
+    "run": "41313169910",
+    "sha256": "05793ac44f69bc51b7aea7abccfbf5f6c6ac25bc562481644311e571aeae2d28",
+    "sidecarSha256": "1c36cc5dbbb1931ad125543cbcfb7fbce6b3ea023cee9d0542aa1bf36c924331"
   },
   "main-installed-refresh-hover.dark-modern.1200.png": {
     "status": "approved",
