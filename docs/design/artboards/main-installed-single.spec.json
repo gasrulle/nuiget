@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "41271425370",
+  "run": "41294610738",
   "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
@@ -276,12 +276,14 @@
           "h": 72
         },
         "inset": 16,
-        "padding": "0px 6px 0px 16px",
+        "padding": "0px 36px 0px 16px",
         "gap": "8px 8px",
         "tokens": [
           "--nuiget-row-height-comfortable",
           "--nuiget-gap-between",
           "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
           "--nuiget-inset",
           "--nuiget-radius-row"
         ]
@@ -701,12 +703,14 @@
           "h": 72
         },
         "inset": 16,
-        "padding": "0px 6px 0px 16px",
+        "padding": "0px 36px 0px 16px",
         "gap": "8px 8px",
         "tokens": [
           "--nuiget-row-height-comfortable",
           "--nuiget-gap-between",
           "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
           "--nuiget-inset",
           "--nuiget-radius-row"
         ]
