@@ -16,7 +16,8 @@ const product = walk(ROOT).filter(file => file.endsWith('.tsx') && !file.endsWit
 /** Every string of a list's hint: the literal of its `hint=` or of the constant it names, both branches of a ternary. */
 export function hintsOf(source: string): string[] {
     const hints: string[] = [];
-    for (const match of source.matchAll(/\bhint=(?:"([^"]*)"|\{([\s\S]*?)\}\n)/g)) {
+    // The Windows job checks the repository out with CRLF line ends.
+    for (const match of source.replace(/\r\n/g, '\n').matchAll(/\bhint=(?:"([^"]*)"|\{([\s\S]*?)\}\n)/g)) {
         if (match[1] !== undefined) {
             hints.push(match[1]);
             continue;
@@ -73,5 +74,6 @@ describe('a11y-hint-truthful (UX-P2.9a)', () => {
     it('reads a named constant and both branches of a ternary', () => {
         expect(hintsOf("const HINT = 'One; two.';\n<Listbox\n hint={HINT}\n")).toEqual(['One; two.']);
         expect(hintsOf("<Listbox\n hint={ready\n ? 'A.'\n : 'B.'}\n")).toEqual(['A.', 'B.']);
+        expect(hintsOf("const HINT = 'One.';\r\n<Listbox\r\n hint={HINT}\r\n")).toEqual(['One.']);
     });
 });
