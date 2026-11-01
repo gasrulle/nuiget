@@ -74,7 +74,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             icon={src === undefined ? undefined : <img src={src} alt="" />}
             busy={busy}
             selectable={!readOnly}
-            status={busy ? busyStatus(entry.id) : unresolved ? 'Unresolved' : readOnlyReason(entry, result)}
+            status={busy ? busyStatus(entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
             badges={<>
                 {entry.isImplicit ? <Badge label="SDK" title="Added by the .NET SDK; cannot be uninstalled" /> : null}
                 {entry.declaration === 'props' ? <Badge label="props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}

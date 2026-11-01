@@ -21,7 +21,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
         rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, titles: { panel: undefined, details: undefined, dialog: undefined }, headings: [], dividers: { key: '', header: undefined, tabStrips: [], groupLines: [] }, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [], unselectable: [],
-        stateCells: { testIds: [], rows: 0, disabledStatuses: [], skeletonRows: 0, listBusy: false, progressTop: undefined, contentTop: undefined, empties: [], banners: [], roles: [] },
+        stateCells: { testIds: [], rows: 0, disabledVersions: [], skeletonRows: 0, listBusy: false, progressTop: undefined, contentTop: undefined, empties: [], banners: [], roles: [] },
     },
     testIds: {},
     scrollbar: { rootColor: '', slider: '', scrollers: [] },
@@ -71,7 +71,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         for (const id of ['DS-HEIGHT-3', 'DS-ROW-1', 'DS-ROW-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1']) {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
@@ -102,7 +102,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
-        expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+        expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         // UX-P0.12: PF-2, PF-3a and PF-4 where P9.fix-2, -3 and -4 measured; MS-8 hard for chrome (Appendix B).
         expect(scopes('PF-2')).toEqual({ 'main-installed': 'hard' });
         expect(RULES.find(rule => rule.id === 'PF-2')?.states).toEqual(['main-transitive-expanded']);
@@ -378,7 +378,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', modernBadges, 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: true, value: 'count 19×19 (at least 19×19); label 1' });
         expect(lineOf('main-installed-single', badges, 'DS-HEIGHT-10@main-installed-single', 'classic')?.value).toContain('count fontSize 10px (target 11px)');
         // The progress bar only in a loading state.
-        expect(lineOf('main-installed-loading', layout({}, { progress: [2] }), 'DS-HEIGHT-11@main-installed-loading')).toMatchObject({ pass: true, status: { pending: 'P2.8b' } });
+        expect(lineOf('main-installed-loading', layout({}, { progress: [2] }), 'DS-HEIGHT-11@main-installed-loading')).toMatchObject({ pass: true, status: 'hard' });
         expect(lineOf('main-installed-single', layout({}, { progress: [2] }), 'DS-HEIGHT-11@main-installed-single')).toBeUndefined();
     });
 
@@ -699,7 +699,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-unresolved', facts({}), 'DS-COPY-3@main-installed-unresolved')).toBeUndefined();
     });
 
-    it('leaves only the count of a group header unread in the two cells with no list (UX-P2.8b)', () => {
+    it('leaves the group header unread in the two cells with no list (UX-P2.8b)', () => {
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error']);
@@ -708,7 +708,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
         expect(inset.exceptStates).toBeUndefined();
         const cells = (stateCells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...stateCells } } as Layout['endOfP0'] });
-        expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no count on the group header (no list)' });
+        expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
+        expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
+        expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
+        for (const id of ['DS-GRID-2b', 'DS-OVERFLOW-2']) {
+            expect(RULES.find(rule => rule.id === id)?.exceptStates, id).toEqual(['main-installed-loading', 'main-installed-error']);
+        }
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-INSET-3@main-installed-error/headers')).toMatchObject({ pass: true });
         expect(lineOf('main-installed-single', cells({}), 'DS-INSET-3@main-installed-single/headers')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-all', cells({ testIds: ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'] }), 'DS-STATE-1@main-installed-all')).toMatchObject({ pass: false, value: expect.stringContaining('missing: installed-empty-empty.csproj') });
@@ -719,28 +724,30 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(outerScrollVerdict(0, 5)).toEqual({ text: 'outer scroll 0,5', pass: false });
     });
 
-    it('registers the Installed cells in main-installed, pending on this item, with their later owners (UX-P2.8b)', () => {
+    it('holds the Installed cells hard in main-installed, with their later owners (UX-P2.8b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': { pending: 'P2.8b' } });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard' });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         }
     });
 
     it('reads the Installed cells: markers, the bar, the welcome layout, the inline message and the colour roles (UX-P2.8b)', () => {
         const facts = (cells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });
         const line = (state: string, cells: Record<string, unknown>, name: string) => lineOf(state, facts(cells), name);
-        expect(line('main-installed-empty', { testIds: ['installed-empty'] }, 'DS-STATE-1@main-installed-empty')).toMatchObject({ pass: true, status: { pending: 'P2.8b' } });
+        expect(line('main-installed-empty', { testIds: ['installed-empty'] }, 'DS-STATE-1@main-installed-empty')).toMatchObject({ pass: true, status: 'hard' });
         expect(line('main-installed-empty', {}, 'DS-STATE-1@main-installed-empty')).toMatchObject({ pass: false, value: 'present: none; missing: installed-empty' });
         expect(line('main-installed-loading', { testIds: ['installed-progress'], skeletonRows: 3 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: true });
         expect(line('main-installed-loading', { testIds: ['installed-progress'], rows: 2 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: false });
-        expect(line('main-installed-unresolved', { disabledStatuses: ['Unresolved'] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: true });
-        expect(line('main-installed-unresolved', { disabledStatuses: [''] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: false });
+        expect(line('main-installed-unresolved', { disabledVersions: ['unresolved'] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: true });
+        expect(line('main-installed-unresolved', { disabledVersions: [''] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: false });
         expect(line('main-installed-single', {}, 'DS-STATE-1@main-installed-single')).toBeUndefined();
 
-        expect(line('main-installed-revalidating', { progressTop: 148, contentTop: 150, rows: 4, listBusy: true }, 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 4; aria-busy' });
+        expect(line('main-installed-revalidating', { progressTop: 150, contentTop: 150, rows: 4, listBusy: true }, 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 4; aria-busy' });
         expect(line('main-installed-revalidating', { progressTop: 200, contentTop: 150, rows: 4, listBusy: true }, 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: false });
-        expect(line('main-installed-loading', { progressTop: 148, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: true });
+        expect(line('main-installed-loading', { progressTop: 149, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: true });
+        expect(line('main-installed-loading', { progressTop: 0, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
+        expect(line('main-installed-loading', { progressTop: 152, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
         expect(line('main-installed-loading', {}, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
 
         const empty = { textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 260, width: 300 };

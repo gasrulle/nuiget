@@ -149,7 +149,7 @@ const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
 /** One status for the state groups where a rule's elements are rendered. */
 const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
 
-/** The Installed cells with no list yet: the Direct group row has no count badge and no end to read (design ruling DO 4, UX-P2.8b). */
+/** The Installed cells with no list yet: no group row, so no count badge and no gap under a header (design ruling DO 4, follow-up 3, UX-P2.8b). */
 const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error'];
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
@@ -164,16 +164,17 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj'],
 };
 /** DS-COLOR-1, the roles these cells paint; the rest join per screen with their P3 items (UX-P2.8b). */
-const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; property: 'color' | 'backgroundColor'; key: string }> = [
+const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: string; property: 'color' | 'backgroundColor'; key: string }> = [
     { role: 'progress', selector: '.nuiget-progress-bar', property: 'backgroundColor', key: '--vscode-progressBar-background' },
     { role: 'severity glyph', selector: '.nuiget-banner--info .nuiget-banner-icon', property: 'color', key: '--vscode-problemsInfoIcon-foreground' },
     { role: 'severity glyph', selector: '.nuiget-banner--warning .nuiget-banner-icon', property: 'color', key: '--vscode-problemsWarningIcon-foreground' },
     { role: 'severity glyph', selector: '.nuiget-banner--error .nuiget-banner-icon', property: 'color', key: '--vscode-problemsErrorIcon-foreground' },
     { role: 'secondary text', selector: '.nuiget-empty-text, .nuiget-row-message', property: 'color', key: '--vscode-descriptionForeground' },
-    { role: 'skeleton', selector: '.nuiget-skeleton-row', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
+    { role: 'skeleton', selector: '.nuiget-skeleton-row--comfortable', pseudo: '::before', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
+    { role: 'skeleton', selector: '.nuiget-skeleton-row--compact', pseudo: '::after', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
 ];
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
-const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
+const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
@@ -183,7 +184,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
-    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.proximity }),
+    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.proximity, exceptStates: NO_LIST_STATES }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -202,7 +203,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES] }),
-    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
+    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
@@ -214,7 +215,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_LIST_STATES }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -281,11 +282,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': { pending: 'P2.8b' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/ }),
-    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/ }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/ }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/ }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/ }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/ }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -631,7 +632,7 @@ export interface EndOfP0 {
 export interface StateCells {
     testIds: string[];
     rows: number;
-    disabledStatuses: string[];
+    disabledVersions: string[];
     skeletonRows: number;
     listBusy: boolean;
     progressTop: number | undefined;
@@ -1297,7 +1298,7 @@ const contentEl = shown('.nuiget-skeleton-row, .nuiget-row')[0];
 const stateCells = {
     testIds: [...new Set(shown('[data-testid]').map(el => el.dataset.testid))],
     rows: shown('.nuiget-row-option').length,
-    disabledStatuses: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-status')?.textContent || '').trim()),
+    disabledVersions: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-version')?.textContent || '').trim()),
     skeletonRows: shown('.nuiget-skeleton-row').length,
     listBusy: scope.querySelector('[data-testid="installed-list"]')?.getAttribute('aria-busy') === 'true',
     progressTop: progressEl ? rectOf(progressEl).top : undefined,
@@ -1313,7 +1314,7 @@ const stateCells = {
         buttons: el.querySelectorAll('button').length,
         text: (el.querySelector('.nuiget-banner-text')?.textContent || '').trim(),
     })),
-    roles: ${JSON.stringify(ROLE_ELEMENTS)}.flatMap(entry => shown(entry.selector).map(el => ({ role: entry.role, key: entry.key, actual: getComputedStyle(el)[entry.property], expected: resolveKey(entry.key, entry.property) }))),
+    roles: ${JSON.stringify(ROLE_ELEMENTS)}.flatMap(entry => shown(entry.selector).map(el => ({ role: entry.role, key: entry.key, actual: getComputedStyle(el, entry.pseudo || null)[entry.property], expected: resolveKey(entry.key, entry.property) }))),
 };
 // UX-P0.14: the facts of the six rules registered with the theme dump (design-advisor ruling of 2026-10-24).
 const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
@@ -1951,10 +1952,8 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                 if (scope === 'headers' && layout.flatList) {
                     return { value: 'no group header (flat list)', pass: true };
                 }
-                // A first load or a failed read: the group row has no count at its end yet (design ruling DO 4, UX-P2.8b).
-                const cells = layout.endOfP0.stateCells;
-                if (scope === 'headers' && (cells.skeletonRows > 0 || cells.banners.some(banner => banner.severity === 'error'))) {
-                    return { value: 'no count on the group header (no list)', pass: true };
+                if (scope === 'headers' && noListCell(layout)) {
+                    return { value: 'no group header (no list)', pass: true };
                 }
                 return { value: NOT_MEASURABLE, pass: false };
             }
@@ -2451,6 +2450,9 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
         case 'DS-TYPE-5': {
             const titled = layout.sections.filter(section => section.hasTitle === true && section.title !== undefined && (scope === 'sidebar' || section.variant !== 'pane'));
             if (titled.length === 0) {
+                if (scope === 'headers' && noListCell(layout)) {
+                    return { value: 'no group header (no list)', pass: true };
+                }
                 return layout.flatList ? { value: 'no group header (flat list)', pass: true } : notMeasurable('no header');
             }
             const pane = look === 'classic' ? { size: 11, weight: '700', transform: 'uppercase' } : { size: 12, weight: '600', transform: facts.uppercaseHeaders ? 'uppercase' : 'capitalize' };
@@ -2585,6 +2587,12 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
     }
 }
 
+/** A first load or a failed read of a single project: the tree has no group row yet (follow-up 3, UX-P2.8b). */
+function noListCell(layout: Layout): boolean {
+    const cells = layout.endOfP0.stateCells;
+    return cells.skeletonRows > 0 || cells.banners.some(banner => banner.severity === 'error');
+}
+
 /** The Installed cells (design-system.md §9, UX-P2.8b). */
 function evaluateStateCell(definition: RuleDefinition, state: string, facts: EndOfP0): { value: string; pass: boolean } {
     const cells = facts.stateCells;
@@ -2607,8 +2615,8 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             if (state.endsWith('-error') && cells.banners.filter(banner => banner.buttons === 1).length !== 1) {
                 clauses.push('no banner with one button');
             }
-            if (state.endsWith('-unresolved') && !cells.disabledStatuses.includes('Unresolved')) {
-                clauses.push('no disabled row whose status is Unresolved');
+            if (state.endsWith('-unresolved') && !cells.disabledVersions.includes('unresolved')) {
+                clauses.push('no disabled row whose version reads unresolved');
             }
             const present = wanted.filter(id => cells.testIds.includes(id));
             return { value: `present: ${present.join(', ') || (state.endsWith('-unresolved') ? 'Unresolved row' : 'none')}; missing: ${[...missing, ...clauses].join('; ') || 'none'}`, pass: missing.length === 0 && clauses.length === 0 };
@@ -2617,7 +2625,8 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             if (cells.progressTop === undefined) {
                 return notMeasurable('no progress bar');
             }
-            const above = cells.contentTop === undefined || cells.progressTop <= cells.contentTop;
+            // An overlay: the bar's top meets the first row's or skeleton row's, within a pixel on either side.
+            const above = cells.contentTop === undefined || Math.abs(cells.progressTop - cells.contentTop) <= definition.tolerance + 1;
             const content = loading ? cells.skeletonRows === 3 && cells.rows === 0 : cells.rows >= 1 && cells.listBusy;
             return { value: `bar ${above ? 'at list top' : 'below the list top'}; ${loading ? `skeleton ${cells.skeletonRows}, rows ${cells.rows}` : `rows ${cells.rows}${cells.listBusy ? '; aria-busy' : ''}`}`, pass: above && content };
         }
@@ -2855,6 +2864,9 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
                 case 'headers':
                     if (groupBoxes.length === 0 && layout.flatList) {
                         return { value: 'no group header (flat list)', pass: true };
+                    }
+                    if (groupBoxes.length === 0 && noListCell(layout)) {
+                        return { value: 'no group header (no list)', pass: true };
                     }
                     boxes = groupBoxes;
                     break;

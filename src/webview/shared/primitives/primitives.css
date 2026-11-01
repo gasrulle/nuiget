@@ -949,23 +949,53 @@
 .nuiget-skeleton {
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-1);
-    padding: var(--nuiget-space-1) var(--nuiget-space-4);
 }
 
-/* A row that is not there yet. It breathes for as long as the duration tokens allow. */
+/* A row that is not there yet: its anatomy at the row's own insets (DS-ROW-1). It breathes for as long as the duration tokens allow. */
 .nuiget-skeleton-row {
-    border-radius: var(--nuiget-radius-xs);
-    background: var(--nuiget-color-list-hover-bg);
+    position: relative;
     animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) var(--nuiget-easing) infinite alternate;
 }
 
 .nuiget-skeleton-row--compact {
-    height: calc(var(--nuiget-row-height-compact) - var(--nuiget-space-1));
+    height: var(--nuiget-row-height-compact);
+}
+
+.nuiget-skeleton-row--compact::after {
+    content: '';
+    position: absolute;
+    inset-block-start: calc(50% - var(--nuiget-space-4) / 2);
+    inset-inline-start: var(--nuiget-inset-sidebar);
+    inline-size: 60%;
+    block-size: var(--nuiget-space-4);
+    border-radius: var(--nuiget-radius-xs);
+    background: var(--nuiget-color-list-hover-bg);
 }
 
 .nuiget-skeleton-row--comfortable {
-    height: calc(var(--nuiget-row-height-comfortable) - var(--nuiget-space-1));
+    height: var(--nuiget-row-height-comfortable);
+}
+
+.nuiget-skeleton-row--comfortable::before {
+    content: '';
+    position: absolute;
+    inset-block-start: calc((var(--nuiget-row-height-comfortable) - var(--nuiget-icon-size-xl)) / 2);
+    inset-inline-start: calc(var(--nuiget-inset) + var(--nuiget-checkbox-size) + var(--nuiget-space-5));
+    inline-size: var(--nuiget-icon-size-xl);
+    block-size: var(--nuiget-icon-size-xl);
+    border-radius: var(--nuiget-radius-xs);
+    background: var(--nuiget-color-list-hover-bg);
+}
+
+.nuiget-skeleton-row--comfortable::after {
+    content: '';
+    position: absolute;
+    inset-block-start: calc(50% - var(--nuiget-space-5));
+    inset-inline-start: calc(var(--nuiget-inset) + var(--nuiget-checkbox-size) + var(--nuiget-space-5) + var(--nuiget-icon-size-xl) + var(--nuiget-space-6));
+    inline-size: 45%;
+    block-size: var(--nuiget-space-5);
+    border-radius: var(--nuiget-radius-xs);
+    background: var(--nuiget-color-list-hover-bg);
 }
 
 @keyframes nuiget-breathe {

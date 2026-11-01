@@ -368,7 +368,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const list = document.querySelector('.nuiget-list') as HTMLElement;
         list.insertAdjacentHTML('afterbegin', [
             '<div class="nuiget-progress" data-testid="installed-progress" data-rect="0,100,600,102"><div class="nuiget-progress-bar" data-rect="0,100,180,102"></div></div>',
-            '<div class="nuiget-skeleton"><div class="nuiget-skeleton-row" data-rect="0,104,600,172"></div><div class="nuiget-skeleton-row" data-rect="0,176,600,244"></div></div>',
+            '<div class="nuiget-skeleton"><div class="nuiget-skeleton-row nuiget-skeleton-row--comfortable" data-rect="0,104,600,172"></div><div class="nuiget-skeleton-row nuiget-skeleton-row--comfortable" data-rect="0,176,600,244"></div></div>',
             '<div class="nuiget-empty" data-rect="0,250,600,290"><p class="nuiget-empty-text" data-rect="20,250,580,270" data-text="20,250,200,270">No packages installed.</p><button data-rect="20,270,320,290">Add</button></div>',
             '<div class="nuiget-banner nuiget-banner--error" data-rect="0,300,600,330"><svg class="nuiget-banner-icon" data-codicon="error" data-rect="16,306,32,322"></svg><span class="nuiget-banner-text" data-rect="40,306,500,322" data-text="40,306,300,322">It failed. </span><button data-rect="500,304,580,326">Retry</button></div>',
             '<div class="nuiget-row" data-row-kind="message" data-rect="0,340,600,368"><div class="nuiget-row-message" data-rect="0,340,600,368" data-text="40,342,300,366">A sentence. </div></div>',
@@ -381,7 +381,8 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(cells.contentTop).toBeGreaterThanOrEqual(100);
         expect(cells.empties).toEqual([{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 300, width: 600 }]);
         expect(cells.banners).toEqual([{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }]);
-        expect(cells.roles.map(role => role.key)).toEqual(['--vscode-progressBar-background', '--vscode-problemsErrorIcon-foreground', expect.any(String), expect.any(String), expect.any(String), expect.any(String), expect.any(String)].slice(0, cells.roles.length));
+        expect([...new Set(cells.roles.map(role => role.key))]).toEqual(expect.arrayContaining(['--vscode-progressBar-background', '--vscode-problemsErrorIcon-foreground', '--vscode-descriptionForeground', '--vscode-list-hoverBackground']));
+        expect(cells.roles.filter(role => role.role === 'skeleton')).toHaveLength(2);
         expect(collected.copyEnds).toContainEqual({ kind: 'banner', text: 'It failed.' });
         expect(collected.copyEnds).toContainEqual({ kind: 'leaf', text: 'A sentence.' });
         // A message row is not a package row.

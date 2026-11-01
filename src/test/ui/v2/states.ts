@@ -190,7 +190,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-installed-error', 'main', [primary('main')],
         'Utility chosen with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker installed-error).'), diffTolerance: 0 },
     { ...ready('main-installed-unresolved', 'main', [primary('main')],
-        'The Unresolved project: its Serilog reference has no version it can tell, and the row says Unresolved. It is unrestored by design (NU1015), so the Transitive group shows its restore-needed message.', [LIVE_ICONS]), diffTolerance: 0 },
+        'The Unresolved project: its Serilog reference has no version it can tell, and the row says so: its version reads unresolved, its status why. It is unrestored by design (NU1015), so the Transitive group shows its restore-needed message.', [LIVE_ICONS]), diffTolerance: 0 },
     pending('main-updates-unavailable', 'main', 'P3.1b', 'No source answered the update check: the unavailable banner.'),
     pending('main-browse-unavailable', 'main', 'P3.10', 'No source answered the search: the unavailable banner.'),
     pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),

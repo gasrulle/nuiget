@@ -80,6 +80,18 @@ body {
     flex: none;
 }
 
+/* The Installed list's bar lies over the list area's top edge, so the rows do not move when it comes and goes (DS-STATE-2). */
+.nuiget-installed > .nuiget-installed-lists {
+    position: relative;
+}
+
+.nuiget-installed-progress {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    z-index: 1;
+}
+
 /* The revalidation bar lies over the header's bottom edge, so the list does not move when it comes and goes. */
 .nuiget-main-progress {
     position: absolute;

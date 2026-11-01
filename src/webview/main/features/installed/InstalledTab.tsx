@@ -214,11 +214,15 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         };
         if (!allMode) {
             const section = sections[0];
-            if (section !== undefined) {
+            // A project without a result lists nothing: the bar and the skeleton, or the error banner, stand alone (UX-P2.8b).
+            if (section !== undefined && section.result === undefined) {
+                return list;
+            }
+            if (section?.result !== undefined) {
                 const { result, metadata } = section;
-                const shown = result === undefined ? undefined : visibleRows(result, metadata, filter, vulnerableOnly);
-                const nothing = result === undefined || (result.unsupported !== undefined && result.packages.length === 0);
-                const count = nothing ? undefined : directCount(result.packages.length, shown?.items.length ?? 0, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
+                const shown = visibleRows(result, metadata, filter, vulnerableOnly);
+                const nothing = result.unsupported !== undefined && result.packages.length === 0;
+                const count = nothing ? undefined : directCount(result.packages.length, shown.items.length, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
                 list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct packages', count, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
@@ -311,7 +315,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     expanded={placement.expanded}
                     variant={item.variant}
                     count={item.count ?? (counted ? result.packages.length : undefined)}
-                    busy={section !== undefined && (section.revalidating || (allMode && result === undefined && section.error === undefined))}
+                    busy={allMode && section !== undefined && section.result === undefined && section.error === undefined}
                     badges={statusBadges(result, allMode ? item.id.slice(PROJECT_GROUP.length) : undefined)}
                 />
             );
@@ -321,7 +325,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     let body: React.ReactNode;
     if (sections.length === 0) {
         body = committed === undefined || (allMode && all.status === 'loading')
-            ? <><ProgressBar label="Loading installed packages" data-testid="installed-progress" /><Skeleton density="comfortable" /></>
+            ? <><div className="nuiget-installed-progress"><ProgressBar label="Loading installed packages" data-testid="installed-progress" /></div><Skeleton density="comfortable" /></>
             : <EmptyState message={allMode ? 'No projects to list.' : 'No .NET projects found in this workspace.'} />;
     } else {
         const single = allMode ? undefined : sections[0];
@@ -333,14 +337,13 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         const revalidating = sections.some(section => section.revalidating);
         body = (
             <>
-                {firstLoad || revalidating ? <ProgressBar label={firstLoad ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="installed-progress" /> : null}
+                {firstLoad || revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={firstLoad ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="installed-progress" /></div> : null}
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {!allMode && section.result?.unsupported ? <Banner severity="warning" data-testid="installed-unsupported">{`Unsupported project: ${sentence(section.result.unsupported.message)}`}</Banner> : null}
                         {failed(section) ? <Banner severity="error" data-testid={allMode ? `installed-error-${markerOf(section)}` : 'installed-error'} action={{ label: 'Retry', onClick: section.onRetry }}>{`Installed packages of ${section.projectName} could not be loaded: ${sentence(section.error ?? 'unknown error')}`}</Banner> : null}
                     </Fragment>
                 ))}
-                {single && open && firstLoad ? <Skeleton density="comfortable" /> : null}
                 {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} data-testid="installed-empty" /> : null}
                 {transitivePart.message}
                 <Listbox
@@ -351,6 +354,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     testId="installed-list"
                     density="comfortable"
                     busy={revalidating}
+                    empty={firstLoad ? <Skeleton density="comfortable" /> : undefined}
                     selectedId={current}
                     selectedIds={bulk.selected}
                     isDisabled={item => item.kind === 'package' && item.entry.declaration === 'unresolved'}

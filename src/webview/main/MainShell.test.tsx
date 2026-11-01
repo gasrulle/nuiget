@@ -163,18 +163,26 @@ describe('main panel shell', () => {
         expect(screen.getByTestId('project-selector')).toBeDisabled();
     });
 
-    it('refresh is disabled and a progress bar shows while refresh/all is unanswered', async () => {
+    it('refresh is disabled while refresh/all is unanswered, and on Installed the header draws no bar', async () => {
         const user = userEvent.setup();
         const { host } = await mountReady();
         expect(screen.queryByRole('progressbar')).toBeNull();
         await user.click(screen.getByRole('button', { name: 'Refresh' }));
         expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
-        expect(screen.getByRole('progressbar', { name: 'Refreshing' })).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar', { name: 'Refreshing' })).toBeNull();
         await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
         expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
         expect(screen.queryByRole('progressbar')).toBeNull();
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Refreshed'));
         expect(host.requests('refresh/all')).toHaveLength(1);
+    });
+
+    it('on Updates the header draws the bar while refresh/all is unanswered', async () => {
+        const user = userEvent.setup();
+        await mountReady();
+        await user.click(screen.getByTestId('updates-tab'));
+        await user.click(screen.getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByRole('progressbar', { name: 'Refreshing' })).toBeInTheDocument();
     });
 
     it('refresh asks the host once and says how it ended', async () => {

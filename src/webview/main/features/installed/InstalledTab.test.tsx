@@ -91,7 +91,9 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Loading installed packages');
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        expect(document.querySelectorAll('.nuiget-listbox-empty .nuiget-skeleton-row')).toHaveLength(3);
+        expect(screen.queryByTestId('group-row-direct')).toBeNull();
+        expect(screen.queryByTestId('group-row-transitive')).toBeNull();
         await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, THREE), 1));
         expect(screen.queryByTestId('installed-progress')).toBeNull();
         expect(document.querySelector('.nuiget-skeleton')).toBeNull();
@@ -99,6 +101,8 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Refreshing installed packages');
         expect(names()).toHaveLength(3);
         expect(screen.getByTestId('installed-list')).toHaveAttribute('aria-busy', 'true');
+        // Revalidation is the bar's: the group row shows no spinner of its own.
+        expect(screen.getByTestId('group-row-direct').querySelector('.nuiget-spinner')).toBeNull();
     });
 
     it('an empty project and a failed read have their markers; the sentence ends with one full stop', async () => {
@@ -114,6 +118,16 @@ describe('main panel: Installed tab', () => {
         expect(banner).toHaveTextContent('Installed packages of App could not be loaded: The project file could not be read.');
         expect(banner.querySelector('.nuiget-banner-text')?.textContent?.endsWith('read.')).toBe(true);
         expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+        expect(screen.queryByTestId('group-row-direct')).toBeNull();
+        expect(screen.queryByTestId('group-row-transitive')).toBeNull();
+    });
+
+    it('an unresolved row says why in its description; its version cell keeps the word', async () => {
+        await mountWith([pkg('Serilog', { version: '', versionType: 'unresolved', declaration: 'unresolved' })]);
+        const option = optionOf('Serilog');
+        expect(option).toHaveAttribute('aria-disabled', 'true');
+        expect(option).toHaveAccessibleDescription(expect.stringContaining('Its reference could not be resolved.'));
+        expect(option.querySelector('.nuiget-row-version')).toHaveTextContent('unresolved');
     });
 
     it('provisional: the badge leaves when the authoritative list replaces the chunk', async () => {
@@ -402,6 +416,8 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('section-header-transitive'));
         expect(transitiveRows()[0]).toHaveAttribute('aria-current', 'true');
         await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        // A project without a result lists no group rows (UX-P2.8b): the group is read once it has answered.
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(B, THREE), 2));
         expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
     });
 

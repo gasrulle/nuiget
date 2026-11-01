@@ -599,10 +599,10 @@ links.
 
 | State (interaction model §4) | What the section shows |
 |---|---|
-| Loading (first) | Three skeleton rows; "Loading installed packages" in the live region |
-| Revalidating | The rows stay; the list is `aria-busy`; an indeterminate progress bar under the search box |
+| Loading (first) | The 2 px bar over the top of the list area and three skeleton rows in the row's anatomy, in the `Listbox`'s `empty` slot, with no group row; "Loading installed packages" in the live region |
+| Revalidating | The rows stay; the list is `aria-busy`; the 2 px bar over the top of the list area, which moves no row (the header's bar stays for Updates) |
 | Provisional | A "provisional" badge beside the section title, with a tooltip |
-| Unresolved | Version "unresolved" with a tooltip (`Row.versionTitle`, `UNRESOLVED_HINT`), status "Unresolved", the row disabled and without action |
+| Unresolved | Version "unresolved" with a tooltip (`Row.versionTitle`, `UNRESOLVED_HINT`), status "Its reference could not be resolved.", the row disabled and without action |
 | Centrally managed | A "CPM" badge read as "Centrally managed"; uninstalls from this project (the central entry stays); an update goes through the host's actions menu and its modal preview (P6.4) |
 | Unsupported project | A warning banner "Unsupported project: <reason>"; the rows are listed without actions |
 | Pending operation | A spinner in place of the row's button, status "Uninstalling", from the click to the outcome |

@@ -305,7 +305,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await chooseFixtureProject('Unresolved.csproj');
             await clickVisible('installed-tab');
-            await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\')?.getAttribute("aria-disabled") === "true" && document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-status\')?.textContent === "Unresolved"', 'the Unresolved row');
+            await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\')?.getAttribute("aria-disabled") === "true" && document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-version\')?.textContent === "unresolved"', 'the unresolved row');
             await until('document.querySelector(\'[data-testid="package-row-newtonsoft.json"] .nuiget-row-authors\') !== null', 'the other row\'s authors');
         },
     },
