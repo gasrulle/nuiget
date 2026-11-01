@@ -149,6 +149,8 @@ const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
 /** One status for the state groups where a rule's elements are rendered. */
 const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
 
+/** The Installed cells with no list yet: the Direct group row has no count badge and no end to read (design ruling DO 4, UX-P2.8b). */
+const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error'];
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
 /** DS-STATE-1: the markers each Installed cell renders (design-system.md §9, UX-P2.8b). */
@@ -159,7 +161,7 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-error': ['installed-error'],
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
     'main-installed-unresolved': [],
-    'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'],
+    'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj'],
 };
 /** DS-COLOR-1, the roles these cells paint; the rest join per screen with their P3 items (UX-P2.8b). */
 const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; property: 'color' | 'backgroundColor'; key: string }> = [
@@ -199,7 +201,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     // The popup covers the strip and the list: no badge is shown.
-    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'] }),
+    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
@@ -233,9 +235,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3a' }, dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions'], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -1949,6 +1951,11 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                 if (scope === 'headers' && layout.flatList) {
                     return { value: 'no group header (flat list)', pass: true };
                 }
+                // A first load or a failed read: the group row has no count at its end yet (design ruling DO 4, UX-P2.8b).
+                const cells = layout.endOfP0.stateCells;
+                if (scope === 'headers' && (cells.skeletonRows > 0 || cells.banners.some(banner => banner.severity === 'error'))) {
+                    return { value: 'no count on the group header (no list)', pass: true };
+                }
                 return { value: NOT_MEASURABLE, pass: false };
             }
             return { value: parts.map(part => part.text).join('; '), pass: parts.every(part => part.pass) };
@@ -2653,6 +2660,11 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             return { value: off.length === 0 ? named.join('; ') : off.map(entry => `${entry.role} ${entry.actual} (target ${entry.key} ${entry.expected})`).join('; '), pass: off.length === 0 };
         }
     }
+}
+
+/** The outer webview frame's scroll offset before a shot: a moved frame puts the editor's chrome into the crop (UX-P2.8b follow-up 2). */
+export function outerScrollVerdict(x: number, y: number): { text: string; pass: boolean } {
+    return { text: `outer scroll ${x},${y}`, pass: x === 0 && y === 0 };
 }
 
 /** Whether two computed lengths agree within a tolerance; a keyword (`normal`) agrees only with itself. */

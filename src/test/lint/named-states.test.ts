@@ -45,7 +45,7 @@ describe('the named states (UX-P0.8)', () => {
 
     it('keeps the pending states of the P0.8 ruling on their items', () => {
         const byItem = (item: string): string[] => STATES.filter(state => !isReady(state) && (state.status as { pending: string }).pending === item).map(state => state.name);
-        expect(byItem('P2.8b')).toEqual(['main-installed-loading', 'main-installed-revalidating', 'main-installed-empty', 'main-installed-error', 'main-installed-unresolved']);
+        expect(byItem('P2.8b')).toEqual([]);
         expect(byItem('P3.1b')).toEqual(['main-updates-unavailable']);
         expect(byItem('P3.10')).toEqual(['main-browse-unavailable', 'sidebar-updates-unavailable', 'sidebar-browse-unavailable']);
     });
@@ -87,8 +87,8 @@ describe('the named states (UX-P0.8)', () => {
         const windows = LEGACY_STATES.map(state => `${state}.png`);
         expect(screenshotProblems(crops, windows)).toEqual([]);
         expect(screenshotProblems(crops.slice(1), windows)).toEqual([`no capture ${crops[0]}`]);
-        expect(screenshotProblems([...crops, 'main-installed-empty.dark-modern.1200.png'], windows))
-            .toEqual(['a capture of the pending state main-installed-empty: main-installed-empty.dark-modern.1200.png']);
+        expect(screenshotProblems([...crops, 'main-updates-unavailable.dark-modern.1200.png'], windows))
+            .toEqual(['a capture of the pending state main-updates-unavailable: main-updates-unavailable.dark-modern.1200.png']);
         expect(screenshotProblems(crops, windows.filter(file => file !== 'main-updates.png'))).toEqual(['no window PNG of the 2.0 state main-updates']);
         // An empty folder fails for every expected file.
         expect(screenshotProblems([], [])).toHaveLength(crops.length + LEGACY_STATES.length);
@@ -112,7 +112,7 @@ describe('the named states (UX-P0.8)', () => {
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
-            const expected = theme.includes('high-contrast') ? 64 : 73;
+            const expected = theme.includes('high-contrast') ? 79 : 88;
             expect(files, theme).toHaveLength(expected);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
@@ -132,8 +132,8 @@ describe('the named states (UX-P0.8)', () => {
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
         // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current.
-        expect(files).toHaveLength(43);
-        expect(new Set(files).size).toBe(43);
+        expect(files).toHaveLength(48);
+        expect(new Set(files).size).toBe(48);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());
@@ -144,7 +144,7 @@ describe('the named states (UX-P0.8)', () => {
         expect(laneProblems(files, 'matrix', 'dark-2026')).toEqual([]);
         expect(laneProblems(files.slice(1), 'matrix', 'dark-2026')).toEqual([`no capture ${files[0]}`]);
         expect(laneProblems([...files, 'main-installed-single.dark-modern.1200.png'], 'matrix', 'dark-2026')).toEqual(['an unexpected capture main-installed-single.dark-modern.1200.png']);
-        expect(laneProblems([...files, 'main-installed-error.dark-2026.800.png'], 'matrix', 'dark-2026')).toEqual(['a capture of the pending state main-installed-error: main-installed-error.dark-2026.800.png']);
+        expect(laneProblems([...files, 'main-updates-unavailable.dark-2026.800.png'], 'matrix', 'dark-2026')).toEqual(['a capture of the pending state main-updates-unavailable: main-updates-unavailable.dark-2026.800.png']);
     });
 
     it('runs the Linux lanes under a window manager and the ui job without one', () => {

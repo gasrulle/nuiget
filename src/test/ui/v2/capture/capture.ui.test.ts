@@ -4,7 +4,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
@@ -95,6 +95,66 @@ async function clickVisible(testId: string, timeoutMs = 30_000): Promise<void> {
 async function installedListAtTop(): Promise<void> {
     await findByTestId('installed-list', 120_000);
     await script<void>('document.querySelector(\'[data-testid="installed-list"]\').scrollTop = 0;');
+}
+
+/** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating'];
+/** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
+const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error'];
+
+/**
+ * Holds every envelope of `installed/get` before it is dispatched: the outer frame hands the host's messages to the content
+ * frame through its `postMessage`, so a wrapper there sees them first. A `message` listener cannot: on `window` listeners run in
+ * registration order whatever their capture flag, so the bus's comes first (run on 2e5c48c; UX-P2.8b architecture follow-up).
+ * The stream is held too, or the provisional chunk paints rows.
+ */
+const HOLD_SOURCE = `
+const real = window.postMessage;
+const hold = { real, held: [], failure: null, failed: 0 };
+window.__nuigetHold = hold;
+window.postMessage = function (data, ...rest) {
+    if (!data || data.type !== 'installed/get' || (data.kind !== 'stream' && data.kind !== 'response')) return real.call(window, data, ...rest);
+    if (hold.failure === null) { hold.held.push(data); return undefined; }
+    hold.failed += 1;
+    if (data.kind === 'response') real.call(window, { kind: data.kind, id: data.id, type: data.type, ok: false, error: { code: 'failed', message: hold.failure } }, '*');
+    return undefined;
+};`;
+
+async function holdInstalled(): Promise<void> {
+    await script<void>(HOLD_SOURCE);
+}
+
+/** Ends the hold, handing the bus what was held in order, and prints what it held. */
+async function releaseInstalled(state: string): Promise<void> {
+    const counts = await script<{ stream: number; response: number }>(`
+const hold = window.__nuigetHold;
+if (!hold) return { stream: 0, response: 0 };
+window.postMessage = hold.real;
+const counts = { stream: hold.held.filter(d => d.kind === 'stream').length, response: hold.held.filter(d => d.kind === 'response').length };
+for (const d of hold.held) window.postMessage(d, '*');
+delete window.__nuigetHold;
+return counts;`);
+    console.warn(`[hold] ${state}: ${counts.stream + counts.response} held (stream ${counts.stream}, response ${counts.response})`);
+}
+
+/**
+ * From here on every real answer of `installed/get` reaches the bus as a failure, its id and type kept, and its stream not at
+ * all: the host invalidates a provisional list once it is evaluated, and the answer to that second request would replace the
+ * cell (UX-P2.8b). Printed as `[hold]` and ended by the state's `leave`.
+ */
+async function failInstalled(state: string, message: string): Promise<void> {
+    const failed = await script<number>(`
+const hold = window.__nuigetHold;
+hold.failure = arguments[0];
+for (const d of hold.held) if (d.kind === 'response') { hold.failed += 1; hold.real.call(window, { kind: d.kind, id: d.id, type: d.type, ok: false, error: { code: 'failed', message: hold.failure } }, '*'); }
+hold.held = [];
+return hold.failed;`, message);
+    console.warn(`[hold] ${state}: ${failed} answers failed`);
+}
+
+/** Ends `failInstalled`. */
+async function endFailure(): Promise<void> {
+    await script<void>('const hold = window.__nuigetHold; if (hold) { window.postMessage = hold.real; delete window.__nuigetHold; }');
 }
 
 /**
@@ -204,6 +264,51 @@ const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'm
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
+    'main-installed-loading': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdInstalled();
+            await chooseFixtureProject('Utility.csproj');
+            await until('document.querySelector(\'[data-testid="installed-progress"]\') !== null && document.querySelectorAll(".nuiget-skeleton-row").length === 3 && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option\') === null', 'the bar and the skeleton with no row');
+        },
+        leave: () => releaseInstalled('main-installed-loading'),
+    },
+    'main-installed-revalidating': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdInstalled();
+            await clickVisible('refresh-button');
+            await until('document.querySelector(\'[data-testid="installed-progress"]\') !== null && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option\') !== null && !document.querySelector(\'[data-testid="refresh-button"]\').disabled', 'the rows under the bar, the list busy');
+        },
+        leave: () => releaseInstalled('main-installed-revalidating'),
+    },
+    'main-installed-empty': {
+        reach: async () => {
+            await chooseFixtureProject('Empty.csproj');
+            await clickVisible('installed-tab');
+            await until('document.querySelector(\'[data-testid="installed-empty"]\')?.textContent.includes("No packages installed.") === true', 'the empty state');
+            await until(TRANSITIVE_HEADER_STILL, 'the Transitive group settled');
+        },
+    },
+    'main-installed-error': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdInstalled();
+            await chooseFixtureProject('Utility.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await failInstalled('main-installed-error', 'The project file could not be read.');
+            await until('document.querySelector(\'[data-testid="installed-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endFailure,
+    },
+    'main-installed-unresolved': {
+        reach: async () => {
+            await chooseFixtureProject('Unresolved.csproj');
+            await clickVisible('installed-tab');
+            await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\')?.getAttribute("aria-disabled") === "true" && document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-status\')?.textContent === "Unresolved"', 'the Unresolved row');
+            await until('document.querySelector(\'[data-testid="package-row-newtonsoft.json"] .nuiget-row-authors\') !== null', 'the other row\'s authors');
+        },
+    },
     'main-installed-all': {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
@@ -440,6 +545,29 @@ interface Shot {
     dpr: number;
 }
 
+/** The outer webview frame's scroll offset, read in that frame: the inner document's measurements cannot see it (UX-P2.8b follow-up 2). */
+async function outerFrameScroll(rootTestId: string): Promise<[number, number]> {
+    const driver = driverOf();
+    await driver.switchTo().defaultContent();
+    try {
+        for (const outer of await driver.findElements(By.css('iframe.webview'))) {
+            await driver.switchTo().frame(outer);
+            const offset = await script<[number, number]>('const page = document.scrollingElement || document.documentElement; return [page.scrollLeft + document.body.scrollLeft, page.scrollTop + document.body.scrollTop];');
+            const inner = await driver.findElements(By.css('iframe#active-frame'));
+            if (inner.length > 0) {
+                await driver.switchTo().frame(inner[0]);
+                if ((await driver.findElements(By.css(`[data-testid="${rootTestId}"]`))).length > 0) {
+                    return offset;
+                }
+            }
+            await driver.switchTo().defaultContent();
+        }
+    } finally {
+        await driver.switchTo().defaultContent();
+    }
+    throw new Error(`no webview holds ${rootTestId}`);
+}
+
 /**
  * Writes the window PNG and the webview crop of `capture`, exactly `capture.width` CSS px wide from the webview's left
  * edge, and logs the rectangle. The pointer is moved to the window's corner first, outside both webviews, except for
@@ -452,6 +580,11 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
         await driverOf().actions().move({ x: 1, y: 1 }).perform();
     }
     const rect = await webviewRect(state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar');
+    const outer = outerScrollVerdict(...await outerFrameScroll(state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar'));
+    if (!outer.pass) {
+        console.warn(`[capture] ${file}: not reachable (${outer.text})`);
+        throw new Error(`${state.name} is not reachable: ${outer.text}`);
+    }
     if (rect.width < capture.width - 0.5) {
         throw new Error(`${file}: the webview is ${rect.width} px wide, narrower than the capture`);
     }
@@ -466,7 +599,7 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
         path.join(path.dirname(dir), file),
         String(dpr),
     ], { stdio: 'pipe' });
-    console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}`);
+    console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}, ${outer.text}`);
     return { png: path.join(dir, `${windowName}.png`), x: rect.x, y: rect.y, dpr };
 }
 
@@ -495,7 +628,7 @@ for (const id of ['installed-tab', 'updates-tab']) {
     const tab = document.querySelector('[data-testid="' + id + '"]');
     if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
 }
-if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
+if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]'))) clauses.push('a comfortable row without authors');
 return clauses.join('; ');
 `;
 
@@ -517,10 +650,13 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
         await script(AXE_SOURCE);
     }
     // After the shot and the measurements, never before them: the snapshot and axe read the state's settled data.
-    try {
-        await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the state\'s data to settle', SETTLE_MS);
-    } catch {
-        console.warn(`[aria] ${state.name}: not settled after ${SETTLE_MS / 1000} s (${await script<string>(UNSETTLED)})`);
+    if (!HELD_STATES.includes(state.name)) {
+        const unsettled = NO_COUNT_STATES.includes(state.name) ? 'return document.querySelector(\'[aria-busy="true"]\') ? "a busy element" : "";' : UNSETTLED;
+        try {
+            await poll(async () => ((await script<string>(unsettled)) === '' ? true : undefined), 'the state\'s data to settle', SETTLE_MS);
+        } catch {
+            console.warn(`[aria] ${state.name}: not settled after ${SETTLE_MS / 1000} s (${await script<string>(unsettled)})`);
+        }
     }
     if (LOOK === 'modern') {
         const tree = await script<{ nodes?: AriaNode[]; error?: string }>(ARIA_SNAPSHOT);
@@ -1106,7 +1242,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         await openSidebarView();
         await openMainPanel();
         await enterMainWebview();
-        // The dense workspace's four projects, discovered across its two folders.
+        // The dense workspace's six projects, discovered across its two folders.
         await optionFor('Unsupported.csproj');
     });
 

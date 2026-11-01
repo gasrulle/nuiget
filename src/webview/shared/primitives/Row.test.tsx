@@ -312,6 +312,13 @@ describe('Row layout (P9.2, D46)', () => {
         expect(option).toHaveAccessibleDescription('Verified: the package id prefix is reserved by its owner Serilog Contributors');
     });
 
+    it('a row with no badge gives its name the whole line: the empty badge box takes no gap (judge P2.8b)', () => {
+        const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');
+        expect(/(?:^|\n)\.nuiget-row-badges:empty \{([^}]*)\}/.exec(stylesheet)?.[1]).toContain('display: none;');
+        renderRow({ density: 'comfortable', badges: <></> });
+        expect(screen.getByTestId('package-row-serilog').querySelector('.nuiget-row-badges')?.childNodes).toHaveLength(0);
+    });
+
     it('the option is the band: it paints the hover, selection and focus carriers and the comfortable actions sit over its end', () => {
         renderRow({ density: 'comfortable', actions: uninstall() });
         const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');

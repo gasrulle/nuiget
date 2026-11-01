@@ -100,6 +100,8 @@ const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', 
 const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]', reason: 'nuget.org suggestions change between runs' };
 /** The search box of a state whose setup leaves the focus in it (UX-P0.15, design-advisor ruling). */
 const LIVE_CARET: Mask = { selector: '[data-testid="search-input"]', reason: 'the caret blinks and the selection differs between runs (H27)' };
+/** The stripe and the breathing rows are CSS animations, mid-phase in any shot until UX-P4.5 honours reduced motion; the transition wait does not read them. */
+const LIVE_MOTION: Mask = { selector: '.nuiget-progress, .nuiget-skeleton', reason: 'the indeterminate stripe and the breathe animation are mid-phase until P4.5 honours vscode-reduce-motion; NO_RUNNING_TRANSITION reads transitions only' };
 /** The package icon of every comfortable row (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icons are resolved by the host per run: the breaker race (X2, V31; P7.1) and any failed fetch leave the default icon, so which rows show one differs between runs' };
 /**
@@ -127,7 +129,7 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 220 },
     ], 'Gateway selected; the Installed list shows its direct rows (package-row-newtonsoft.json present).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-all', 'main', themeSensitive('main'),
-        'Scrolled to the Tools folder, whose Unsupported project shows its badges and its message leaf. All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
+        'Scrolled to the Tools folder, whose Unsupported project shows its badges and its message leaf; the Unresolved project is unrestored by design (NU1015). All Projects selected; six project sections, the Transitive group\'s restore-needed message for the unrestored Unresolved project, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-unsupported', 'main', [primary('main')],
         'Unsupported selected; the Unsupported banner, the read-only list and both header badges; the transitive header shows its count and framework badge (the prefetch settled).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-cpm', 'main', [primary('main')],
@@ -179,11 +181,16 @@ export const STATES: readonly NamedState[] = [
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],
         'Gateway selected, Update all pressed in the Updates section header; the confirmation is open and is cancelled after the capture, never confirmed.', [LIVE_SIDEBAR_UPDATES, LIVE_BULK_LIST]), diffTolerance: 0 },
-    pending('main-installed-loading', 'main', 'P2.8b', 'The first list loading: skeleton rows and the 2 px bar (marker installed-progress).'),
-    pending('main-installed-revalidating', 'main', 'P2.8b', 'A shown list revalidating under the 2 px bar.'),
-    pending('main-installed-empty', 'main', 'P2.8b', 'A project without packages: the welcome-style "No packages installed." (marker installed-empty).'),
-    pending('main-installed-error', 'main', 'P2.8b', 'The installed read failed: the inline error with Retry (marker installed-error).'),
-    pending('main-installed-unresolved', 'main', 'P2.8b', 'A reference whose version cannot be told: the row says unresolved.'),
+    { ...ready('main-installed-loading', 'main', [primary('main')],
+        'Gateway committed, its answers then held in the webview document and Utility chosen: the first list loading under the 2 px bar with three skeleton rows (marker installed-progress); released after the capture.', [LIVE_MOTION]), diffTolerance: 0 },
+    { ...ready('main-installed-revalidating', 'main', [primary('main')],
+        'Gateway listed, its answers then held and Refresh pressed: the rows stay under the 2 px bar and the list is aria-busy; released after the capture.', [LIVE_MOTION, LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-installed-empty', 'main', [primary('main')],
+        'The Empty project: the welcome-style "No packages installed." (marker installed-empty).'), diffTolerance: 0 },
+    { ...ready('main-installed-error', 'main', [primary('main')],
+        'Utility chosen with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker installed-error).'), diffTolerance: 0 },
+    { ...ready('main-installed-unresolved', 'main', [primary('main')],
+        'The Unresolved project: its Serilog reference has no version it can tell, and the row says Unresolved. It is unrestored by design (NU1015), so the Transitive group shows its restore-needed message.', [LIVE_ICONS]), diffTolerance: 0 },
     pending('main-updates-unavailable', 'main', 'P3.1b', 'No source answered the update check: the unavailable banner.'),
     pending('main-browse-unavailable', 'main', 'P3.10', 'No source answered the search: the unavailable banner.'),
     pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),

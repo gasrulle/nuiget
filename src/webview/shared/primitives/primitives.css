@@ -323,6 +323,11 @@
     gap: var(--nuiget-space-2);
 }
 
+/* A row with no badge leaves its name the line's whole width, not the line's gap short (judge P2.8b main-installed-single#D3). */
+.nuiget-row-badges:empty {
+    display: none;
+}
+
 .nuiget-row-version-new {
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-version-new));
     font-weight: 600;

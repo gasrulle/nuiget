@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -697,6 +697,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P2.8b: a message leaf is read in All Projects, and "unresolved" has no subject.
         expect(value('main-installed-all', facts({ copyEnds: [{ kind: 'leaf', text: 'Unsupported project: requires .NET SDK 10 or newer.' }] }), 'DS-COPY-3@main-installed-all')).toMatchObject({ pass: true });
         expect(value('main-installed-unresolved', facts({}), 'DS-COPY-3@main-installed-unresolved')).toBeUndefined();
+    });
+
+    it('leaves only the count of a group header unread in the two cells with no list (UX-P2.8b)', () => {
+        for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
+            const definition = RULES.find(rule => rule.id === id)!;
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error']);
+            expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
+        }
+        const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
+        expect(inset.exceptStates).toBeUndefined();
+        const cells = (stateCells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...stateCells } } as Layout['endOfP0'] });
+        expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no count on the group header (no list)' });
+        expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-INSET-3@main-installed-error/headers')).toMatchObject({ pass: true });
+        expect(lineOf('main-installed-single', cells({}), 'DS-INSET-3@main-installed-single/headers')).toMatchObject({ pass: false });
+        expect(lineOf('main-installed-all', cells({ testIds: ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'] }), 'DS-STATE-1@main-installed-all')).toMatchObject({ pass: false, value: expect.stringContaining('missing: installed-empty-empty.csproj') });
+    });
+
+    it('reads the outer frame\'s offset: anything but 0,0 fails the state (UX-P2.8b)', () => {
+        expect(outerScrollVerdict(0, 0)).toEqual({ text: 'outer scroll 0,0', pass: true });
+        expect(outerScrollVerdict(0, 5)).toEqual({ text: 'outer scroll 0,5', pass: false });
     });
 
     it('registers the Installed cells in main-installed, pending on this item, with their later owners (UX-P2.8b)', () => {
