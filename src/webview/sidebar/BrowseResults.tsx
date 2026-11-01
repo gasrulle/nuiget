@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type PackageSearchResult } from '../../protocol';
+import type { PackageSearchResult } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Badge, Banner, EmptyState, IconButton, Listbox, PlusIcon, ProgressBar, Row, Skeleton } from '../shared/primitives';
+import { allProjectsBrowseContext, browseRowContext, installedProjectsOf } from '../shared/installed/rules';
+import { Badge, Banner, EmptyState, IconButton, Listbox, openRowMenu, PlusIcon, ProgressBar, Row, Skeleton } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
@@ -22,7 +23,7 @@ export interface BrowseResultsProps {
 /**
  * The flat browse results of the sidebar (interaction model §2): compact rows, Enter or the row's button installs the
  * version found into the selected project; a package installed already says so and offers nothing. Under All Projects,
- * Enter, the button and the menu ask the host for the row's actions (`ui/contextMenu`, browse path), whose QuickPick
+ * Enter, the button and the menu open the row's actions (VS Code's `webview/context` menu), whose host command
  * picks the projects to install into, with where the package is installed already (interaction model §3). Into a
  * Central Package Management project the row first asks `cpm/preview`: a package that has a central entry already goes
  * through the actions menu, whose host modal lists the projects the central version reaches (ADR-004 tier 3, N77).
@@ -40,7 +41,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
 
     const projectPath = installed.projectPath;
     const all = useAllProjects();
-    const { menu, viewDetails } = useRowRequests(announce);
+    const { viewDetails } = useRowRequests(announce);
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
     const installedVersions = useMemo(
         () => new Map((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry.resolvedVersion ?? entry.version])),
@@ -57,31 +58,21 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
     }, [results, status]);
 
     /** Where a package is installed in All Projects: every listed project whose list has it, with its version. */
-    const installedIn = (packageId: string): Array<{ projectPath: string; projectName: string; version: string }> => {
-        const id = packageId.toLowerCase();
-        return [...all.chunks.values()].flatMap(chunk => {
-            const entry = chunk.result?.packages.find(candidate => candidate.id.toLowerCase() === id);
-            return entry === undefined ? [] : [{ projectPath: chunk.projectPath, projectName: chunk.projectName, version: entry.resolvedVersion ?? entry.version }];
-        });
-    };
     const listedCount = all.chunks.size;
-    const allProjectsMenu = (result: PackageSearchResult): void => {
-        const where = installedIn(result.id);
-        menu({
-            packageId: result.id,
-            context: 'browse',
-            projectPath: ALL_PROJECTS,
-            latestVersion: result.version,
-            sourceUrl: result.sourceUrl,
-            installedProjects: where,
-            installedVersion: where[0]?.version,
-            partiallyInstalled: where.length > 0 && where.length < listedCount,
-        });
+    const whereInstalled = useMemo(() => installedProjectsOf(all.chunks.values()), [all.chunks]);
+    // The row that asked, whatever has the focus when the answer arrives; gone from the list, the Enter says so.
+    const openMenuOf = (result: PackageSearchResult): void => {
+        const row = document.querySelector(`[data-testid="sidebar-browse-list"] [data-testid="package-row-${result.id.toLowerCase()}"]`);
+        if (row === null) {
+            announce(`The actions of ${result.id} are on its row, which is no longer shown.`);
+            return;
+        }
+        openRowMenu(row);
     };
 
     const install = ({ result }: Item): void => {
         if (all.active) {
-            allProjectsMenu(result);
+            openMenuOf(result);
             return;
         }
         if (projectPath === null) {
@@ -111,7 +102,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
             return;
         }
         asking.current.add(key);
-        const openMenu = (): void => menu({ packageId: result.id, latestVersion: result.version, context: 'browse', projectPath, sourceUrl: result.sourceUrl });
+        const openMenu = (): void => openMenuOf(result);
         bus.request('cpm/preview', { projectPath, packageId: result.id, version: result.version }).then(
             ({ result: answer }) => (answer.preview === null ? submit() : openMenu()),
             // Never install on an error: the actions menu asks the host, whose gate and modal decide.
@@ -148,19 +139,12 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                 onSelect={item => setSelectedId(item.id)}
                 onActivate={install}
                 onSecondaryActivate={({ result }) => viewDetails(result.id, result.version)}
-                onContextMenu={({ result }) => {
-                    if (all.active) {
-                        allProjectsMenu(result);
-                    } else if (projectPath !== null) {
-                        menu({ packageId: result.id, installedVersion: installedVersions.get(result.id.toLowerCase()), latestVersion: result.version, context: 'browse', projectPath, sourceUrl: result.sourceUrl });
-                    }
-                }}
                 empty={<EmptyState message={search.sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
                 renderRow={(item, placement) => {
                     const { result } = item;
                     const installedVersion = all.active ? undefined : installedVersions.get(result.id.toLowerCase());
                     const busy = projectPath !== null && isPackageBusy(projectPath, result.id);
-                    const where = all.active ? installedIn(result.id) : [];
+                    const where = all.active ? whereInstalled.get(result.id.toLowerCase()) ?? [] : [];
                     let badge: React.ReactNode;
                     if (installedVersion !== undefined) {
                         badge = <Badge label="Installed" title={`Installed: ${installedVersion}`} />;
@@ -172,6 +156,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                     return (
                         <Row
                             {...placement}
+                            vscodeContext={all.active ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], listedCount) : projectPath === null ? undefined : browseRowContext(result, projectPath, installedVersions.get(result.id.toLowerCase()))}
                             itemId={result.id}
                             name={result.id}
                             version={result.version}

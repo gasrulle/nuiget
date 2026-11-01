@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { IN_PROGRESS, isCentral, whyNotUpdatable } from '../shared/installed/rules';
-import { ArrowUpIcon, Badge, EmptyState, IconButton, Listbox, Row } from '../shared/primitives';
+import { IN_PROGRESS, isCentral, updateRowContext, whyNotUpdatable } from '../shared/installed/rules';
+import { ArrowUpIcon, Badge, EmptyState, IconButton, Listbox, openRowMenu, Row } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useRowRequests } from './rowRequests';
 
@@ -30,7 +30,7 @@ export interface ProjectUpdatesProps {
 
 /**
  * The updates of one project as compact rows: Enter or the row's button updates the package in this project to its
- * latest version with the row's source; Ctrl+Enter opens the full view, Shift+F10 the host's actions menu. A centrally
+ * latest version with the row's source; Ctrl+Enter opens the full view, Shift+F10 VS Code's actions menu. A centrally
  * managed package opens the actions menu instead, where the host confirms the central change in a modal listing the
  * projects it reaches; a row with a `VersionOverride` updates in this project alone, without a preview (N74); an
  * unsupported project is read-only.
@@ -39,7 +39,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
     const { projectPath, rows, installed, filter, announce, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
-    const { menu, viewDetails } = useRowRequests(announce);
+    const { viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
     // Sorted by id, as the main panel's lists are (MU9, P9.10).
     const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(update => ({ id: update.id, update })), [rows, needle]);
@@ -59,11 +59,6 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
         return 'In progress';
     };
 
-    const openMenu = (update: PackageUpdate): void => {
-        const versionType = installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.versionType;
-        menu({ packageId: update.id, installedVersion: update.installedVersion, latestVersion: update.latestVersion, context: 'updates', projectPath, versionType, sourceUrl: update.sourceUrl });
-    };
-
     const updateOne = ({ update }: Item): void => {
         if (isBusy(update.id)) {
             return;
@@ -79,7 +74,8 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             return;
         }
         if (entry !== undefined && isCentral(entry)) {
-            openMenu(update);
+            // The host confirms the central change in a modal; the menu is the row's, under the keyboard's focus.
+            openRowMenu(document.activeElement);
             return;
         }
         run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
@@ -99,7 +95,6 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             onSelect={item => onSelectedChange(item.id)}
             onActivate={updateOne}
             onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
-            onContextMenu={({ update }) => openMenu(update)}
             empty={<EmptyState data-testid="sidebar-updates-empty" message={empty} />}
             renderRow={(item, placement) => {
                 const { update } = item;
@@ -108,6 +103,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
                 return (
                     <Row
                         {...placement}
+                        vscodeContext={updateRowContext(update, projectPath, installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase()), installed)}
                         itemId={update.id}
                         name={update.id}
                         version={update.installedVersion}

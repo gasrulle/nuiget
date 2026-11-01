@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
+import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../protocol';
@@ -214,17 +215,18 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 1');
     });
 
-    it('Shift+F10, the ContextMenu key and a right-click ask ui/contextMenu with the row\'s project and versions', async () => {
+    it('Shift+F10, the ContextMenu key and a right-click open the row\'s menu with its project and versions', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountWith([pkg('Serilog', { version: '3.*', resolvedVersion: '3.1.1', versionType: 'floating' }), pkg('Moq')]);
-        const expected = { packageId: 'Serilog', installedVersion: '3.1.1', context: 'installed', projectPath: A, versionType: 'floating' };
+        const expected = { preventDefaultContextMenuItems: true, packageId: 'Serilog', installedVersion: '3.1.1', webviewSection: 'installedRow', projectPath: A, versionType: 'floating', 'nuiget.central': false, 'nuiget.readOnly': false };
 
         await user.click(option('Serilog'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
         await user.keyboard('{ContextMenu}');
         await user.pointer({ keys: '[MouseRight]', target: option('Serilog') });
 
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expected, expected, expected]);
+        expect(menus.contexts).toEqual([expected, expected, expected]);
         expect(host.requests('ops/remove')).toHaveLength(0);
     });
 
@@ -379,6 +381,7 @@ describe('sidebar: Installed section', () => {
 
     it('All Projects: one section per project over allProjects/installed, in folder order, and uninstall sends the row\'s project', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountWith([pkg('Serilog')]);
         const B = '/w2/Lib/Lib.csproj';
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
@@ -398,7 +401,7 @@ describe('sidebar: Installed section', () => {
         await user.keyboard('{Delete}');
         expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq' }]);
         await user.keyboard('{Shift>}{F10}{/Shift}');
-        expect(host.requests('ui/contextMenu')[0].payload).toMatchObject({ packageId: 'Moq', context: 'installed', projectPath: B });
+        expect(menus.contexts[0]).toMatchObject({ packageId: 'Moq', webviewSection: 'installedRow', projectPath: B });
         expect(await axe(document.body)).toHaveNoViolations();
     });
 

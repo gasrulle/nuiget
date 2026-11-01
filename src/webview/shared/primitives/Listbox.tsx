@@ -1,6 +1,7 @@
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cssVars } from './cssVars';
+import { openRowMenu } from './rowMenu';
 import type { RowPlacement } from './Row';
 import './primitives.css';
 
@@ -84,6 +85,9 @@ function treeOf<T>(items: readonly T[], groups: ListboxGroups<T>): TreePlace[] {
     return places;
 }
 
+/** A right-click beside a row offers no editing items (ADR-013 Decision 4). */
+const LIST_CONTEXT = '{"preventDefaultContextMenuItems":true}';
+
 /** The rows kept in the document above and below the view. */
 const OVERSCAN = 5;
 
@@ -119,8 +123,6 @@ interface ListboxBaseProps<T extends { id: string }> {
     onSecondaryActivate?: (item: T) => void;
     /** Delete, or Cmd+Backspace on macOS. */
     onDelete?: (item: T) => void;
-    /** Shift+F10, the ContextMenu key (anchored below the row) or a right-click (anchored at the pointer). */
-    onContextMenu?: (item: T, anchor: { x: number; y: number }) => void;
     /** The list is being revalidated: its rows stay and it is `aria-busy`. */
     busy?: boolean;
     /** What takes the place of the list when it has no items, usually an `EmptyState`. */
@@ -137,7 +139,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, onContextMenu, busy, empty } = props;
+    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, busy, empty } = props;
     const rowHeight = ROW_HEIGHT[density];
     const groupHeight = groupRowHeight();
     const tree = useMemo(() => (groups === undefined ? undefined : treeOf(items, groups)), [items, groups]);
@@ -287,21 +289,20 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             }
         } else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
             handled();
-            const rect = rowFocusAt(activeIndex)?.getBoundingClientRect();
-            onContextMenu?.(item, { x: rect?.left ?? 0, y: rect?.bottom ?? 0 });
+            openRowMenu(wrapperAt(activeIndex));
         }
     };
 
     if (items.length === 0) {
         return (
-            <div className="nuiget-listbox-root" ref={rootRef}>
+            <div className="nuiget-listbox-root" ref={rootRef} data-vscode-context={LIST_CONTEXT}>
                 <div className="nuiget-listbox-empty" tabIndex={-1} ref={emptyRef}>{empty}</div>
             </div>
         );
     }
 
     return (
-        <div className="nuiget-listbox-root" ref={rootRef}>
+        <div className="nuiget-listbox-root" ref={rootRef} data-vscode-context={LIST_CONTEXT}>
             <div
                 className="nuiget-listbox"
                 role={groups === undefined ? 'listbox' : 'tree'}
@@ -338,13 +339,6 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                         }
                     } else {
                         onSelect?.(items[index]);
-                    }
-                }}
-                onContextMenu={event => {
-                    const index = indexOf(event.target);
-                    if (index >= 0 && items[index] && !isGroupAt(index) && !isMessageAt(index)) {
-                        event.preventDefault();
-                        onContextMenu?.(items[index], { x: event.clientX, y: event.clientY });
                     }
                 }}
             >

@@ -242,6 +242,20 @@ describe('main panel: All Projects', () => {
         expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     });
 
+    it('a row under All Projects carries its own project in its menu context, never the sentinel, and a leaf none', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: PROJECTS }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w1', result: installed(B, [pkg('Serilog')]) } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Tool', workspaceFolder: 'w2', result: installed(C, []) } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [B, C], errored: [] }));
+        expect(JSON.parse(screen.getByTestId('package-row-serilog').dataset.vscodeContext ?? '{}')).toMatchObject({ webviewSection: 'installedRow', projectPath: B });
+        expect(screen.getByTestId('installed-empty-tool').closest('[data-row-kind="message"]')).not.toHaveAttribute('data-vscode-context');
+    });
+
     it('a filter takes the empty project\'s message leaf away', async () => {
         const user = userEvent.setup();
         const host = createFakeHost();

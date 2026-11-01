@@ -19,6 +19,7 @@ export { LiveStatus, type LiveStatusProps } from './LiveStatus';
 export { Popover, type PopoverPoint, type PopoverProps } from './Popover';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { Row, type RowPlacement, type RowProps } from './Row';
+export { openRowMenu } from './rowMenu';
 export { Select, type SelectProps } from './Select';
 export { Sash, type SashProps } from './Sash';
 export { SectionHeader, type SectionHeaderProps } from './SectionHeader';

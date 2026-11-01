@@ -51,11 +51,6 @@ export function isRowMenuContext(arg: unknown): arg is RowMenuContext {
 
 /** Runs one of the row's actions; true when it went through. */
 export async function runRowAction(services: HostServices, action: ContextMenuAction, request: ContextMenuRequest): Promise<boolean> {
-    const isAllProjectsBrowse = (!request.projectPath || request.projectPath === ALL_PROJECTS) && request.context === 'browse';
-    if ((!request.projectPath || request.projectPath === ALL_PROJECTS) && !isAllProjectsBrowse) {
-        void vscode.window.showWarningMessage('Select a specific project for this action.');
-        return false;
-    }
     switch (action) {
         case 'copy-id':
             await vscode.env.clipboard.writeText(request.packageId);
@@ -66,6 +61,13 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
             return true;
         default:
             break;
+    }
+
+    // After copying and showing, which need no project: a transitive row under All Projects has none.
+    const isAllProjectsBrowse = (!request.projectPath || request.projectPath === ALL_PROJECTS) && request.context === 'browse';
+    if ((!request.projectPath || request.projectPath === ALL_PROJECTS) && !isAllProjectsBrowse) {
+        void vscode.window.showWarningMessage('Select a specific project for this action.');
+        return false;
     }
 
     // An install without a version writes a floating `*` (gotcha "A webview install without a version").

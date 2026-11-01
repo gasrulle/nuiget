@@ -298,6 +298,8 @@ All Projects (§3; `<name>` = project name lower-cased):
 
 Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
 
+Every package row's wrapper (`package-row-<id>`, `role="presentation"`) carries `data-vscode-context`, the context object of VS Code's `webview/context` menu on both surfaces: `webviewSection` (`installedRow`, `updateRow`, `browseRow` or `transitiveRow`), the row's package id, project path and versions, the facts the `when` clauses read, and `preventDefaultContextMenuItems`; the list's root carries that last key alone (ADR-013 Decision 4, UX-P2.9a). It is an attribute, not a test id, and no table row.
+
 Removing or renaming a hook requires updating this table and the ExTester tests in the same change.
 
 A hook enters a table when a test outside its component reads it (ExTester, e2e, harness), or when it marks a
@@ -322,7 +324,6 @@ is a project or section name lower-cased, as above.
 
 | Added by | Test id or attribute | Element |
 |---|---|---|
-| Installed slice | `data-vscode-context` on `package-row-<id>` | The context-menu anchor on both surfaces: the row wrapper's context object (`webviewSection` = `installedRow`, `updateRow`, `browseRow` or `transitiveRow`, the row's ids and versions, `preventDefaultContextMenuItems`), which the menu items' `when` clauses read (ADR-013) |
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Updates | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's progress bar, empty state and inline error |
 | Browse and details | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' progress bar, empty state ("No results for "x".") and inline error |

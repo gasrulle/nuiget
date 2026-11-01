@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
+import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -20,7 +20,7 @@ interface Item {
     update: PackageUpdate;
 }
 
-const HINT = 'Space selects the package for a bulk update. Enter updates it.';
+const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu.';
 
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
@@ -192,6 +192,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                     return (
                         <Row
                             {...placement}
+                            vscodeContext={projectPath === null ? undefined : updateRowContext(update, projectPath, entryOf(update.id), installed.result)}
                             itemId={update.id}
                             name={update.id}
                             version={update.installedVersion}

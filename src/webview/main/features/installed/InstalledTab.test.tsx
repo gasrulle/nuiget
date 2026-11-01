@@ -86,6 +86,15 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
     });
 
+    it('a package row carries its menu context: read-only rows say so, the group row has none', async () => {
+        await mountWith([pkg('Serilog', { version: '3.*', resolvedVersion: '3.1.1', versionType: 'floating' }), pkg('Moq', { declaration: 'central' }), pkg('Sdk', { isImplicit: true })]);
+        const contextOf = (id: string): unknown => JSON.parse(screen.getByTestId(`package-row-${id}`).dataset.vscodeContext ?? '{}');
+        expect(contextOf('serilog')).toEqual({ preventDefaultContextMenuItems: true, webviewSection: 'installedRow', packageId: 'Serilog', projectPath: A, installedVersion: '3.1.1', versionType: 'floating', 'nuiget.central': false, 'nuiget.readOnly': false });
+        expect(contextOf('moq')).toMatchObject({ 'nuiget.central': true, 'nuiget.readOnly': false });
+        expect(contextOf('sdk')).toMatchObject({ 'nuiget.readOnly': true });
+        expect(screen.getByTestId('group-row-direct')).not.toHaveAttribute('data-vscode-context');
+    });
+
     it('a first load is the bar and the skeleton; an answer replaces them, a revalidation keeps the rows under the bar', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));

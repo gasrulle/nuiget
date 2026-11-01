@@ -8,7 +8,7 @@ import { IconButton } from './IconButton';
 import { TrashIcon } from './icons';
 import { Listbox } from './Listbox';
 import { Row } from './Row';
-import { axeRuleOutcome, installFakeLayout } from './testSupport';
+import { axeRuleOutcome, installFakeLayout, recordRowMenus } from './testSupport';
 
 interface Package {
     id: string;
@@ -22,7 +22,7 @@ const INLINE_STYLE = /^(--nuiget-[a-z0-9-]+: [^;]+;\s*)+$/;
 const three: Package[] = [{ id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0', central: true }, { id: 'Gamma', version: '3.0.0' }];
 const many = (count: number): Package[] => Array.from({ length: count }, (_, index) => ({ id: `Package${index}`, version: '1.0.0' }));
 
-type Handlers = Pick<React.ComponentProps<typeof Listbox<Package>>, 'onSelect' | 'onActivate' | 'onSecondaryActivate' | 'onDelete' | 'onContextMenu' | 'selectedId' | 'busy' | 'empty'>;
+type Handlers = Pick<React.ComponentProps<typeof Listbox<Package>>, 'onSelect' | 'onActivate' | 'onSecondaryActivate' | 'onDelete' | 'selectedId' | 'busy' | 'empty'>;
 
 function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?: (id: string) => void } & Handlers): React.JSX.Element {
     return (
@@ -37,6 +37,7 @@ function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?
             renderRow={(item, placement) => (
                 <Row
                     {...placement}
+                    vscodeContext={{ webviewSection: 'installedRow', packageId: item.id }}
                     itemId={item.id}
                     name={item.id}
                     version={item.version}
@@ -143,34 +144,37 @@ describe('Listbox', () => {
         expect(onDelete).toHaveBeenCalledTimes(2);
     });
 
-    it('Shift+F10 and the ContextMenu key report the active item with an anchor', async () => {
+    it('Shift+F10 and the ContextMenu key open the active row\'s menu: a contextmenu event at the row', async () => {
         const user = userEvent.setup();
-        const onContextMenu = vi.fn();
-        render(<PackageList items={three} onContextMenu={onContextMenu} />);
+        const menus = recordRowMenus();
+        render(<PackageList items={three} />);
         await user.tab();
         await user.keyboard('{End}');
         await user.keyboard('{Shift>}{F10}{/Shift}');
         await user.keyboard('{ContextMenu}');
-        // Anchored at the left and the bottom of the third row, where a menu opens.
-        expect(onContextMenu.mock.calls).toEqual([[three[2], { x: 0, y: 72 }], [three[2], { x: 0, y: 72 }]]);
+        expect(menus.contexts.map(context => context.packageId)).toEqual(['Gamma', 'Gamma']);
+        const rect = screen.getByTestId('package-row-gamma').getBoundingClientRect();
+        expect(menus.positions[0]).toEqual({ x: rect.left + 8, y: rect.top + rect.height / 2 });
         // F10 alone belongs to the editor.
         await user.keyboard('{F10}');
-        expect(onContextMenu).toHaveBeenCalledTimes(2);
+        expect(menus.contexts).toHaveLength(2);
     });
 
-    it('right-click on a row reports the item', () => {
-        const onContextMenu = vi.fn();
-        render(<PackageList items={three} onContextMenu={onContextMenu} />);
-        // `false`: the browser's own menu is suppressed.
-        expect(fireEvent.contextMenu(option('Beta'), { clientX: 5, clientY: 6 })).toBe(false);
-        // Anywhere on the row, its actions included.
-        fireEvent.contextMenu(screen.getAllByTestId('row-action-uninstall')[2], { clientX: 7, clientY: 8 });
-        expect(onContextMenu.mock.calls).toEqual([[three[1], { x: 5, y: 6 }], [three[2], { x: 7, y: 8 }]]);
+    it('a right-click reaches VS Code: the list never prevents its default', () => {
+        render(<PackageList items={three} />);
+        expect(fireEvent.contextMenu(option('Beta'), { clientX: 5, clientY: 6 })).toBe(true);
+        expect(fireEvent.contextMenu(screen.getAllByTestId('row-action-uninstall')[2], { clientX: 7, clientY: 8 })).toBe(true);
+    });
+
+    it('the list carries the context beside its rows, so a right-click there offers no editing items', () => {
+        const { container } = render(<PackageList items={three} />);
+        expect(JSON.parse((container.querySelector('.nuiget-listbox-root') as HTMLElement).dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true });
     });
 
     it('a disabled option ignores Enter, Ctrl+Enter and Delete but keeps focus and the context menu', async () => {
         const user = userEvent.setup();
-        const handlers = { onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onContextMenu: vi.fn() };
+        const menus = recordRowMenus();
+        const handlers = { onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn() };
         const items: Package[] = [three[0], { id: 'Broken', version: 'unresolved', disabled: true }];
         render(<PackageList items={items} {...handlers} />);
         await user.tab();
@@ -181,7 +185,7 @@ describe('Listbox', () => {
         expect(handlers.onSecondaryActivate).not.toHaveBeenCalled();
         expect(handlers.onDelete).not.toHaveBeenCalled();
         await user.keyboard('{ContextMenu}');
-        expect(handlers.onContextMenu).toHaveBeenCalledExactlyOnceWith(items[1], expect.anything());
+        expect(menus.contexts.map(context => context.packageId)).toEqual(['Broken']);
         expect(option('Broken')).toHaveFocus();
     });
 
@@ -309,7 +313,7 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
     });
 
     const mixed: Package[] = [{ id: 'Group', version: '' }, { id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0' }];
-    const handlers = () => ({ onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onContextMenu: vi.fn(), onToggleSelected: vi.fn() });
+    const handlers = () => ({ onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onToggleSelected: vi.fn() });
 
     function Grouped({ items = mixed, group = true, expanded = true, onGroupToggle, levels, selectedIds, selectedId, ...rest }: {
         items?: Package[]; group?: boolean; expanded?: boolean; onGroupToggle?: (item: Package, expanded: boolean) => void; levels?: Record<string, number>; selectedIds?: ReadonlySet<string>; selectedId?: string;
@@ -335,6 +339,7 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
                 renderRow={(item, placement) => (
                     <Row
                         {...placement}
+                        vscodeContext={{ webviewSection: 'installedRow', packageId: item.id }}
                         itemId={item.id}
                         name={item.id}
                         version={item.version}
@@ -391,12 +396,14 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
 
     it('Ctrl+Enter, Delete, Space, Shift+F10 and a right-click on a group row report nothing; Enter and a click toggle it', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const spies = handlers();
         const onGroupToggle = vi.fn();
         render(<Grouped {...spies} onGroupToggle={onGroupToggle} />);
         fireEvent.contextMenu(screen.getByTestId('group-content-Group'));
         treeitem('Group').focus();
         await user.keyboard('{Control>}{Enter}{/Control}{Delete} {Shift>}{F10}{/Shift}');
+        expect(menus.contexts).toEqual([]);
         expect(onGroupToggle).not.toHaveBeenCalled();
         // Space does not page the scroller from a group row.
         expect(fireEvent.keyDown(treeitem('Group'), { key: ' ' })).toBe(false);
@@ -557,7 +564,7 @@ describe('Listbox message leaves (UX-P2.8b)', () => {
     });
 
     const items: Package[] = [{ id: 'Group', version: '' }, { id: 'Why', version: '' }, { id: 'Alpha', version: '1.0.0' }];
-    const handlers = { onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onContextMenu: vi.fn(), onToggleSelected: vi.fn() };
+    const handlers = { onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onToggleSelected: vi.fn() };
 
     function WithMessage(): React.JSX.Element {
         return (
@@ -583,6 +590,7 @@ describe('Listbox message leaves (UX-P2.8b)', () => {
 
     it('a message leaf is a treeitem without a focusable element, skipped by Enter, Space, Delete and the context menu; ArrowLeft moves to its group', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         render(<WithMessage />);
         const leaf = screen.getByText('A sentence.').closest<HTMLElement>('[role="treeitem"]')!;
         expect(leaf.closest('[data-row-kind="message"]')).toHaveAttribute('role', 'presentation');
@@ -594,6 +602,7 @@ describe('Listbox message leaves (UX-P2.8b)', () => {
         leaf.focus();
         await user.keyboard('{Enter} {Delete}{Shift>}{F10}{/Shift}');
         fireEvent.contextMenu(leaf);
+        expect(menus.contexts).toEqual([]);
         for (const handler of Object.values(handlers)) {
             expect(handler).not.toHaveBeenCalled();
         }

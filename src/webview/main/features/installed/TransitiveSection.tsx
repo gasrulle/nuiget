@@ -91,11 +91,12 @@ export function transitiveGroupContent(item: GroupItem, placement: GroupPlacemen
 }
 
 /** A comfortable transitive row: icon, authors and Verified from the lite metadata, the Vulnerable badge; no description. */
-export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, lite: PackageMetadataLite | undefined, placement: RowPlacement, badges?: React.ReactNode): React.JSX.Element {
+export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, lite: PackageMetadataLite | undefined, placement: RowPlacement, projectPath: string, badges?: React.ReactNode): React.JSX.Element {
     const src = packageIconSrc(lite?.iconUrl);
     return (
         <Row
             {...placement}
+            vscodeContext={{ webviewSection: 'transitiveRow', packageId: entry.id, projectPath, installedVersion: entry.version, 'nuiget.readOnly': true }}
             itemId={entry.id}
             name={entry.id}
             version={entry.version}

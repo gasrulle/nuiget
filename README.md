@@ -22,6 +22,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   suggestions appear while you type (see `nuiget.searchDebounceMode`). The results replace the tabs until you clear the box. Prefixes
   filter instead of searching: `@installed`, `@updates` and `@vulnerable` in the main panel, `@installed` and
   `@updates` in the sidebar.
+- **Actions menu.** Every package row, in the main panel and the sidebar, has VS Code's own menu: right-click, Shift+F10 or the Menu key.
 - **Activity Bar sidebar.** Compact Installed and Updates sections that collapse independently, with a draggable
   split between them. Every row has an actions menu (right-click or Shift+F10): install the latest or a chosen
   version, update, uninstall, copy the package ID, or view the package in the main panel. The title bar holds the
@@ -36,8 +37,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update all,
   Update selected or Uninstall selected. A confirmation dialog lists exactly the packages that will change.
 - **Central Package Management.** Centrally managed packages carry a CPM badge. Before the central version of a
-  package changes, nUIget lists every project that the change reaches and asks you to confirm (main panel: a dialog;
-  sidebar: the actions menu and a confirmation). Installing a package that already has a central entry is previewed
+  package changes, nUIget lists every project that the change reaches and asks you to confirm (the details button and Ctrl+Enter: a dialog;
+  the row's actions menu, in the main panel and the sidebar: a confirmation). Installing a package that already has a central entry is previewed
   the same way. A package whose project overrides the central version with `VersionOverride` updates in that project
   alone. Uninstall removes the project's reference and keeps the central entry. An install into several projects
   leaves out the projects where the package has a central entry and says so.
@@ -131,7 +132,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
 | `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists) |
 | `Space` | Main panel: select the row for a bulk action, or clear it |
-| `Shift+F10` / Menu key | Sidebar: open the actions menu |
+| `Shift+F10` / Menu key | Open the row's actions menu |
 
 </details>
 

@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
+
 ### Changed
+- **The sidebar's actions menu is VS Code's own**
 - **Breaking:** nUIget 2.0 requires Visual Studio Code 1.90 or newer; VS Code 1.85 to 1.89 keep nUIget 1.18.9
 - **Package and dialog titles are larger, and text sizes follow VS Code**
 - **Scrollbars and sidebar section headers follow VS Code's Modern UI look**

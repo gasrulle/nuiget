@@ -50,6 +50,8 @@ export interface RowProps extends RowPlacement {
     authors?: string;
     /** The package id prefix is reserved by its owner: a check mark before the authors. */
     verified?: boolean;
+    /** The row's context for VS Code's webview/context menu (ADR-013): serialized onto the wrapper; absent, the row offers no menu. */
+    vscodeContext?: Readonly<Record<string, unknown>>;
     /** The middle line of a comfortable row, for Browse rows only (D14); read out, not shown, in compact rows. */
     description?: string;
     /** Shown in comfortable rows only, in a column that is there with or without it. Decoration: the name is the text. */
@@ -82,7 +84,7 @@ export interface RowProps extends RowPlacement {
  * sits on the text column: on the option a `title` would become its description.
  */
 export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): React.JSX.Element {
-    const { itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef, onToggle, level, posInSet } = props;
+    const { vscodeContext, itemId, name, version, nextVersion, versionTitle, meta, authors, verified, description, icon, badges, status, busy, disabled, selectable, actions, density, index, setSize, active, selected, current, checkable, optionId, offset, measureRef, onToggle, level, posInSet } = props;
     const optionRef = useRef<HTMLDivElement>(null);
     const ids = {
         name: `${optionId}-name`,
@@ -141,6 +143,7 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
             data-testid={`package-row-${itemId.toLowerCase()}`}
             ref={measureRef}
             data-level={level}
+            data-vscode-context={vscodeContext === undefined ? undefined : JSON.stringify({ preventDefaultContextMenuItems: true, ...vscodeContext })}
             style={cssVars({ '--nuiget-virtual-offset': `${offset}px` })}
         >
             <div

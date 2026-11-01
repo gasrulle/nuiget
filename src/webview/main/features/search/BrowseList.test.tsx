@@ -111,6 +111,24 @@ describe('main panel: browse', () => {
         await waitFor(() => expect(said()).toBe('2 packages found for "seri"'));
     });
 
+    it('a result carries its menu context; an installed one says so', async () => {
+        const host = await mountReady();
+        await searchFor(host, 'x', [result('Polly', '8.4.2', { sourceUrl: FEED })]);
+        expect(JSON.parse(within(list()).getByTestId('package-row-polly').dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true, webviewSection: 'browseRow', packageId: 'Polly', projectPath: A, latestVersion: '8.4.2', sourceUrl: FEED, 'nuiget.installed': false });
+    });
+
+    it('under All Projects a result says where it is installed; with no project committed it has no menu', async () => {
+        const host = await mountReady({ selectedProject: ALL_PROJECTS });
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [{ id: 'Polly', version: '8.0.0', versionType: 'standard', declaration: 'project' }] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: '/w/Lib/Lib.csproj', projectName: 'Lib', result: { projectPath: '/w/Lib/Lib.csproj', fidelity: 'authoritative', isCpm: false, packages: [] } } }));
+        await searchFor(host, 'x', [result('Polly', '8.4.2', { sourceUrl: FEED })]);
+        expect(JSON.parse(within(list()).getByTestId('package-row-polly').dataset.vscodeContext ?? '{}')).toEqual({
+            preventDefaultContextMenuItems: true, webviewSection: 'browseRow', packageId: 'Polly', projectPath: ALL_PROJECTS, latestVersion: '8.4.2', sourceUrl: FEED,
+            installedProjects: [{ projectPath: A, projectName: 'App', version: '8.0.0' }], installedVersion: '8.0.0', partiallyInstalled: true, 'nuiget.installed': true, 'nuiget.partial': true,
+        });
+    });
+
     it('a click or Enter makes a row current; a new text starts without one', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

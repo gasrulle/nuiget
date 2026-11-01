@@ -9,6 +9,7 @@
 
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { onTestFinished } from 'vitest';
 
 /** The layout a browser would compute: lists `viewport` pixels high, rows `row` pixels high, one under the other. */
 export interface FakeLayout {
@@ -189,4 +190,20 @@ export function expectFocusAfterClose(caseId: string, registry: Readonly<Record<
     if (where === '<body>') {
         throw new Error(`[focus] ${caseId}: focus fell to <body> after the dialog closed (a11y-focus-after-close)`);
     }
+}
+
+/** Records the `contextmenu` events that reach a row's wrapper this test: what VS Code's host page reads (ADR-013 Decision 4). */
+export function recordRowMenus(): { contexts: Array<Record<string, unknown>>; positions: Array<{ x: number; y: number }> } {
+    const contexts: Array<Record<string, unknown>> = [];
+    const positions: Array<{ x: number; y: number }> = [];
+    const listener = (event: Event): void => {
+        const wrapper = (event.target as Element).closest<HTMLElement>('.nuiget-row[data-vscode-context]');
+        if (wrapper) {
+            contexts.push(JSON.parse(wrapper.dataset.vscodeContext ?? '{}') as Record<string, unknown>);
+            positions.push({ x: (event as MouseEvent).clientX, y: (event as MouseEvent).clientY });
+        }
+    };
+    document.addEventListener('contextmenu', listener);
+    onTestFinished(() => document.removeEventListener('contextmenu', listener));
+    return { contexts, positions };
 }

@@ -28,14 +28,14 @@ export interface ProjectPackagesProps {
 
 /**
  * The installed packages of one project as compact rows: Enter, Delete or the row's button uninstalls from this project,
- * Ctrl+Enter opens the package in the full view, Shift+F10 asks the host for the actions menu. A package that cannot be
+ * Ctrl+Enter opens the package in the full view, Shift+F10 opens VS Code's actions menu. A package that cannot be
  * uninstalled (an unsupported project, an SDK-injected one, one declared in a props file) has no button and Enter says why;
  * a centrally managed one uninstalls from this project and keeps its central entry.
  */
 export function ProjectPackages({ projectPath, result, filter, announce, labelledBy, testId, busy: revalidating, selectedId, onSelectedChange }: ProjectPackagesProps): React.JSX.Element {
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
-    const { menu, viewDetails } = useRowRequests(announce);
+    const { viewDetails } = useRowRequests(announce);
     const needle = filter.trim().toLowerCase();
     const items = useMemo<Item[]>(
         // Sorted by id, as the main panel's lists are (P9.10).
@@ -91,7 +91,6 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
             onActivate={uninstall}
             onDelete={uninstall}
             onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version)}
-            onContextMenu={({ entry }) => menu({ packageId: entry.id, installedVersion: entry.resolvedVersion ?? entry.version, context: 'installed', projectPath, versionType: entry.versionType })}
             empty={<EmptyState data-testid="sidebar-installed-empty" message={nothing} />}
             isDisabled={({ entry }) => entry.declaration === 'unresolved'}
             renderRow={(item, placement) => {
@@ -102,6 +101,15 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
                 return (
                     <Row
                         {...placement}
+                        vscodeContext={{
+                            webviewSection: 'installedRow',
+                            packageId: entry.id,
+                            projectPath,
+                            installedVersion: entry.resolvedVersion ?? entry.version,
+                            versionType: entry.versionType,
+                            'nuiget.central': central,
+                            'nuiget.readOnly': whyNotRemovable(entry, result) !== undefined,
+                        }}
                         itemId={entry.id}
                         name={entry.id}
                         version={shownVersion(entry)}

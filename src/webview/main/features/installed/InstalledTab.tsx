@@ -390,7 +390,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                         if (item.kind === 'package') {
                             return <InstalledRow placement={placement} projectPath={item.section.projectPath} entry={item.entry} result={item.result} metadata={item.section.metadata} onUninstall={entry => uninstall(item.section, entry)} />;
                         }
-                        return item.kind === 'transitive' ? transitiveRow(item.entry, (allMode ? all.transitive.metadata : transitive.metadata).get(item.key), placement, item.badges) : null;
+                        return item.kind === 'transitive' ? transitiveRow(item.entry, (allMode ? all.transitive.metadata : transitive.metadata).get(item.key), placement, item.scope.projectPath ?? ALL_PROJECTS, item.badges) : null;
                     }}
                 />
             </>

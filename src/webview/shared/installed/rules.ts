@@ -1,4 +1,4 @@
-import type { InstalledPackage, InstalledResult, OperationKind } from '../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk } from '../../../protocol';
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
@@ -76,3 +76,54 @@ export const isCentral = (entry: InstalledPackage): boolean => entry.declaration
 
 /** The tooltip of an unresolved version cell (interaction model §4). */
 export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.';
+
+/** An update row's context for the actions menu (ADR-013 Decision 4): its project, versions and what the `when` clauses read. */
+export const updateRowContext = (update: PackageUpdate, projectPath: string, entry: InstalledPackage | undefined, installed: InstalledResult | undefined): Readonly<Record<string, unknown>> => ({
+    webviewSection: 'updateRow',
+    packageId: update.id,
+    projectPath,
+    installedVersion: update.installedVersion,
+    latestVersion: update.latestVersion,
+    versionType: entry?.versionType,
+    sourceUrl: update.sourceUrl,
+    'nuiget.floating': entry?.versionType === 'floating' || entry?.versionType === 'range',
+    'nuiget.central': entry?.declaration === 'central' || entry?.declaration === 'central-override',
+    'nuiget.readOnly': installed?.unsupported !== undefined || (entry !== undefined && installed !== undefined && whyNotUpdatable(entry, installed) !== undefined),
+});
+
+/** Where each package is installed, by lower-cased id, from the All Projects chunks. */
+export function installedProjectsOf(chunks: Iterable<ProjectInstalledChunk>): ReadonlyMap<string, Array<{ projectPath: string; projectName: string; version: string }>> {
+    const byId = new Map<string, Array<{ projectPath: string; projectName: string; version: string }>>();
+    for (const chunk of chunks) {
+        for (const entry of chunk.result?.packages ?? []) {
+            const id = entry.id.toLowerCase();
+            byId.set(id, [...(byId.get(id) ?? []), { projectPath: chunk.projectPath, projectName: chunk.projectName, version: entry.resolvedVersion ?? entry.version }]);
+        }
+    }
+    return byId;
+}
+
+/** A Browse row's context under All Projects: the host's picker reads where the package is installed. */
+export const allProjectsBrowseContext = (result: PackageSearchResult, where: ReadonlyArray<{ projectPath: string; projectName: string; version: string }>, listedCount: number): Readonly<Record<string, unknown>> => ({
+    webviewSection: 'browseRow',
+    packageId: result.id,
+    projectPath: ALL_PROJECTS,
+    latestVersion: result.version,
+    sourceUrl: result.sourceUrl,
+    installedProjects: where,
+    installedVersion: where[0]?.version,
+    partiallyInstalled: where.length > 0 && where.length < listedCount,
+    'nuiget.installed': where.length > 0,
+    'nuiget.partial': where.length > 0 && where.length < listedCount,
+});
+
+/** A Browse row's context in one project. */
+export const browseRowContext = (result: PackageSearchResult, projectPath: string, installedVersion: string | undefined): Readonly<Record<string, unknown>> => ({
+    webviewSection: 'browseRow',
+    packageId: result.id,
+    projectPath,
+    installedVersion,
+    latestVersion: result.version,
+    sourceUrl: result.sourceUrl,
+    'nuiget.installed': installedVersion !== undefined,
+});

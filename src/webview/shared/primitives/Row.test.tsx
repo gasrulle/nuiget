@@ -61,6 +61,17 @@ describe('Row', () => {
         expect(option).toHaveAttribute('aria-selected', 'true');
     });
 
+    it('the wrapper carries the menu context, with the editing items off', () => {
+        renderRow({ vscodeContext: { webviewSection: 'installedRow', packageId: 'Serilog' } });
+        const wrapper = screen.getByTestId('package-row-serilog');
+        expect(JSON.parse(wrapper.dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true, webviewSection: 'installedRow', packageId: 'Serilog' });
+    });
+
+    it('a row without a context has no attribute', () => {
+        renderRow({});
+        expect(screen.getByTestId('package-row-serilog')).not.toHaveAttribute('data-vscode-context');
+    });
+
     it('the row wrapper carries no aria attribute and no tabindex', () => {
         renderRow({ actions: uninstall(), busy: true });
         const wrapper = screen.getByTestId('package-row-serilog');

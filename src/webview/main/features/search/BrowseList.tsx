@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageSearchResult } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
+import { allProjectsBrowseContext, browseRowContext, installedProjectsOf } from '../../../shared/installed/rules';
 import { Badge, Banner, EmptyState, Listbox, ProgressBar, Row, Skeleton } from '../../../shared/primitives';
+import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useOps } from '../../../shared/store/ops';
@@ -17,7 +19,7 @@ interface Item {
     result: PackageSearchResult;
 }
 
-const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project.';
+const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project. Shift+F10 opens the actions menu.';
 
 const formatDownloads = (count: number | undefined): string | undefined => {
     if (count === undefined) {
@@ -44,6 +46,8 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
     const { select } = useDetailsActions();
     const { isPackageBusy } = useOps();
     const allMode = useSession().committed?.selectedProject === ALL_PROJECTS;
+    const all = useAllProjects();
+    const whereInstalled = useMemo(() => installedProjectsOf(all.chunks.values()), [all.chunks]);
     const installAction = useInstallAction(announce);
     // The details pane follows the row made current by the user or by a navigation.
     const makeCurrent = (result: PackageSearchResult, version = result.version): void => {
@@ -128,6 +132,7 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
                     return (
                         <Row
                             {...placement}
+                            vscodeContext={allMode ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], all.chunks.size) : installed.projectPath === null ? undefined : browseRowContext(result, installed.projectPath, installedVersion)}
                             itemId={result.id}
                             name={result.id}
                             version={result.version}

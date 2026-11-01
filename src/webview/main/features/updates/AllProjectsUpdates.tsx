@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, whyNotUpdatable } from '../../../shared/installed/rules';
+import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useAllProjects } from '../../../shared/store/allProjects';
@@ -12,7 +12,7 @@ import { FolderGroups } from '../../../shared/allProjects/folderGroups';
 import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 
-const HINT = 'Enter updates the package. Space selects it for Update all.';
+const HINT = 'Enter updates the package. Space selects it for Update all. Shift+F10 opens the actions menu.';
 
 interface Section {
     projectPath: string;
@@ -113,6 +113,7 @@ function ProjectUpdatesSection(props: ProjectUpdatesSectionProps): React.JSX.Ele
                         return (
                             <Row
                                 {...placement}
+                                vscodeContext={updateRowContext(update, section.projectPath, entryIn(section.installed, update.id), section.installed)}
                                 itemId={update.id}
                                 name={update.id}
                                 version={update.installedVersion}

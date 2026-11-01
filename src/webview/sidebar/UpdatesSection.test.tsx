@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
@@ -85,6 +86,7 @@ describe('sidebar: Updates section', () => {
 
     it('Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountWith({ updates: UPDATES });
         await user.click(updateOption('Serilog'));
         await user.keyboard('{Enter}');
@@ -94,19 +96,20 @@ describe('sidebar: Updates section', () => {
         // A central change goes through the host's actions menu, where the host previews and confirms it (P6.4a).
         await user.click(updateOption('Newtonsoft.Json'));
         await user.keyboard('{Enter}');
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expect.objectContaining({ packageId: 'Newtonsoft.Json', context: 'updates', projectPath: A })]);
+        expect(menus.contexts).toEqual([expect.objectContaining({ packageId: 'Newtonsoft.Json', webviewSection: 'updateRow', projectPath: A })]);
         await user.click(within(within(updatesList()).getByTestId('package-row-newtonsoft.json')).getByTestId('row-action-update'));
-        expect(host.requests('ui/contextMenu')).toHaveLength(2);
+        expect(menus.contexts).toHaveLength(2);
         expect(host.requests('ops/update')).toHaveLength(1);
     });
 
     it('an override row updates in its project alone: one ops/update, no actions menu', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, [pkg('Moq', '4.18.0', { declaration: 'central-override' })]);
         await user.click(updateOption('Moq'));
         await user.keyboard('{Enter}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
-        expect(host.requests('ui/contextMenu')).toHaveLength(0);
+        expect(menus.contexts).toHaveLength(0);
         expect(updateOption('Moq')).toHaveAttribute('aria-busy', 'true');
         expect(updateOption('Moq')).toHaveAccessibleDescription(/Centrally managed/);
     });
@@ -146,12 +149,13 @@ describe('sidebar: Updates section', () => {
 
     it('the actions menu and Ctrl+Enter carry the update\'s versions and source', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountWith({ updates: UPDATES });
         await user.click(updateOption('Serilog'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
         await user.keyboard('{Control>}{Enter}{/Control}');
 
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', context: 'updates', projectPath: A, versionType: 'standard', sourceUrl: FEED }]);
+        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.floating': false, 'nuiget.central': false, 'nuiget.readOnly': false, packageId: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', webviewSection: 'updateRow', projectPath: A, versionType: 'standard', sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0' }]);
         expect(host.requests('ops/update')).toHaveLength(0);
     });

@@ -181,6 +181,13 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('updates/get')).toHaveLength(2);
     });
 
+    it('an update row carries its menu context: section, versions, source and the row facts', async () => {
+        await mountWith();
+        const context = JSON.parse(screen.getByTestId('package-row-serilog').dataset.vscodeContext ?? '{}') as Record<string, unknown>;
+        expect(context).toMatchObject({ preventDefaultContextMenuItems: true, webviewSection: 'updateRow', packageId: 'Serilog', projectPath: A, 'nuiget.floating': false, 'nuiget.central': false, 'nuiget.readOnly': false });
+        expect(context.latestVersion).toBeTypeOf('string');
+    });
+
     it('says "No updates available" for a complete empty answer, and asks the user to pick a project in All Projects', async () => {
         await mountWith({ updates: [] });
         expect(screen.getByText('No updates available.')).toBeInTheDocument();

@@ -1,6 +1,6 @@
 /**
  * Sidebar host: the Activity Bar `WebviewView`. Registers the shared handlers plus the
- * requests that only the host's own UI serves (context menu, open full view), keeps the view title in sync with the
+ * requests that only the host's own UI serves (the retired context menu request until P4.1, open full view), keeps the view title in sync with the
  * active project, and exposes the title-bar command implementations (pickers/toggles).
  */
 

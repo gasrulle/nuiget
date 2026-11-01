@@ -87,6 +87,16 @@ describe('the row menu commands (UX-P2.9a)', () => {
         expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Serilog');
     });
 
+    it('a transitive row under All Projects has no project and still copies and shows', async () => {
+        const { commands } = setUp();
+        const warning = vi.mocked(vscode.window.showWarningMessage);
+        await commands.get('nuiget.row.copyId')?.(row({ webviewSection: 'transitiveRow', projectPath: ALL_PROJECTS }));
+        await commands.get('nuiget.row.viewDetails')?.(row({ webviewSection: 'transitiveRow', projectPath: ALL_PROJECTS }));
+        expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Serilog');
+        expect(panel.MainPanelHost.navigateToPackage).toHaveBeenCalledTimes(1);
+        expect(warning).not.toHaveBeenCalled();
+    });
+
     it('a read-only row is refused a write, whatever the menu offered', async () => {
         const { commands, warn } = setUp();
         await commands.get('nuiget.row.uninstall')?.(row({ 'nuiget.readOnly': true }));

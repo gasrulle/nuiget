@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type InstalledPackage, type PackageSearchResult, type PackageUpdate, type SessionSnapshot } from '../../protocol';
@@ -57,6 +58,7 @@ describe('sidebar: search modes and browse', () => {
 
     it('Enter on a row of a CPM project asks for the preview; a central entry opens the actions menu, none installs, and a second Enter while asking sends nothing', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountReady(true);
         await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
 
@@ -66,7 +68,7 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Enter}');
         expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2' }]);
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A] } }));
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Polly', latestVersion: '8.4.2', context: 'browse', projectPath: A, sourceUrl: FEED }]);
+        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED, 'nuiget.installed': false }]);
         expect(host.requests('ops/install')).toHaveLength(0);
 
         // Without a central entry the install changes this project only and runs at once.
@@ -74,7 +76,7 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Enter}');
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: null }));
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Xunit', version: '2.9.0', sourceUrl: FEED }]);
-        expect(host.requests('ui/contextMenu')).toHaveLength(1);
+        expect(menus.contexts).toHaveLength(1);
     });
 
     it('@installed and @updates show that section alone, filtered; the box offers those two filters only', async () => {
@@ -137,8 +139,9 @@ describe('sidebar: search modes and browse', () => {
         expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly', 'Polly.Core']);
     });
 
-    it('an installed package says so and installs nothing; under All Projects Enter, the button and the menu ask ui/contextMenu with where it is installed', async () => {
+    it('an installed package says so and installs nothing; under All Projects Enter, the button and the menu open the row menu with where it is installed', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountReady();
         await searchFor(host, 'serilog', [result('Serilog', '4.0.0')]);
         expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Installed: 3\.0\.0/);
@@ -155,13 +158,13 @@ describe('sidebar: search modes and browse', () => {
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
         expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Installed in 1 of 2/);
 
-        const expected = { packageId: 'Serilog', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '4.0.0', sourceUrl: FEED, installedProjects: [{ projectPath: A, projectName: 'App', version: '3.0.0' }], installedVersion: '3.0.0', partiallyInstalled: true };
+        const expected = { preventDefaultContextMenuItems: true, 'nuiget.installed': true, 'nuiget.partial': true, packageId: 'Serilog', webviewSection: 'browseRow', projectPath: ALL_PROJECTS, latestVersion: '4.0.0', sourceUrl: FEED, installedProjects: [{ projectPath: A, projectName: 'App', version: '3.0.0' }], installedVersion: '3.0.0', partiallyInstalled: true };
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Enter}');
         await user.click(within(row('Serilog')).getByTestId('row-action-install'));
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([expected, expected, expected]);
+        expect(menus.contexts).toEqual([expected, expected, expected]);
         expect(host.requests('ops/install')).toHaveLength(0);
         expect(host.requests('ops/bulkInstall')).toHaveLength(0);
     });
@@ -183,8 +186,21 @@ describe('sidebar: search modes and browse', () => {
         expect(screen.getByTestId('section-header-updates')).toBeInTheDocument();
     });
 
+    it('a preview that answers after the focus moved opens the menu of the row that asked', async () => {
+        const user = userEvent.setup();
+        const menus = recordRowMenus();
+        const host = await mountReady(true);
+        await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
+        await user.click(within(row('Polly')).getByRole('option'));
+        await user.keyboard('{Enter}{ArrowDown}');
+        expect(within(row('Xunit')).getByRole('option')).toHaveFocus();
+        await hostSays(() => host.fail(host.requests('cpm/preview')[0], 'failed'));
+        expect(menus.contexts.map(context => context.packageId)).toEqual(['Polly']);
+    });
+
     it('the actions menu and Ctrl+Enter carry the version found', async () => {
         const user = userEvent.setup();
+        const menus = recordRowMenus();
         const host = await mountReady();
         await searchFor(host, 'serilog', [result('Serilog', '4.0.0'), result('Polly', '8.4.2')]);
         await user.click(within(row('Polly')).getByRole('option'));
@@ -192,7 +208,7 @@ describe('sidebar: search modes and browse', () => {
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Control>}{Enter}{/Control}');
 
-        expect(host.requests('ui/contextMenu').map(request => request.payload)).toEqual([{ packageId: 'Polly', installedVersion: undefined, latestVersion: '8.4.2', context: 'browse', projectPath: A, sourceUrl: FEED }]);
+        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.installed': false, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '4.0.0' }]);
         expect(host.requests('ops/install')).toHaveLength(0);
     });

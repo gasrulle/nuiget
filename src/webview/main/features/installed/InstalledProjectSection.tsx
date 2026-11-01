@@ -65,6 +65,15 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
     return (
         <Row
             {...placement}
+            vscodeContext={{
+                webviewSection: 'installedRow',
+                packageId: entry.id,
+                projectPath,
+                installedVersion: entry.resolvedVersion ?? entry.version,
+                versionType: entry.versionType,
+                'nuiget.central': central,
+                'nuiget.readOnly': readOnly,
+            }}
             itemId={entry.id}
             name={entry.id}
             version={cell.text}
