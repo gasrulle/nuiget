@@ -166,6 +166,9 @@ export const AXE_ACCEPTED: readonly AxeAccepted[] = [
     // A group row's height is DS-HEIGHT-1's; its band cannot grow a hit without covering its neighbours.
     { rule: 'target-size', kind: 'violation', selector: '.nuiget-row-group', ruling: 'DECISIONS.md 2026-10-31: a group row is a pane header\'s height (DS-HEIGHT-1, M 28 / C 22), the workbench\'s own tree row; its band is the target and no ::after may overlap its neighbours' },
     { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-row-group', ruling: 'DECISIONS.md 2026-10-31: a group row is a pane header\'s height (DS-HEIGHT-1, M 28 / C 22), the workbench\'s own tree row; its band is the target and no ::after may overlap its neighbours' },
+    // A message leaf takes its group row's height and is acted on by nothing (UX-P2.8b).
+    { rule: 'target-size', kind: 'violation', selector: '.nuiget-row-message', ruling: 'DECISIONS.md 2026-11-01: a message leaf is a tree row of its group row\'s height (DS-HEIGHT-1, M 28 / C 22) that no key or click acts on; it is no target, and no ::after may overlap its neighbours' },
+    { rule: 'target-size', kind: 'incomplete', selector: '.nuiget-row-message', ruling: 'DECISIONS.md 2026-11-01: a message leaf is a tree row of its group row\'s height (DS-HEIGHT-1, M 28 / C 22) that no key or click acts on; it is no target, and no ::after may overlap its neighbours' },
 ];
 
 /** The selectors `RUN_FULL_AXE` counts nodes against. */

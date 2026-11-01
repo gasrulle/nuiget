@@ -175,7 +175,7 @@
     align-items: center;
     min-width: 0;
     min-height: var(--nuiget-pane-header-height);
-    padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-sm) + var(--nuiget-space-2)) var(--nuiget-message-inset, var(--nuiget-inset));
+    padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-md) + var(--nuiget-space-2)) var(--nuiget-message-inset, var(--nuiget-inset));
     outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
     outline-offset: calc(var(--nuiget-line-width) * -1);
     color: var(--nuiget-color-fg-muted);

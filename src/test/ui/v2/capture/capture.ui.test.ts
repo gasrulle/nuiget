@@ -203,8 +203,8 @@ const REACH: Record<string, Reach> = {
             // level-1 groups in the tree, the two folders and Transitive (UX-P2.1e).
             await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
-            // The Unsupported project's sentence is a leaf of the virtualized tree: step the list until it is rendered (UX-P2.8b).
-            await poll(async () => (await script<boolean>('const list = document.querySelector(\'[data-testid="installed-list"]\'); const leaf = list.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\'); if (leaf) { leaf.closest(".nuiget-row").scrollIntoView({ block: "center" }); return true; } list.scrollTop += 300; return false;') ? true : undefined), 'the Unsupported project\'s message leaf', 60_000);
+            // The window is pinned at the Tools folder so both looks compose the same and the leaf is rendered (UX-P2.8b follow-up).
+            await poll(async () => (await script<boolean>('const list = document.querySelector(\'[data-testid="installed-list"]\'); const folder = list.querySelector(\'[data-testid="group-row-folder-tools"]\'); if (!folder) { list.scrollTop += 300; return false; } folder.scrollIntoView({ block: "start" }); return list.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null;') ? true : undefined), 'the Tools folder at the top of the list with the Unsupported project\'s message leaf rendered', 60_000);
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },

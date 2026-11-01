@@ -127,7 +127,7 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 220 },
     ], 'Gateway selected; the Installed list shows its direct rows (package-row-newtonsoft.json present).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-all', 'main', themeSensitive('main'),
-        'All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
+        'Scrolled to the Tools folder, whose Unsupported project shows its badges and its message leaf. All Projects selected; four project sections, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-unsupported', 'main', [primary('main')],
         'Unsupported selected; the Unsupported banner, the read-only list and both header badges; the transitive header shows its count and framework badge (the prefetch settled).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-cpm', 'main', [primary('main')],
