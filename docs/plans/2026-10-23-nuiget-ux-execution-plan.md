@@ -688,6 +688,71 @@ items ≈ 1 h per phase plus ≈ 0.25 h per feature mini-phase; sessions of 4–
 | The owner's two before/after pages surface "not better" late | Each "not better" becomes a failing rule first, then a fix row; the P2 page comes before the large phases |
 | A capture or decision cites a gitignored or local artefact | `captures/<run-id>/` only, by run id and sha256; local DPR 2 captures never update goldens (§2.6) |
 
+### Re-base (2026-11-01, UX-P2.11)
+
+**Result: ≈ 203 h, ≈ 187 plan-equivalent days, 194 % of the plan. Above the stop line (> 158 h or > 145 days); the owner
+cuts features (RUN-ux §7).** No cut inside P5 reaches the line. The tables above stay as written; the rulings are in
+`docs/plans/handoff/P2.11.md`.
+
+**Measured.** `git log --reverse --format='%at %h %s' origin/main..HEAD` on d7d5571 against origin/main 622352d: 212
+commits, 4 gaps over 3 h removed, 91.6 h. A commit belongs to the last `UX-P<n>` in its subject and an untagged commit
+inherits the one before it; CI waits under 3 h count.
+
+| Phase | Plan days | Plan h | Measured h | h ratio | h per planned day |
+|---|---|---|---|---|---|
+| P0 | 24.5 | 23.7 | 47.3 | 2.00 | 1.93 |
+| P1 | 4.0 | 3.7 | 4.0 | 1.08 | 1.00 |
+| P2 (to date) | 17.0 | 17.4 | 40.4 | 2.32 | 2.38 |
+| Sum | 45.5 | 44.8 | 91.6 | 2.04 | 2.01 |
+
+P2 to date: the P2 gate, its review and the fix rows (a) to (f) are not in the 40.4 h, so P2's figure and the rate are
+lower bounds.
+
+**Re-based at the overall rate.** 51.25 remaining planned days × 2.01 h = 103.2 h, plus 8.5 h of unscaled boundaries (6
+phases × 1 h + 10 mini-phases × 0.25 h): 91.6 + 103.2 + 8.5 = 203.3 h; 96.75 × 203.3 / 105 ≈ 187 days. The measured hours
+already hold the P0 and P1 gates and fix rows, so the 8.5 h is partly a double count; without it the total is 194.8 h,
+still above the line.
+
+| Sensitivity | Rate | Total h |
+|---|---|---|
+| Overall h ratio | 2.04 | 201.7 |
+| P2's h per planned day | 2.38 | 221.9 |
+| P2's h ratio | 2.32 | 215.5 |
+| By items: 1.48 h per row × 60 open rows, before boundaries | — | 180 |
+
+**Cuts at 2.01 h per planned day.** Every cuttable P5 row cut: 173.8 h. All of P5 cut, P5.0 and P5.9a included: 169.6 h.
+Both are above 158 h.
+
+| Feature | Rows | Planned days | Hours | Cuttable |
+|---|---|---|---|---|
+| F1 Vulnerability truth | P5.1a, P5.1b | 1.5 | 3.0 | yes |
+| F2 Deprecation and remediation | P5.2a, P5.2b | 2 | 4.0 | yes |
+| F3 Consolidate | P5.3a, P5.3b | 1.5 | 3.0 | yes |
+| F7 Sidebar vulnerability marks | P5.4 | 1 | 2.0 | yes |
+| F4 Promote a transitive package | P5.6 | 1 | 2.0 | yes |
+| F5 Palette commands, category, keybinding | P5.7a, P5.7b | 1.5 | 3.0 | yes |
+| F6 Restore, Collapse/Expand all | P5.8 | 1 | 2.0 | yes |
+| F9 Browse continuity | P5.9b | 1 | 2.0 | yes (MB16, MB19 move to P7.3) |
+| F10 Mapping visibility | P5.10a, P5.10b | 2 | 4.0 | yes |
+| F11 One central-update confirmation | P5.11a, P5.11b | 1 | 2.0 | yes |
+| Feature bundle (MB3's chunk always) | P5.0 | 1 | 2.0 | no (D56) |
+| F9 Browse rows first | P5.9a | 1 | 2.0 | no (D56, A11) |
+
+Each feature also frees its mini-phase's 0.25 h of boundary. P5.5 is already folded into P4.2b (D49).
+
+**Judge (D37).** Criterion (b): 0/365 = 0 % over P2 (refuted-by-measurement over all dispositions, rubric §9;
+accepted-as-design 12, fixed 353; the agent-file grep reads 0/384 because P2.2, P2.3 and P2.4 re-record 19 earlier findings
+under `closedFromEarlierLogs`); cumulative 0/529. Criterion (a): unchanged from UX-P0.19 (6 met, V4 not met, 3 pending
+artboard); no panel ran in P2.11; **D37's date not recorded**, so the judge stays informational (RUN-ux §4.3: every standing
+finding fixed or ruled). Beside the rate, the refuter refuted 123 of 1142 candidates over P2 (10.8 %).
+
+**No row owns the round-3 artboards** (`main-installed-all`, `main-transitive-expanded`, `main-transitive-details`,
+`main-updates`, `main-installed-details`): P2.10 produced none, so criterion (a)'s pending cells have no scheduled path. It
+goes to the P2 review as a candidate `P2.fix-n` row. A later panel counts for (a) only when it is the first panel on a
+`docs/ux/reference-2.0/` (or `80940aa`) capture of a state with its own committed artboard at the capture's width, with the
+defect still present in that capture, and only for the defects P0.19's `rerunWithRound3` names for that state.
+`main-installed-single`'s V4 cell stays `not met`; V4 may become `met` through `main-transitive-expanded`'s base capture.
+
 ---
 
 ## Appendix A — Ledger crosswalk (where each research id lands)
