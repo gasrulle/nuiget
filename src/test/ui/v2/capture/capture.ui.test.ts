@@ -98,6 +98,15 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /**
+ * Brings a row to the list's top by the list's own scroll. An element's own scroll-into-view call moves the outer webview
+ * frame by 5 px and the crop shows the editor chrome (UX-P2.8b follow-up 2, runs 41296382421 and 41298538865).
+ */
+async function scrollListTo(listTestId: string, rowTestId: string): Promise<void> {
+    const step = `const list = document.querySelector('[data-testid="${listTestId}"]'); const row = list.querySelector('[data-testid="${rowTestId}"]'); if (!row) { list.scrollTop += 300; return false; } list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top; return true;`;
+    await poll(async () => ((await script<boolean>(step)) ? true : undefined), `${rowTestId} at the top of ${listTestId}`, 60_000);
+}
+
+/**
  * Gateway's Installed list with its rows and their lite metadata. The rendered window shrinks with the pane's width: the
  * wait is on what every width renders, never on a row by position (UX-P2.1e).
  */
@@ -204,7 +213,8 @@ const REACH: Record<string, Reach> = {
             await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
             // The window is pinned at the Tools folder so both looks compose the same and the leaf is rendered (UX-P2.8b follow-up).
-            await poll(async () => (await script<boolean>('const list = document.querySelector(\'[data-testid="installed-list"]\'); const folder = list.querySelector(\'[data-testid="group-row-folder-tools"]\'); if (!folder) { list.scrollTop += 300; return false; } folder.scrollIntoView({ block: "start" }); return list.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null;') ? true : undefined), 'the Tools folder at the top of the list with the Unsupported project\'s message leaf rendered', 60_000);
+            await scrollListTo('installed-list', 'group-row-folder-tools');
+            await until('document.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null', 'the Unsupported project\'s message leaf', 60_000);
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },
