@@ -342,7 +342,7 @@
 
 /* The Extensions breakpoints of the list pane (DS-ROW-6). css.at-rules.container: Chrome 105, inside the floor's 122. */
 @container (max-width: 250px) {
-    /* §8's narrow pane: the tab strip's badges hide first, Select all gives way to its glyph and keeps its name. */
+    /* §8's narrow pane, read from `.nuiget-tabs` (a container's query reads its content box: a padded toolbar would collapse at a 280 px pane): the tab strip's badges hide first, Select all gives way to its glyph and keeps its name. */
     .nuiget-tab-count,
     .nuiget-tab-badge {
         display: none;
@@ -1213,7 +1213,6 @@
 
 /* DS-INSET-2: 4 above and below its 26 px controls, the surface inset at both ends; the below-minimum behaviours land with the pane's minimum, P2.7. */
 .nuiget-toolbar {
-    container-type: inline-size;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
