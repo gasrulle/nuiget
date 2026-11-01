@@ -42,7 +42,7 @@ export const ARTBOARDS: readonly ArtboardEntry[] = [
         source: 'artboards/round1/A-Extensions.dc.html',
         panel: 'nuiget-app',
         // The selected row's band, `list.activeSelectionBackground` (#04395e in Dark Modern).
-        sample: '[data-testid="package-row-newtonsoft.json"]',
+        sample: '[data-testid="package-row-microsoft.extensions.dependencyinjection.abstractions"]',
         themes: ['dark-modern'],
         looks: ['modern', 'classic'],
         widths: [{ panel: 932, viewport: 1280 }],

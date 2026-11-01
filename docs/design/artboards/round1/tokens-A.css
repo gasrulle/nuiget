@@ -60,7 +60,8 @@
     --nuiget-list-width: 328px;
     --nuiget-sidebar-split: 368px;
     --nuiget-select-arrow-space: 22px;
-    --nuiget-search-action-space: 28px;
+    --nuiget-search-action-space: 24px;
+    --nuiget-panel-height: 813px;
 
     /* Radius */
     --nuiget-radius-icon: var(--vscode-cornerRadius-xSmall, 2px);
@@ -197,4 +198,9 @@
     --nuiget-title-height: 35px;
     --nuiget-badge-size: 18px;
     --nuiget-font-size-badge: var(--nuiget-font-size-meta);
+}
+
+/* The `ui` job's Modern UI crop is 803 tall, its classic crop 813 (run 41255841039). */
+:root[data-look="modern"] {
+    --nuiget-panel-height: 803px;
 }

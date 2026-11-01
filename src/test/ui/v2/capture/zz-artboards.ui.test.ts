@@ -45,13 +45,15 @@ for (const el of panel.querySelectorAll('[data-testid]')) {
         padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
         gap: [s.rowGap, s.columnGap].join(' '),
         tokens: [...new Set((el.getAttribute('style') || '').match(/--nuiget-[a-z0-9-]+/g) || [])],
+        ...(el.dataset.composed ? { composed: el.dataset.composed } : {}),
     };
 }
-return JSON.stringify({ rect: { x: base.left, y: base.top, w: base.width, h: base.height }, elements });
+return JSON.stringify({ rect: { x: base.left, y: base.top, w: base.width, h: base.height }, ...(panel.dataset.composition ? { composition: panel.dataset.composition } : {}), elements });
 `;
 
 interface Spec {
     rect: { x: number; y: number; w: number; h: number };
+    composition?: string;
     elements: Record<string, unknown>;
 }
 
