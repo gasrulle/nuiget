@@ -1,0 +1,168 @@
+{
+  "item": "P2.9b",
+  "runs": [
+    {
+      "runId": "41335175993",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "1ce8595",
+      "look": "modern",
+      "workflow": "wf_8955bb74-883",
+      "note": "P2.9b moves no pixel: [diff] 54 at 0 px. main-installed-single 932 differs in bytes from the judged run 41319633060 (a3017914… against 02545da7…) inside its masked live regions alone: one panel. sidebar-sections 300 (628dce03…) is byte-identical to the judged run 41319633060: not re-run. Nothing new: both standing findings go to their existing owners.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/41335175993/main-installed-single.dark-modern.932.png",
+          "sha256": "a301791489eae8f15f59a89fe8107a224641bec6c8c1e9356566293f6c42bea4",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 10,
+        "standing": 2,
+        "blocking": 0,
+        "refuted": 3,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[states] The toolbar check box label reads \"Include prerelease\", while the Design System's terms (microcopy section, T-20) require the spelling \"Pre-Release\" in labels and \"pre-release\" in sentences. The artboard draws the same text, so the conflict is between the artboard and the terms rule.",
+          "severity": "minor",
+          "box": [
+            466,
+            13,
+            120,
+            15
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The toolbar check box label reads \"Include prerelease\", while the Design System's terms (microcopy section, T-20) require the spelling \"Pre-Release\" in labels and \"pre-release\" in sentences. The artboard draws the same text, so the conflict is between the artboard and the terms rule.",
+              "severity": "minor",
+              "box": [
+                466,
+                13,
+                120,
+                15
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Include prerelease', as does the artboard, while the Design System's terms (line 479 and T-20) spell it 'Pre-Release' in labels; the spec declares no text for this label, so nothing excludes it, and with the artboard identical it stays a terminology polish item.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "The Installed tab draws a full 1 px focusBorder ring (x 6-144, y 77-111) in this rest state, where the artboard shows only the 1 px active underline at y 111, so the strip reads as focused and the blue is more prominent than the selected-tab role at rest.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "DS-COLOR-5",
+          "verdict": "refuted",
+          "reason": "The ring is visible at x 6-144, y 77-111, but it is the focus ring of a tab the state's reach clicked (DS-FOCUS-3: the main panel draws rings after a click), and the hard measurement reads 'DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "The Installed tab has a 1 px #0078d4 box on all four sides (x 6-144, y 77-111), where the artboard draws only the bottom underline (y 111) across the same width. The spec declares no such box for this rest state, although DS-FOCUS-3 allows a ring on a main-panel tab after a click.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The four-sided #0078d4 box at x 6-144, y 77-111 is there, but it is the clicked tab's focus outline that DS-FOCUS-3 prescribes, and the hard measurement reads 'tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The rest state shows a 1 px #0078d4 focus ring around the whole Installed tab (x 6 to 144, y 77 to 112), which the artboard does not draw: there the tab has only its 1 px underline. The spec's composition calls this state the rest state, and DS-FOCUS-3 only explains a ring after a click, so the ring is an extra interaction state.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            36
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The ring spans x 6-144, y 77-111 (y 112 is the #2b2b2b strip line, not ring) and is the focused tab's outline after the reach's click on installed-tab, which DS-FOCUS-3 prescribes; the hard DS-FOCUS-1 tabs line measures 'outline 1 solid rgb(0, 120, 212) offset -1' on target.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The split between the list and details panes is a solid 4 px #313131 band (x 326-329, y 77-803), where the artboard draws a 1 px #2b2b2b separator at x 327 and DS-DIVIDER-6 wants a 1 px separator with a transparent sash at rest. It reads as a heavy non-native bar, moves the list's scrollbar 1 px left, and starts the details pane at x 330 instead of the spec's 328. | [geometry] The split between the list and details panes is an opaque 4 px band (x 326-329, y 77-802, #313131), where the artboard draws a 1 px #2b2b2b separator at x 327 and DS-DIVIDER-6 requires a transparent sash at rest. As a result the details pane starts at x 330 instead of the spec's 328, and the list column ends at x 325 instead of 326 (scrollbar at 318-325, artboard 319-326). | [states] The split between the list and details panes is painted as a 4 px band of #313131 (x 326 to 329, y 77 to the bottom) at rest. The artboard draws a 1 px #2b2b2b separator at x 327, and DS-DIVIDER-6 requires a 1 px separator with a transparent 4 px sash at rest.",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent; owner P3.9 (From UX-P2.8b's judge)",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` where §4 wants transparent; owner P3.9 (From UX-P2.8b's judge)"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The bulk toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and the copy rule requires Title Case on button labels like the workbench's own. | [states] The Select All button reads \"Select all\" in sentence case, where the artboard and the Design System's microcopy list draw \"Select All\" in Title Case. | [states] The bulk uninstall button reads \"Uninstall selected (0)\" in sentence case, where the artboard and the Design System's microcopy list draw \"Uninstall Selected (0)\" in Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the bulk toolbar labels become Title Case at P3.11 (From UX-P2.8a, DS-COPY-1)",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the bulk toolbar labels become Title Case at P3.11 (From UX-P2.8a, DS-COPY-1)"
+        }
+      ]
+    }
+  ]
+}

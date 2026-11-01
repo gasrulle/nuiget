@@ -1039,7 +1039,7 @@ These parts are the current truth for the build, test and release pipeline.
   (`[artboard]` lines, UX-P0.27); the copies kept are in `docs/design/artboards/`. `scripts/render-artboards.mjs` runs the
   export suite alone, narrowed by state, theme and look, with the extensions directory under the storage directory. A pending state names the item that renders its markers and
   is never captured. The two suites divide the work by what each can see. The
-  extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`)
+  extension-host suite (`src/test/e2e/v2-*.e2e.test.ts`, one file per legacy e2e file since P5.12a, shared steps in `v2Support.ts`; `v2-row-menu.e2e.test.ts` runs the command a row menu item runs, ExTester's `[menu]` probe opens the menu itself)
   shows that the extension activates,
   that every contributed command answers, that the main panel is one tab that closes and opens again, and that
   noun-first `dotnet package add` and `remove` on the project file under both surfaces (an install, an update from
