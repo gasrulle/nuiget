@@ -798,6 +798,2031 @@
           "ruling": "design-advisor, UX-P2.8b-a follow-up 2"
         }
       ]
+    },
+    {
+      "runId": "41306445646",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "4fc4541",
+      "look": "modern",
+      "workflow": "wf_8ca42aef-67c",
+      "note": "The five new cells have no artboard of their own: judged against main-installed-single's 932 artboard and spec.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/41306445646/main-installed-single.dark-modern.932.png",
+          "sha256": "0c9d3e56c65e98633ee1840f08aeca09b931099ee2334c59498694b4b632c56b",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-loading": {
+          "png": "captures/41306445646/main-installed-loading.dark-modern.1200.png",
+          "sha256": "fc17b1b402737794959273795e60be2e96564ced74ebd9d51de1e83d7a14b3c9",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-revalidating": {
+          "png": "captures/41306445646/main-installed-revalidating.dark-modern.1200.png",
+          "sha256": "4c60c1492080aa8ab0411b13349f2ac8b8ff72092f9e77f81a1b2bf041300864",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-empty": {
+          "png": "captures/41306445646/main-installed-empty.dark-modern.1200.png",
+          "sha256": "10501d2eee6ad82d052c85894757b4334436aad4a8e0d456458744066fd14930",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-error": {
+          "png": "captures/41306445646/main-installed-error.dark-modern.1200.png",
+          "sha256": "75f9cfdd574b5477c355458267c492b034b79b50b2a9643142f6ad93c63b5bc4",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-unresolved": {
+          "png": "captures/41306445646/main-installed-unresolved.dark-modern.1200.png",
+          "sha256": "b93114f25362476c728a963cd25274e0d1cab0c75569e5a87c0718f6df7b1168",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 87,
+        "standing": 26,
+        "blocking": 1,
+        "refuted": 17,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-revalidating#D7",
+          "state": "main-installed-revalidating",
+          "finding": "[states] The header's Refresh action draws the two-arrow sync glyph, where the artboard's refresh-button draws the single circular-arrow refresh glyph.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-7",
+              "lens": "states",
+              "state": "main-installed-revalidating",
+              "finding": "The header's Refresh action draws the two-arrow sync glyph, where the artboard's refresh-button draws the single circular-arrow refresh glyph.",
+              "severity": "minor",
+              "box": [
+                1162,
+                10,
+                22,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The 4x zoom shows the two-arrow sync glyph, also in main-installed-single, where the artboard draws the single circular arrow; these are different icons rather than a rendering difference, so §6 does not cover them, though no spec line names the glyph and the artboard's own gear also differs.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-error#D6",
+          "state": "main-installed-error",
+          "finding": "[states] The header check box reads \"Include prerelease\", where microcopy rule 7 of the Design System requires \"pre-release\" in sentence-case text; the artboard draws the same wording, so the defect is in both.",
+          "severity": "minor",
+          "box": [
+            734,
+            12,
+            121,
+            17
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-6",
+              "lens": "states",
+              "state": "main-installed-error",
+              "finding": "The header check box reads \"Include prerelease\", where microcopy rule 7 of the Design System requires \"pre-release\" in sentence-case text; the artboard draws the same wording, so the defect is in both.",
+              "severity": "minor",
+              "box": [
+                734,
+                12,
+                121,
+                17
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Include prerelease', and Design System microcopy rule 7 and T-20 require the hyphenated 'pre-release'; the artboard draws the same wording but the spec has no text entry declaring it, so it is a copy defect in both rather than a declared difference.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-unresolved#D2",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The Serilog name is drawn in the secondary text colour (#9d9d9d, the same as its facts line) instead of the list foreground (#cccccc) that Newtonsoft.Json and the artboard's rows use, and it is not the disabled colour either, so the row's name and facts lose their hierarchy.",
+          "severity": "major",
+          "box": [
+            98,
+            266,
+            56,
+            15
+          ],
+          "rule": "DS-COLOR-1",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-unresolved",
+              "finding": "The Serilog name is drawn in the secondary text colour (#9d9d9d, the same as its facts line) instead of the list foreground (#cccccc) that Newtonsoft.Json and the artboard's rows use, and it is not the disabled colour either, so the row's name and facts lose their hierarchy.",
+              "severity": "major",
+              "box": [
+                98,
+                266,
+                56,
+                15
+              ],
+              "rule": "DS-COLOR-1",
+              "verdict": "confirmed",
+              "reason": "The Serilog name peaks at #9d9d9d (descriptionForeground) against #cccccc for Newtonsoft.Json, and it is not disabledForeground (about #727272 on #181818), which DS-COLOR-6 and the §4 List row entry require for a disabled name; no hard measurement covers this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "The Installed tab has a full 1 px focusBorder box around it (x 6 to 144, y 77 to 111) in this rest state, where the artboard draws only the 1 px underline of the selected tab, so the tab reads as a boxed control rather than a quiet navbar label; DS-FOCUS-3 allows a ring only if the tab really holds focus after a click, which the pixels cannot show.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The ring is visible in the crop, but the finding's open question is answered by a hard measurement: DS-FOCUS-1@main-installed-single/tabs reads 'tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1', so the tab holds focus, and DS-FOCUS-3 requires a ring after a click in the main panel.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "The Installed tab has a full 1 px blue ring around its whole 139 x 35 box at rest, where the artboard draws only the active tab's underline under the same tab rect (spec installed-tab x 6, y 77, w 138.6, h 35) and the spec calls this state the rest state; the ring also replaces the underline along the tab's bottom edge.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The 1 px ring at x 6 to 144, y 77 to 111 is visible, but the hard DS-FOCUS-1 line 'outline 1 solid rgb(0, 120, 212) offset -1' shows it is the focus ring of the focused tab, which DS-FOCUS-3 requires after a click, and the bottom edge still paints #0078d4 at y 111 where the artboard's underline sits.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-4",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "Badges are 1 px taller than the artboard's: the tab count badges span y 84-103 (20 px) against 85-103 (19 px), and the same holds for the Updates tab badge, the Direct Packages count (y 151-170 against 152-170) and the Vulnerable badge (y 624-643 against 625-643), which also lifts the Newtonsoft name 1 px above the artboard's position.",
+          "severity": "minor",
+          "box": [
+            82,
+            84,
+            53,
+            20
+          ],
+          "rule": "DS-HEIGHT-10",
+          "verdict": "refuted",
+          "reason": "The 1 px difference is real (the x 95 pixel column starts at y 84 against y 85 in the artboard), but the hard line DS-HEIGHT-10@main-installed-single reads 'count 20.4×20, 26.7×20 ×3 (at least 19×19)', the rule sets a minimum, and the spec gives no badge rectangle.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The Installed tab shows a full 1 px focusBorder rectangle (blue at y 77 as well as y 111) in this rest state, where the artboard draws only the 1 px active underline at y 111 and no ring, so an interaction state the artboard does not show is on screen.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "DS-COLOR-5",
+          "verdict": "refuted",
+          "reason": "The blue rectangle is visible, but DS-COLOR-5 allows focusBorder on keyboard-focused controls, and DS-FOCUS-3 extends rings to clicks in the main panel; hard lines show the tab holds focus (DS-FOCUS-1 'outline 1 solid rgb(0, 120, 212) offset -1') and 'DS-COLOR-5@main-installed-single/tabs: ... 1 others unlined'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-5",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The header's two actions differ from the artboard's glyphs: the source-settings action is a toothed gear where the artboard draws a rayed gear, and the refresh-button is the two-arrow sync shape where the artboard draws the single-arrow refresh circle.",
+          "severity": "minor",
+          "box": [
+            868,
+            10,
+            48,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "verdict": "refuted",
+          "reason": "The crops differ only in glyph outline (toothed gear and two-arrow shape against rayed gear and single arrow), which rubric §6 excludes, and the spec's rects and tokens name no glyph; the hard line DS-ICON-2@main-installed-single reads 'glyph 16×16 ×3 (target 16×16); colour icon.foreground ×3'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-6",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The search box's filter glyph is a larger funnel with a long stem, about 14 by 14 px, where the artboard draws a smaller, shorter funnel about 12 by 10 px in the same slot.",
+          "severity": "minor",
+          "box": [
+            896,
+            48,
+            14,
+            14
+          ],
+          "rule": "DS-ICON-2",
+          "verdict": "refuted",
+          "reason": "The capture's funnel is larger (bright pixels x 896-909, y 48-60 against x 897-908, y 50-59 in the artboard), but the hard line DS-ICON-2@main-installed-single reads 'glyph 16×16 ×3 (target 16×16)', so the capture meets the rule, and the rest of the difference is glyph outline, which §6 excludes.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-7",
+          "lens": "native",
+          "state": "main-installed-loading",
+          "finding": "The INSTALLED tab shows a full 1 px focus-coloured ring (x 6-85, y 77-112) in a loading state that is not a focus state, where the artboard's selected tab draws only its 1 px bottom underline, so the tab reads as a boxed control rather than a workbench navbar tab.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            80,
+            36
+          ],
+          "rule": "DS-COLOR-5",
+          "verdict": "refuted",
+          "reason": "The ring is visible, but the capture setup clicks installed-tab, and the same run measures a focused tab's ring as DS-FOCUS-1 \"outline 1 solid rgb(0, 120, 212) offset -1\" and DS-FOCUS-3 \"after a click ... target a ring, main panel, modern\" (hard), so it is the required focus ring, not a misuse of focusBorder.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-installed-empty",
+          "finding": "The sentence 'No packages installed.' floats between the toolbar and the group headers, and the Direct Packages header below it stays expanded with a 0 badge and nothing under it; the message is detached from the group it describes, whereas a built-in view's welcome message stands where the empty list would be.",
+          "severity": "major",
+          "box": [
+            16,
+            155,
+            388,
+            54
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The sentence does sit above an expanded Direct Packages header with a 0 badge, but DECISIONS.md 2026-10-31 (UX-P2.1e) declares that the empty state renders above the tree under the toolbar, and DS-STATE-3 measures 'start, 20/20, 0 buttons, gap 8 (2)' (pending P2.8b); the finding cites no rule, so this placement is a recorded design choice.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-empty",
+          "finding": "The Installed tab draws a full 1 px focusBorder ring around the tab in this rest state, where the artboard shows only the 1 px active underline; the ring sits over the underline and hides it, so the tab reads differently from the artboard's and from a built-in tab strip at rest.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "DS-FOCUS-1",
+          "verdict": "refuted",
+          "reason": "The ring is visible (rgb 0,120,212 at y 77, y 111, x 6 and x 85), but the state's reach clicks installed-tab and DS-FOCUS-3 says the main panel draws rings after a click in both looks, so this is correct focus in the DS-FOCUS-1 form; DS-COLOR-4 hard reads 'selected [installed-tab]: panelTitle.activeForeground, line 1 panelTitle.activeBorder'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-5",
+          "lens": "native",
+          "state": "main-installed-empty",
+          "finding": "The Installed and Updates tabs show no count badge at zero while the Direct Packages and Transitive Packages headers just below show a 0 badge, so one surface treats a zero count in two ways, where the artboard draws a count badge on both tabs and on the group header.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            150,
+            35
+          ],
+          "rule": "DS-COPY-5",
+          "verdict": "refuted",
+          "reason": "The tabs do show no badge at zero, but hard DS-COPY-5 reads 'headers 2: count badges 1, \"(N)\" texts 0; tabs 2: count badges 0', that rule bars only a badge with '(N)' text, no document sets a zero-count rule, the artboard draws a non-empty project's counts (live content under rubric §6), and the box does not cover the headers it compares.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-empty",
+          "finding": "The details pane's empty message \"Select a package to see its details.\" starts about 8 px below the pane top (pane top y 77, text ink from y 88) but 20 px from its start edge (x 424 to x 444), so it sits tighter at the top than the 20 px details inset (spec readme-content padding 20; the artboard's details title also sits lower).",
+          "severity": "minor",
+          "box": [
+            444,
+            88,
+            226,
+            13
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The text sits about 11 px below the pane top and 20 px from its start edge as described, but DS-STATE-3 sets only 20 px side padding and no top value, the spec has no details-empty entry, and readme-content's padding belongs to another element, so no rule or redline makes this a defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-empty",
+          "finding": "The INSTALLED tab carries a full 1 px focusBorder ring (rgb 0,120,212 on all four sides) in this rest state, whereas the artboard's installed-tab draws no ring, only the 1 px active underline, and the ring swallows that underline.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "DS-COLOR-4",
+          "verdict": "refuted",
+          "reason": "The ring is visible, but hard DS-COLOR-4 reads 'selected [installed-tab]: panelTitle.activeForeground, line 1 panelTitle.activeBorder', the suite clicks installed-tab to reach this state, and DS-FOCUS-3 plus DECISIONS.md 2026-10-31 (UX-P2.5, 'a ring after a click') declare a ring after a click in the main panel.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-empty",
+          "finding": "The Installed and Updates tabs show no count badge, whereas the artboard's tabs carry count badges and the Direct and Transitive group headers just below do draw a \"0\" badge, so one surface treats a zero count two ways.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            150,
+            35
+          ],
+          "rule": "DS-COPY-5",
+          "verdict": "refuted",
+          "reason": "Hard DS-COPY-5 reads 'headers 2: count badges 1, \"(N)\" texts 0; tabs 2: count badges 0', which satisfies the rule's only bar on a badge with '(N)' text, and the artboard's tab badges are a non-empty project's count values (live content under rubric §6), so the empty state's missing tab badges break no stated rule.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-6",
+          "lens": "states",
+          "state": "main-installed-empty",
+          "finding": "The empty sentence \"No packages installed.\" sits above an expanded Direct Packages header with a \"0\" badge and no content under it, so the condition is stated twice and the message does not read as the content of the group it describes, unlike a welcome view whose sentence stands in for the content.",
+          "severity": "minor",
+          "box": [
+            16,
+            155,
+            388,
+            48
+          ],
+          "rule": "DS-STATE-3",
+          "verdict": "refuted",
+          "reason": "DS-STATE-3 measures 'start, 20/20, 0 buttons, gap 8 (2)' (pending P2.8b), which meets the cited rule, and DECISIONS.md 2026-10-31 (UX-P2.1e) declares the empty state above the tree, so the sentence above the empty Direct Packages header is a recorded design choice even though it is visible in the crop.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-error",
+          "finding": "The error sentence's text starts at x 40 and the Direct Packages title directly below it starts at x 36, so two stacked text edges in the list column miss each other by 4 px; in the artboard the only text column under the toolbar at that level is the group title at x 36.",
+          "severity": "minor",
+          "box": [
+            36,
+            154,
+            297,
+            58
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The 4 px difference is visible (sentence at x 40, group title at x 36), but no rule, spec entry or artboard element says a banner's text column and a group title must coincide (the artboard draws no banner and DS-ALIGN-1 covers label-value pairs only), the measured start insets agree ('DS-INSET-1@main-installed-error: search 16, section 16, tab 16, title 16, toolbar 16'), and rubric §6 excludes judgement with nothing to cite.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-2",
+          "lens": "native",
+          "state": "main-installed-unresolved",
+          "finding": "The Serilog row's check box has a bright #7e7e7e border at rest, while the Newtonsoft.Json check box above it and every artboard check box use the #3c3c3c check box border, and the row has no hover or selection band that would explain the difference.",
+          "severity": "major",
+          "box": [
+            16,
+            274,
+            18,
+            18
+          ],
+          "rule": "DS-HEIGHT-9",
+          "verdict": "refuted",
+          "reason": "The #7e7e7e border is visible, but it is the Design System's disabled check box role: §4 gives Check box Disabled as disabledForeground, and rgba(204,204,204,0.5) over the #313131 fill composites to #7e7e7e, so the role is right and rubric §6 says to judge the role, not the hex; DS-HEIGHT-9 measures 18×18 ×4 (hard).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-unresolved",
+          "finding": "The check box of the disabled Serilog row has a border of about rgb(126,126,126), while the enabled Newtonsoft.Json row above it has the checkbox.border value rgb(60,60,60) (#3c3c3c), so the row that cannot act has the more prominent check box.",
+          "severity": "major",
+          "box": [
+            16,
+            274,
+            18,
+            18
+          ],
+          "rule": "DS-HEIGHT-9",
+          "verdict": "refuted",
+          "reason": "The border samples #7e7e7e against #3c3c3c on the enabled row, but this row is disabled and §4 gives the disabled check box disabledForeground, which composites to exactly #7e7e7e over #313131, so the difference follows the declared role and rubric §6 says to judge the role, not the hex.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The split between the list and details panes is a painted 4 px band in a grey (#313131, pixels x 326 to 329) from y 77 to the bottom edge at rest, where the artboard draws one 1 px separator at x 327 (#2b2b2b) with a transparent sash, so the divider reads visibly heavier than a workbench split and the scrollbar thumb sits 1 px further left than in the artboard. | [geometry] The split between the list and details panes is a 4 px opaque #313131 band at x 326-329 from y 77 to 802, where the artboard and DS-DIVIDER-6 draw a 1 px separator at x 327 with a transparent sash; as a result the list column ends at x 326 (spec installed-list w 327, scrollbar 318-325 against the artboard's 319-326) and the details pane starts at x 330 (spec package-details-panel x 328), which moves its empty-state text to x 350 against the spec's 348 inset. | [states] The split between list and details paints a solid 4 px band (#313131, x 326 to 329) at rest, where the artboard draws a 1 px separator at x 327 (#2b2b2b) and the rule requires the 4 px sash to stay transparent until hovered or dragged.",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and workbench button labels are Title Case. | [geometry] The toolbar labels read 'Select all' and 'Uninstall selected (0)' in sentence case where the artboard draws 'Select All' and 'Uninstall Selected (0)', and this changes the geometry: the Uninstall button spans x 165-309 (145 wide) against the spec's x 164, w 147, and Select all ends at x 88 against the artboard's 89. | [states] The selected-state button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the Microcopy list give the Title Case label \"Uninstall Selected (0)\". | [states] The bulk button reads \"Select all\" in sentence case, where the artboard's select-all-button and the Microcopy list give the Title Case label \"Select All\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D1",
+          "state": "main-installed-loading",
+          "finding": "[native] The three loading placeholders are blank 404 x 70 px slabs in the row-hover colour (#2a2d2e), with no check, icon or text-line shapes, so they read as filled panels rather than the artboard's 72 px Extensions rows (check box, 36 px icon, two text lines) or anything the workbench draws. | [states] The skeleton rows are blank flat plates, inset to x 8..412 and 70 px high with 2 px gaps, with no placeholder for the check box, icon, name or facts line; the artboard's package rows are 72 px bands starting at x 0 with no gap, so the plates do not read as the rows they stand in for.",
+          "severity": "major",
+          "box": [
+            8,
+            151,
+            404,
+            214
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the skeleton row draws the row anatomy (icon tile at 46, name bar at 98, DS-ROW-1) at the row's height, with no padding of its own",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D2",
+          "state": "main-installed-loading",
+          "finding": "[native] The skeleton rows sit above the Direct Packages header at y 367, and the header is drawn expanded with nothing under it, directly followed by Transitive Packages; the artboard puts Direct Packages first at y 147 with its rows below, so the placeholders belong to no group and the header labels nothing. | [geometry] The three skeleton blocks sit above the Direct Packages header, so the header starts at y 367 instead of the list top (spec section-header-direct y 147) and is 2 px below the last skeleton; its chevron is expanded with no rows under it, and the skeleton rows it should label are detached from it, against the artboard's header-then-rows order and the 4/8 block gaps. | [states] The three skeletons sit above the Direct Packages header and leave that header expanded with nothing beneath it, so the loading placeholders belong to no group and the group reads as empty, whereas the artboard's section-header-direct comes first at y 147 with its rows directly under it; here the header is pushed to about y 367.",
+          "severity": "major",
+          "box": [
+            4,
+            151,
+            412,
+            270
+          ],
+          "rule": "DS-GRID-2, judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "a single project without a result lists no group rows; the Skeleton is the Listbox's `empty` slot under the bar",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D3",
+          "state": "main-installed-loading",
+          "finding": "[native] The split between list and details is a 4 px opaque #313131 band at x 420-423, much heavier than the artboard's 1 px #2b2b2b separator at its split, where the sash itself should be transparent at rest. | [geometry] The split between the list and details panes is a painted 4 px band in #313131 at x 420-423, running the full body height; the artboard draws a 1 px #2b2b2b separator (x 327, with the details panel starting at 328 in the spec), and the rule asks for a 1 px separator with a transparent 4 px sash at rest. | [states] The split between list and details is painted as a solid 4 px band (x 420..423, rgb 49,49,49) at rest, where the artboard draws a 1 px separator at x 327 (rgb 43,43,43) and the rule requires a 1 px separator with a transparent 4 px sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D4",
+          "state": "main-installed-loading",
+          "finding": "[native] The bulk toolbar labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case, against the artboard's Title Case \"Select All\" and \"Uninstall Selected (0)\" and the copy rule's own examples. | [states] The bulk toolbar's button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and the copy rule requires Title Case on button labels. | [states] The primary bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and the copy rule requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D5",
+          "state": "main-installed-loading",
+          "finding": "[native] No visible \"Loading …\" status line appears under the progress bar: the bar runs straight into the first skeleton, while the rule asks for three skeleton rows and a status line on a first load, so the state says what it is doing nowhere in text. | [geometry] No visible \"Loading …\" status line appears under the progress bar: the pixels go from the bar at y 147-148 straight to the first skeleton at y 151, while the rule requires three skeleton rows and a status line under the bar on a first load. | [states] The first-load state shows no visible \"Loading …\" status line under the 2 px bar: the bar at y 147 is followed directly by the first skeleton plate at y 151 with no text anywhere in the list, although DS-STATE-2 requires three skeleton rows and that status line on a first load of Installed.",
+          "severity": "major",
+          "box": [
+            0,
+            147,
+            420,
+            24
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DS §7 :419: the 'Loading …' status line is the live region, not visible text; its announcement is A9, P4.6 (item ruling DO NOT)",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-loading#D6",
+          "state": "main-installed-loading",
+          "finding": "[native] The skeleton bands run from x 8 to x 412, inset 8 px on each side, which matches neither the artboard's row band starting at the list edge (x 0) nor the 16 px content inset of the toolbar and group headers, so their edges line up with nothing around them. | [geometry] The skeleton blocks span x 8-411, 8 px from each side of the 420 px list column; this matches neither the row band of the artboard and spec (starts at x 0) nor the 16 px region inset used by Select all, the section headers and the row check box, so they add a third left edge to the column.",
+          "severity": "major",
+          "box": [
+            8,
+            151,
+            404,
+            214
+          ],
+          "rule": "DS-ROW-3, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the skeleton row draws the row anatomy (icon tile at 46, name bar at 98, DS-ROW-1) at the row's height, with no padding of its own",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D1",
+          "state": "main-installed-revalidating",
+          "finding": "[native] A second indeterminate bar runs in the main header, under the search box and above the header line (y 74-75, x 16-366), while the list's own bar runs at y 147-148. The state rule allows one bar per screen, at the top of the list that revalidates, and neither the artboard nor a native view draws a progress stripe inside a search row. | [geometry] A second indeterminate bar is drawn in the main header's bottom padding (x 16-366, y 74-75, under the search box and 1 px above the header line at y 76) while the list-top bar (x 0-126, y 147-148) also runs; design-system §9 allows one bar per screen, DS-STATE-2 puts it at the top of the list that revalidates, and the artboard draws nothing in this 8 px padding (search bottom 68 to line 76). | [states] A second 2 px progress stripe runs under the search box in the header (x 16 to 365, y 74 to 75); the artboard draws nothing between the search box and the header line, the Installed revalidating cell names one bar (installed-progress), design-system §9 allows one bar per screen, and no search is running, so the extra bar shows work in the wrong place.",
+          "severity": "blocking",
+          "box": [
+            16,
+            74,
+            350,
+            2
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the header's RefreshBar yields to the Installed list's own bar (§9: one bar per screen; the header's revalidating cell is the refresh button); Updates keeps it until P3.1b",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D2",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The list's progress bar takes layout height: the Direct Packages header and every row sit 2 px lower than the spec and artboard (title centre y 163 against 161, first row name y 203 against 201, header expected at y 147). A native pane's progress bar overlays the header's bottom edge and moves nothing, and a revalidation should keep the rows in place. | [geometry] The list-top progress bar takes layout space and pushes the list down 2 px: the bar fills y 147-148 and the scrollbar thumb and everything below start at y 149, the Direct Packages header at y 149 against the spec's section-header-direct y 147, and the check boxes at y 204 and 276 against the artboard's 202 and 274; main-installed-single in the same run has its thumb at y 147, so the rows jump when the bar appears instead of the bar overlaying the list's top edge. | [states] The list-top bar takes layout height instead of overlaying the list: the section header text and rows sit 2 px lower than the artboard (Direct Packages text starts at y 160 against 158, scrollbar at y 149 against the spec list's 147), so the rows move when a revalidation starts rather than staying put.",
+          "severity": "major",
+          "box": [
+            0,
+            147,
+            412,
+            30
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the list's bar overlays the list area's top edge (`.nuiget-installed-progress`, the pattern of `.nuiget-main-progress`; DS-STATE-2's exemplar `paneviewlet.css:78-87`)",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D3",
+          "state": "main-installed-revalidating",
+          "finding": "[native] A spinner sits beside the 'Direct Packages' title, where the artboard's header has only the title and the count badge. The Installed (single) state is defined as bar, rows stay, so this is a redundant extra progress indicator on top of the bars, not how a built-in pane header shows progress. | [geometry] An extra spinner of about 12 px sits on the Direct Packages header beside its title; the artboard's header has only chevron, title and count, and design-system §9 defines single-project revalidating as the bar with rows kept, naming a group-row spinner only for All Projects. | [states] A spinner sits beside the \"Direct Packages\" title; the artboard's header has no such glyph and the single-project revalidating cell is bar, rows stay and aria-busy (a group-row spinner belongs to the All Projects cell), so this state shows redundant progress beside the list-top bar.",
+          "severity": "major",
+          "box": [
+            150,
+            156,
+            14,
+            14
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "a group row's spinner means a missing chunk under All Projects only; revalidation is the bar's (DECISIONS 2026-10-31 P2.1d, narrowed)",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D4",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The split between the list and details panes is painted as a solid 4 px band (x 420-423, rgb 49,49,49, y 77 to the bottom) at rest, where the artboard draws a 1 px separator (x 327, rgb 43,43,43). The rule asks for a 1 px separator with a transparent sash, so it reads as a heavy non-native gutter. | [geometry] The split between list and details is an opaque 4 px band (x 420-423, y 77 to the bottom) where the artboard draws a 1 px line at x 327 with the details panel starting right after it (spec package-details-panel x 328); DS-DIVIDER-6 asks for a 1 px separator with a sash that is transparent at rest. | [states] The split between list and details is a 4 px lighter band (x 420 to 423) over the full body height, where the artboard draws a 1 px separator at x 327 and the rule asks for a 1 px line with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D5",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The toolbar button reads 'Select all' in sentence case, where the artboard draws 'Select All' and button labels must be Title Case like the workbench's own buttons. | [states] The toolbar button reads \"Select all\" in sentence case; the artboard's select-all-button reads \"Select All\", and button labels are Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            73,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-revalidating#D6",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The toolbar button reads 'Uninstall selected (0)' in sentence case, where the artboard draws 'Uninstall Selected (0)' and button labels must be Title Case. | [states] The bulk button reads \"Uninstall selected (0)\" in sentence case; the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\", and button labels are Title Case.",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-empty#D1",
+          "state": "main-installed-empty",
+          "finding": "[native] Between the list and details panes a 4 px band in a lighter grey (#313131, x 420-423) runs the full height, where the artboard draws a single 1 px #2b2b2b separator (x 327), so the split reads as a thick painted bar instead of a workbench sash at rest. | [geometry] The split between the list and details panes is a solid 4 px #313131 band (x 420-423, y 77-802), where the artboard draws a 1 px #2b2b2b separator at the list's right edge (x 327, details starting at x 328) and the rule asks for a 1 px separator with a sash that is transparent at rest. | [states] The split between the list and details panes paints a visible 4 px grey band (x 420 to 423, rgb 49,49,49) over the full height at rest, where the artboard draws a 1 px divider at the pane edge and the rule asks for a 1 px separator in a transparent 4 px sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-empty#D2",
+          "state": "main-installed-empty",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws 'Select All' and 'Uninstall Selected (0)' and the rule requires Title Case on button labels. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and button labels must be Title Case. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws \"Uninstall Selected (0)\" and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            389,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-error#D1",
+          "state": "main-installed-error",
+          "finding": "[native] The split between the list and details panes paints a lighter bar about 4 px wide at rest (x 420 to 424, full height), where the artboard draws a 1 px separator at the list's edge; it reads as a heavy gutter, not a workbench sash line. | [geometry] The split between the list and the details pane is a 4 px bar painted solid grey at rest (x 420-423, rgb 49,49,49, y 77 to the bottom), where the artboard draws a 1 px divider (x 327, rgb 43,43,43), the spec puts the details panel 1 px after the list (list ends 327, panel x 328), and the rule asks for a 1 px separator with a transparent sash. | [states] The split between the list and details panes is painted as a visible 4 px lighter band over the full height (x 420 to 424), where the artboard draws a 1 px separator at x 327 and the rule requires a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-error#D2",
+          "state": "main-installed-error",
+          "finding": "[native] The selected Installed tab shows a full 1 px focusBorder rectangle in this rest error capture, where the artboard's selected tab has only a 1 px underline, so the tab reads as a boxed control rather than a workbench navbar tab and the underline cannot be told apart from the ring. | [states] The active Installed tab shows a 1 px focus-blue ring on all four sides in a capture that is not a focus state, where the artboard's installed-tab draws only the 1 px active underline, so the underline cannot be told apart from the ring.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "DS-COLOR-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-10-31 (UX-P2.5): a tab shows its ring after a click (DS-FOCUS-3); the setup clicks the tab, as `main-installed-single`'s does; the states are in `FOCUSED_TAB_STATES`",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-error#D3",
+          "state": "main-installed-error",
+          "finding": "[native] The bulk toolbar button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rule requires Title Case for button labels. | [states] The bulk toolbar's left button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and the copy rules require Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-error#D4",
+          "state": "main-installed-error",
+          "finding": "[native] The primary bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and the copy rule requires Title Case for button labels. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-error#D5",
+          "state": "main-installed-error",
+          "finding": "[native] Under the error message, Direct Packages sits expanded (chevron down) with no rows, count or message beneath it and Transitive Packages follows directly, so the group that failed looks open and empty and the error is not in the area that failed; a built-in view would show the inline message alone, and the artboard never draws an expanded group without rows. | [states] Direct Packages stays expanded with its chevron down but has no rows, count or message under it, while the error sits above it; compared with the artboard's populated group, it reads as an open, empty group rather than as the area that failed.",
+          "severity": "minor",
+          "box": [
+            4,
+            190,
+            412,
+            56
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "as `loading#D2`: no group rows without a result; the banner stands alone",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-unresolved#D1",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The split between the list and details panes is painted as a solid 4 px band (x 420-423, #313131) for the full pane height, where the artboard draws a 1 px separator (x 327, #2b2b2b) and the rule asks for a 1 px line with a transparent sash, so it reads heavier than any workbench split. | [geometry] The split between the list pane and the details pane is a solid 4 px band of #313131 at x 420-423, running the full body height, where the artboard and DS-DIVIDER-6 draw a 1 px separator (artboard: x 327, #2b2b2b) with a transparent 4 px sash; the divider reads heavier than the 1 px header and tab lines beside it, and the list pane's edge moves 3 px from the line the details pane starts on. | [states] A 4 px solid band of rgb(49,49,49) runs the full height between the list and details panes at x 420-423, where the artboard draws a 1 px rgb(43,43,43) separator at x 327 and the rule requires a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-unresolved#D3",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and button labels must be Title Case. | [states] The bulk toolbar's first button reads \"Select all\" in sentence case, where artboard A's select-all-button reads \"Select All\" and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            73,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-unresolved#D4",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The toolbar button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and button labels must be Title Case. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where artboard A's uninstall-selected-button reads \"Uninstall Selected (0)\" and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-unresolved#D5",
+          "state": "main-installed-unresolved",
+          "finding": "[native] This rest state shows a 1 px blue focus ring around the whole Installed tab, where the artboard's active tab carries only its 1 px underline, so the tab strip draws a box the artboard does not have. | [states] The Installed tab has a full 1 px focusBorder ring on all four sides in this rest state, where the artboard's installed-tab shows only the bottom active underline, so the capture has an extra element and focus colour the artboard lacks.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            106,
+            35
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-10-31 (UX-P2.5): a tab shows its ring after a click (DS-FOCUS-3); the setup clicks the tab, as `main-installed-single`'s does; the states are in `FOCUSED_TAB_STATES`",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        },
+        {
+          "id": "main-installed-unresolved#D6",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The Serilog facts line reads \"unresolved · Unresolved\", repeating one word in two casings where the artboard's rows show a version and an author, so it does not read as a workbench status text. | [states] The Serilog facts line reads \"unresolved · Unresolved\", the same word twice with different casing, so the status adds nothing to the version cell and does not say why the row is disabled.",
+          "severity": "minor",
+          "box": [
+            98,
+            286,
+            139,
+            13
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the status is §10.7's sentence 'Its reference could not be resolved.' on the row's description (DS-STATE-7, §10.9); the version cell keeps `unresolved` (interaction model §4)",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 3"
+        }
+      ]
+    },
+    {
+      "runId": "41310624436",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "6f2e2ac",
+      "look": "modern",
+      "workflow": "wf_7cf18458-c3f",
+      "note": "The closing panel on the flip commit; judged against main-installed-single's 932 artboard and spec.",
+      "captures": {
+        "main-installed-loading": {
+          "png": "captures/41310624436/main-installed-loading.dark-modern.1200.png",
+          "sha256": "c38ef46049c4e96e7502b977c16acf80db1f128f1578c64ddd6aae04b180aa0f",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-revalidating": {
+          "png": "captures/41310624436/main-installed-revalidating.dark-modern.1200.png",
+          "sha256": "19f0cc61d0d209460b1e7a73ae041a266738be57f8c9d65f29ddaf3683b11bf6",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-error": {
+          "png": "captures/41310624436/main-installed-error.dark-modern.1200.png",
+          "sha256": "691cadf254fc86ad16e50d314a921a5476febf8de110a04a8f1c42a74b457e61",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-unresolved": {
+          "png": "captures/41310624436/main-installed-unresolved.dark-modern.1200.png",
+          "sha256": "69b99e8a1648f779967272bed5e9faffde64ea43d6a960388885d36f061260ad",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-all": {
+          "png": "captures/41310624436/main-installed-all.dark-modern.1200.png",
+          "sha256": "11047a60fc6f5190a83808aed98a9e9697d77c699362d8929f6588573535e63b",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 5,
+        "candidates": 67,
+        "standing": 16,
+        "blocking": 0,
+        "refuted": 24,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-loading#D5",
+          "state": "main-installed-loading",
+          "finding": "[states] The Installed tab has a 1 px blue ring on all four sides, an interaction state this loading capture does not name, where the artboard's installed-tab shows only its active underline.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "DS-COLOR-5",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-loading",
+              "finding": "The Installed tab has a 1 px blue ring on all four sides, an interaction state this loading capture does not name, where the artboard's installed-tab shows only its active underline.",
+              "severity": "minor",
+              "box": [
+                6,
+                77,
+                80,
+                35
+              ],
+              "rule": "DS-COLOR-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows a blue ring on all four sides of the Installed tab (#0078d4 at (40,77) and (6,90)) where the artboard crop shows only the underline; no measurement for this state contradicts it, since DS-FOCUS-1's tab scope has no line here.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-revalidating#D4",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The refresh action draws the two-arrow sync codicon, while the artboard's refresh-button draws the single-arrow refresh glyph that workbench view refresh actions use.",
+          "severity": "minor",
+          "box": [
+            1167,
+            15,
+            12,
+            12
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-4",
+              "lens": "native",
+              "state": "main-installed-revalidating",
+              "finding": "The refresh action draws the two-arrow sync codicon, while the artboard's refresh-button draws the single-arrow refresh glyph that workbench view refresh actions use.",
+              "severity": "minor",
+              "box": [
+                1167,
+                15,
+                12,
+                12
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the two-arrow sync glyph (MainShell imports SyncIcon) where the artboard's refresh button, at its own x 894-916, draws a single-arrow refresh glyph; this is a different codicon, not a font-rendering difference under §6.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-revalidating#D5",
+          "state": "main-installed-revalidating",
+          "finding": "[states] The header check box label spells \"Include prerelease\", against the spelling \"Pre-Release\" / \"pre-release\" that Design System §10.7 prescribes, though the artboard draws the same text.",
+          "severity": "minor",
+          "box": [
+            734,
+            12,
+            121,
+            17
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-revalidating",
+              "finding": "The header check box label spells \"Include prerelease\", against the spelling \"Pre-Release\" / \"pre-release\" that Design System §10.7 prescribes, though the artboard draws the same text.",
+              "severity": "minor",
+              "box": [
+                734,
+                12,
+                121,
+                17
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Include prerelease' while Design System §10.7 and T-20 prescribe 'pre-release'; the artboard draws the same text, but the spec declares no such label and DECISIONS.md has no row for it, so the rule still stands against the wording.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-unresolved#D3",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The refresh button draws the two-arrow sync glyph, where the artboard draws a single circular refresh arrow.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-5",
+              "lens": "native",
+              "state": "main-installed-unresolved",
+              "finding": "The refresh button draws the two-arrow sync glyph, where the artboard draws a single circular refresh arrow.",
+              "severity": "minor",
+              "box": [
+                1162,
+                10,
+                22,
+                22
+              ],
+              "rule": "DS-ICON-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the two-arrow sync codicon, while the artboard's refresh-button at x 894 (cropped there because the candidate box lies outside the 932 px artboard) draws a single circular arrow; this is a different glyph rather than font rendering, though DS-ICON-2 measures 16×16 and icon.foreground correctly.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-all#D5",
+          "state": "main-installed-all",
+          "finding": "[states] The list is scrolled away from its start (scrollbar thumb at y 527 to 646 in a track starting at y 148), but its top edge shows no scroll shadow: the pixels under the toolbar line are flat #181818 from y 148.",
+          "severity": "major",
+          "box": [
+            0,
+            148,
+            412,
+            8
+          ],
+          "rule": "DS-SCROLL-2",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-all",
+              "finding": "The list is scrolled away from its start (scrollbar thumb at y 527 to 646 in a track starting at y 148), but its top edge shows no scroll shadow: the pixels under the toolbar line are flat #181818 from y 148.",
+              "severity": "major",
+              "box": [
+                0,
+                148,
+                412,
+                8
+              ],
+              "rule": "DS-SCROLL-2",
+              "verdict": "confirmed",
+              "reason": "The list is scrolled (thumb from y 527 at x 412-419, none near y 148), yet the crop and pixel scans at x 200 and x 405 are flat rgb 24 from y 148 directly under the y 147 line, with no inset shadow; ui-output.txt has no DS-SCROLL-2 line for this state, so no measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-loading",
+          "finding": "No \"Loading …\" status line is visible under the 2 px bar: only the three skeleton rows follow it, while DS-STATE-2 names a status line for an Installed first load (it may exist only in the live region, which pixels cannot show).",
+          "severity": "minor",
+          "box": [
+            0,
+            149,
+            420,
+            16
+          ],
+          "rule": "DS-STATE-2",
+          "verdict": "refuted",
+          "reason": "The crop shows only the bar and skeleton, but design-system §9 defines this cell as \"bar + 3 skeleton rows\", the interaction model and the Skeleton row place the Loading words in the live region, and hard DS-STATE-2 reads \"bar at list top; skeleton 3, rows 0\".",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-loading",
+          "finding": "The first load shows the bar and three skeleton rows but no visible \"Loading …\" status line under the bar, which DS-STATE-2 requires for Installed on a first load; the only text in the list area is the toolbar's.",
+          "severity": "major",
+          "box": [
+            0,
+            149,
+            420,
+            16
+          ],
+          "rule": "DS-STATE-2",
+          "verdict": "refuted",
+          "reason": "No visible line appears in the crop, but design-system §9 defines this cell as \"bar + 3 skeleton rows\" and the Loading words belong to the live region, which pixels cannot show; hard DS-STATE-2 reads \"bar at list top; skeleton 3, rows 0\".",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-6",
+          "lens": "states",
+          "state": "main-installed-loading",
+          "finding": "Each skeleton row draws only an icon block and one bar, with no placeholder for the artboard row's facts line or for its check box column at x 16, so it does not preview the two-line row it stands in for.",
+          "severity": "minor",
+          "box": [
+            16,
+            165,
+            271,
+            36
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show an icon block and one bar, but no rule, redline entry or artboard element defines a skeleton's contents (the rule is judge-only, §9 asks for 3 skeleton rows, measured \"skeleton 3\"), so rubric §6 excludes it, and the icon at x 46 already keeps the check column's room.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-revalidating",
+          "finding": "The details pane's empty message starts 20 px from the pane's start edge but its line box sits only about 7-8 px below the pane top (about y 84-85, pane top y 77); the artboard's details content starts about 20 px below the same edge (title around y 97, spec details inset 20), so the top inset reads tighter than the start inset.",
+          "severity": "minor",
+          "box": [
+            444,
+            84,
+            227,
+            18
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The text ink starts at x 444, 20 px from the pane start at x 424 as DS-STATE-3 asks, and ink rows 88-100 sit under an 8 px on-ramp top padding that no rule contradicts; DS-INSET-4 governs the details header only and the spec marks the artboard's details title as composed, compared in main-details-readme only, so it is no target for this empty state.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-revalidating",
+          "finding": "The refresh button carries a filled hover-style background (#313232) with no interaction shown in the state's name, where the artboard's refresh-button and the neighbouring settings button have no fill at rest.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The #313232 fill is visible, but the same pixels read #1f1f1f in main-installed-single and the button's rest background is transparent; only the :hover rule paints this colour and the suite reaches this state by clicking refresh-button, so it is pointer residue that §6 excludes, not a rest-state defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-error",
+          "finding": "The Installed tab carries a full 1 px focusBorder box (x 6-85, y 77-111) in this non-focus error state, while the artboard's active tab shows only its bottom underline; the ring is allowed only if the tab really holds focus after a click, and at rest it makes the tab read as a boxed control rather than a workbench tab.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "DS-FOCUS-3",
+          "verdict": "refuted",
+          "reason": "The ring is visible, but DS-FOCUS-3 lets the main panel draw rings after a click in both looks, the ring rule applies only under .nuiget-tab:focus, and the hard measurement reads \"DS-FOCUS-1@main-installed-error/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1\", so this is a correct focus ring, not a defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-5",
+          "lens": "native",
+          "state": "main-installed-error",
+          "finding": "The inline error message capitalises the word after a mid-sentence colon (\"could not be loaded: The project file could not be read.\"), so it reads as two sentences spliced together rather than the single sentence-case message of the rules.",
+          "severity": "minor",
+          "box": [
+            40,
+            152,
+            294,
+            34
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop reads \"could not be loaded: The project file could not be read.\", which follows the \"<What> could not be loaded: <reason>.\" pattern of design-system §10 item 8; the capitalised reason is injected fixture text that no rule sets the casing of, and DS-STATE-4 measures \"1 glyph (error), 1 buttons, ends with a full stop (1)\".",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-error",
+          "finding": "The Installed tab shows a full 1 px focusBorder rectangle in a state that is not a focus state, where the artboard's active installed-tab draws only the underline (spec token --nuiget-color-tab-active-border).",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            80,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The rectangle is visible in the crop, but it is the tab's real focus ring, which DS-FOCUS-3 allows after a click in the main panel; the hard measurement reads \"tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1\", and the selected-tab line is measured separately as panelTitle.activeBorder (DS-COLOR-4).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-5",
+          "lens": "states",
+          "state": "main-installed-error",
+          "finding": "The header's settings and refresh actions draw a cogwheel and a two-arrow sync glyph, where the artboard's source-settings and refresh-button draw a rayed settings glyph and a single-arrow refresh glyph.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            48,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crops do show a cog and two-arrow sync against the artboard's rayed glyph and single-arrow refresh, but rubric §6 says to compare geometry and colour roles and not glyph outlines; DS-ICON-2 measures \"glyph 16×16 ×3; colour icon.foreground ×3\" and docs/design/icons.json names settings-gear and sync as the codicons.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-6",
+          "lens": "states",
+          "state": "main-installed-error",
+          "finding": "The inline error capitalises the word after the colon (\"could not be loaded: The project file could not be read.\"), which breaks sentence case in a message that the failure pattern defines as one sentence, \"<What> could not be loaded: <reason>.\"",
+          "severity": "minor",
+          "box": [
+            40,
+            151,
+            294,
+            35
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop text matches the pattern \"<What> could not be loaded: <reason>.\" with one full stop measured by DS-STATE-4 (\"ends with a full stop (1)\"); the capital belongs to the injected reason string, and no rule sets the reason's casing.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-installed-unresolved",
+          "finding": "The Serilog row's check box has a #7e7e7e border, while the Newtonsoft.Json check box directly above it and the artboard's row check boxes use checkbox.border #3c3c3c, so the unresolved row's check box is the louder of the two and leaves the check-box colour role.",
+          "severity": "major",
+          "box": [
+            16,
+            274,
+            18,
+            18
+          ],
+          "rule": "DS-HEIGHT-9",
+          "verdict": "refuted",
+          "reason": "The #7e7e7e line is visible, but it is the disabled cell of the check box's role in the Design System colour table (disabledForeground), and DECISIONS.md 2026-10-31 UX-P2.3 sets the non-selectable mark to solid disabledForeground; DS-STATE-7 measures '1 unselectable, 0 without a reason' and DS-HEIGHT-9 '18×18 ×4'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-unresolved",
+          "finding": "The Installed tab carries a full 1 px focusBorder ring in a rest state, where the artboard draws only the 1 px bottom underline; the ring form itself is allowed for a focused main-panel tab, but it boxes the tab where the artboard shows no focus.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            106,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The ring is visible, but the hard line DS-FOCUS-1@main-installed-unresolved/tabs reads 'tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)': this state's setup leaves focus on the clicked tab, and the main panel draws a ring after a click (DECISIONS.md 2026-10-23 and UX-P2.5).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-6",
+          "lens": "native",
+          "state": "main-installed-unresolved",
+          "finding": "The Serilog facts line says the same thing twice, 'unresolved · Its reference could not be resolved.', mixing a lower-case token with a sentence where one sentence would do.",
+          "severity": "minor",
+          "box": [
+            98,
+            285,
+            272,
+            14
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The text reads as described, but both parts are required: interaction model §4 has the version cell show 'unresolved', and DS-STATE-7 (hard: '1 unselectable, 0 without a reason') requires a status text on a muted-check row, so the objection is taste with no rule (§6).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-unresolved",
+          "finding": "The Installed tab has a full 1 px blue ring (x 6-111, y 77-111) in a state that is not a focus state, where the artboard draws only the bottom underline at y 111 on that tab, so its side and top edges read as an extra box in the tab strip.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            106,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The ring is at x 6-111, y 77-111, but this is a focused tab, not a rest-state defect: hard DS-FOCUS-1/tabs measures 'outline 1 solid rgb(0, 120, 212) offset -1' on [installed-tab], the ring a click leaves in the main panel.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-unresolved",
+          "finding": "The Serilog row's check box has a bright, high-contrast border, while Newtonsoft.Json's check box and the artboard's rows have a dim one, so the unresolved row's check reads as the most active check in the list.",
+          "severity": "major",
+          "box": [
+            16,
+            274,
+            18,
+            18
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The brighter #7e7e7e line is visible, but it is the disabled check box's disabledForeground from the Design System colour table and DECISIONS.md UX-P2.3 (non-selectable mark solid disabledForeground), and DS-STATE-7 measures '1 unselectable, 0 without a reason'; the artboard draws no unresolved row to differ from.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-unresolved",
+          "finding": "The Installed tab has a full 1 px blue focus ring in this rest state and the ring hides the tab's underline; the artboard's installed-tab draws no ring, only the panelTitle.activeBorder underline (spec token --nuiget-color-tab-active-border).",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            106,
+            35
+          ],
+          "rule": "DS-COLOR-4",
+          "verdict": "refuted",
+          "reason": "Hard DS-COLOR-4 reads 'selected [installed-tab]: panelTitle.activeForeground, line 1 panelTitle.activeBorder', and y 111 stays #0078d4 in the crop, so nothing hides the underline; hard DS-FOCUS-1/tabs measures the 1 px ring, offset -1, on the focused tab.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-6",
+          "lens": "states",
+          "state": "main-installed-unresolved",
+          "finding": "The unresolved Serilog row shows a saturated orange box icon with no tile while its name is dimmed; the artboard's default icon is a neutral outlined cube on a 36 px tile, so the icon breaks from both the artboard and the row's disabled look.",
+          "severity": "minor",
+          "box": [
+            46,
+            265,
+            36,
+            36
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The orange icon is visible at [46,265,36,36], but the capture's sidecar masks exactly that rect ('.nuiget-row-icon': nuget.org icons are resolved per run), making it live content under §6, and hard DS-ROW-1 and DS-ICON-3 measure 36×36 ×2 with DS-RADIUS-2 'icon 2px ×2'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-installed-all",
+          "finding": "The group separator appears only above 'Tools' (y 147, x 4-407); the later same-level group rows Empty.csproj (y 175) and Unresolved.csproj (y 231) have no line above them, and neither do Unsupported.csproj or Utility.csproj, so groups are not divided as native pane headers are.",
+          "severity": "major",
+          "box": [
+            4,
+            173,
+            404,
+            60
+          ],
+          "rule": "DS-DIVIDER-1",
+          "verdict": "refuted",
+          "reason": "The crop has no line above Empty.csproj, but that is the measured design: the hard line reads 'DS-DIVIDER-1@main-installed-all/headers: group rows 6: first unlined, 1 lined, 4 level rows unlined (hard)', and the helper requires level-2 project rows to be unlined and only level-1 rows like Tools to be lined.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-all",
+          "finding": "The 'Tools' group row shows an expanded chevron with no count badge, no rows and no message leaf, directly above Empty.csproj at the same indent, while every sibling group has a count and an Empty group explains itself; it reads as a broken expanded group, unlike the artboard's group header with its count.",
+          "severity": "major",
+          "box": [
+            16,
+            147,
+            380,
+            28
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Tools is a level-1 folder row whose children are the project rows below it, not an empty project group, as the hard lines show: 'DS-TYPE-5 group ×2 12px/600, level ×4 13px/600', 'DS-INSET-2 folder-tools 16/16 (pad 16)' and 'DS-STATE-1 missing: none'; the absent count badge matches 'DS-COPY-5 headers 6: count badges 4'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-5",
+          "lens": "native",
+          "state": "main-installed-all",
+          "finding": "A 1 px focus ring is drawn around the whole Installed tab in this rest state, where the artboard draws only the tab's 1 px active underline and no ring; the box reads louder than a workbench tab strip at rest and absorbs the underline.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the ring, but the state clicks installed-tab before the shot, so the tab holds focus and the ring is the required one: 'DS-FOCUS-1@main-installed-all/tabs: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1) (hard)'; DS-FOCUS-3 keeps rings after a click in the main panel, and DS-COLOR-4 still measures the active line.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-installed-all",
+          "finding": "The details pane's empty-state sentence sits about 8-11 px below the pane top (ink top y 88, pane top y 77) but 20 px from its start edge (x 444, pane x 424), so it reads tight at the top compared with the 20 px details inset the artboard's title uses.",
+          "severity": "minor",
+          "box": [
+            424,
+            77,
+            246,
+            24
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The sentence sits at x 444 with the 20 px side padding DS-STATE-3 requires, and no rule, artboard element or spec entry sets its top padding (the artboard's title belongs to the composed details scene, not this empty state), so a judgement of 'tight at the top' is excluded by rubric section 6 as taste.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-all",
+          "finding": "The \"Tools\" group row has an expanded chevron but no count badge, no rows and no message leaf under it, and the next group row follows at once, while every sibling group (Empty, Unresolved, Unsupported, Utility) shows a badge and either rows or a message, so this group shows no defined state from the DS-STATE-1 table.",
+          "severity": "major",
+          "box": [
+            0,
+            148,
+            412,
+            26
+          ],
+          "rule": "DS-STATE-1",
+          "verdict": "refuted",
+          "reason": "The crop shows Tools followed directly by Empty.csproj, which is a folder row above its child projects rather than a group with no state: the hard lines read 'DS-STATE-1@main-installed-all: ... missing: none', 'DS-TYPE-5 group ×2 ... level ×4' and 'DS-GRID-2b folder-tools 0/0', and DS-STATE-1's per-project cells do not apply to a folder.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-all",
+          "finding": "No separator is drawn above any group header after the first: a pixel scan at x 405 is flat #181818 from y 148 to y 803 across Empty, Unresolved, Unsupported and Utility, where the rule requires a 1 px line inset 4 px above each; the box marks the first missing line, at Empty.csproj.",
+          "severity": "major",
+          "box": [
+            0,
+            174,
+            412,
+            28
+          ],
+          "rule": "DS-DIVIDER-1",
+          "verdict": "refuted",
+          "reason": "The crop and scan (flat rgb 24 at x 405 past y 148) match the claim, but the hard measurement treats this as correct: 'DS-DIVIDER-1@main-installed-all/headers: group rows 6: first unlined, 1 lined, 4 level rows unlined (hard)', and the 1 px line above Tools at y 147 disproves 'none after the first'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-7",
+          "lens": "states",
+          "state": "main-installed-all",
+          "finding": "The Installed tab shows a full 1 px focusBorder rectangle in this rest state, where the artboard's installed-tab draws only its active underline; the ring is an element the artboard lacks and it absorbs the underline.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The ring is present, but it marks the tab focused by the state's click, and the hard line reads 'DS-FOCUS-1@main-installed-all/tabs: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)'; DS-FOCUS-3 requires rings after a click in the main panel, so it is not an extra element.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-loading#D1",
+          "state": "main-installed-loading",
+          "finding": "[native] The split between the list and details panes paints a solid 4 px #313131 band at x 420-423, reading as a heavy bar, where the artboard draws a 1 px #2b2b2b line at x 327 and the rule asks for a 1 px separator with a transparent sash at rest. | [geometry] The split between list and details is a filled 4 px band (x 420-423, #313131, from y 77 to the bottom edge), where the artboard draws a 1 px #2b2b2b line (x 327) followed directly by the details pane and DS-DIVIDER-6 asks for a 1 px separator with a transparent sash at rest. | [states] The split between the list and the details pane is drawn as a solid grey band about 4 px wide over the full height, where the artboard draws a 1 px separator and DS-DIVIDER-6 requires a 1 px line with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-loading#D2",
+          "state": "main-installed-loading",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and the rule requires Title Case on button labels. | [states] The toolbar button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and the copy rule requires Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-loading#D3",
+          "state": "main-installed-loading",
+          "finding": "[native] The toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and the rule requires Title Case on button labels. | [states] The toolbar button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and the copy rule requires Title Case.",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-loading#D4",
+          "state": "main-installed-loading",
+          "finding": "[native] Each skeleton row draws one 12 px text bar centred about 6 px above its 36 px icon's centre (bar y 171-182, icon y 165-200 in the first row; the other two rows repeat it), so it sits high and matches neither the centred two-line text block of the artboard's rows nor its name line. | [geometry] Each skeleton row draws one 12 px text bar at y 171-182 (centre 177) beside a 36 px icon at y 165-200 (centre 183), and likewise in rows 2 and 3, so the text block sits 6 px above the centre of the 72 px band, against the artboard's two-line block centred on its icon and DS-ROW-1's 1 px centre tolerance.",
+          "severity": "minor",
+          "box": [
+            46,
+            165,
+            241,
+            180
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P2.8b",
+          "evidence": "the name bar centred on the icon tile (`calc(50% - space-3)`), masked by LIVE_MOTION",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-revalidating#D1",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The split between the list and details panes paints a solid 4 px strip (x 420 to 423, a lighter grey than either pane) at rest; the artboard draws a 1 px separator (x 327) and the rule asks for a 1 px line under a transparent sash, so this reads as a heavy non-native bar beside the scrollbar. | [geometry] The split between the list and details panes is a painted 4 px band (#313131, x 420-423, y 77-802, also present in the main-installed-single capture), whereas the artboard draws a 1 px #2b2b2b separator directly after the scrollbar (x 327) with the details pane starting on the next pixel and the 4 px sash transparent at rest, so the details pane starts about 3 px late. | [states] The split between the list and details panes is a 4 px band painted #313131 over the full pane height (x 420-423), with no separate separator line, where the artboard draws a 1 px #2b2b2b separator and DS-DIVIDER-6 requires a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-revalidating#D2",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case; the artboard's select-all-button reads \"Select All\", and button labels are Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button and Design System §10.1 give the Title Case label \"Select All\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            73,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-revalidating#D3",
+          "state": "main-installed-revalidating",
+          "finding": "[native] The toolbar button reads \"Uninstall selected (0)\" in sentence case; the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\", and button labels are Title Case. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and Design System §10.1 give the Title Case label \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-error#D1",
+          "state": "main-installed-error",
+          "finding": "[native] The split between the list and details panes is painted as a solid 4 px band (#313131, x 420-423) running from y 77 to the bottom, while the artboard draws a 1 px separator (#2b2b2b at x 327) and the rule asks for a 1 px line with a transparent 4 px sash, so the pane split looks like a heavy bar instead of a workbench split line. | [geometry] The split between the list and details panes is a painted 4 px solid band from x 420 to 423 (rgb 49,49,49) over the full pane height, compared with the artboard's 1 px separator at x 327 (rgb 43,43,43), the spec's list end and details start 1 px apart (list x 0 w 327, details x 328), and DS-DIVIDER-6's 1 px separator with a transparent 4 px sash at rest. | [states] The split between the list and details panes paints a 4 px solid grey band at rest (x 420-423, rgb 49,49,49), where the artboard draws a 1 px separator (spec: tab-bar ends at 327, package-details-panel starts at 328) and the rule requires a 1 px separator with a transparent sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-error#D2",
+          "state": "main-installed-error",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case, while the artboard's select-all-button reads \"Select All\" and button labels must be Title Case. | [states] The toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and the button label rule requires Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-error#D3",
+          "state": "main-installed-error",
+          "finding": "[native] The toolbar primary button reads \"Uninstall selected (0)\" in sentence case, while the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and button labels must be Title Case. | [states] The toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and the button label rule requires Title Case.",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-unresolved#D1",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The split between the list and details panes is painted as a solid 4 px #313131 bar (x 420-423, full height) that looks like a stuck scrollbar or a resize handle, where the artboard draws a 1 px #2b2b2b separator (x 327) and the rule asks for a 1 px separator with a transparent 4 px sash at rest. | [geometry] The split between the list and details panes paints a solid 4 px bar (x 420-423, y 77-802, #313131), where the artboard draws a 1 px separator at x 327 with the details pane starting at the next pixel (spec: list ends at 327, package-details-panel x 328) and DS-DIVIDER-6 requires a 1 px separator with a transparent 4 px sash at rest. | [states] The split between the list and details panes is painted as a band about 4 px wide in a lighter grey at rest, where the artboard draws a 1 px separator and the rule requires a transparent sash around it.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-unresolved#D2",
+          "state": "main-installed-unresolved",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws 'Select All' and 'Uninstall Selected (0)' and the workbench's button labels are Title Case. | [states] The bulk button reads \"Select all\" in sentence case, where the artboard's select-all-button and the rule's own example read \"Select All\". | [states] The disabled bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the rule's own example read \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-all#D1",
+          "state": "main-installed-all",
+          "finding": "[native] The split between list and details pane is a 4 px solid grey band (x 420-423, rgb 49,49,49, full height from y 77), not the artboard's 1 px separator (x 327, rgb 43,43,43) with a transparent sash, so it reads heavier than any workbench split. | [geometry] The split between the list and details panes is a solid 4 px band (x 420-423, y 77-802, #313131) at rest, where the artboard draws a 1 px separator (x 327, #2b2b2b) and DS-DIVIDER-6 requires a 1 px separator with a transparent 4 px sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); the sash at rest paints `--nuiget-color-border` (`primitives.css:1042-1055`) where §4 wants transparent with `sash.hoverBorder` after 300 ms",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-all#D2",
+          "state": "main-installed-all",
+          "finding": "[native] The toolbar labels read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws 'Select All' and 'Uninstall Selected (0)' and workbench button labels are Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button and the microcopy list (design-system §10 item 1) write the Title Case label \"Select All\". | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the microcopy list (design-system §10 item 1) write \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            389,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "design-advisor, UX-P2.8a-a follow-up 4",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-all#D3",
+          "state": "main-installed-all",
+          "finding": "[native] The muted check boxes of the unresolved and read-only rows have a brighter border (rgb 126) than the enabled check boxes (rgb 60, as on all artboard rows), so controls that cannot be used stand out more than those that can. | [states] The check boxes of the rows that cannot be selected (unresolved Serilog and the three Read-only rows) have a brighter border (#7e7e7e) than the enabled check boxes (#3c3c3c on the Newtonsoft.Json row at y 295 and the Utility row at y 739, the artboard's look), so the disabled state reads stronger than the enabled one.",
+          "severity": "major",
+          "box": [
+            16,
+            358,
+            18,
+            299
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-10-31 (UX-P2.3): the non-selectable mark is solid `disabledForeground`; §4 Check box, disabled (as `main-installed-unsupported#D4`)",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        },
+        {
+          "id": "main-installed-all#D4",
+          "state": "main-installed-all",
+          "finding": "[native] In the Unsupported.csproj header the two adjacent label badges differ in casing: 'Unsupported' is capitalised and 'provisional' is lowercase, whereas the artboard's label badge 'Vulnerable' is capitalised. | [states] The label badge \"provisional\" is lowercase beside its Title Case neighbour \"Unsupported\" on the same group row, and the artboard's label badge reads \"Vulnerable\", so one badge row mixes two casings.",
+          "severity": "major",
+          "box": [
+            221,
+            407,
+            151,
+            19
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "`Provisional` (interaction model §4 :106), as `main-installed-unsupported#D5`",
+          "ruling": "design-advisor, UX-P2.8b-b follow-up 4"
+        }
+      ]
     }
   ]
 }

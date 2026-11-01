@@ -319,7 +319,8 @@ const REACH: Record<string, Reach> = {
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
             // The window is pinned at the Tools folder so both looks compose the same and the leaf is rendered (UX-P2.8b follow-up).
             await scrollListTo('installed-list', 'group-row-folder-tools');
-            await until('document.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null', 'the Unsupported project\'s message leaf', 60_000);
+            // The suite's data budget: the leaf renders when the Unsupported chunk has answered through the fan-out (macOS Intel, dispatch 41310624224).
+            await until('document.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null', 'the Unsupported project\'s message leaf', 120_000);
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },
