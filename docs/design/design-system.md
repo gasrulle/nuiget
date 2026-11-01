@@ -9,7 +9,7 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
 | Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 12 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72)) |
-| Tokens | 171 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 26 of them switched by the look |
+| Tokens | 176 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 30 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
 | Owner rounds | Round 1: composition A, the Extensions view. Round 2: D51 disabled text buttons, D52 row check mark, D54 floor, D56 Browse loading. Applied throughout; §14 lists what each changed |
@@ -230,8 +230,8 @@ The exemplar fails three rule premises in the classic look; the closest-to-the-w
 
 ## 3. Tokens
 
-`tokens.json` is the reference (171 tokens: space 19, radius 17, size 23, type 12, weight 4, motion 7, opacity 1, z 2,
-colour 86; 26 switched by the look). `src/webview/shared/tokens.css` was copied from the generator's CSS at UX-P1.1 and differs in the five values `docs/plans/STATUS-ux.md` names for P1.5. `tokens.json` is written
+`tokens.json` is the reference (176 tokens: space 23, radius 17, size 24, type 12, weight 4, motion 7, opacity 1, z 2,
+colour 86; 30 switched by the look). `src/webview/shared/tokens.css` was copied from the generator's CSS at UX-P1.1 and differs in the five values `docs/plans/STATUS-ux.md` names for P1.5. `tokens.json` is written
 by the committed generator, `docs/design/tools/build.mjs` from the spec `docs/design/tools/spec.mjs`, and resolve every
 colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir holding probe/out and probe/out-modern> <timestamp>`).
 
@@ -260,7 +260,7 @@ colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir ho
 | `--nuiget-color-border` | layers and dividers | layers only | DS-DIVIDER-4: dividers move to `--nuiget-color-divider` |
 | `--nuiget-color-focus` | focus, row accent, tab underline, sash hover | keyboard focus of controls only | DS-COLOR-5: rows use `--nuiget-color-list-focus-outline`, tabs `--nuiget-color-tab-indicator`, the sash `--nuiget-color-sash-hover` |
 
-New tokens (83): `space-7`; `inset-details`, `inset-sidebar`, `block-gap-inner`, `block-gap-outer`,
+New tokens (88): `space-7`; `inset-details`, `inset-sidebar`, `block-gap-inner`, `block-gap-outer`,
 `row-action-end-inset`, `popup-row-padding-x`, `pane-header-margin-x`, `pane-header-padding-start`,
 `pane-header-padding-end`, `row-inset-x`; `radius-xs`, `-lg`, `-xl`, `-circle`, `-checkbox`, `-control`, `-action`,
 `-row`, `-popup-row`, `-section-header`, `-badge`, `-label-badge`, `-layer`, `-layer-input`, `-scrollbar`;
@@ -268,7 +268,8 @@ New tokens (83): `space-7`; `inset-details`, `inset-sidebar`, `block-gap-inner`,
 `checkbox-size`, `badge-size`, `tab-strip-height`, `details-tab-strip-height`, `progress-height`, `sash-size`,
 `welcome-button-max`, `focus-pointer-width`; `opacity-disabled` (D51); `font-size-xs`, `-label`, `-badge`, `-section-title`,
 `font-weight-regular`, `-semibold`, `-bold`, `-section-title`, `text-transform-section-title`, `line-height-button`;
-`duration-spin`, `easing-spin`, `duration-progress`, `delay-sash-hover`; and 28 colour roles (§4). `--nuiget-z-sticky` and `--nuiget-z-toast` are removed (V64); every other name stays.
+`duration-spin`, `easing-spin`, `duration-progress`, `delay-sash-hover`; `badge-padding-block`, `badge-padding-inline`,
+`label-badge-padding-block`, `label-badge-padding-inline`, `list-pane-min`; and 28 colour roles (§4). `--nuiget-z-sticky` and `--nuiget-z-toast` are removed (V64); every other name stays.
 
 ## 4. Colour roles
 
