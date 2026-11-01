@@ -40,6 +40,8 @@ export interface ListboxGroups<T> {
     onToggle: (item: T, expanded: boolean) => void;
     /** Text and decoration only: the list owns the treeitem, its name and its states. */
     render: (item: T, placement: GroupPlacement) => React.ReactNode;
+    /** An item that is a sentence under its group (UX-P2.8b): a treeitem of text alone, from `render`, reached by the arrows and acted on by no key. */
+    isMessage?: (item: T) => boolean;
 }
 
 /** A row's place in the tree: its depth, its parent and first child (indexes, or −1) and its position among its siblings. */
@@ -170,11 +172,12 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     }, [activeIndex]);
 
     const isGroupAt = (index: number): boolean => items[index] !== undefined && groups?.is(items[index]) === true;
+    const isMessageAt = (index: number): boolean => items[index] !== undefined && groups?.isMessage?.(items[index]) === true;
 
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLElement>({
         count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: index => (isGroupAt(index) ? groupHeight : rowHeight),
+        estimateSize: index => (isGroupAt(index) || isMessageAt(index) ? groupHeight : rowHeight),
         overscan: OVERSCAN,
         getItemKey: index => items[index].id,
         measureElement: element => element.getBoundingClientRect().height || rowHeight,
@@ -261,6 +264,11 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             } else if (event.key === ' ') {
                 handled();
             }
+        } else if (isMessageAt(activeIndex)) {
+            // A sentence takes no action; Space does not page the scroller.
+            if (event.key === 'Enter' || event.key === ' ') {
+                handled();
+            }
         } else if (event.key === 'Enter') {
             handled();
             if (!disabled) {
@@ -321,6 +329,9 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                         groups.onToggle(items[index], !groups.isExpanded(items[index]));
                         return;
                     }
+                    if (isMessageAt(index)) {
+                        return;
+                    }
                     if (selectedIds !== undefined && (event.ctrlKey || event.metaKey)) {
                         if (isDisabled?.(items[index]) !== true) {
                             onToggleSelected?.(items[index]);
@@ -331,7 +342,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 }}
                 onContextMenu={event => {
                     const index = indexOf(event.target);
-                    if (index >= 0 && items[index] && !isGroupAt(index)) {
+                    if (index >= 0 && items[index] && !isGroupAt(index) && !isMessageAt(index)) {
                         event.preventDefault();
                         onContextMenu?.(items[index], { x: event.clientX, y: event.clientY });
                     }
@@ -367,6 +378,31 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                                         aria-setsize={place.setSize}
                                     >
                                         {groups.render(item, { index: virtual.index, active, offset: virtual.start, measureRef: virtualizer.measureElement, level: place.level, expanded })}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        if (groups && place && isMessageAt(virtual.index)) {
+                            return (
+                                <div
+                                    key={item.id}
+                                    className={`nuiget-row nuiget-row--${density}`}
+                                    role="presentation"
+                                    data-index={virtual.index}
+                                    data-row-kind="message"
+                                    data-level={place.level}
+                                    ref={virtualizer.measureElement}
+                                    style={cssVars({ '--nuiget-virtual-offset': `${virtual.start}px` })}
+                                >
+                                    <div
+                                        className={`nuiget-row-message nuiget-row-message--${density}`}
+                                        role="treeitem"
+                                        tabIndex={active ? 0 : -1}
+                                        aria-level={place.level}
+                                        aria-posinset={place.posInSet}
+                                        aria-setsize={place.setSize}
+                                    >
+                                        {groups.render(item, { index: virtual.index, active, offset: virtual.start, measureRef: virtualizer.measureElement, level: place.level, expanded: false })}
                                     </div>
                                 </div>
                             );

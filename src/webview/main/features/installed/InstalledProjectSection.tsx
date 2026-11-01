@@ -103,14 +103,14 @@ function readOnlyReason(entry: InstalledPackage, result: InstalledResult): strin
 }
 
 /** A project's status on its group row: `Unsupported` and `provisional`, as text. */
-export function statusBadges(result: InstalledResult | undefined): React.ReactNode {
+export function statusBadges(result: InstalledResult | undefined, marker?: string): React.ReactNode {
     if (!result?.unsupported && result?.fidelity !== 'provisional') {
         return undefined;
     }
     return (
         <>
             {result?.unsupported ? <Badge label="Unsupported" tone="warning" title={result.unsupported.message} /> : null}
-            {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" title="Versions come from the project files; a full evaluation is pending." /> : null}
+            {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" data-testid={marker === undefined ? 'installed-provisional' : `installed-provisional-${marker}`} title="Versions come from the project files; a full evaluation is pending." /> : null}
         </>
     );
 }

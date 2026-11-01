@@ -10,6 +10,7 @@ body {
 }
 
 .nuiget-sidebar {
+    --nuiget-message-inset: var(--nuiget-inset-sidebar);
     display: flex;
     flex-direction: column;
     height: 100vh;

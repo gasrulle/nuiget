@@ -150,7 +150,26 @@ const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
 const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
 
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
-const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
+/** DS-STATE-1: the markers each Installed cell renders (design-system.md §9, UX-P2.8b). */
+const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
+    'main-installed-loading': ['installed-progress'],
+    'main-installed-revalidating': ['installed-progress'],
+    'main-installed-empty': ['installed-empty'],
+    'main-installed-error': ['installed-error'],
+    'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
+    'main-installed-unresolved': [],
+    'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'],
+};
+/** DS-COLOR-1, the roles these cells paint; the rest join per screen with their P3 items (UX-P2.8b). */
+const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; property: 'color' | 'backgroundColor'; key: string }> = [
+    { role: 'progress', selector: '.nuiget-progress-bar', property: 'backgroundColor', key: '--vscode-progressBar-background' },
+    { role: 'severity glyph', selector: '.nuiget-banner--info .nuiget-banner-icon', property: 'color', key: '--vscode-problemsInfoIcon-foreground' },
+    { role: 'severity glyph', selector: '.nuiget-banner--warning .nuiget-banner-icon', property: 'color', key: '--vscode-problemsWarningIcon-foreground' },
+    { role: 'severity glyph', selector: '.nuiget-banner--error .nuiget-banner-icon', property: 'color', key: '--vscode-problemsErrorIcon-foreground' },
+    { role: 'secondary text', selector: '.nuiget-empty-text, .nuiget-row-message', property: 'color', key: '--vscode-descriptionForeground' },
+    { role: 'skeleton', selector: '.nuiget-skeleton-row', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
+];
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
@@ -245,7 +264,7 @@ export const RULES: readonly RuleDefinition[] = [
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
         helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } },
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|unresolved/, pendingStates: { 'main-installed-unsupported': 'P2.8b' },
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
@@ -259,6 +278,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; the other screens with their items.
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': { pending: 'P2.8b' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/ }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/ }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/ }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -589,13 +614,29 @@ export interface EndOfP0 {
     /** DS-STATE-7: the rows whose check mark is muted, and what says why. */
     unselectable: Array<{ label: string; status: string; transitive: boolean }>;
     descriptionForeground: string;
-    copyEnds: Array<{ kind: 'empty' | 'banner'; text: string }>;
+    copyEnds: Array<{ kind: 'empty' | 'banner' | 'leaf'; text: string }>;
+    /** The Installed cells: DS-STATE-1, -2, -3, -4 and DS-COLOR-1 (UX-P2.8b). */
+    stateCells: StateCells;
     /** UX-P0.14: the focused element (`document.activeElement`, the body excepted) and its outline (DS-FOCUS-1..3). */
     focus: FocusFacts | undefined;
     /** The theme's focus colours as VS Code put them on the root (hex, or empty when the theme leaves the key unset). */
     focusColours: { focusBorder: string; listFocusOutline: string; contrastActiveBorder: string };
     /** Every visible disabled affordance (`aria-disabled` or a disabled button) and its reason in text (DS-STATE-7). */
     disabled: Array<{ label: string; reason: string }>;
+}
+
+/** What a list's state cell renders (UX-P2.8b). */
+export interface StateCells {
+    testIds: string[];
+    rows: number;
+    disabledStatuses: string[];
+    skeletonRows: number;
+    listBusy: boolean;
+    progressTop: number | undefined;
+    contentTop: number | undefined;
+    empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; gap: number; buttons: number; buttonWidth: number | undefined; width: number }>;
+    banners: Array<{ severity: string; glyphs: string[]; buttons: number; text: string }>;
+    roles: Array<{ role: string; key: string; actual: string; expected: string }>;
 }
 
 /** An outline as computed: width and offset in px. */
@@ -899,12 +940,12 @@ const hitOf = el => {
 };
 const heights = {
     headers: shown('[data-testid^="section-box-"]').map(el => ({ id: el.dataset.testid.replace(/^section-box-/, ''), variant: el.dataset.variant ?? '', height: heightOf(el) })),
-    compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"])').map(heightOf),
-    comfortableRows: shown('.nuiget-row--comfortable:not([data-row-kind="group"])').map(heightOf),
+    compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"]):not([data-row-kind="message"])').map(heightOf),
+    comfortableRows: shown('.nuiget-row--comfortable:not([data-row-kind="group"]):not([data-row-kind="message"])').map(heightOf),
     comfortablePitches: [...scope.querySelectorAll('.nuiget-listbox')].flatMap(list => {
         // Pitches between consecutive package rows: a group row restarts the count.
         const rows = [...list.querySelectorAll('.nuiget-row--comfortable')].filter(visible).sort((a, b) => rectOf(a).top - rectOf(b).top);
-        return rows.flatMap((row, i) => (i > 0 && !row.matches('[data-row-kind="group"]') && !rows[i - 1].matches('[data-row-kind="group"]') ? [round(rectOf(row).top - rectOf(rows[i - 1]).top)] : []));
+        return rows.flatMap((row, i) => (i > 0 && !row.matches('[data-row-kind="group"], [data-row-kind="message"]') && !rows[i - 1].matches('[data-row-kind="group"], [data-row-kind="message"]') ? [round(rectOf(row).top - rectOf(rows[i - 1]).top)] : []));
     }),
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
@@ -968,7 +1009,7 @@ const buttonBox = id => { const el = scope.querySelector('[data-testid="' + id +
 const detailsButtons = { uninstall: buttonBox('uninstall-button'), update: buttonBox('install-update-button') };
 // Helpers 5 and 6 (UX-P0.12): named text, rows' trailing actions, still chrome, collisions and containment.
 const width = round(document.documentElement.clientWidth);
-const rows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
+const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind="message"])').map(row => {
     const option = row.querySelector('.nuiget-row-option') ?? row;
     const name = option.querySelector('.nuiget-row-name');
     const authors = option.querySelector('.nuiget-row-authors');
@@ -1037,7 +1078,7 @@ overflow.badges = shown('[data-testid^="section-box-"] .nuiget-badge').map(badge
 // PF-2: the first transitive header after the last direct row, in one scroller.
 const scrollerOf = el => { for (let a = el ? el.parentElement : null; a; a = a.parentElement) if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a; return null; };
 const transitiveRow = root.querySelector('[data-testid="group-row-transitive"]');
-const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])')].filter(visible)
+const directRows = [...root.querySelectorAll('[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"]):not([data-row-kind="message"])')].filter(visible)
     .filter(row => !transitiveRow || (row.compareDocumentPosition(transitiveRow) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
 // The P0.10 hook, else P9.fix-2's own selector: the same header box, which a tree from before the hook (the negative
 // control's 80940aa) renders without the hook (UX-P0.17, D36).
@@ -1131,7 +1172,7 @@ const checkOf = option => {
     const style = getComputedStyle(mark);
     return { fill: style.backgroundColor, border: style.borderTopColor };
 };
-const endRows = shown('.nuiget-row:not([data-row-kind="group"])').map(row => {
+const endRows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind="message"])').map(row => {
     const option = row.querySelector('.nuiget-row-option') ?? row;
     const icon = option.querySelector('.nuiget-row-icon');
     const glyph = icon ? icon.querySelector('img, svg') : null;
@@ -1238,7 +1279,40 @@ const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-me
 const copyEnds = [
     ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
     ...shown('.nuiget-banner-text').map(el => ({ kind: 'banner', text: el.textContent.trim() })),
+    ...shown('.nuiget-row-message').map(el => ({ kind: 'leaf', text: el.textContent.trim() })),
 ];
+// UX-P2.8b: the Installed cells. A role's colour is compared with its --vscode-* key as this document resolves it.
+const resolveKey = (key, property) => {
+    const probe = document.createElement('span');
+    probe.style.setProperty(property === 'color' ? 'color' : 'background-color', 'var(' + key + ')');
+    document.body.appendChild(probe);
+    const resolved = getComputedStyle(probe)[property];
+    probe.remove();
+    return resolved;
+};
+const progressEl = shown('[data-testid="installed-progress"]')[0];
+const contentEl = shown('.nuiget-skeleton-row, .nuiget-row')[0];
+const stateCells = {
+    testIds: [...new Set(shown('[data-testid]').map(el => el.dataset.testid))],
+    rows: shown('.nuiget-row-option').length,
+    disabledStatuses: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-status')?.textContent || '').trim()),
+    skeletonRows: shown('.nuiget-skeleton-row').length,
+    listBusy: scope.querySelector('[data-testid="installed-list"]')?.getAttribute('aria-busy') === 'true',
+    progressTop: progressEl ? rectOf(progressEl).top : undefined,
+    contentTop: contentEl ? rectOf(contentEl).top : undefined,
+    empties: shown('.nuiget-empty').map(el => {
+        const style = getComputedStyle(el);
+        const buttons = [...el.querySelectorAll('button')];
+        return { textAlign: style.textAlign, paddingLeft: px(style.paddingLeft), paddingRight: px(style.paddingRight), gap: px(style.rowGap), buttons: buttons.length, buttonWidth: buttons[0] ? rectOf(buttons[0]).width : undefined, width: rectOf(el).width };
+    }),
+    banners: shown('.nuiget-banner').map(el => ({
+        severity: (el.className.match(/nuiget-banner--(\\w+)/) || [])[1] || '',
+        glyphs: [...el.querySelectorAll('[data-codicon]')].map(glyph => glyph.dataset.codicon),
+        buttons: el.querySelectorAll('button').length,
+        text: (el.querySelector('.nuiget-banner-text')?.textContent || '').trim(),
+    })),
+    roles: ${JSON.stringify(ROLE_ELEMENTS)}.flatMap(entry => shown(entry.selector).map(el => ({ role: entry.role, key: entry.key, actual: getComputedStyle(el)[entry.property], expected: resolveKey(entry.key, entry.property) }))),
+};
 // UX-P0.14: the facts of the six rules registered with the theme dump (design-advisor ruling of 2026-10-24).
 const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
 const focusKind = el => {
@@ -1312,6 +1386,7 @@ const endOfP0 = {
     metaText,
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
+    stateCells,
     focus,
     focusColours: {
         focusBorder: rootVars.getPropertyValue('--vscode-focusBorder').trim(),
@@ -2336,7 +2411,7 @@ const isRing = (outline: Outline, style: string, colour: string, tolerance: numb
  * The rules registered with the theme dump (UX-P0.14, design-advisor rulings of 2026-10-24): value and verdict, or
  * undefined for another rule.
  */
-function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
+function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     const facts = layout.endOfP0;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
@@ -2478,6 +2553,12 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout:
                 pass: marked.every(row => isRing(row.outline, 'dotted', colour, tolerance)) && focused.every(row => isRing(row.outline, 'solid', colour, tolerance)),
             };
         }
+        case 'DS-STATE-1':
+        case 'DS-STATE-2':
+        case 'DS-STATE-3':
+        case 'DS-STATE-4':
+        case 'DS-COLOR-1':
+            return evaluateStateCell(definition, state, facts);
         case 'DS-STATE-7': {
             if (facts.fonts.root === '') {
                 return notMeasurable('no page');
@@ -2494,6 +2575,83 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, layout:
         }
         default:
             return undefined;
+    }
+}
+
+/** The Installed cells (design-system.md §9, UX-P2.8b). */
+function evaluateStateCell(definition: RuleDefinition, state: string, facts: EndOfP0): { value: string; pass: boolean } {
+    const cells = facts.stateCells;
+    const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
+    if (facts.fonts.root === '') {
+        return notMeasurable('no page');
+    }
+    const loading = state.includes('loading');
+    switch (definition.id) {
+        case 'DS-STATE-1': {
+            const wanted = STATE_MARKERS[state] ?? [];
+            const missing = wanted.filter(id => !cells.testIds.includes(id));
+            const clauses: string[] = [];
+            if (loading && (cells.skeletonRows === 0 || cells.rows > 0)) {
+                clauses.push(`skeleton ${cells.skeletonRows}, rows ${cells.rows}`);
+            }
+            if (state.endsWith('-revalidating') && (cells.rows === 0 || !cells.listBusy)) {
+                clauses.push(`rows ${cells.rows}, aria-busy ${cells.listBusy}`);
+            }
+            if (state.endsWith('-error') && cells.banners.filter(banner => banner.buttons === 1).length !== 1) {
+                clauses.push('no banner with one button');
+            }
+            if (state.endsWith('-unresolved') && !cells.disabledStatuses.includes('Unresolved')) {
+                clauses.push('no disabled row whose status is Unresolved');
+            }
+            const present = wanted.filter(id => cells.testIds.includes(id));
+            return { value: `present: ${present.join(', ') || (state.endsWith('-unresolved') ? 'Unresolved row' : 'none')}; missing: ${[...missing, ...clauses].join('; ') || 'none'}`, pass: missing.length === 0 && clauses.length === 0 };
+        }
+        case 'DS-STATE-2': {
+            if (cells.progressTop === undefined) {
+                return notMeasurable('no progress bar');
+            }
+            const above = cells.contentTop === undefined || cells.progressTop <= cells.contentTop;
+            const content = loading ? cells.skeletonRows === 3 && cells.rows === 0 : cells.rows >= 1 && cells.listBusy;
+            return { value: `bar ${above ? 'at list top' : 'below the list top'}; ${loading ? `skeleton ${cells.skeletonRows}, rows ${cells.rows}` : `rows ${cells.rows}${cells.listBusy ? '; aria-busy' : ''}`}`, pass: above && content };
+        }
+        case 'DS-STATE-3': {
+            if (cells.empties.length === 0) {
+                return notMeasurable('no empty state');
+            }
+            const tolerance = definition.tolerance;
+            const off = cells.empties.flatMap(empty => {
+                const wanted = empty.buttonWidth === undefined ? undefined : Math.min(empty.width - 40, 300);
+                return [
+                    ...(empty.textAlign === 'start' ? [] : [`text-align ${empty.textAlign}`]),
+                    ...(Math.abs(empty.paddingLeft - 20) > tolerance || Math.abs(empty.paddingRight - 20) > tolerance ? [`padding ${empty.paddingLeft}/${empty.paddingRight}`] : []),
+                    ...(Math.abs(empty.gap - 8) > tolerance ? [`gap ${empty.gap}`] : []),
+                    ...(empty.buttons > 1 ? [`${empty.buttons} buttons`] : []),
+                    ...(wanted !== undefined && Math.abs((empty.buttonWidth ?? 0) - wanted) > tolerance ? [`button ${empty.buttonWidth} (target ${wanted})`] : []),
+                ];
+            });
+            const first = cells.empties[0];
+            return { value: off.length === 0 ? `${first.textAlign}, ${first.paddingLeft}/${first.paddingRight}, ${first.buttons} buttons, gap ${first.gap} (${cells.empties.length})` : off.join('; '), pass: off.length === 0 };
+        }
+        case 'DS-STATE-4': {
+            if (cells.banners.length === 0) {
+                return notMeasurable('no banner');
+            }
+            const off = cells.banners.flatMap(banner => [
+                ...(banner.glyphs.length === 1 && banner.glyphs[0] === banner.severity ? [] : [`glyphs ${banner.glyphs.join(', ') || 'none'} on ${banner.severity}`]),
+                ...(banner.buttons > 1 ? [`${banner.buttons} buttons`] : []),
+                ...(banner.text.endsWith('.') ? [] : [`no full stop: ${banner.text}`]),
+            ]);
+            const first = cells.banners[0];
+            return { value: off.length === 0 ? `${first.glyphs.length} glyph (${first.severity}), ${first.buttons} buttons, ends with a full stop (${cells.banners.length})` : off.join('; '), pass: off.length === 0 };
+        }
+        default: {
+            if (cells.roles.length === 0) {
+                return notMeasurable('no element of the role table');
+            }
+            const off = cells.roles.filter(entry => entry.actual !== entry.expected);
+            const named = [...new Set(cells.roles.map(entry => `${entry.role} = ${entry.key}`))];
+            return { value: off.length === 0 ? named.join('; ') : off.map(entry => `${entry.role} ${entry.actual} (target ${entry.key} ${entry.expected})`).join('; '), pass: off.length === 0 };
+        }
     }
 }
 
@@ -2593,7 +2751,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         return evaluateSpec(layout, spec, definition, scope, state);
     }
     const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
-        ?? evaluateFocusAndState(definition, scope, layout, look) ?? evaluateType(definition, layout, look);
+        ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
     }

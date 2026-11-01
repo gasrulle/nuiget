@@ -11,12 +11,13 @@ export interface BadgeProps {
     tone?: BadgeTone;
     /** A count badge is the workbench's count badge (DS-HEIGHT-10); a label badge carries words. Absent, a label of digits only is a count. */
     kind?: 'count' | 'label';
+    'data-testid'?: string;
 }
 
 /** A small label next to a name. No role and no `aria-label`: a span may not carry one; the words are text. */
-export function Badge({ label, title, tone = 'neutral', kind }: BadgeProps): React.JSX.Element {
+export function Badge({ label, title, tone = 'neutral', kind, 'data-testid': testId }: BadgeProps): React.JSX.Element {
     return (
-        <span className={`nuiget-badge nuiget-badge--${kind ?? (/^\d+$/.test(label) ? 'count' : 'label')} nuiget-badge--${tone}`}>
+        <span className={`nuiget-badge nuiget-badge--${kind ?? (/^\d+$/.test(label) ? 'count' : 'label')} nuiget-badge--${tone}`} data-testid={testId}>
             {title === undefined ? label : (
                 <>
                     <span aria-hidden="true">{label}</span>

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
 import { whyNotRemovable } from '../../../shared/installed/rules';
-import { Banner, Button, CheckAllIcon, EmptyState, Listbox, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
+import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -26,10 +26,16 @@ const HINT = 'Space selects the package for a bulk action. Enter shows its detai
 
 const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
 
+/** A reason from the host as the end of a sentence with one full stop (DS-COPY-3). */
+const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
+
+const PROJECT_GROUP = 'project-';
+
 /**
  * The Installed tab of the main panel: one tree (D48), the tab's scroller, of the selected project's packages under its
  * group row, or under a group row per project in All Projects, then the Transitive group, with the bulk toolbar over it. A
- * group's status is on its row; messages sit above the tree, which owns treeitems only. The
+ * group's status is on its row; messages sit above the tree, which owns treeitems only, but for an action-less
+ * sentence of a project under All Projects, a text-only leaf of its group. The
  * current row (`aria-current`) is the one whose details are shown; the rows selected for a bulk action are
  * `aria-selected`. Nothing is removed from a list here: a row is busy from the request on (ops slice) and leaves
  * when the host's next list no longer has it.
@@ -157,6 +163,29 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         select({ packageId: item.entry.id, version: item.entry.version, origin: 'transitive', projectPath: item.scope.projectPath });
     };
 
+    // A project's group row id, unique though a project's name is not; its suffix names the project's markers.
+    const projectGroups = useMemo((): ReadonlyMap<string, string> => {
+        const ids = new Map<string, string>();
+        if (!allMode) {
+            return ids;
+        }
+        const seen = new Set<string>();
+        const folders = groupByFolder(sections);
+        const assign = (section: Section, folder: string | undefined): void => {
+            const name = section.projectName.toLowerCase();
+            const id = [`${PROJECT_GROUP}${name}`, `${PROJECT_GROUP}${(folder ?? section.workspaceFolder ?? '').toLowerCase()}/${name}`].find(candidate => !seen.has(candidate)) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`;
+            seen.add(id);
+            ids.set(section.projectPath, id);
+        };
+        if (folders.length < 2) {
+            sections.forEach(section => assign(section, undefined));
+        } else {
+            folders.forEach(([folder, members]) => members.forEach(section => assign(section, folder)));
+        }
+        return ids;
+    }, [allMode, sections]);
+    const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? section.projectPath).slice(PROJECT_GROUP.length);
+
     const transitiveExpanded = transitiveOpen && (allMode ? all.transitive.enabled : transitive.enabled);
     const transitivePart = useMemo(
         () => (allMode ? allProjectsTransitiveTree(all, transitiveExpanded, projectPaths => { run('ops/restore', { projectPaths }).catch(() => undefined); }) : transitiveTree(transitive, transitiveExpanded, collapsed)),
@@ -170,6 +199,15 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 return;
             }
             const { result } = section;
+            if (allMode) {
+                // What a project without an action has to say is a leaf of its group (DECISIONS 2026-11-01).
+                const message = { kind: 'message', id: `${groupId}\nmessage`, level: 0, section, marker: groupId.slice(PROJECT_GROUP.length) } as const;
+                if (result.unsupported !== undefined) {
+                    list.push({ ...message, cell: 'unsupported', text: `Unsupported project: ${sentence(result.unsupported.message)}` });
+                } else if (result.packages.length === 0 && filter.trim() === '' && !vulnerableOnly) {
+                    list.push({ ...message, cell: 'empty', text: 'No packages installed.' });
+                }
+            }
             for (const item of visibleRows(result, section.metadata, filter, vulnerableOnly).items) {
                 list.push({ kind: 'package', id: rowId(section.projectPath, item.id), section, result, entry: item.entry });
             }
@@ -187,18 +225,14 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
             list.push(...transitivePart.items);
             return list;
         }
-        const seen = new Set<string>();
-        const project = (section: Section, level: number, folder: string | undefined): void => {
-            const name = section.projectName.toLowerCase();
-            // A project's name is not unique; its path is.
-            const id = [`project-${name}`, `project-${(folder ?? section.workspaceFolder ?? '').toLowerCase()}/${name}`].find(candidate => !seen.has(candidate)) ?? `project-${section.projectPath.toLowerCase()}`;
-            seen.add(id);
+        const project = (section: Section, level: number): void => {
+            const id = projectGroups.get(section.projectPath) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`;
             list.push({ kind: 'group', id, level, title: section.projectName, section, variant: level === 1 ? 'group' : 'level' });
             packagesOf(section, id);
         };
         const folders = groupByFolder(sections);
         if (folders.length < 2) {
-            sections.forEach(section => project(section, 1, undefined));
+            sections.forEach(section => project(section, 1));
             list.push(...transitivePart.items);
             return list;
         }
@@ -206,12 +240,12 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
             const id = `folder-${folder.toLowerCase()}`;
             list.push({ kind: 'group', id, level: 1, title: folder, variant: 'group' });
             if (!collapsed.has(id)) {
-                members.forEach(section => project(section, 2, folder));
+                members.forEach(section => project(section, 2));
             }
         }
         list.push(...transitivePart.items);
         return list;
-    }, [allMode, sections, collapsed, filter, vulnerableOnly, transitivePart.items]);
+    }, [allMode, sections, projectGroups, collapsed, filter, vulnerableOnly, transitivePart.items]);
 
     // A selection of this tab that comes back (the tab shown again) makes its row current again.
     const detailsSelection = useDetails().selection;
@@ -231,6 +265,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     const { enable: enableTransitive } = transitive;
     const groups = useMemo((): ListboxGroups<TreeItem> => ({
         is: item => item.kind === 'group',
+        isMessage: item => item.kind === 'message',
         level: item => (item.kind === 'group' ? item.level : 1),
         isExpanded: item => (item.id === 'transitive' ? transitiveExpanded : !collapsed.has(item.id)),
         onToggle: (item, expanded) => {
@@ -256,6 +291,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
             });
         },
         render: (item, placement) => {
+            if (item.kind === 'message') {
+                return <span data-testid={item.cell === 'empty' ? `installed-empty-${item.marker}` : `installed-unsupported-${item.marker}`}>{item.text}</span>;
+            }
             if (item.kind !== 'group') {
                 return null;
             }
@@ -274,7 +312,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     variant={item.variant}
                     count={item.count ?? (counted ? result.packages.length : undefined)}
                     busy={section !== undefined && (section.revalidating || (allMode && result === undefined && section.error === undefined))}
-                    badges={statusBadges(result)}
+                    badges={statusBadges(result, allMode ? item.id.slice(PROJECT_GROUP.length) : undefined)}
                 />
             );
         },
@@ -283,7 +321,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     let body: React.ReactNode;
     if (sections.length === 0) {
         body = committed === undefined || (allMode && all.status === 'loading')
-            ? <Skeleton density="comfortable" />
+            ? <><ProgressBar label="Loading installed packages" data-testid="installed-progress" /><Skeleton density="comfortable" /></>
             : <EmptyState message={allMode ? 'No projects to list.' : 'No .NET projects found in this workspace.'} />;
     } else {
         const single = allMode ? undefined : sections[0];
@@ -291,16 +329,19 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         const listed = single?.result !== undefined && (single.result.unsupported === undefined || single.result.packages.length > 0);
         const open = !collapsed.has('direct');
         const failed = (section: Section): boolean => section.status === 'error' || section.error !== undefined;
+        const firstLoad = single !== undefined ? single.result === undefined && !failed(single) : all.status === 'loading';
+        const revalidating = sections.some(section => section.revalidating);
         body = (
             <>
+                {firstLoad || revalidating ? <ProgressBar label={firstLoad ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="installed-progress" /> : null}
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
-                        {section.result?.unsupported ? <Banner severity="warning">{allMode ? `Unsupported project ${section.projectName}: ${section.result.unsupported.message}` : `Unsupported project: ${section.result.unsupported.message}`}</Banner> : null}
-                        {failed(section) ? <Banner severity="error" action={{ label: 'Retry', onClick: section.onRetry }}>{`Installed packages of ${section.projectName} could not be loaded: ${section.error ?? 'unknown error'}`}</Banner> : null}
+                        {!allMode && section.result?.unsupported ? <Banner severity="warning" data-testid="installed-unsupported">{`Unsupported project: ${sentence(section.result.unsupported.message)}`}</Banner> : null}
+                        {failed(section) ? <Banner severity="error" data-testid={allMode ? `installed-error-${markerOf(section)}` : 'installed-error'} action={{ label: 'Retry', onClick: section.onRetry }}>{`Installed packages of ${section.projectName} could not be loaded: ${sentence(section.error ?? 'unknown error')}`}</Banner> : null}
                     </Fragment>
                 ))}
-                {single && open && single.result === undefined && !failed(single) ? <Skeleton density="comfortable" /> : null}
-                {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} /> : null}
+                {single && open && firstLoad ? <Skeleton density="comfortable" /> : null}
+                {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} data-testid="installed-empty" /> : null}
                 {transitivePart.message}
                 <Listbox
                     items={items}
@@ -309,7 +350,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     hint={HINT}
                     testId="installed-list"
                     density="comfortable"
-                    busy={sections.some(section => section.revalidating)}
+                    busy={revalidating}
                     selectedId={current}
                     selectedIds={bulk.selected}
                     isDisabled={item => item.kind === 'package' && item.entry.declaration === 'unresolved'}

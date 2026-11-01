@@ -21,6 +21,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
         rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, titles: { panel: undefined, details: undefined, dialog: undefined }, headings: [], dividers: { key: '', header: undefined, tabStrips: [], groupLines: [] }, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
         factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [],
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [], unselectable: [],
+        stateCells: { testIds: [], rows: 0, disabledStatuses: [], skeletonRows: 0, listBusy: false, progressTop: undefined, contentTop: undefined, empties: [], banners: [], roles: [] },
     },
     testIds: {},
     scrollbar: { rootColor: '', slider: '', scrollers: [] },
@@ -41,7 +42,7 @@ const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16
 const asGrid1 = { 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
-const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading'];
+const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
 
 describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('writes D34\'s tolerances and the ramp once', () => {
@@ -56,7 +57,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
-            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-SCROLL-1',
+            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
@@ -146,15 +147,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-6')).toEqual({ ...hard('main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } });
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
-        expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toEqual({ 'main-installed-unsupported': 'P2.8b' });
+        expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
         // The states without a row by design: DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-quicksearch-open', 'main-quicksearch-versions'];
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
-            expect(noRow.map(state => appliesTo(definition, state)), id).toEqual([false, false, false]);
+            expect(noRow.map(state => appliesTo(definition, state)), id).toEqual(noRow.map(() => false));
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
         expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
@@ -175,7 +176,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
-            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
     });
 
@@ -685,7 +686,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-browse-details', facts({ metaText: [...meta(11), { kind: 'description', fontSize: 11.05, colour: 'rgb(157, 157, 157)', selected: false }], descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-browse-details'))
             .toMatchObject({ pass: false, status: { pending: 'P3.2' } });
         expect(value('main-installed-unsupported', facts({ copyEnds: [{ kind: 'banner', text: 'Unsupported project: requires .NET SDK 10 or newer' }] }), 'DS-COPY-3@main-installed-unsupported'))
-            .toMatchObject({ pass: false, status: { pending: 'P2.8b' } });
+            .toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
             .toMatchObject({ pass: false, value: 'meta 11 (target 11); 1 meta off descriptionForeground' });
         expect(value('main-installed-hover', facts({ rows: [row({ actions: 4 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: false });
@@ -693,6 +694,48 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: false, value: 'no full stop: empty "No packages installed"' });
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed.' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({}), 'DS-COPY-3@main-installed-single')).toBeUndefined();
+        // UX-P2.8b: a message leaf is read in All Projects, and "unresolved" has no subject.
+        expect(value('main-installed-all', facts({ copyEnds: [{ kind: 'leaf', text: 'Unsupported project: requires .NET SDK 10 or newer.' }] }), 'DS-COPY-3@main-installed-all')).toMatchObject({ pass: true });
+        expect(value('main-installed-unresolved', facts({}), 'DS-COPY-3@main-installed-unresolved')).toBeUndefined();
+    });
+
+    it('registers the Installed cells in main-installed, pending on this item, with their later owners (UX-P2.8b)', () => {
+        const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': { pending: 'P2.8b' } });
+        for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
+            expect(scopesOf(id), id).toEqual({ 'main-installed': { pending: 'P2.8b' }, 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+        }
+    });
+
+    it('reads the Installed cells: markers, the bar, the welcome layout, the inline message and the colour roles (UX-P2.8b)', () => {
+        const facts = (cells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });
+        const line = (state: string, cells: Record<string, unknown>, name: string) => lineOf(state, facts(cells), name);
+        expect(line('main-installed-empty', { testIds: ['installed-empty'] }, 'DS-STATE-1@main-installed-empty')).toMatchObject({ pass: true, status: { pending: 'P2.8b' } });
+        expect(line('main-installed-empty', {}, 'DS-STATE-1@main-installed-empty')).toMatchObject({ pass: false, value: 'present: none; missing: installed-empty' });
+        expect(line('main-installed-loading', { testIds: ['installed-progress'], skeletonRows: 3 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: true });
+        expect(line('main-installed-loading', { testIds: ['installed-progress'], rows: 2 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: false });
+        expect(line('main-installed-unresolved', { disabledStatuses: ['Unresolved'] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: true });
+        expect(line('main-installed-unresolved', { disabledStatuses: [''] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: false });
+        expect(line('main-installed-single', {}, 'DS-STATE-1@main-installed-single')).toBeUndefined();
+
+        expect(line('main-installed-revalidating', { progressTop: 148, contentTop: 150, rows: 4, listBusy: true }, 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 4; aria-busy' });
+        expect(line('main-installed-revalidating', { progressTop: 200, contentTop: 150, rows: 4, listBusy: true }, 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: false });
+        expect(line('main-installed-loading', { progressTop: 148, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: true });
+        expect(line('main-installed-loading', {}, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
+
+        const empty = { textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 260, width: 300 };
+        expect(line('main-installed-empty', { empties: [empty] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: true });
+        expect(line('main-installed-empty', { empties: [{ ...empty, textAlign: 'center' }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'text-align center' });
+        expect(line('main-installed-empty', { empties: [{ ...empty, buttonWidth: 200 }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'button 200 (target 260)' });
+
+        const banner = { severity: 'warning', glyphs: ['warning'], buttons: 0, text: 'Unsupported project: too old.' };
+        expect(line('main-installed-unsupported', { banners: [banner] }, 'DS-STATE-4@main-installed-unsupported')).toMatchObject({ pass: true });
+        expect(line('main-installed-error', { banners: [{ ...banner, severity: 'error' }] }, 'DS-STATE-4@main-installed-error')).toMatchObject({ pass: false, value: 'glyphs warning on error' });
+        expect(line('main-installed-unsupported', { banners: [{ ...banner, buttons: 2, text: 'No stop' }] }, 'DS-STATE-4@main-installed-unsupported')).toMatchObject({ pass: false, value: '2 buttons; no full stop: No stop' });
+
+        const role = { role: 'progress', key: '--vscode-progressBar-background', actual: 'rgb(1, 2, 3)', expected: 'rgb(1, 2, 3)' };
+        expect(line('main-installed-loading', { roles: [role] }, 'DS-COLOR-1@main-installed-loading')).toMatchObject({ pass: true, value: 'progress = --vscode-progressBar-background' });
+        expect(line('main-installed-loading', { roles: [{ ...role, actual: 'rgb(9, 9, 9)' }] }, 'DS-COLOR-1@main-installed-loading')).toMatchObject({ pass: false });
     });
 
     it('checks the rules registered with the theme dump: focus rings and disabled reasons (UX-P0.14)', () => {

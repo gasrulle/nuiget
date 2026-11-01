@@ -10,6 +10,7 @@ body {
 }
 
 .nuiget-main {
+    --nuiget-message-inset: var(--nuiget-inset);
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -173,6 +174,7 @@ body {
 /* ── Details pane ── */
 
 .nuiget-details {
+    --nuiget-message-inset: var(--nuiget-inset-details);
     display: flex;
     flex: 1;
     flex-direction: column;

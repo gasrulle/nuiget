@@ -545,6 +545,71 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
     });
 });
 
+describe('Listbox message leaves (UX-P2.8b)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 240, row: 24 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    const items: Package[] = [{ id: 'Group', version: '' }, { id: 'Why', version: '' }, { id: 'Alpha', version: '1.0.0' }];
+    const handlers = { onSelect: vi.fn(), onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn(), onContextMenu: vi.fn(), onToggleSelected: vi.fn() };
+
+    function WithMessage(): React.JSX.Element {
+        return (
+            <Listbox
+                {...handlers}
+                items={items}
+                label="Installed packages"
+                hint={HINT}
+                testId="message-list"
+                density="comfortable"
+                selectedIds={new Set<string>()}
+                groups={{
+                    is: item => item.id === 'Group',
+                    isMessage: item => item.id === 'Why',
+                    isExpanded: () => true,
+                    onToggle: () => undefined,
+                    render: item => <span>{item.id === 'Why' ? 'A sentence.' : item.id}</span>,
+                }}
+                renderRow={(item, placement) => <Row {...placement} itemId={item.id} name={item.id} version={item.version} />}
+            />
+        );
+    }
+
+    it('a message leaf is a treeitem without a focusable element, skipped by Enter, Space, Delete and the context menu; ArrowLeft moves to its group', async () => {
+        const user = userEvent.setup();
+        render(<WithMessage />);
+        const leaf = screen.getByText('A sentence.').closest<HTMLElement>('[role="treeitem"]')!;
+        expect(leaf.closest('[data-row-kind="message"]')).toHaveAttribute('role', 'presentation');
+        expect(leaf).toHaveAttribute('aria-level', '2');
+        expect(leaf).not.toHaveAttribute('aria-expanded');
+        expect(leaf.querySelector('button, input, a, [tabindex]')).toBeNull();
+
+        await user.click(leaf);
+        leaf.focus();
+        await user.keyboard('{Enter} {Delete}{Shift>}{F10}{/Shift}');
+        fireEvent.contextMenu(leaf);
+        for (const handler of Object.values(handlers)) {
+            expect(handler).not.toHaveBeenCalled();
+        }
+
+        await user.keyboard('{ArrowLeft}');
+        expect(document.activeElement).toBe(screen.getByTestId('group-row-group').querySelector('[role="treeitem"]'));
+        await user.keyboard('{ArrowDown}');
+        expect(document.activeElement).toBe(leaf);
+    });
+
+    it('has no axe violations with a message leaf', async () => {
+        const { container } = render(<WithMessage />);
+        expect(await axe(container)).toHaveNoViolations();
+    });
+});
+
 describe('Listbox estimates', () => {
     // No fake layout: without a client box nothing renders or is measured, so the sizer is the estimates alone.
     it('a group row is estimated at the pane-header height and a package row at its density\'s height', () => {

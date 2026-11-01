@@ -363,6 +363,33 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; row-gap: 8px; }</style>');
+        const list = document.querySelector('.nuiget-list') as HTMLElement;
+        list.insertAdjacentHTML('afterbegin', [
+            '<div class="nuiget-progress" data-testid="installed-progress" data-rect="0,100,600,102"><div class="nuiget-progress-bar" data-rect="0,100,180,102"></div></div>',
+            '<div class="nuiget-skeleton"><div class="nuiget-skeleton-row" data-rect="0,104,600,172"></div><div class="nuiget-skeleton-row" data-rect="0,176,600,244"></div></div>',
+            '<div class="nuiget-empty" data-rect="0,250,600,290"><p class="nuiget-empty-text" data-rect="20,250,580,270" data-text="20,250,200,270">No packages installed.</p><button data-rect="20,270,320,290">Add</button></div>',
+            '<div class="nuiget-banner nuiget-banner--error" data-rect="0,300,600,330"><svg class="nuiget-banner-icon" data-codicon="error" data-rect="16,306,32,322"></svg><span class="nuiget-banner-text" data-rect="40,306,500,322" data-text="40,306,300,322">It failed. </span><button data-rect="500,304,580,326">Retry</button></div>',
+            '<div class="nuiget-row" data-row-kind="message" data-rect="0,340,600,368"><div class="nuiget-row-message" data-rect="0,340,600,368" data-text="40,342,300,366">A sentence. </div></div>',
+        ].join(''));
+        const collected = collect().endOfP0;
+        const cells = collected.stateCells;
+        expect(cells.testIds).toContain('installed-progress');
+        expect(cells.skeletonRows).toBe(2);
+        expect(cells.progressTop).toBe(100);
+        expect(cells.contentTop).toBeGreaterThanOrEqual(100);
+        expect(cells.empties).toEqual([{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 300, width: 600 }]);
+        expect(cells.banners).toEqual([{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }]);
+        expect(cells.roles.map(role => role.key)).toEqual(['--vscode-progressBar-background', '--vscode-problemsErrorIcon-foreground', expect.any(String), expect.any(String), expect.any(String), expect.any(String), expect.any(String)].slice(0, cells.roles.length));
+        expect(collected.copyEnds).toContainEqual({ kind: 'banner', text: 'It failed.' });
+        expect(collected.copyEnds).toContainEqual({ kind: 'leaf', text: 'A sentence.' });
+        // A message row is not a package row.
+        expect(cells.rows).toBe(collected.rows.length);
+        expect(collected.rows.every(row => row.band.top !== 340)).toBe(true);
+        document.getElementById('state-cells')?.remove();
+    });
+
     it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
         panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-details-facts" data-rect="620,200,880,260"><div class="nuiget-details-fact" data-rect="620,200,880,220"><dt data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd></div><div class="nuiget-details-fact" data-rect="620,230,880,250"><dt data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></div></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');

@@ -203,6 +203,8 @@ const REACH: Record<string, Reach> = {
             // level-1 groups in the tree, the two folders and Transitive (UX-P2.1e).
             await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
             // UX-P0.fix-2 (P0 phase review, design-2): the settled data before the shot, P0.23's predicate (its goldens show it).
+            // The Unsupported project's sentence is a leaf of the virtualized tree: step the list until it is rendered (UX-P2.8b).
+            await poll(async () => (await script<boolean>('const list = document.querySelector(\'[data-testid="installed-list"]\'); const leaf = list.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\'); if (leaf) { leaf.closest(".nuiget-row").scrollIntoView({ block: "center" }); return true; } list.scrollTop += 300; return false;') ? true : undefined), 'the Unsupported project\'s message leaf', 60_000);
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },
@@ -212,9 +214,8 @@ const REACH: Record<string, Reach> = {
             await clickVisible('installed-tab');
             await installedListAtTop();
             await findByTestId('package-row-polly', 120_000);
-            // The banner primitive's class: the main panel renders this banner without a test id.
-            await until('[...document.querySelectorAll(".nuiget-banner--warning")].some(banner => banner.textContent.includes("Unsupported project"))', 'the Unsupported banner');
-            await until('document.body.textContent.includes("provisional")', 'the provisional badge');
+            await until('document.querySelector(\'[data-testid="installed-unsupported"]\') !== null', 'the Unsupported banner');
+            await until('document.querySelector(\'[data-testid="installed-provisional"]\') !== null', 'the provisional badge');
             await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/^\\d+$/.test(row.querySelector(".nuiget-badge--count")?.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
         },
     },
@@ -484,7 +485,7 @@ for (const id of ['installed-tab', 'updates-tab']) {
     const tab = document.querySelector('[data-testid="' + id + '"]');
     if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
 }
-if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind="group"])')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
+if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors'))) clauses.push('a comfortable row without authors');
 return clauses.join('; ');
 `;
 

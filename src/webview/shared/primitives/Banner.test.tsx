@@ -19,6 +19,15 @@ describe('Banner', () => {
         expect(screen.queryByTestId('status-live')).toBeNull();
     });
 
+    it('draws the glyph of its severity', () => {
+        const { container, rerender } = render(<Banner severity="error">Failed.</Banner>);
+        expect(container.querySelector('.nuiget-banner-icon')).toHaveAttribute('data-codicon', 'error');
+        rerender(<Banner severity="warning">Careful.</Banner>);
+        expect(container.querySelector('.nuiget-banner-icon')).toHaveAttribute('data-codicon', 'warning');
+        rerender(<Banner severity="info">Note.</Banner>);
+        expect(container.querySelector('.nuiget-banner-icon')).toHaveAttribute('data-codicon', 'info');
+    });
+
     it('the severity is spoken before the text', () => {
         render(<>
             <Banner severity="info">Showing cached results</Banner>

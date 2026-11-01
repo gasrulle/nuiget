@@ -157,9 +157,30 @@
     block-size: var(--nuiget-pane-header-height);
 }
 
+/* A one-line leaf equals its estimate; a sentence wrapped in a narrow pane is measured, never over the next row. */
+.nuiget-row[data-row-kind="message"] {
+    block-size: auto;
+    min-block-size: var(--nuiget-pane-header-height);
+}
+
 .nuiget-row-group > .nuiget-section-header {
     flex: 1;
     min-width: 0;
+}
+
+/* A sentence under its group, at the x of the group's title; text alone, no hover (UX-P2.8b). */
+.nuiget-row-message {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    min-height: var(--nuiget-pane-header-height);
+    padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-sm) + var(--nuiget-space-2)) var(--nuiget-message-inset, var(--nuiget-inset));
+    outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
+    color: var(--nuiget-color-fg-muted);
+    overflow-wrap: anywhere;
+    cursor: default;
 }
 
 /* Selection follows the list's focus (DS-COLOR-2). */
@@ -227,6 +248,12 @@
 .nuiget-row-option--comfortable:focus,
 .nuiget-row-group--compact:focus-visible,
 .nuiget-row-group--comfortable:focus {
+    --nuiget-row-outline-style: solid;
+    --nuiget-row-outline-color: var(--nuiget-color-list-focus-outline);
+}
+
+.nuiget-row-message--compact:focus-visible,
+.nuiget-row-message--comfortable:focus {
     --nuiget-row-outline-style: solid;
     --nuiget-row-outline-color: var(--nuiget-color-list-focus-outline);
 }
@@ -753,6 +780,8 @@
     overflow: hidden;
     border: var(--nuiget-line-width) solid var(--nuiget-color-button-border);
     border-radius: var(--nuiget-radius-control);
+    inline-size: var(--nuiget-button-width, auto);
+    max-inline-size: var(--nuiget-button-max-width, none);
     background: var(--nuiget-button-bg, var(--nuiget-button-rest-bg));
     color: var(--nuiget-color-button-fg);
     font: inherit;
@@ -892,14 +921,17 @@
 
 /* ── EmptyState ── */
 
+/* Welcome-view content: left-aligned sentences at the 20 px inset, the one button full width up to 300 px (DS-STATE-3). */
 .nuiget-empty {
+    --nuiget-button-width: 100%;
+    --nuiget-button-max-width: var(--nuiget-welcome-button-max);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-6);
+    padding: var(--nuiget-space-4) var(--nuiget-space-7);
     color: var(--nuiget-color-fg-muted);
-    text-align: center;
+    text-align: start;
 }
 
 .nuiget-empty-text {
@@ -981,30 +1013,22 @@
     display: flex;
     align-items: center;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-2) var(--nuiget-space-4);
-    border-inline-start: var(--nuiget-space-1) solid var(--nuiget-color-info);
+    padding: var(--nuiget-space-2) var(--nuiget-message-inset, var(--nuiget-inset));
     color: var(--nuiget-color-fg);
 }
 
-.nuiget-banner--warning {
-    border-inline-start-color: var(--nuiget-color-warning);
-}
-
-.nuiget-banner--error {
-    border-inline-start-color: var(--nuiget-color-error);
-}
-
+/* The severity glyph's role (DS-STATE-4); the Extensions view's message has no coloured bar. */
 .nuiget-banner-icon {
     flex: none;
-    color: var(--nuiget-color-info);
+    color: var(--nuiget-color-icon-info);
 }
 
 .nuiget-banner--warning .nuiget-banner-icon {
-    color: var(--nuiget-color-warning);
+    color: var(--nuiget-color-icon-warning);
 }
 
 .nuiget-banner--error .nuiget-banner-icon {
-    color: var(--nuiget-color-error);
+    color: var(--nuiget-color-icon-error);
 }
 
 .nuiget-banner-text {

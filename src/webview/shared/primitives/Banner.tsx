@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Button } from './Button';
-import { InfoIcon, WarningIcon } from './icons';
+import { ErrorIcon, InfoIcon, WarningIcon } from './icons';
 import './primitives.css';
 
 export type BannerSeverity = 'info' | 'warning' | 'error';
@@ -15,6 +15,7 @@ export interface BannerProps {
 }
 
 const SPOKEN: Record<BannerSeverity, string> = { info: 'Info', warning: 'Warning', error: 'Error' };
+const ICON: Record<BannerSeverity, typeof InfoIcon> = { info: InfoIcon, warning: WarningIcon, error: ErrorIcon };
 
 /**
  * A message that stays on the page until its cause is gone, for example "Sources unreachable". It is announced
@@ -23,7 +24,7 @@ const SPOKEN: Record<BannerSeverity, string> = { info: 'Info', warning: 'Warning
  * someone who cannot see them.
  */
 export function Banner({ severity, children, action, 'data-testid': testId }: BannerProps): React.JSX.Element {
-    const Icon = severity === 'info' ? InfoIcon : WarningIcon;
+    const Icon = ICON[severity];
     return (
         <div className={`nuiget-banner nuiget-banner--${severity}`} role={severity === 'error' ? 'alert' : 'status'} data-testid={testId}>
             <Icon className="nuiget-banner-icon" />

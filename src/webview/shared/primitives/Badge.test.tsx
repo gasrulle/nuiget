@@ -25,6 +25,11 @@ describe('Badge', () => {
         expect(badge?.querySelector('[aria-hidden]')).toBeNull();
     });
 
+    it('carries a test id', () => {
+        render(<Badge label="provisional" data-testid="installed-provisional" />);
+        expect(screen.getByTestId('installed-provisional')).toHaveTextContent('provisional');
+    });
+
     it('has no axe violations', async () => {
         const { container } = render(<p>Serilog <Badge label="CPM" title="Centrally managed" /> <Badge label="2" /></p>);
         expect(await axe(container)).toHaveNoViolations();

@@ -71,7 +71,7 @@ it (pointer helpers, not stops of the Tab order).
 Selecting **All Projects (N)** sets `selectedProject = ALL_PROJECTS`. It means *every supported
 project discovered in the workspace* (all workspace folders), grouped by workspace folder when
 there are several. Solution membership is not consulted in 2.0 (see ADR-000). Unsupported
-projects appear with an Unsupported section (badge and banner) explaining why (`packages.config`, non-SDK-style); a
+projects appear with an Unsupported section (badge and sentence) explaining why (`packages.config`, non-SDK-style); a
 project whose SDK is below 10 lists its packages read-only.
 
 In this mode:
@@ -101,7 +101,7 @@ Every screen defines each state below that can occur on it, with a marker (§8) 
 
 | State | Visual | Rule |
 |---|---|---|
-| **Loading (first)** | A 2 px indeterminate progress bar along the top edge of the region that waits (a list, a section, the details pane, the README); no skeleton; the live region announces the load once. Browse results show their rows as soon as the search answers, under the same bar, and each row's icon and authors fill in as the metadata arrives (round 2, F3a; MB3, X23, X34); every other region shows no rows until its data is there | Only when there is no previous data for the key. The bar shows where the work is, never in a shared place, and stays until the last part of the region has arrived. |
+| **Loading (first)** | A 2 px indeterminate progress bar along the top edge of the region that waits (a list, a section, the details pane, the README). Installed, Updates, Transitive and the details pane add three skeleton rows under the bar on a first load (DS-STATE-2, T-16); the live region announces the load once (P4.6). Browse results show their rows as soon as the search answers, under the same bar, and each row's icon and authors fill in as the metadata arrives (round 2, F3a; MB3, X23, X34); every other region shows no rows until its data is there | Only when there is no previous data for the key. The bar shows where the work is, never in a shared place, and stays until the last part of the region has arrived. |
 | **Revalidating** | Existing rows stay under the same 2 px bar; the list is `aria-busy` | When a displayed resource was invalidated and is being recomputed. Never blank the list; a provisional answer never replaces rows already shown (X7). |
 | **Provisional** | A "Provisional" badge on the group row or pane header it applies to (each All Projects project row, the main panel's Direct packages row, the sidebar's Installed pane header), at the end inset, never over a border; its tooltip explains that the evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
 | **Unresolved** | Version cell shows "unresolved" with tooltip; row actions disabled | `declaration: 'unresolved'`; excluded from update checks. |
@@ -112,7 +112,7 @@ Every screen defines each state below that can occur on it, with a marker (§8) 
 | **Stale selection** | Details header shows the project the selection belongs to; actions disabled until re-validated | When the active project changes while a package is selected, the details panel keeps its content but becomes read-only until the new installed data confirms the package (then it re-enables) or clears it (package not in new project). |
 | **Empty** | Welcome-style, as the workbench's empty views: one sentence at the region's content inset, start-aligned, ending with a period, and at most one button under it; never centred | e.g. "No packages installed.", "No updates available.", "No results for "x"." |
 | **Offline / sources unreachable** | Warning banner at the top of the affected list with "Retry" | `sourcesUnavailable: true` on updates/search; never render as "no updates". |
-| **Unsupported project** | Banner "Unsupported project: <reason>." in place of the list; a project below SDK 10 keeps its read-only list under the banner | From `InstalledResult.unsupported`. |
+| **Unsupported project** | Banner "Unsupported project: <reason>." in place of the list; a project below SDK 10 keeps its read-only list under the banner; under All Projects the sentence is a message leaf under the project's group row, before its read-only rows | From `InstalledResult.unsupported`. |
 | **Error** | Inline in the region: an error icon, one sentence and "Retry"; details also logged to the output channel | Any error response. Progress always clears. A rendering error in a view shows the error state ("Something went wrong in this view.") with Reload and is reported to the host as `ui/reportError`. |
 
 Every disabled control and row action says why: its tooltip and its accessible description name the reason ("Select
@@ -271,6 +271,8 @@ project has several and one block per project in All Projects; no version select
 | `installed-toolbar`, `updates-toolbar` | The bulk toolbars of the Installed and Updates tabs: their start and end edges are measured against the list's (V2) |
 | `section-box-<name>` | The box of a section header (chevron, title, spinner, badges, actions, count), one per `section-header-<name>` with the same `<name>`, and the heading of each Required by block of the details pane (`required-by-<framework or project>`, which has no toggle); it carries `data-variant`: `pane` (sidebar sections), `group` (a project or framework group in a list) or `level` (a nested level such as a target framework). Its top and bottom gaps (V4) and its badges' end inset (V3) are measured on it |
 | `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |
+| `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading and revalidating, above the tree), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages group row |
+| `installed-empty-<name>`, `installed-error-<name>`, `installed-unsupported-<name>`, `installed-provisional-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-` (`unsupported.csproj`): the empty and unsupported sentences are message leaves of its group, the error a banner above the tree, the badge on its group row. One tree has one bar: a project's progress is its group row's spinner (UX-P2.1d) |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
@@ -322,8 +324,6 @@ is a project or section name lower-cased, as above.
 |---|---|---|
 | Installed slice | `data-vscode-context` on `package-row-<id>` | The context-menu anchor on both surfaces: the row wrapper's context object (`webviewSection` = `installedRow`, `updateRow`, `browseRow` or `transitiveRow`, the row's ids and versions, `preventDefaultContextMenuItems`), which the menu items' `when` clauses read (ADR-013) |
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
-| Installed slice | `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading and revalidating), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages header |
-| Installed slice | `installed-progress-<name>`, `installed-empty-<name>`, `installed-error-<name>`, `installed-unsupported-<name>`, `installed-provisional-<name>` | The same markers for one project's section under All Projects |
 | Updates | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's progress bar, empty state and inline error |
 | Browse and details | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' progress bar, empty state ("No results for "x".") and inline error |
 | Browse and details | `search-suggestions-loading`, `search-suggestions-empty`, `search-suggestions-error` | The quick-search popup's loading row, no-results row and error row |

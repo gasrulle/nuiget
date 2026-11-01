@@ -15,9 +15,10 @@ export interface Section {
     onRetry: () => void;
 }
 
-/** A row of the tab's one tree (D48, ADR-013 Decision 8): a group, a package of a project or a transitive package. */
+/** A row of the tab's one tree (D48, ADR-013 Decision 8): a group, a project's message, a package of a project or a transitive package. */
 export type TreeItem =
     | { kind: 'group'; id: string; level: number; title: string; count?: number | string; section?: Section; variant: 'group' | 'level'; tfm?: string }
+    | { kind: 'message'; id: string; level: number; section: Section; cell: 'empty' | 'unsupported'; text: string; marker: string }
     | { kind: 'package'; id: string; section: Section; result: InstalledResult; entry: InstalledPackage }
     | { kind: 'transitive'; id: string; scope: { projectPath: string; tfm: string } | { projectPath: null }; entry: { id: string; version: string }; key: string; badges?: React.ReactNode };
 

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Narrow package lists keep their tabs and buttons readable**
 - **Packages that cannot be uninstalled say why in the list**
 - **Author names stand out in package lists**
+- **The Installed tab shows where it is loading, and empty or unsupported projects say so in place**
 
 ### Fixed
 - **Scrollbars in the package manager are thin again**

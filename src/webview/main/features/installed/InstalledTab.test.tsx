@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -86,6 +86,36 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
     });
 
+    it('a first load is the bar and the skeleton; an answer replaces them, a revalidation keeps the rows under the bar', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Loading installed packages');
+        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, THREE), 1));
+        expect(screen.queryByTestId('installed-progress')).toBeNull();
+        expect(document.querySelector('.nuiget-skeleton')).toBeNull();
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Refreshing installed packages');
+        expect(names()).toHaveLength(3);
+        expect(screen.getByTestId('installed-list')).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('an empty project and a failed read have their markers; the sentence ends with one full stop', async () => {
+        await mountWith([]);
+        expect(screen.getByTestId('installed-empty')).toHaveTextContent('No packages installed.');
+        expect(screen.queryByTestId('installed-error')).toBeNull();
+        cleanup();
+        const failing = mount();
+        await hostSays(() => failing.respond(failing.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => failing.respond(failing.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => failing.fail(failing.requests('installed/get')[0], 'failed', 'The project file could not be read.'));
+        const banner = screen.getByTestId('installed-error');
+        expect(banner).toHaveTextContent('Installed packages of App could not be loaded: The project file could not be read.');
+        expect(banner.querySelector('.nuiget-banner-text')?.textContent?.endsWith('read.')).toBe(true);
+        expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
     it('provisional: the badge leaves when the authoritative list replaces the chunk', async () => {
         // The main panel shows a project header, and with it the badge, in All Projects; the evaluated list arrives
         // as a second `project` chunk for the same project.
@@ -104,7 +134,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), fidelity: 'provisional' }, 1));
-        expect(within(screen.getByTestId('group-row-direct')).getByText('provisional')).toBeInTheDocument();
+        expect(within(screen.getByTestId('group-row-direct')).getByTestId('installed-provisional')).toHaveTextContent('provisional');
         expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
 
         // The evaluation finishes: the host invalidates the key and the authoritative list replaces the provisional one.

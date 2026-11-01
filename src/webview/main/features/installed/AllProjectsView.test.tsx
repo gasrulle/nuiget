@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -184,7 +184,7 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, [pkg('Serilog'), pkg('Moq')]), unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } }, 1));
 
-        expect(screen.getByText('Unsupported project: requires .NET SDK 10 or newer')).toBeInTheDocument();
+        expect(screen.getByTestId('installed-unsupported')).toHaveTextContent('Unsupported project: requires .NET SDK 10 or newer.');
         const list = screen.getByTestId('installed-list');
         expect(list.querySelectorAll('.nuiget-row-option')).toHaveLength(2);
         expect(within(list).queryAllByTestId('row-action-uninstall')).toHaveLength(0);
@@ -192,7 +192,7 @@ describe('main panel: All Projects', () => {
         expect(screen.getByTestId('uninstall-selected-button')).toHaveTextContent('Uninstall selected (0)');
     });
 
-    it('a packages.config project is a group row with the Unsupported badge and no rows; its banner names it above the tree', async () => {
+    it('a packages.config project is a group row with the Unsupported badge and no rows; a message leaf under it says why', async () => {
         const host = createFakeHost();
         render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
@@ -210,11 +210,52 @@ describe('main panel: All Projects', () => {
         expect(lib).toHaveTextContent('Unsupported');
         expect(lib.querySelector('[role="treeitem"]')).toHaveAccessibleName(/^Lib(?! 0)/);
         expect(within(lib).queryByText('0')).toBeNull();
-        const banner = screen.getByText('Unsupported project Lib: packages.config projects are not supported');
-        expect(tree.contains(banner)).toBe(false);
-        expect(banner.compareDocumentPosition(tree) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const leaf = within(tree).getByTestId('installed-unsupported-lib');
+        expect(leaf).toHaveTextContent('Unsupported project: packages.config projects are not supported.');
+        const treeitem = leaf.closest('[role="treeitem"]') as HTMLElement;
+        expect(treeitem).not.toHaveAttribute('aria-expanded');
+        expect(treeitem.querySelector('button')).toBeNull();
+        expect(treeitem.closest('[data-row-kind="message"]')?.previousElementSibling).toBe(lib);
+        expect(screen.queryByRole('status', { name: /Unsupported/ })).toBeNull();
         expect(tree.querySelectorAll('.nuiget-row-option')).toHaveLength(2);
         expect(screen.queryByText('No packages installed.')).toBeNull();
+    });
+
+    it('a project with no packages says so in a message leaf, and a failed project is a banner with Retry above the tree', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: PROJECTS }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', result: { ...installed(A, [pkg('Serilog')]), fidelity: 'provisional' } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w1', result: installed(B, []) } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Tool', workspaceFolder: 'w2', error: 'the project file is locked' } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [{ projectPath: C, error: 'the project file is locked' }] }));
+
+        const tree = screen.getByTestId('installed-list');
+        expect(within(tree).getByTestId('installed-empty-lib')).toHaveTextContent('No packages installed.');
+        expect(within(tree).getByTestId('installed-provisional-app')).toHaveTextContent('provisional');
+        const banner = screen.getByTestId('installed-error-tool');
+        expect(tree.contains(banner)).toBe(false);
+        expect(banner).toHaveTextContent('Installed packages of Tool could not be loaded: the project file is locked.');
+        expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('a filter takes the empty project\'s message leaf away', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: PROJECTS }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', result: installed(A, [pkg('Serilog')]) } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w1', result: installed(B, []) } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        expect(screen.getByTestId('installed-empty-lib')).toBeInTheDocument();
+        await user.type(screen.getByTestId('search-input'), '@installed Serilog');
+        await waitFor(() => expect(screen.queryByTestId('installed-empty-lib')).toBeNull());
     });
 
     it('has no axe violations with folders and the Transitive group row expanded', async () => {

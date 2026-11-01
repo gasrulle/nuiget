@@ -388,6 +388,8 @@ div.nuiget-row[role="presentation"][data-index][data-row-kind="group"][data-leve
 └─ div.nuiget-row-group[role="treeitem"][tabIndex 0 | -1][aria-level][aria-expanded][aria-posinset][aria-setsize]   ← text only
 ```
 
+A message leaf (`ListboxGroups.isMessage`, UX-P2.8b) has `data-row-kind="message"` and a `div.nuiget-row-message[role="treeitem"]` without `aria-expanded` or a focusable child: the arrows reach it, ArrowLeft goes to its group, and Enter, Space, Delete and the context menu do nothing.
+
 A click toggles a group row, as Enter does; Ctrl+Enter, Delete, the actions menu and the bulk set are package rows' alone. `useBulkSelection`
 (`src/webview/shared/selection/`) is the one owner of a bulk set, always a subset of the rows a bulk action may take.
 `Listbox` is always virtualized (`@tanstack/react-virtual`): only the rows in view and an overscan are in the
@@ -655,8 +657,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   project from the `allProjects` slice, under a `folder-<folder>` group row with two or more workspace folders. Enter,
   Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
   `Unsupported` and `provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
-  presentation; its messages (the Unsupported sentence, an error with Retry) are `Banner`s above the tree, because a
-  tree owns treeitems only. The Transitive group comes last. The tree is the tab's scroller, with real virtualization
+  presentation; its error with Retry is a `Banner` above the tree, because a tree owns treeitems only; an action-less
+  sentence (empty, unsupported) is a text-only message leaf of its group under All Projects. The Transitive group comes last. The tree is the tab's scroller, with real virtualization
   (UX-P2.1e); a group row past the rendered window is not in the document until the list scrolls to it. A list as high as its rows
   (All Projects Updates) cannot scroll itself, so `Listbox` scrolls the active row into view with
   `scrollIntoView({ block: 'nearest' })` (N88).
@@ -686,7 +688,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   `transitiveAggregate.ts`. Comfortable rows with the icon, authors and Verified mark of the lite metadata, no description
   and a muted check mark (a transitive row is current, never selected); a row opens `TransitiveDetails`. A Restore banner
   (`transitive-restore-banner`) above the tree when the assets file is missing; the group's 2 px progress bar, empty state
-  and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). In All Projects the aggregate is asked on
+  and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the aggregate is asked on
   expand, its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)
