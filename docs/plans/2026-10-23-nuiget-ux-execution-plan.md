@@ -753,6 +753,8 @@ goes to the P2 review as a candidate `P2.fix-n` row. A later panel counts for (a
 defect still present in that capture, and only for the defects P0.19's `rerunWithRound3` names for that state.
 `main-installed-single`'s V4 cell stays `not met`; V4 may become `met` through `main-transitive-expanded`'s base capture.
 
+
+**Owner decision (2026-11-02, recorded by the planning session):** no P5.x row is cut; ≈ 203 h / ≈ 187 days (194 %) is accepted as the plan's line, the P2.11 stop is answered and D20's order stands. The planning session re-measures by this subsection's method at each phase gate and raises a drift above 25 % of the re-base with the owner.
 ---
 
 ## Appendix A — Ledger crosswalk (where each research id lands)
