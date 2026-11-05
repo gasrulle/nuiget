@@ -35,7 +35,14 @@ export interface ArtboardEntry {
     widths: readonly ArtboardWidth[];
 }
 
-/** Artboard A (round 1, composition A; UX-P0.27a): the main panel at 932 px in Dark Modern, both looks. */
+/** The round-3 pages' one width: the 1200 goldens' main panel, its list pane 420 px (UX-P2.fix-8). */
+const ROUND3_WIDTHS: readonly ArtboardWidth[] = [{ panel: 1200, viewport: 1280 }];
+
+/**
+ * Artboard A (round 1, composition A; UX-P0.27a): the main panel at 932 px in Dark Modern, both looks. The round-3 pages
+ * (UX-P2.fix-8) are A's main panel at 1200 px, its list scrolled to the product's window; each samples its current row's
+ * band, `list.activeSelectionBackground`, the state's own or drawn current and declared in the page's `data-composition`.
+ */
 export const ARTBOARDS: readonly ArtboardEntry[] = [
     {
         state: 'main-installed-single',
@@ -46,6 +53,43 @@ export const ARTBOARDS: readonly ArtboardEntry[] = [
         themes: ['dark-modern'],
         looks: ['modern', 'classic'],
         widths: [{ panel: 932, viewport: 1280 }],
+    },
+    {
+        state: 'main-transitive-expanded',
+        source: 'artboards/round3/main-transitive-expanded.dc.html',
+        panel: 'nuiget-app',
+        sample: '[data-testid="package-row-newtonsoft.json"]',
+        themes: ['dark-modern'],
+        looks: ['modern'],
+        widths: ROUND3_WIDTHS,
+    },
+    {
+        state: 'main-transitive-details',
+        source: 'artboards/round3/main-transitive-details.dc.html',
+        panel: 'nuiget-app',
+        sample: '[data-testid="package-row-microsoft.extensions.configuration"]',
+        themes: ['dark-modern'],
+        looks: ['modern'],
+        widths: ROUND3_WIDTHS,
+    },
+    {
+        state: 'main-installed-details',
+        source: 'artboards/round3/main-installed-details.dc.html',
+        panel: 'nuiget-app',
+        sample: '[data-testid="package-row-newtonsoft.json"]',
+        themes: ['dark-modern'],
+        looks: ['modern', 'classic'],
+        widths: ROUND3_WIDTHS,
+    },
+    {
+        state: 'main-installed-all',
+        source: 'artboards/round3/main-installed-all.dc.html',
+        panel: 'nuiget-app',
+        // The first Newtonsoft.Json row in the panel is Unresolved.csproj's, the one the page draws current.
+        sample: '[data-testid="package-row-newtonsoft.json"]',
+        themes: ['dark-modern'],
+        looks: ['modern', 'classic'],
+        widths: ROUND3_WIDTHS,
     },
 ];
 

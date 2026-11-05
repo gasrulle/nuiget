@@ -15,10 +15,19 @@ import { artboardFile, artboardFilter, artboardJobs, ARTBOARDS, type ColourSampl
 const SELECTED = '[data-testid="package-row-newtonsoft.json"]';
 
 describe('the artboard manifest (UX-P0.27)', () => {
-    it('renders artboard A as P0.27a did: both looks, Dark Modern, 932 px, under the capture names', () => {
+    it('renders artboard A at 932 px and the four round-3 pages at 1200 px in Dark Modern, under the capture names (UX-P2.fix-8)', () => {
         const jobs = artboardJobs();
-        expect(jobs.map(artboardFile)).toEqual(['main-installed-single.dark-modern.932.png', 'main-installed-single.dark-modern-classic.932.png']);
-        expect(jobs.map(job => job.width.viewport)).toEqual([1280, 1280]);
+        expect(jobs.map(artboardFile)).toEqual([
+            'main-installed-single.dark-modern.932.png',
+            'main-installed-single.dark-modern-classic.932.png',
+            'main-transitive-expanded.dark-modern.1200.png',
+            'main-transitive-details.dark-modern.1200.png',
+            'main-installed-details.dark-modern.1200.png',
+            'main-installed-details.dark-modern-classic.1200.png',
+            'main-installed-all.dark-modern.1200.png',
+            'main-installed-all.dark-modern-classic.1200.png',
+        ]);
+        expect(jobs.map(job => job.width.viewport)).toEqual(Array(8).fill(1280));
         expect(jobs.every(isSpecRender)).toBe(true);
     });
 
@@ -41,9 +50,18 @@ describe('the artboard manifest (UX-P0.27)', () => {
 
     it('narrows the renders by state, theme and look, and refuses a name it does not know', () => {
         expect(artboardFilter({})).toEqual({ states: undefined, themes: undefined, looks: undefined });
-        expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_LOOKS: 'classic' })).map(artboardFile)).toEqual(['main-installed-single.dark-modern-classic.932.png']);
+        expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_LOOKS: 'classic' })).map(artboardFile)).toEqual([
+            'main-installed-single.dark-modern-classic.932.png',
+            'main-installed-details.dark-modern-classic.1200.png',
+            'main-installed-all.dark-modern-classic.1200.png',
+        ]);
         expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_THEMES: 'light-modern' }))).toEqual([]);
         expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_STATES: ' main-installed-single , ' })).length).toBe(2);
+        expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_STATES: 'main-transitive-details,main-installed-all' })).map(artboardFile)).toEqual([
+            'main-transitive-details.dark-modern.1200.png',
+            'main-installed-all.dark-modern.1200.png',
+            'main-installed-all.dark-modern-classic.1200.png',
+        ]);
         expect(() => artboardFilter({ NUIGET_ARTBOARD_STATES: 'main-updates' })).toThrow('no artboard for main-updates');
         expect(() => artboardFilter({ NUIGET_ARTBOARD_THEMES: 'solarized' })).toThrow('no theme solarized');
         expect(() => artboardFilter({ NUIGET_ARTBOARD_LOOKS: 'compact' })).toThrow('no look compact');
