@@ -320,7 +320,15 @@ const REACH: Record<string, Reach> = {
             // The window is pinned at the Tools folder so both looks compose the same and the leaf is rendered (UX-P2.8b follow-up).
             await scrollListTo('installed-list', 'group-row-folder-tools');
             // The suite's data budget: the leaf renders when the Unsupported chunk has answered through the fan-out (macOS Intel, dispatch 41310624224).
-            await until('document.querySelector(\'[data-testid="installed-unsupported-unsupported.csproj"]\') !== null', 'the Unsupported project\'s message leaf', 120_000);
+            // UX-P2.fix-6: the pin is renewed on every probe; rows above the folder that grow as their data arrives move it
+            // past the rendered window between a single pin and the leaf (the light-theme cell, floor and macOS lanes).
+            const leaf = `const list = document.querySelector('[data-testid="installed-list"]'); const row = list.querySelector('[data-testid="group-row-folder-tools"]'); if (row) { list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top; } else { list.scrollTop += 300; } return document.querySelector('[data-testid="installed-unsupported-unsupported.csproj"]') !== null;`;
+            try {
+                await poll(async () => ((await script<boolean>(leaf)) ? true : undefined), 'the Unsupported project\'s message leaf', 120_000);
+            } catch (error) {
+                console.warn(`[reach] main-installed-all: ${await script<string>(LEAF_FACTS)}`);
+                throw error;
+            }
             await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
         },
     },
@@ -622,6 +630,22 @@ const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.j
  * no busy element; each visible tab with its count (the slice is `ready`); every comfortable row with its authors (its
  * metadata arrived). The snapshot reads counts and marks that arrive after the crop.
  */
+/** UX-P2.fix-6: what the tree holds when the Unsupported project's leaf never came (the tab, the pin, the project's group row). */
+const LEAF_FACTS = `
+const list = document.querySelector('[data-testid="installed-list"]');
+if (list === null) return 'no installed-list';
+const box = list.getBoundingClientRect();
+const at = el => { if (el === null) return 'absent'; const rect = el.getBoundingClientRect(); return Math.round(rect.top) + '–' + Math.round(rect.bottom); };
+const project = list.querySelector('[data-testid^="group-row-project-unsupported"]');
+const item = project === null ? null : project.querySelector('[role="treeitem"]');
+const rows = list.querySelectorAll('[data-index]').length;
+return 'tab "' + (document.querySelector('[data-testid="installed-tab"]')?.textContent ?? '') + '", clip y ' + Math.round(box.top) + '–' + Math.round(box.bottom)
+    + ', scrollTop ' + Math.round(list.scrollTop) + ' of ' + list.scrollHeight + ', rendered ' + rows
+    + ', tools folder y ' + at(list.querySelector('[data-testid="group-row-folder-tools"]'))
+    + ', Unsupported group row y ' + at(project) + (item === null ? '' : ' expanded ' + item.getAttribute('aria-expanded') + ', busy ' + (project.querySelector('.nuiget-spinner') !== null))
+    + ', unsupported cells ' + [...document.querySelectorAll('[data-testid^="installed-unsupported"]')].map(el => el.dataset.testid).join(' ');
+`;
+
 const UNSETTLED = `
 const clauses = [];
 if (document.querySelector('[aria-busy="true"]')) clauses.push('a busy element');
