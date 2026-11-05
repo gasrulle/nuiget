@@ -575,6 +575,8 @@ export interface EndOfP0 {
     }>;
     /** UX-P2.2b: the theme's selection colours, as computed colours. */
     listSelection: { active: string; inactive: string };
+    /** UX-P2.fix-1: the role tokens whose colour is focusBorder's in this theme (DS-COLOR-5 prints them). */
+    focusCoincides: string[];
     /** UX-P2.3b: the secondary button's hover and rest fills, as computed colours. */
     buttonSecondary: { hover: string; rest: string };
     /** UX-P2.5: the icon and tab roles, as computed colours. */
@@ -1163,12 +1165,19 @@ const computedColour = name => {
     return colour;
 };
 const focusBorder = computedColour('--vscode-focusBorder');
+// DS-COLOR-5 speaks of the focus role, the colour compares strings: a role that resolves to focusBorder's colour in a
+// theme (Light 2026's badge, button, link and verified; contrastActiveBorder in high contrast) is not focus paint. The
+// focus ring is a solid outline; DS-FOCUS-4's hover and selection outlines are dashed and dotted (UX-P2.fix-1).
+const FILLED_BY_ROLE = '.nuiget-badge, .nuiget-button, .nuiget-icon-button, a';
+const LINED_BY_ROLE = '.nuiget-badge, .nuiget-row-check';
 const paintsFocus = el => {
     const style = getComputedStyle(el);
-    return (style.outlineStyle !== 'none' && px(style.outlineWidth) > 0 && style.outlineColor === focusBorder)
-        || style.boxShadow.includes(focusBorder) || style.backgroundColor === focusBorder
-        || ['Top', 'Right', 'Bottom', 'Left'].some(side => px(style['border' + side + 'Width']) > 0 && style['border' + side + 'Color'] === focusBorder);
+    return (style.outlineStyle === 'solid' && px(style.outlineWidth) > 0 && style.outlineColor === focusBorder)
+        || style.boxShadow.includes(focusBorder) || (style.backgroundColor === focusBorder && !el.matches(FILLED_BY_ROLE))
+        || (!el.matches(LINED_BY_ROLE) && ['Top', 'Right', 'Bottom', 'Left'].some(side => px(style['border' + side + 'Width']) > 0 && style['border' + side + 'Color'] === focusBorder));
 };
+const FOCUS_COINCIDENT_ROLES = [['badge-bg', '--nuiget-color-badge-bg'], ['button-bg', '--nuiget-color-button-bg'], ['link', '--nuiget-color-link'], ['verified', '--nuiget-color-verified'], ['contrast-active-border', '--vscode-contrastActiveBorder']];
+const focusCoincides = FOCUS_COINCIDENT_ROLES.filter(([, name]) => computedColour(name) === focusBorder).map(([label]) => label);
 const checkOf = option => {
     const mark = option.querySelector('.nuiget-row-check');
     if (!visible(mark) || mark.classList.contains('nuiget-row-check--off')) return undefined;
@@ -1357,6 +1366,7 @@ const unselectable = shown('.nuiget-row-check--off').map(check => {
 const endOfP0 = {
     rows: endRows,
     listSelection: { active: computedColour('--vscode-list-activeSelectionBackground'), inactive: computedColour('--vscode-list-inactiveSelectionBackground') },
+    focusCoincides,
     buttonSecondary: { hover: computedColour('--nuiget-color-button-secondary-hover-bg'), rest: computedColour('--nuiget-color-button-secondary-bg') },
     iconColours: { icon: computedColour('--nuiget-color-icon'), active: computedColour('--nuiget-color-list-active-icon'), disabled: computedColour('--nuiget-color-fg-disabled'), warning: computedColour('--nuiget-color-icon-warning'), hoverBg: computedColour('--nuiget-color-toolbar-hover-bg') },
     tabColours: { active: computedColour('--nuiget-color-tab-active-fg'), inactive: computedColour('--nuiget-color-tab-inactive-fg'), indicator: computedColour('--nuiget-color-tab-indicator') },
@@ -2240,7 +2250,8 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return notMeasurable('no row');
             }
             const painted = facts.rows.reduce((sum, row) => sum + row.focusPainted, 0);
-            return { value: `${painted} elements of an unfocused row in focusBorder`, pass: painted === 0 };
+            const coincides = facts.focusCoincides.length === 0 ? '' : `; coincides: ${facts.focusCoincides.join(', ')}`;
+            return { value: `${painted} elements of an unfocused row in focusBorder${coincides}`, pass: painted === 0 };
         }
         case 'DS-ROW-6': {
             const width = facts.listPaneWidth;

@@ -149,6 +149,60 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         option.blur();
     });
 
+    it('counts only focus paint as DS-COLOR-5 paint, never a role that shares focusBorder\'s colour (UX-P2.fix-1)', () => {
+        const focusBorder = 'var(--vscode-focusBorder, transparent)';
+        const option = document.querySelector('.nuiget-row-option') as HTMLElement;
+        const painted = () => collect().endOfP0.rows[0].focusPainted;
+        const add = (tag: string, className: string, rectSpec = '90,150,110,166') => {
+            const el = document.createElement(tag);
+            el.className = className;
+            el.setAttribute('data-rect', rectSpec);
+            option.append(el);
+            return el;
+        };
+        expect(painted()).toBe(0);
+        // A fill by role: badge, text button, icon button and link keep their own background whatever its colour.
+        for (const [tag, className] of [['span', 'nuiget-badge'], ['button', 'nuiget-button'], ['button', 'nuiget-icon-button'], ['a', '']]) {
+            const el = add(tag, className);
+            el.style.setProperty('background-color', focusBorder);
+            expect(painted(), `${tag}.${className} background`).toBe(0);
+            el.remove();
+        }
+        // A line by role: the badge's box and the row's check mark keep their own border.
+        for (const className of ['nuiget-badge', 'nuiget-row-check']) {
+            const el = add('span', className);
+            el.style.setProperty('border-top-width', '1px');
+            el.style.setProperty('border-top-style', 'solid');
+            el.style.setProperty('border-top-color', focusBorder);
+            expect(painted(), `${className} border`).toBe(0);
+            el.remove();
+        }
+        // A border with no role of its own counts: the exclusion above is the role's, not the line's.
+        const lined = add('span', 'nuiget-row-meta');
+        lined.style.setProperty('border-top-width', '1px');
+        lined.style.setProperty('border-top-style', 'solid');
+        lined.style.setProperty('border-top-color', focusBorder);
+        expect(painted()).toBe(1);
+        lined.remove();
+        // DS-FOCUS-4's hover and selection outlines are dashed and dotted; only a solid outline is a focus ring.
+        option.style.setProperty('outline-width', '1px');
+        option.style.setProperty('outline-color', focusBorder);
+        for (const outlineStyle of ['dashed', 'dotted']) {
+            option.style.setProperty('outline-style', outlineStyle);
+            expect(painted(), `${outlineStyle} outline`).toBe(0);
+        }
+        option.style.setProperty('outline-style', 'solid');
+        expect(painted()).toBe(1);
+        for (const name of ['outline-width', 'outline-color', 'outline-style']) {
+            option.style.removeProperty(name);
+        }
+        // The same paint on an element with no role of its own still counts.
+        const plain = add('span', 'nuiget-row-meta');
+        plain.style.setProperty('background-color', focusBorder);
+        expect(painted()).toBe(1);
+        plain.remove();
+    });
+
     it('reads a disabled button and the check mark of a current row; a mark that cannot join stays out (UX-P2.3)', () => {
         const row = document.querySelector('.nuiget-row-option') as HTMLElement;
         const check = row.querySelector('.nuiget-row-check') as HTMLElement;
