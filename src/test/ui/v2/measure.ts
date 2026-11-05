@@ -18,6 +18,8 @@
  * `src/test/lint` can import its registry.
  */
 
+import type { Lane } from './states';
+
 export type RuleStatus = 'hard' | { pending: string };
 
 /** The state groups of Appendix B ("main" is the main panel's Installed states). */
@@ -106,6 +108,11 @@ export interface RuleDefinition {
     /** Themes the rule is limited to (DS-FOCUS-4 in the two high-contrast themes), or undefined for every theme. */
     themes?: readonly string[];
     /**
+     * Lanes the rule is limited to, or undefined for every lane: SPEC reads the artboard the `ui` lane renders, at that
+     * lane's window and fonts, and has no reference on another lane's host (UX-P2.fix-3).
+     */
+    lanes?: readonly Lane[];
+    /**
      * States a `hard` scope does not hold in yet, with the item that makes them hold (plan §2.7: a rule today's tree does
      * not satisfy lands as pending with that item; design-advisor ruling of 2026-10-24, V72).
      */
@@ -126,11 +133,15 @@ export interface RuleDefinition {
     scopeStates?: Partial<Record<Scope, readonly string[]>>;
 }
 
-/** Whether a rule measures a state (at a webview width, in a theme) at all; its scopes then say for which state group. */
-export const appliesTo = (definition: RuleDefinition, state: string, width?: number, theme?: string): boolean =>
+/**
+ * Whether a rule measures a state (at a webview width, in a theme, on a lane) at all; its scopes then say for which state
+ * group. The lane defaults to the per-push `ui` job's.
+ */
+export const appliesTo = (definition: RuleDefinition, state: string, width?: number, theme?: string, lane: Lane = 'ui'): boolean =>
     (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state))
     && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)))
     && (definition.themes === undefined || (theme !== undefined && definition.themes.includes(theme)))
+    && (definition.lanes === undefined || definition.lanes.includes(lane))
     && !(definition.exceptStates ?? []).includes(state);
 
 export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefinition {
@@ -271,7 +282,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932], lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -1622,10 +1633,16 @@ function tally(values: ReadonlyArray<number | string>): string {
     return [...counts].map(([value, count]) => (count > 1 ? `${value} ×${count}` : `${value}`)).join(', ');
 }
 
-/** A set of heights against a Design System value and, for a parity rule, the workbench's own control. */
-function heightCheck(label: string, values: readonly number[], target: number, tolerance: number, parity?: { widget: WorkbenchWidget; workbench: WorkbenchHeights }): { text: string; pass: boolean } {
+/**
+ * A set of heights against a Design System value and, for a parity rule, the workbench's own control: the exemplar's
+ * (`docs/design/workbench/<look>.json`, the `ui` lane on VS Code 1.140.0) in every lane; a lane's own workbench that
+ * differs is printed beside it as information, never a pass condition (UX-P2.fix-2: the 1.90.0 floor's button is 24).
+ */
+function heightCheck(label: string, values: readonly number[], target: number, tolerance: number, parity?: { widget: WorkbenchWidget; workbench: WorkbenchHeights; lane?: WorkbenchHeights }): { text: string; pass: boolean } {
     const workbench = parity === undefined ? undefined : parity.workbench[parity.widget];
-    const against = parity === undefined ? `target ${target}` : `target ${target}, workbench ${workbench ?? 'absent'}`;
+    const lane = parity?.lane?.[parity.widget];
+    const laneNote = lane === undefined || lane === workbench ? '' : `, lane ${lane}`;
+    const against = parity === undefined ? `target ${target}` : `target ${target}, workbench ${workbench ?? 'absent'}${laneNote}`;
     const onTarget = values.every(value => near(value, target, tolerance));
     const onWorkbench = parity === undefined || (workbench !== undefined && values.every(value => near(value, workbench, TOLERANCES.parity)));
     return { text: `${label}${label ? ' ' : ''}${tally(values)} (${against})`, pass: onTarget && onWorkbench };
@@ -1673,7 +1690,7 @@ const sameColour = (a: string, b: string): boolean => {
 const isRound = (radius: string, width: number, height: number): boolean => radius.endsWith('%') ? Number.parseFloat(radius) >= 50 : Number.parseFloat(radius) >= Math.min(width, height) / 2 - 0.5;
 
 /** Helpers 3 and 4 (UX-P0.11): the value and the verdict of a height or centring rule, or undefined for another rule. */
-function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights): { value: string; pass: boolean } | undefined {
+function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     const heights = layout.heights;
     switch (definition.id) {
@@ -1745,14 +1762,14 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
                 }
                 return { value: NOT_MEASURABLE, pass: false };
             }
-            const check = heightCheck('', [strip], HEIGHTS.tabStrip, tolerance, { widget: 'extensionNavbar', workbench });
+            const check = heightCheck('', [strip], HEIGHTS.tabStrip, tolerance, { widget: 'extensionNavbar', workbench, lane });
             return { value: check.text, pass: check.pass };
         }
         case 'DS-HEIGHT-6': {
             if (heights.buttons.length === 0) {
                 return { value: NOT_MEASURABLE, pass: false };
             }
-            const check = heightCheck('', heights.buttons.map(button => button.height), HEIGHTS.button, tolerance, { widget: 'settingsButton', workbench });
+            const check = heightCheck('', heights.buttons.map(button => button.height), HEIGHTS.button, tolerance, { widget: 'settingsButton', workbench, lane });
             const off = offStyles(heights.buttons, CONTROL_STYLES.button);
             return { value: [check.text, ...off].join('; '), pass: check.pass && off.length === 0 };
         }
@@ -1762,7 +1779,7 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             }
             const kinds = [['search', HEIGHTS.searchBox, 'extensionsSearch'], ['select', HEIGHTS.select, 'settingsSelect'], ['field', HEIGHTS.textField, 'settingsInput']] as const;
             const checks = kinds.filter(([kind]) => heights.inputs.some(input => input.kind === kind))
-                .map(([kind, target, widget]) => heightCheck(kind, heights.inputs.filter(input => input.kind === kind).map(input => input.height), target, tolerance, { widget, workbench }));
+                .map(([kind, target, widget]) => heightCheck(kind, heights.inputs.filter(input => input.kind === kind).map(input => input.height), target, tolerance, { widget, workbench, lane }));
             return { value: checks.map(check => check.text).join('; '), pass: checks.every(check => check.pass) };
         }
         case 'DS-HEIGHT-8': {
@@ -2774,7 +2791,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
 }
 
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
-function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined): { value: string; pass: boolean } | undefined {
+function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined, laneWorkbench: WorkbenchHeights | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
@@ -2782,7 +2799,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, definition, scope, state);
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
+    const heightVerdict = evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
@@ -2939,14 +2956,14 @@ function withoutNulls<T>(value: T): T {
  * artboard spec when the capture has the spec's theme and width (helper 8), else undefined; `theme` is the capture's
  * (DS-FOCUS-4 in the high-contrast themes only).
  */
-export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number, spec?: SpecLook, theme?: string): MeasureLine[] {
+export function measureLines(state: string, collected: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights = {}, reference?: ChromeReference, width?: number, spec?: SpecLook, theme?: string, laneWorkbench?: WorkbenchHeights, lane: Lane = 'ui'): MeasureLine[] {
     const layout = withoutNulls(collected);
     const chromeReference = reference === undefined ? undefined : withoutNulls(reference);
     const group = stateGroup(state);
     const lines: MeasureLine[] = [];
     for (const definition of RULES) {
         // The capture's own width when given (PF-3a at 1200), else the webview's.
-        if (!appliesTo(definition, state, width ?? layout.width, theme)) {
+        if (!appliesTo(definition, state, width ?? layout.width, theme, lane)) {
             continue;
         }
         for (const scope of (definition.helper === 8 ? Object.keys(definition.scopes) : [group, ...elementGroups(group, state)]) as Scope[]) {
@@ -2958,7 +2975,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width ?? layout.width);
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
-            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
+            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec, laneWorkbench) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
             const name = scope === group ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }

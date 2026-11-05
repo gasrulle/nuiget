@@ -113,6 +113,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const pf4 = RULES.find(rule => rule.id === 'PF-4');
         expect(pf4?.widths).toEqual([800, 932, 1200, 1600]);
         expect([800, 932, 1200, 1600, 220, 400, 600].map(width => appliesTo(pf4!, 'main-installed-single', width))).toEqual([true, true, true, true, false, false, false]);
+        // UX-P2.fix-3: SPEC reads the artboard the `ui` lane renders; no other lane has a reference, so it measures there alone.
+        const spec = RULES.find(rule => rule.id === 'SPEC');
+        expect(spec?.lanes).toEqual(['ui']);
+        expect((['ui', 'matrix', 'floor', 'macos'] as const).map(lane => appliesTo(spec!, 'main-installed-single', 932, 'dark-modern', lane))).toEqual([true, false, false, false]);
+        expect(appliesTo(spec!, 'main-installed-single', 932, 'dark-modern')).toBe(true);
+        expect(RULES.filter(rule => rule.lanes !== undefined).map(rule => rule.id)).toEqual(['SPEC']);
+        const specLines = (lane: 'ui' | 'floor' | 'macos') => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 932, undefined, 'dark-modern', undefined, lane).filter(line => line.name.startsWith('SPEC@'));
+        expect(specLines('ui').length).toBeGreaterThan(0);
+        expect([...specLines('floor'), ...specLines('macos')]).toEqual([]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
         // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state.
         expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toBeUndefined();
@@ -327,6 +336,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-details', layout({}, { buttons: [button] }), 'DS-HEIGHT-6@main-installed-details', 'modern', { settingsButton: 26 })).toMatchObject({ pass: true });
         // Without the workbench's value a parity rule cannot pass.
         expect(lineOf('main-installed-details', layout({}, { buttons: [button] }), 'DS-HEIGHT-6@main-installed-details')).toMatchObject({ pass: false, value: '26 (target 26, workbench absent)' });
+        // UX-P2.fix-2: the parity reads the exemplar; a lane's own workbench (the 1.90.0 floor's 24) is printed, never judged.
+        const laneLine = (lane: Record<string, number>, exemplar: Record<string, number> = { settingsButton: 26 }) =>
+            measureLines('main-installed-details', layout({}, { buttons: [button] }), 'classic', exemplar, undefined, undefined, undefined, undefined, lane).find(line => line.name === 'DS-HEIGHT-6@main-installed-details');
+        expect(laneLine({ settingsButton: 24 })).toMatchObject({ pass: true, value: '26 (target 26, workbench 26, lane 24)' });
+        expect(laneLine({ settingsButton: 26 })).toMatchObject({ pass: true, value: '26 (target 26, workbench 26)' });
+        expect(laneLine({ settingsButton: 26 }, { settingsButton: 24 })).toMatchObject({ pass: false, value: '26 (target 26, workbench 24, lane 26)' });
         // DS-HEIGHT-7 per kind of control.
         const inputs = layout({}, { inputs: [{ kind: 'search', id: 'search-input', height: 24, radius: '4px' }, { kind: 'select', id: 'project-selector', height: 26, radius: '4px' }, { kind: 'select', id: 'source-selector', height: 26, radius: '4px' }] });
         // A text field other than a search box is 25 px, the Settings editor's (UX-P2.4).

@@ -1093,8 +1093,17 @@ function writeSidecar(state: NamedState, capture: Capture, facts: CaptureFacts):
 /** The pending lines of this run, printed again at its end. */
 const pendingLines: string[] = [];
 
-/** The workbench's own controls, measured once at the start of the run (UX-P0.11): helper 3's parity. */
-let workbench: WorkbenchHeights = {};
+/**
+ * Helper 3's parity: the exemplar's controls (`docs/design/workbench/<look>.json`, measured on the `ui` lane with VS Code
+ * 1.140.0) in every lane, and this run's own controls, measured once at its start (UX-P0.11), printed beside them as
+ * information (UX-P2.fix-2: D22's "same ExTester session" is the `ui` lane's).
+ */
+const exemplarHeights = (look: string): WorkbenchHeights => {
+    const file = JSON.parse(fs.readFileSync(path.resolve('docs/design/workbench', `${look}.json`), 'utf8')) as { widgets: Record<string, { height: number } | null> };
+    return Object.fromEntries(Object.entries(file.widgets).flatMap(([name, widget]) => (widget === null ? [] : [[name, widget.height]])));
+};
+const workbench: WorkbenchHeights = exemplarHeights(LOOK);
+let laneWorkbench: WorkbenchHeights = {};
 
 let lookReported = false;
 
@@ -1168,7 +1177,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
             red.push(`data-look "${layout.endOfP0.dataLook}" in a ${capture.look} capture`);
         }
     }
-    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture), capture.theme);
+    const lines = measureLines(state.name, layout, capture.look, workbench, reference, capture.width, specFor(state, capture), capture.theme, laneWorkbench, LANE);
     if (layout.root) {
         const merged = before ?? { state: state.name, chrome: {}, firstRow: undefined };
         for (const [name, rect] of Object.entries(layout.chrome)) {
@@ -1233,7 +1242,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         for (const [name, widget] of Object.entries(widgets)) {
             console.warn(`[workbench] ${name}: ${widget === null ? 'absent' : `${widget.height} (${widget.selector})`}`);
         }
-        workbench = Object.fromEntries(Object.entries(widgets).flatMap(([name, widget]) => (widget === null ? [] : [[name, widget.height]])));
+        laneWorkbench = Object.fromEntries(Object.entries(widgets).flatMap(([name, widget]) => (widget === null ? [] : [[name, widget.height]])));
         const crops = path.dirname(VSBrowser.instance.getScreenshotsDir());
         fs.mkdirSync(crops, { recursive: true });
         fs.writeFileSync(path.join(crops, `workbench.${LOOK}.json`), JSON.stringify({
