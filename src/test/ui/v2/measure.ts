@@ -839,14 +839,20 @@ const sectionScroller = el => {
     }
     return null;
 };
+// A virtual row's index, or undefined outside a virtualized list. Its rendered neighbour is its layout neighbour only when
+// their indices are adjacent; past an unrendered row there is no measurable block (UX-P2.fix-5).
+const rowIndex = el => (el !== null && el.hasAttribute('data-index') ? Number(el.getAttribute('data-index')) : undefined);
 const blockAbove = box => {
     const wrapper = box.closest('[data-row-kind="group"]');
+    const index = rowIndex(wrapper);
     for (let el = wrapper ?? box; el && el !== scope; el = el.parentElement) {
         for (let prev = el.previousElementSibling; prev; prev = prev.previousElementSibling) {
-            if (isBlock(prev)) return { el: prev, edge: prev.getBoundingClientRect().bottom };
+            if (!isBlock(prev)) continue;
+            if (el === wrapper && index !== undefined && rowIndex(prev) !== index - 1) return undefined;
+            return { el: prev, edge: prev.getBoundingClientRect().bottom };
         }
         // A first rendered wrapper past index 0: its neighbour is a row the virtualizer has not rendered.
-        if (el === wrapper && wrapper.hasAttribute('data-index') && wrapper.getAttribute('data-index') !== '0') return undefined;
+        if (el === wrapper && index !== undefined && index !== 0) return undefined;
     }
     return undefined;
 };
@@ -856,8 +862,12 @@ const blockBelow = box => {
         const content = document.getElementById(toggle.getAttribute('aria-controls'));
         return content && visible(content) ? { el: content, edge: content.getBoundingClientRect().top } : undefined;
     }
-    for (let next = (box.closest('[data-row-kind="group"]') ?? box).nextElementSibling; next; next = next.nextElementSibling) {
-        if (isBlock(next)) return { el: next, edge: next.getBoundingClientRect().top };
+    const wrapper = box.closest('[data-row-kind="group"]');
+    const index = rowIndex(wrapper);
+    for (let next = (wrapper ?? box).nextElementSibling; next; next = next.nextElementSibling) {
+        if (!isBlock(next)) continue;
+        if (index !== undefined && rowIndex(next) !== index + 1) return undefined;
+        return { el: next, edge: next.getBoundingClientRect().top };
     }
     return undefined;
 };

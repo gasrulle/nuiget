@@ -311,6 +311,20 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const past = tree(137, 0, '3');
         expect(past?.above).toBeUndefined();
         expect(past?.below).toBe(0);
+        // Rendered neighbours past unrendered rows are no neighbours: the next rendered wrapper at index + 5 (the tree scrolled
+        // to the Tools folder keeps `folder-app` rendered; run 42117179913 read `folder-app 0/1712`) and a previous one at − 3.
+        tree(137, 0, '0');
+        (document.querySelector('.nuiget-row') as HTMLElement).dataset.index = '5';
+        expect(collect().sections.find(section => section.id === 'direct')?.below).toBeUndefined();
+        tree(137, 0, '4');
+        const before = document.createElement('div');
+        before.dataset.index = '1';
+        before.className = 'nuiget-row';
+        before.dataset.rect = '0,-62,600,10';
+        document.querySelector('[data-index="4"]')?.before(before);
+        expect(collect().sections.find(section => section.id === 'direct')?.above).toBeUndefined();
+        before.dataset.index = '3';
+        expect(collect().sections.find(section => section.id === 'direct')?.above).toBe(0);
     });
 
     it('reads every list that scrolls, its bar\'s thickness and thumb, the root\'s scrollbar-color and the slider token (UX-P0.22)', () => {
