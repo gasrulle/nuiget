@@ -251,6 +251,12 @@ interface Reach {
 /** The transitive header is not revalidating: its insets are measured on a still header (UX-P0.15 DO 5; UX-P0.fix-2). */
 const TRANSITIVE_HEADER_STILL = 'document.querySelector(\'[data-testid="section-header-transitive"]\')?.querySelector(\'.nuiget-spinner\') === null';
 
+/**
+ * The Transitive group row settled: present, its count a number, no spinner. "No spinner" alone also holds before the
+ * transitive request has started, and a shot then shows the row without its badges (UX-P2.fix-7, dispatch 42092022943).
+ */
+const TRANSITIVE_GROUP_SETTLED = '(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row !== null && /^\\d+$/.test(row.querySelector(".nuiget-badge--count")?.textContent ?? "") && row.querySelector(".nuiget-spinner") === null; })()';
+
 /** No CSS transition runs in the webview: a measurement reads a still subject (the chevron rotates for 100 ms; UX-P0.fix-4). */
 const NO_RUNNING_TRANSITION = 'document.getAnimations().every(animation => !(animation instanceof CSSTransition) || animation.playState !== "running")';
 
@@ -287,7 +293,7 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Empty.csproj');
             await clickVisible('installed-tab');
             await until('document.querySelector(\'[data-testid="installed-empty"]\')?.textContent.includes("No packages installed.") === true', 'the empty state');
-            await until(TRANSITIVE_HEADER_STILL, 'the Transitive group settled');
+            await until(TRANSITIVE_GROUP_SETTLED, 'the Transitive group settled (count, no spinner)', 60_000);
         },
     },
     'main-installed-error': {
