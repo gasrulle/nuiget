@@ -1135,6 +1135,10 @@ return {
     rendered: rows.length,
     heights: rows.reduce((sum, row) => sum + row.getBoundingClientRect().height, 0),
     items: [...sets.values()].reduce((sum, size) => sum + size, 0),
+    // UX-P2.fix-5: where the list stands and where the Direct header sits against its clip (DS-GRID-2b's inView).
+    scrollTop: Math.round(scroller.scrollTop * 10) / 10,
+    clip: (() => { const box = scroller.getBoundingClientRect(); return Math.round(box.top) + '–' + Math.round(box.bottom); })(),
+    direct: (() => { const box = list.querySelector('[data-testid="section-box-direct"]'); if (box === null) return 'absent'; const rect = box.getBoundingClientRect(); return Math.round(rect.top) + '–' + Math.round(rect.bottom); })(),
 };
 `;
 
@@ -1321,9 +1325,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
                 red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
             }
-            const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number } | null>(READ_VIRTUAL);
+            const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number; scrollTop: number; clip: string; direct: string } | null>(READ_VIRTUAL);
             if (virtual !== null) {
-                console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}`);
+                console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}, scrollTop ${virtual.scrollTop}, clip y ${virtual.clip}, direct header y ${virtual.direct}`);
             }
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
