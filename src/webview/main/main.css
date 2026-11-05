@@ -118,8 +118,13 @@ body {
     background: var(--nuiget-color-bg-sidebar);
 }
 
-/* A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here. */
+/*
+ * A column: the details keep their header in view and scroll their tab; the transitive view and the empty state scroll here.
+ * A named container: the welcome content yields its inset in a pane narrower than the workbench's 170 px part minimum,
+ * the details pane at the editor's narrowest (UX-P2.fix-4).
+ */
 .nuiget-main-details {
+    container: nuiget-pane / inline-size;
     display: flex;
     flex: 1;
     flex-direction: column;

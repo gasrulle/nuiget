@@ -944,6 +944,13 @@
     margin: 0;
 }
 
+/* Welcome content below the workbench's narrowest pane (170, sidebarPart.ts:48) takes the inner inset (UX-P2.fix-4). css.at-rules.container: Chrome 105, inside the floor's 122. */
+@container nuiget-pane (max-width: 169px) {
+    .nuiget-empty {
+        padding-inline: var(--nuiget-space-4);
+    }
+}
+
 /* ── Skeleton ── */
 
 .nuiget-skeleton {
