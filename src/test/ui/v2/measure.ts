@@ -829,22 +829,24 @@ for (const container of containers) {
     }
 }
 // Section boxes: content insets, and DS-GRID-2b on border boxes.
-const inView = (rect, el) => {
-    for (let a = el.parentElement; a; a = a.parentElement) {
-        if (/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowY)) {
-            const clip = a.getBoundingClientRect();
-            if (rect.bottom <= clip.top + 0.5 || rect.top >= clip.bottom - 0.5) return false;
-        }
-    }
-    return true;
-};
-// DS-GRID-2b on border boxes: the previous block's bottom, and the first block the header labels.
+// DS-GRID-2b on border boxes: the previous block's bottom, and the first block the header labels. A rendered header is
+// measured whatever its scroller's clip, in the scroller's content coordinates when the edge lies outside the scroller
+// (the macOS lane's reach scrolls the list by 137; UX-P2.fix-5).
 const isBlock = el => visible(el) && !el.classList.contains('nuiget-visually-hidden');
+const sectionScroller = el => {
+    for (let a = el.parentElement; a; a = a.parentElement) {
+        if (/auto|scroll/.test(getComputedStyle(a).overflowY)) return a;
+    }
+    return null;
+};
 const blockAbove = box => {
-    for (let el = box.closest('[data-row-kind="group"]') ?? box; el && el !== scope; el = el.parentElement) {
+    const wrapper = box.closest('[data-row-kind="group"]');
+    for (let el = wrapper ?? box; el && el !== scope; el = el.parentElement) {
         for (let prev = el.previousElementSibling; prev; prev = prev.previousElementSibling) {
-            if (isBlock(prev)) return prev.getBoundingClientRect().bottom;
+            if (isBlock(prev)) return { el: prev, edge: prev.getBoundingClientRect().bottom };
         }
+        // A first rendered wrapper past index 0: its neighbour is a row the virtualizer has not rendered.
+        if (el === wrapper && wrapper.hasAttribute('data-index') && wrapper.getAttribute('data-index') !== '0') return undefined;
     }
     return undefined;
 };
@@ -852,13 +854,14 @@ const blockBelow = box => {
     const toggle = box.querySelector('[aria-controls]');
     if (toggle) {
         const content = document.getElementById(toggle.getAttribute('aria-controls'));
-        return content && visible(content) ? content.getBoundingClientRect().top : undefined;
+        return content && visible(content) ? { el: content, edge: content.getBoundingClientRect().top } : undefined;
     }
     for (let next = (box.closest('[data-row-kind="group"]') ?? box).nextElementSibling; next; next = next.nextElementSibling) {
-        if (isBlock(next)) return next.getBoundingClientRect().top;
+        if (isBlock(next)) return { el: next, edge: next.getBoundingClientRect().top };
     }
     return undefined;
 };
+const contentOffset = (scroller, block) => (scroller !== null && !scroller.contains(block.el) ? scroller.scrollTop : 0);
 const headerFacts = box => {
     const titleEl = box.querySelector('.nuiget-section-title');
     const titleStyle = titleEl ? getComputedStyle(titleEl) : undefined;
@@ -880,9 +883,9 @@ const headerFacts = box => {
 };
 const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].filter(visible).map(box => {
     const rect = box.getBoundingClientRect();
-    const shown = inView(rect, box);
-    const edge = shown ? blockAbove(box) : undefined;
-    const next = shown ? blockBelow(box) : undefined;
+    const scroller = sectionScroller(box);
+    const edge = blockAbove(box);
+    const next = blockBelow(box);
     return {
         id: box.dataset.testid.replace(/^section-box-/, ''),
         variant: box.dataset.variant ?? '',
@@ -891,8 +894,8 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
             const trailing = [...box.querySelectorAll('.nuiget-badge, .nuiget-section-actions > *, .nuiget-section-count > *')].filter(visible);
             return trailing.length > 0 ? round(box.getBoundingClientRect().right - Math.max(...trailing.map(el => el.getBoundingClientRect().right))) : undefined;
         })(),
-        above: edge === undefined ? undefined : round(rect.top - edge),
-        below: next === undefined ? undefined : round(next - rect.bottom),
+        above: edge === undefined ? undefined : round(rect.top + contentOffset(scroller, edge) - edge.edge),
+        below: next === undefined ? undefined : round(next.edge - rect.bottom - contentOffset(scroller, next)),
         ...headerFacts(box),
     };
 });

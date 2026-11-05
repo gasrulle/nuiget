@@ -285,6 +285,34 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.sections.find(section => section.id === 'transitive')?.below).toBeUndefined();
     });
 
+    it('measures a rendered group header in the scroller\'s content coordinates, whatever the clip (UX-P2.fix-5)', () => {
+        // The virtualized tree: the toolbar outside the scroller, the Direct header the first rendered wrapper. On the macOS
+        // lane the reach scrolls the 539 px list by 137 and the header sits above the clip (captures/42112162242).
+        const tree = (scrollTop: number, shift: number, index: string) => {
+            document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,600,700">
+  <div role="toolbar" data-testid="installed-toolbar" data-rect="0,113,600,147"></div>
+  <div data-testid="installed-list" style="overflow-y: auto" data-rect="0,147,600,686">
+    <div class="nuiget-listbox-sizer" data-rect="0,${10 + shift},600,${1146 + shift}">
+      <div data-index="${index}" data-row-kind="group" data-rect="0,${10 + shift},600,${38 + shift}">
+        <div class="nuiget-section-header" data-testid="section-box-direct" data-variant="group" data-rect="0,${10 + shift},600,${38 + shift}"></div>
+      </div>
+      <div data-index="${Number(index) + 1}" class="nuiget-row" data-rect="0,${38 + shift},600,${110 + shift}"></div>
+    </div>
+  </div>
+</main>`;
+            Object.defineProperty(document.querySelector('[data-testid="installed-list"]'), 'scrollTop', { value: scrollTop, configurable: true });
+            return collect().sections.find(section => section.id === 'direct');
+        };
+        // Scrolled: header top 10 + scrollTop 137 − the toolbar's 147 = 0; below between two rows of the scroller.
+        expect(tree(137, 0, '0')).toMatchObject({ above: 0, below: 0 });
+        // The same tree unscrolled reads the same gap.
+        expect(tree(0, 137, '0')).toMatchObject({ above: 0, below: 0 });
+        // A first rendered wrapper past index 0: its real neighbour is an unrendered row, so nothing is measured above it.
+        const past = tree(137, 0, '3');
+        expect(past?.above).toBeUndefined();
+        expect(past?.below).toBe(0);
+    });
+
     it('reads every list that scrolls, its bar\'s thickness and thumb, the root\'s scrollbar-color and the slider token (UX-P0.22)', () => {
         const list = document.querySelector<HTMLElement>('[data-testid="installed-list"]')!;
         list.style.overflowY = 'auto';
@@ -310,17 +338,28 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().scrollbar.scrollers.map(scroller => `${scroller.label} ${scroller.size} ${scroller.thumb}`)).toEqual(['[installed-list] 10 41', '.nuiget-dialog 10 100']);
     });
 
-    it('gives a header scrolled out of its list no gaps, and keeps its insets', () => {
+    it('measures a header scrolled out of its list in content coordinates, and keeps its insets (UX-P0.11, UX-P2.fix-5)', () => {
+        // The list scrolled by 200: everything inside it moves together, so the gaps are the unscrolled ones (the edge is in
+        // the same scroller: no correction), and the box's insets are its own.
+        const list = document.querySelector<HTMLElement>('.nuiget-list') as HTMLElement;
         const box = document.querySelector<HTMLElement>('[data-testid="section-box-direct"]') as HTMLElement;
-        for (const element of [box, ...box.querySelectorAll<HTMLElement>('[data-rect]')]) {
-            element.dataset.rect = rect(element.dataset.rect).left + ',' + (rect(element.dataset.rect).top - 200) + ',' + rect(element.dataset.rect).right + ',' + (rect(element.dataset.rect).bottom - 200);
+        const toolbar = document.querySelector<HTMLElement>('[data-testid="installed-toolbar"]') as HTMLElement;
+        const content = document.getElementById('direct-content') as HTMLElement;
+        const above = rect(box.dataset.rect).top - rect(toolbar.dataset.rect).bottom;
+        const below = rect(content.dataset.rect).top - rect(box.dataset.rect).bottom;
+        const up = (spec: string | undefined) => { const r = rect(spec); return `${r.left},${r.top - 200},${r.right},${r.bottom - 200}`; };
+        for (const element of list.querySelectorAll<HTMLElement>('[data-rect]')) {
+            element.dataset.rect = up(element.dataset.rect);
         }
-        for (const element of box.querySelectorAll<HTMLElement>('[data-text]')) {
-            element.dataset.text = rect(element.dataset.text).left + ',' + (rect(element.dataset.text).top - 200) + ',' + rect(element.dataset.text).right + ',' + (rect(element.dataset.text).bottom - 200);
+        for (const element of list.querySelectorAll<HTMLElement>('[data-text]')) {
+            element.dataset.text = up(element.dataset.text);
         }
-        const direct = collect().sections.find(section => section.id === 'direct');
-        expect(direct).toMatchObject({ above: undefined, below: undefined });
+        Object.defineProperty(list, 'scrollTop', { value: 200, configurable: true });
+        const layout = collect();
+        const direct = layout.sections.find(section => section.id === 'direct');
+        expect(direct).toMatchObject({ above, below });
         expect(direct?.insets?.start).toBe(16);
+        expect(layout.sections.find(section => section.id === 'transitive')?.below).toBeUndefined();
     });
 
     it('collects the heights, the computed styles, the centring and the details buttons (helpers 3 and 4)', () => {
