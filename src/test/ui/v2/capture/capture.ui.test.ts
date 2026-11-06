@@ -374,6 +374,9 @@ const REACH: Record<string, Reach> = {
             await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
             await failHeld('main-installed-error', 'The project file could not be read.');
             await until('document.querySelector(\'[data-testid="installed-error"] button\') !== null', 'the inline error with Retry');
+            // The Updates tab's count for Utility comes from `updates/get`, not held here and answered by the feeds; the shot waited
+            // only for the inline error and lost that race on 3 of 32 ui runs (UX-P3.2 fix-forward, runs 42292613923 and 42301793109).
+            await until('/[0-9]/.test(document.querySelector(\'[data-testid="updates-tab"]\')?.textContent ?? "")', 'the Updates tab\'s count');
         },
         leave: endHold,
     },
