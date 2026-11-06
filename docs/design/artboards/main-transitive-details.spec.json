@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42128198943",
+  "run": "42183339362",
   "composition": "The window is the product's at scrollTop 580: Microsoft.Extensions.Configuration 8.0.0 under net8.0 is the last full row and current (its band is the render's colour sample), and its read-only details fill the pane (interaction model §7): the id with the Transitive badge, Version and Authors, Required by per target framework; no tabs, no actions, no README.",
   "looks": {
     "modern": {
@@ -393,14 +393,15 @@
       "section-header-transitive-net8.0": {
         "rect": {
           "x": 16,
-          "y": 703,
-          "w": 300.9,
-          "h": 28
+          "y": 706,
+          "w": 298.9,
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -432,14 +433,15 @@
       "section-header-transitive-netstandard2.0": {
         "rect": {
           "x": 16,
-          "y": 1451,
-          "w": 256.6,
-          "h": 28
+          "y": 1454,
+          "w": 254.6,
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"

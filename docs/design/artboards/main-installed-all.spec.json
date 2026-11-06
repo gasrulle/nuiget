@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42128198943",
+  "run": "42183339362",
   "composition": "The window is the product's at the Tools folder row (scrollTop 2100, classic 2082); the rows above it are a spacer of their height. Unresolved.csproj's Newtonsoft.Json row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed are compared in main-installed-details only. The Installed tab keeps the focus the state's setup leaves on it.",
   "looks": {
     "modern": {
@@ -233,14 +233,15 @@
       "section-header-project-empty.csproj": {
         "rect": {
           "x": 16,
-          "y": 175,
+          "y": 178,
           "w": 355.6,
-          "h": 28
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -261,14 +262,15 @@
       "section-header-project-unresolved.csproj": {
         "rect": {
           "x": 16,
-          "y": 231,
+          "y": 234,
           "w": 355.6,
-          "h": 28
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -335,14 +337,15 @@
       "section-header-project-unsupported.csproj": {
         "rect": {
           "x": 16,
-          "y": 403,
+          "y": 406,
           "w": 200.7,
-          "h": 28
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -423,14 +426,15 @@
       "section-header-project-utility.csproj": {
         "rect": {
           "x": 16,
-          "y": 675,
+          "y": 678,
           "w": 349.3,
-          "h": 28
+          "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -721,6 +725,7 @@
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -749,6 +754,7 @@
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -816,13 +822,14 @@
         "rect": {
           "x": 16,
           "y": 379,
-          "w": 188.1,
+          "w": 196.1,
           "h": 22
         },
         "inset": 16,
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
@@ -911,6 +918,7 @@
         "padding": "0px 0px 0px 0px",
         "gap": "4px 4px",
         "tokens": [
+          "--nuiget-row-height-compact",
           "--nuiget-gap-group",
           "--nuiget-font-size-body",
           "--nuiget-font-weight-strong"
