@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, Skeleton, Toolbar } from '../../../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -10,17 +10,21 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useSession } from '../../../shared/store/session';
 import { useUpdates } from '../../../shared/store/updates';
 import type { ListView } from '../../MainShell';
+import { directCount } from '../installed/InstalledProjectSection';
+import { rowId } from '../installed/installedTree';
 import { AllProjectsUpdates } from './AllProjectsUpdates';
 import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 
-/** An update as the list holds it; the list identifies its items by `id`. */
-interface Item {
-    id: string;
-    update: PackageUpdate;
-}
+/**
+ * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
+ * items by `id` (a package's is `rowId(project, id)`, as the Installed tab's; UX-P3.1a).
+ */
+type Item =
+    | { kind: 'group'; id: 'direct'; count: number | string }
+    | { kind: 'package'; id: string; update: PackageUpdate };
 
-const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu.';
+const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
@@ -43,6 +47,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const { run } = useOpsActions();
     const [currentId, setCurrentId] = useState<string | null>(null);
     const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [confirming, setConfirming] = useState(false);
     const [central, setCentral] = useState<CentralUpdateRequest | null>(null);
 
@@ -58,8 +63,8 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     // A selection of this tab that comes back (the tab shown again) makes its row current again.
     const detailsSelection = useDetails().selection;
     useEffect(() => {
-        if (detailsSelection?.origin === 'updates' && detailsSelection.projectPath === projectPath) {
-            setCurrentId(detailsSelection.packageId);
+        if (detailsSelection?.origin === 'updates' && detailsSelection.projectPath === projectPath && projectPath !== null) {
+            setCurrentId(rowId(projectPath, detailsSelection.packageId));
         }
     }, [detailsSelection, projectPath]);
     const { select } = useDetailsActions();
@@ -84,11 +89,38 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     const unsupported = installed.result?.unsupported;
 
     const needle = filter.trim().toLowerCase();
+    /** A package row's id in the tree, as the Installed tab's (UX-P3.1a). */
+    const keyOf = (packageId: string): string => rowId(projectPath ?? '', packageId);
     // Alphabetical by id, as 1.x listed them (MU9); the stream's rows keep their place while more arrive.
-    const items = useMemo<Item[]>(() => rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(update => ({ id: update.id, update })), [rows, needle]);
+    const shown = useMemo(() => rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)), [rows, needle]);
+    // One grouped list (D48): the Direct packages group row counts the updates shown, `k of N` under a filter (DS-COPY-5).
+    // Without a row to list the group row is left out: the empty sentence stands alone (the state cells are UX-P3.1b's).
+    const items = useMemo<Item[]>(() => {
+        if (shown.length === 0) {
+            return [];
+        }
+        const group: Item = { kind: 'group', id: 'direct', count: directCount(rows.length, shown.length, needle !== '') };
+        return collapsed.has('direct') ? [group] : [group, ...shown.map(update => ({ kind: 'package' as const, id: rowId(projectPath ?? '', update.id), update }))];
+    }, [shown, rows.length, needle, collapsed, projectPath]);
+    const groups = useMemo((): ListboxGroups<Item> => ({
+        is: item => item.kind === 'group',
+        isExpanded: item => !collapsed.has(item.id),
+        onToggle: (item, expanded) => setCollapsed(previous => {
+            const next = new Set(previous);
+            if (expanded) {
+                next.delete(item.id);
+            } else {
+                next.add(item.id);
+            }
+            return next;
+        }),
+        render: (item, placement) => (item.kind === 'group'
+            ? <SectionHeader presentation="content" title="Direct packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
+            : null),
+    }), [collapsed]);
     // A bulk update takes the rows shown that are neither centrally managed nor busy.
-    const candidates = unsupported ? [] : items.filter(item => !changesCentral(item.id) && !isBusy(item.id)).map(item => item.update);
-    const chosen = candidates.filter(update => selected.has(update.id));
+    const candidates = unsupported ? [] : shown.filter(update => !changesCentral(update.id) && !isBusy(update.id));
+    const chosen = candidates.filter(update => selected.has(keyOf(update.id)));
     const toUpdate = chosen.length > 0 ? chosen : candidates;
     const allSelected = candidates.length > 0 && chosen.length === candidates.length;
 
@@ -123,6 +155,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
     };
 
     const toggle = (update: PackageUpdate): void => {
+        const key = keyOf(update.id);
         if (unsupported) {
             announce(`${update.id} cannot be updated: ${unsupported.message}`);
             return;
@@ -133,8 +166,8 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
         }
         setSelected(previous => {
             const next = new Set(previous);
-            if (!next.delete(update.id)) {
-                next.add(update.id);
+            if (!next.delete(key)) {
+                next.add(key);
             }
             return next;
         });
@@ -170,6 +203,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
         body = (
             <Listbox
                 items={items}
+                groups={groups}
                 label="Updates"
                 hint={HINT}
                 testId="updates-list"
@@ -177,14 +211,28 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                 busy={updates.revalidating || updates.status === 'loading'}
                 selectedId={currentId}
                 selectedIds={selected}
-                onToggleSelected={item => toggle(item.update)}
+                onToggleSelected={item => {
+                    if (item.kind === 'package') {
+                        toggle(item.update);
+                    }
+                }}
                 onSelect={item => {
+                    if (item.kind !== 'package') {
+                        return;
+                    }
                     setCurrentId(item.id);
                     select({ packageId: item.update.id, version: item.update.latestVersion, sourceUrl: item.update.sourceUrl, origin: 'updates', projectPath, known: { verified: item.update.verified } });
                 }}
-                onActivate={item => updateOne(item.update)}
+                onActivate={item => {
+                    if (item.kind === 'package') {
+                        updateOne(item.update);
+                    }
+                }}
                 empty={<EmptyState message={empty} />}
                 renderRow={(item, placement) => {
+                    if (item.kind !== 'package') {
+                        return null;
+                    }
                     const { update } = item;
                     const busy = isBusy(update.id);
                     const centrallyManaged = isCentral(update.id);
@@ -217,10 +265,10 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
 
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} onClick={() => setConfirming(true)}>
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} title={toUpdate.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setConfirming(true)}>
                 {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
             </Button>}>
-                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => update.id)))}>
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => keyOf(update.id))))}>
                     Select all
                 </Button>
             </Toolbar>

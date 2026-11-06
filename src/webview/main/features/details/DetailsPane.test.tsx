@@ -47,7 +47,7 @@ async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0'
 }
 
 const pane = (): HTMLElement => screen.getByTestId('package-details-panel');
-const option = (listId: string, id: string): HTMLElement => within(within(screen.getByTestId(listId)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole(listId === 'installed-list' ? 'treeitem' : 'option');
+const option = (listId: string, id: string): HTMLElement => within(within(screen.getByTestId(listId)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole(listId === 'installed-list' || listId === 'updates-list' ? 'treeitem' : 'option');
 const selector = (): HTMLSelectElement => screen.getByTestId('version-selector');
 const primary = (): HTMLButtonElement => screen.getByTestId('install-update-button');
 const versionsOf = (host: FakeHost) => host.requests('package/versions');

@@ -44,11 +44,19 @@ async function mountWith(answer: { updates: PackageUpdate[]; sourcesUnavailable?
     return host;
 }
 
-const optionOf = (id: string): HTMLElement => within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
+/** A package row's focusable item: a treeitem of the single project's grouped list (UX-P3.1a), an option of All Projects' lists (UX-P3.1b). */
+const ROW_ITEM = '[role="treeitem"], [role="option"]';
+const optionOf = (id: string): HTMLElement => {
+    const item = screen.getByTestId(`package-row-${id.toLowerCase()}`).querySelector<HTMLElement>(ROW_ITEM);
+    if (item === null) {
+        throw new Error(`no row item for ${id}`);
+    }
+    return item;
+};
 const iconOf = (row: HTMLElement): string | null | undefined => row.querySelector('.nuiget-row-icon img')?.getAttribute('src');
 const names = (): string[] => {
     const list = screen.queryByTestId('updates-list');
-    return list === null ? [] : within(list).queryAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent ?? '');
+    return list === null ? [] : [...list.querySelectorAll('.nuiget-row-name')].map(element => element.textContent ?? '');
 };
 
 describe('main panel: Updates tab', () => {
@@ -62,11 +70,18 @@ describe('main panel: Updates tab', () => {
         removeLayout();
     });
 
-    it('lists the updates with their versions, counts them on the tab and passes axe', async () => {
+    it('lists the updates under the Direct packages group row of one grouped list, with their versions, counts them on the tab and passes axe', async () => {
         await mountWith();
         const list = screen.getByTestId('updates-list');
+        // One grouped list per view (D48, UX-P3.1a): a tree whose first item is the Direct packages group row.
+        expect(list).toHaveAttribute('role', 'tree');
         expect(list).toHaveAttribute('aria-multiselectable', 'true');
         expect(list).toHaveAccessibleName('Updates');
+        const group = within(screen.getByTestId('group-row-direct')).getByRole('treeitem');
+        expect(group).toHaveAttribute('aria-level', '1');
+        expect(group).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('section-box-direct')).toHaveTextContent('Direct packages');
+        expect(optionOf('Serilog')).toHaveAttribute('aria-level', '2');
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         expect(screen.getByTestId('package-row-serilog')).toHaveTextContent('3.0.0 → 3.1.0');
         expect(optionOf('Newtonsoft.Json')).toHaveAccessibleDescription(/Centrally managed/);
@@ -74,6 +89,27 @@ describe('main panel: Updates tab', () => {
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
+    });
+
+    it('the group row Direct packages counts the shown updates, reads k of N under a filter and collapses its rows', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        const count = (): string | null | undefined => screen.getByTestId('section-box-direct').querySelector('.nuiget-badge--count')?.textContent;
+        expect(count()).toBe('3');
+        await user.type(screen.getByTestId('search-input'), '@updates Se');
+        await waitFor(() => expect(names()).toEqual(['Serilog']));
+        // Under a filter the count is the text `k of N`, not a badge (DS-COPY-5).
+        expect(screen.getByTestId('section-box-direct')).toHaveTextContent('1 of 3');
+        expect(count()).toBeUndefined();
+        await user.clear(screen.getByTestId('search-input'));
+        await waitFor(() => expect(names()).toHaveLength(3));
+        const group = within(screen.getByTestId('group-row-direct')).getByRole('treeitem');
+        await user.click(group);
+        expect(group).toHaveAttribute('aria-expanded', 'false');
+        expect(names()).toEqual([]);
+        await user.keyboard('{ArrowRight}');
+        expect(group).toHaveAttribute('aria-expanded', 'true');
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
     });
 
     it('streams the found rows before the answer and asks again under the prerelease flag the host commits', async () => {
@@ -104,6 +140,7 @@ describe('main panel: Updates tab', () => {
         // The toolbar box of the measurements (UX-P0.10).
         expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
         expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (2)');
+        expect(screen.getByTestId('update-all-button')).not.toHaveAttribute('title');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
         expect(within(dialog).getByText('Serilog: 3.0.0 → 3.1.0')).toBeInTheDocument();
@@ -211,6 +248,9 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/update')).toHaveLength(0);
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Serilog cannot be updated: requires .NET SDK 10 or newer'));
         expect(screen.getByTestId('update-all-button')).toBeDisabled();
+        // DS-STATE-7: a disabled bulk button says why (UX-P3.1a).
+        expect(screen.getByTestId('update-all-button')).toHaveAttribute('title', 'No update in this list can join a bulk update.');
+        expect(screen.getByTestId('select-all-button')).toHaveAttribute('title', 'No update in this list can join a bulk update.');
     });
 
     it('All Projects: the updates come from allProjects/updates, never updates/get', async () => {
