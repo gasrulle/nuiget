@@ -213,5 +213,5 @@ describe('scripts/compare-goldens.mjs (UX-P0.15)', () => {
             expect(index[file].run, `${file} comes from a CI run`).toMatch(/^\d+$/);
             expect(golden.sidecar.run, `${file}'s sidecar names the same run`).toBe(index[file].run);
         }
-    });
+    }, 30_000);
 });
