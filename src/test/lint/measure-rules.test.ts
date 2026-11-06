@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, cellList, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -73,7 +73,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         }
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
-        expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] });
+        expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
         expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'] });
@@ -159,8 +159,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
-        // The states without a row by design: DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
+        // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-quicksearch-open', 'main-quicksearch-versions'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
@@ -717,10 +717,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-unresolved', facts({}), 'DS-COPY-3@main-installed-unresolved')).toBeUndefined();
     });
 
-    it('leaves the group header unread in the two cells with no list (UX-P2.8b)', () => {
+    it('leaves the group header unread in the cells with no list (UX-P2.8b; the Updates cells without a row, UX-P3.1b)', () => {
+        const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
-            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error']);
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error', ...updatesNoList]);
             expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
         }
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
@@ -730,11 +731,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         for (const id of ['DS-GRID-2b', 'DS-OVERFLOW-2']) {
-            expect(RULES.find(rule => rule.id === id)?.exceptStates, id).toEqual(['main-installed-loading', 'main-installed-error']);
+            expect(RULES.find(rule => rule.id === id)?.exceptStates, id).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList]);
         }
+        // A list with no row and only its empty sentence has no group header either (the Updates tab of one project, UX-P3.1b).
+        const empties = [{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 }];
+        expect(lineOf('main-updates-empty', cells({ empties }), 'DS-INSET-3@main-updates-empty/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
+        expect(lineOf('main-updates-empty', cells({ empties }), 'DS-TYPE-5@main-updates-empty/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
+        // Keyed to the Updates cells: an Installed cell with an empty state that lost its group row still fails.
+        expect(lineOf('main-installed-empty', cells({ empties }), 'DS-INSET-3@main-installed-empty/headers')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-INSET-3@main-installed-error/headers')).toMatchObject({ pass: true });
         expect(lineOf('main-installed-single', cells({}), 'DS-INSET-3@main-installed-single/headers')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-all', cells({ testIds: ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'] }), 'DS-STATE-1@main-installed-all')).toMatchObject({ pass: false, value: expect.stringContaining('missing: installed-empty-empty.csproj') });
+    });
+
+    it('reads a state cell on its own list, keyed by the state group: the Updates cells on updates-*, every other on installed-* (UX-P3.1b)', () => {
+        expect(cellList('main-updates-loading')).toBe('updates');
+        expect(cellList('main-updates-all')).toBe('updates');
+        expect(cellList('main-installed-loading')).toBe('installed');
+        expect(COLLECT_LAYOUT).toContain('[data-testid="\' + cellList + \'-progress"]');
+        expect(COLLECT_LAYOUT).toContain('[data-testid="\' + cellList + \'-list"]');
+        expect(COLLECT_LAYOUT).not.toContain('installed-progress');
     });
 
     it('reads the outer frame\'s offset: anything but 0,0 fails the state (UX-P2.8b)', () => {
@@ -742,9 +758,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(outerScrollVerdict(0, 5)).toEqual({ text: 'outer scroll 0,5', pass: false });
     });
 
-    it('holds the Installed cells hard in main-installed, with their later owners (UX-P2.8b)', () => {
+    it('holds the Installed cells hard in main-installed, with their later owners (UX-P2.8b; the Updates cells pending P3.1b until its closing commit)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard' });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' } });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
             expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         }

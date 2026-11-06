@@ -12,7 +12,7 @@ import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
 import type { ListView } from '../../MainShell';
-import { groupByFolder } from '../../../shared/allProjects/folderGroups';
+import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
 import { directCount, InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
 import { parseRowId, rowId, type Section, type TreeItem } from './installedTree';
@@ -28,8 +28,6 @@ const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()
 
 /** A reason from the host as the end of a sentence with one full stop (DS-COPY-3). */
 const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
-
-const PROJECT_GROUP = 'project-';
 
 /**
  * The Installed tab of the main panel: one tree (D48), the tab's scroller, of the selected project's packages under its
@@ -164,26 +162,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     };
 
     // A project's group row id, unique though a project's name is not; its suffix names the project's markers.
-    const projectGroups = useMemo((): ReadonlyMap<string, string> => {
-        const ids = new Map<string, string>();
-        if (!allMode) {
-            return ids;
-        }
-        const seen = new Set<string>();
-        const folders = groupByFolder(sections);
-        const assign = (section: Section, folder: string | undefined): void => {
-            const name = section.projectName.toLowerCase();
-            const id = [`${PROJECT_GROUP}${name}`, `${PROJECT_GROUP}${(folder ?? section.workspaceFolder ?? '').toLowerCase()}/${name}`].find(candidate => !seen.has(candidate)) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`;
-            seen.add(id);
-            ids.set(section.projectPath, id);
-        };
-        if (folders.length < 2) {
-            sections.forEach(section => assign(section, undefined));
-        } else {
-            folders.forEach(([folder, members]) => members.forEach(section => assign(section, folder)));
-        }
-        return ids;
-    }, [allMode, sections]);
+    const projectGroups = useMemo((): ReadonlyMap<string, string> => (allMode ? projectGroupIds(sections) : new Map()), [allMode, sections]);
     const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? section.projectPath).slice(PROJECT_GROUP.length);
 
     const transitiveExpanded = transitiveOpen && (allMode ? all.transitive.enabled : transitive.enabled);

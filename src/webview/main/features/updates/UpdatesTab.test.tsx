@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageUpdate, type SessionSnapshot } from '../../../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type PackageUpdate, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
@@ -44,7 +44,7 @@ async function mountWith(answer: { updates: PackageUpdate[]; sourcesUnavailable?
     return host;
 }
 
-/** A package row's focusable item: a treeitem of the single project's grouped list (UX-P3.1a), an option of All Projects' lists (UX-P3.1b). */
+/** A package row's focusable item: a treeitem of the single project's grouped list (UX-P3.1a), and of the All Projects tree (UX-P3.1b). */
 const ROW_ITEM = '[role="treeitem"], [role="option"]';
 const optionOf = (id: string): HTMLElement => {
     const item = screen.getByTestId(`package-row-${id.toLowerCase()}`).querySelector<HTMLElement>(ROW_ITEM);
@@ -290,10 +290,59 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('updates/get')).toHaveLength(0);
     });
 
+    describe('the state cells of one project (UX-P3.1b)', () => {
+        it('loading: the bar over the list area and three skeleton rows, no row and no group row', async () => {
+            await mountWith(null);
+            expect(screen.getByTestId('updates-progress')).toHaveAccessibleName('Loading updates');
+            expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+            expect(screen.queryByTestId('group-row-direct')).toBeNull();
+            expect(names()).toEqual([]);
+        });
+
+        it('error: the inline error says why in a sentence and offers Retry, which asks again', async () => {
+            const user = userEvent.setup();
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+            await hostSays(() => host.respond(host.requests('installed/get')[0], installed([pkg('Serilog', { version: '3.0.0' })]), 1));
+            await hostSays(() => host.fail(host.requests('updates/get')[0], 'failed', 'The feed did not answer'));
+            await user.click(screen.getByTestId('updates-tab'));
+            const banner = screen.getByTestId('updates-error');
+            expect(banner).toHaveTextContent('Updates could not be checked: The feed did not answer.');
+            expect(screen.queryByTestId('updates-progress')).toBeNull();
+            expect(screen.queryByTestId('updates-list')).toBeNull();
+            await user.click(within(banner).getByRole('button', { name: 'Retry' }));
+            expect(host.requests('updates/get')).toHaveLength(2);
+        });
+
+        it('all up to date: the empty state says so under its hook, with no group row', async () => {
+            await mountWith({ updates: [] });
+            expect(screen.getByTestId('updates-empty')).toHaveTextContent('No updates available.');
+            expect(screen.queryByTestId('group-row-direct')).toBeNull();
+            expect(screen.queryByTestId('updates-progress')).toBeNull();
+        });
+
+        it('sources unavailable: the banner and a sentence that the updates are unknown, never the empty hook', async () => {
+            await mountWith({ updates: [], sourcesUnavailable: true });
+            expect(screen.getByTestId('updates-unavailable-banner')).toBeInTheDocument();
+            expect(screen.getByText('Updates could not be checked: no package source answered.')).toBeInTheDocument();
+            expect(screen.queryByTestId('updates-empty')).toBeNull();
+        });
+
+        it('revalidating: the rows stay under the bar and the list is busy', async () => {
+            const host = await mountWith();
+            await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'project', projectPaths: [A] }, reason: 'file-watcher', generation: 2, keys: [{ key: resourceKeys.updates(A, false), generation: 2 }] }));
+            await waitFor(() => expect(screen.getByTestId('updates-progress')).toHaveAccessibleName('Refreshing updates'));
+            expect(screen.getByTestId('updates-list')).toHaveAttribute('aria-busy', 'true');
+            expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
+        });
+    });
+
     describe('All Projects', () => {
         const B = '/w/Lib/Lib.csproj';
 
-        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }, icons?: Record<string, string>): Promise<FakeHost> {
+        async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }, icons?: Record<string, string>, libChunk?: { updates: PackageUpdate[]; error?: string }): Promise<FakeHost> {
             const host = createFakeHost();
             render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
             await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
@@ -305,7 +354,7 @@ describe('main panel: Updates tab', () => {
             const stream = host.requests('allProjects/updates')[0];
             await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
             await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0'), update('Newtonsoft.Json', '13.0.1', '13.0.3')] } }));
-            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: answer.sourcesUnavailable ? [] : [update('Moq', '4.20.0', '4.20.72')] } }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', ...(libChunk ?? { updates: answer.sourcesUnavailable ? [] : [update('Moq', '4.20.0', '4.20.72')] }) } }));
             if (icons !== undefined) {
                 // The icons follow the project chunks and count only before the answer of the request.
                 await hostSays(() => host.chunk(stream, { kind: 'icons', icons }));
@@ -315,23 +364,30 @@ describe('main panel: Updates tab', () => {
             return host;
         }
 
-        const listOf = (name: string): HTMLElement => screen.getByTestId(`updates-list-${name}`);
-        const rowIn = (name: string, id: string): HTMLElement => within(within(listOf(name)).getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
+        /** A project's group row, the treeitem inside its `group-row-project-<name>` wrapper (UX-P3.1b). */
+        const groupOf = (name: string): HTMLElement => within(screen.getByTestId(`group-row-project-${name}`)).getByRole('treeitem');
 
-        it('All Projects: one section per project, selections across them become ops/bulkUpdateAllProjects with the project names', async () => {
+        it('All Projects: one tree with a group row per project, selections across them become ops/bulkUpdateAllProjects with the project names (UX-P3.1b)', async () => {
             const user = userEvent.setup();
             const host = await mountAll();
-            expect(listOf('app')).toHaveAccessibleName('App');
-            expect(listOf('lib')).toHaveAccessibleName('Lib');
+            // One grouped list per view (D48): the projects are level-1 group rows of the tab's one tree, their updates under them.
+            const list = screen.getByTestId('updates-list');
+            expect(list).toHaveAttribute('role', 'tree');
+            expect(list).toHaveAccessibleName('Updates');
+            expect(groupOf('app')).toHaveAttribute('aria-level', '1');
+            expect(groupOf('lib')).toHaveAttribute('aria-level', '1');
+            expect(screen.getByTestId('section-header-project-app')).toHaveTextContent('App');
+            expect(within(screen.getByTestId('group-row-project-app')).getByText('2')).toBeInTheDocument();
+            expect(optionOf('Serilog')).toHaveAttribute('aria-level', '2');
+            expect(names()).toEqual(['Newtonsoft.Json', 'Serilog', 'Moq']);
             // All Projects has its own toolbar, the same box of the measurements (UX-P0.10).
             expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
-            // The single-scroller layout of the Installed tab (P9.fix-2).
-            expect(listOf('app').closest('.nuiget-installed')).toHaveClass('nuiget-installed--sections');
+            expect(screen.queryByTestId('updates-list-app')).toBeNull();
             expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);
             expect(host.requests('updates/get')).toHaveLength(0);
 
-            await user.click(rowIn('app', 'Serilog').querySelector('.nuiget-row-check') as Element);
-            await user.click(rowIn('lib', 'Moq').querySelector('.nuiget-row-check') as Element);
+            await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
+            await user.click(optionOf('Moq').querySelector('.nuiget-row-check') as Element);
             expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (2)');
             await user.click(screen.getByTestId('update-all-button'));
             expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
@@ -345,23 +401,22 @@ describe('main panel: Updates tab', () => {
             }]);
 
             // A centrally managed row opens the read-only preview; Enter on another updates its own project.
-            await user.click(rowIn('app', 'Newtonsoft.Json'));
+            await user.click(optionOf('Newtonsoft.Json'));
             await user.keyboard('{Enter}');
             expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
         });
 
         it('All Projects: rows take the icon of the icons chunk when they carry none, and are sorted by id', async () => {
             await mountAll({}, undefined, { serilog: DATA });
-            const row = (name: string, id: string): HTMLElement => within(listOf(name)).getByTestId(`package-row-${id.toLowerCase()}`);
-            expect(iconOf(row('app', 'Serilog'))).toBe(DATA);
-            expect(iconOf(row('lib', 'Moq'))).toBe(DEFAULT_ICON);
-            expect(within(listOf('app')).getAllByRole('option').map(option => option.querySelector('.nuiget-row-name')?.textContent)).toEqual(['Newtonsoft.Json', 'Serilog']);
+            expect(iconOf(screen.getByTestId('package-row-serilog'))).toBe(DATA);
+            expect(iconOf(screen.getByTestId('package-row-moq'))).toBe(DEFAULT_ICON);
+            expect(names()).toEqual(['Newtonsoft.Json', 'Serilog', 'Moq']);
         });
 
         it('All Projects: an override row updates in its own project alone and is a bulk candidate', async () => {
             const user = userEvent.setup();
             const host = await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Moq', { version: '4.20.0', declaration: 'central-override' })] });
-            await user.click(rowIn('lib', 'Moq'));
+            await user.click(optionOf('Moq'));
             await user.keyboard(' ');
             expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
             await user.keyboard('{Enter}');
@@ -370,16 +425,87 @@ describe('main panel: Updates tab', () => {
             expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
         });
 
-        it('All Projects: a source that could not be checked is one banner over the sections, not an empty state', async () => {
+        it('All Projects: a source that could not be checked is one banner over the tree, and the project\'s leaf says the updates are unknown', async () => {
             await mountAll({ sourcesUnavailable: true });
             expect(screen.getAllByTestId('updates-unavailable-banner')).toHaveLength(1);
-            // Lib's section: its empty list says the updates are unknown.
-            expect(screen.getByText('Updates could not be checked.')).toBeInTheDocument();
+            // Lib's group: its message leaf says the updates are unknown.
+            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
             expect(screen.queryByText('No updates available.')).toBeNull();
             expect(screen.getByTestId('updates-tab')).not.toHaveAccessibleName(/\d/);
         });
 
-        it('has no axe violations with All Projects sections and the Update all dialog open', async () => {
+        it('All Projects: nothing installed is a message leaf of its project\'s group, never "up to date"', async () => {
+            await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [] }, undefined, { updates: [] });
+            const leaf = within(screen.getByTestId('updates-list')).getByTestId('updates-empty-lib');
+            expect(leaf).toHaveTextContent('No packages installed.');
+            expect(leaf.closest('[data-row-kind="message"]')).not.toBeNull();
+            expect(leaf.querySelector('button')).toBeNull();
+        });
+
+        it('All Projects: a project whose check failed has its banner with Retry above the tree, and its group row no count', async () => {
+            const user = userEvent.setup();
+            const host = await mountAll({}, undefined, undefined, { updates: [], error: 'The feed did not answer' });
+            const banner = screen.getByTestId('updates-error-lib');
+            expect(banner).toHaveTextContent('Updates of Lib could not be checked: The feed did not answer.');
+            expect(screen.getByTestId('updates-list')).not.toContainElement(banner);
+            expect(screen.getByTestId('group-row-project-lib').querySelector('.nuiget-badge--count')).toBeNull();
+            await user.click(within(banner).getByRole('button', { name: 'Retry' }));
+            expect(host.requests('allProjects/updates')).toHaveLength(2);
+        });
+
+        it('All Projects: two workspace folders are level-1 group rows over their projects at level 2, and a folder collapses its projects (UX-P3.1b)', async () => {
+            const user = userEvent.setup();
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+            const projects = [{ name: 'App', path: A, workspaceFolder: 'app' }, { name: 'Lib', path: B, workspaceFolder: 'tools' }];
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects }, 1));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'app', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'tools', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+            await user.click(screen.getByTestId('updates-tab'));
+            const folder = within(screen.getByTestId('group-row-folder-app')).getByRole('treeitem');
+            expect(folder).toHaveAttribute('aria-level', '1');
+            expect(within(screen.getByTestId('group-row-folder-tools')).getByRole('treeitem')).toHaveAttribute('aria-level', '1');
+            expect(groupOf('app')).toHaveAttribute('aria-level', '2');
+            expect(optionOf('Serilog')).toHaveAttribute('aria-level', '3');
+            expect(names()).toEqual(['Serilog', 'Moq']);
+            await user.click(folder);
+            await user.keyboard('{ArrowLeft}');
+            expect(folder).toHaveAttribute('aria-expanded', 'false');
+            expect(screen.queryByTestId('group-row-project-app')).toBeNull();
+            expect(names()).toEqual(['Moq']);
+        });
+
+        it('All Projects: an unsupported project says why in a message leaf before its read-only rows', async () => {
+            await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })], unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } });
+            const leaf = screen.getByTestId('updates-unsupported-lib');
+            expect(leaf).toHaveTextContent('Unsupported project: requires .NET SDK 10 or newer.');
+            expect(leaf.closest('[data-row-kind="message"]')).not.toBeNull();
+            expect(screen.getByTestId('package-row-moq').querySelector('[data-testid="row-action-update"]')).toBeNull();
+        });
+
+        it('All Projects: the tab draws its own bar while the stream runs, and a project with no chunk after it is unknown, never "no updates"', async () => {
+            const user = userEvent.setup();
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+            await user.click(screen.getByTestId('updates-tab'));
+            expect(screen.getByTestId('updates-progress')).toHaveAccessibleName('Loading updates');
+            expect(screen.getByTestId('section-header-project-lib').closest('[data-testid="group-row-project-lib"]')?.querySelector('.nuiget-spinner')).not.toBeNull();
+            expect(screen.queryByTestId('updates-empty-lib')).toBeNull();
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+            expect(screen.queryByTestId('updates-progress')).toBeNull();
+            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
+        });
+
+        it('has no axe violations with the All Projects tree and the Update all dialog open', async () => {
             const user = userEvent.setup();
             await mountAll();
             await user.click(screen.getByTestId('update-all-button'));

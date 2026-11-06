@@ -145,28 +145,11 @@ body {
     flex: none;
 }
 
-.nuiget-installed-lists,
-.nuiget-installed-project,
-.nuiget-installed-project-content {
+.nuiget-installed-lists {
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
-}
-
-/*
- * All Projects Updates: one scroll container for every section, and every list as high as its rows. The list is not its
- * own scroll element then, so the virtualizer renders all of its rows (P9.fix-2). The Updates tab of one project keeps
- * its list scrolling on its own.
- */
-.nuiget-installed--sections .nuiget-installed-lists {
-    overflow: auto;
-}
-
-.nuiget-installed--sections .nuiget-installed-project,
-.nuiget-installed--sections .nuiget-installed-project-content {
-    flex: none;
-    overflow: visible;
 }
 
 /* The bulk uninstall dialog: one short list per project. */
@@ -595,16 +578,6 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: var(--nuiget-space-3);
-}
-
-/* ── All Projects: one heading per workspace folder ── */
-
-.nuiget-installed-folder-title {
-    margin: var(--nuiget-space-4) var(--nuiget-space-4) var(--nuiget-space-1) var(--nuiget-inset);
-    color: var(--nuiget-color-fg-muted);
-    font-size: var(--nuiget-font-size-sm);
-    font-weight: 600;
-    text-transform: uppercase;
 }
 
 /* ── Install in several projects ── */

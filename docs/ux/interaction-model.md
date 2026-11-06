@@ -258,7 +258,7 @@ project has several and one block per project in All Projects; no version select
 | `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list or a single project's Updates list, is a tree) |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
-| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, the sidebar's two and the Updates tab's projects until their lists become trees); in a group row, the title inside the treeitem, with no button, named by the group's id |
+| `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, the sidebar's two until their lists become trees); in a group row, the title inside the treeitem, with no button, named by the group's id |
 | `section-header-transitive-<tfm>` | The title inside one target framework's group row under Transitive (a project with several) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
@@ -274,6 +274,8 @@ project has several and one block per project in All Projects; no version select
 | `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |
 | `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading and revalidating, above the tree), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages group row |
 | `installed-empty-<name>`, `installed-error-<name>`, `installed-unsupported-<name>`, `installed-provisional-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-` (`unsupported.csproj`): the empty and unsupported sentences are message leaves of its group, the error a banner above the tree, the badge on its group row. One tree has one bar: a project's progress is its group row's spinner (UX-P2.1d) |
+| `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's 2 px progress bar (loading and revalidating, above the tree), empty state ("No packages installed." or "No updates available."; never when a source could not be checked, which `updates-unavailable-banner` says) and inline error with Retry (UX-P3.1b) |
+| `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
@@ -291,11 +293,10 @@ All Projects (§3; `<name>` = project name lower-cased):
 
 | Test id | Element |
 |---|---|
-| `updates-list-<name>` | A project's list in the main panel's Updates tab, until UX-P3.1b makes it a group row |
 | `group-row-<id>` | The wrapper of a group row in a grouped list, one of three hooks on one row: this wrapper, `section-box-<id>` (its header box, measured) and `section-header-<id>` (its title); the state and the keys are on the `role="treeitem"` inside the wrapper; the id is the group's: direct, project-<name>, folder-<folder>, transitive, transitive-<tfm> |
 | `sidebar-installed-list-<name>`, `sidebar-updates-list-<name>` | A project's list in the sidebar, until UX-P3.7c and UX-P3.7d make them group rows |
 | `sidebar-update-all-button` | Update all in the sidebar's Updates header |
-| `section-header-project-<name>`, `section-header-updates-<name>` | The title of a project's group row (Installed); the toggle of a project's section (Updates) |
+| `section-header-project-<name>` | The title of a project's group row in the Installed and Updates tabs (the Updates tab since UX-P3.1b) |
 
 Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
 
@@ -326,7 +327,6 @@ is a project or section name lower-cased, as above.
 | Added by | Test id or attribute | Element |
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
-| Updates | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's progress bar, empty state and inline error |
 | Browse and details | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' progress bar, empty state ("No results for "x".") and inline error |
 | Browse and details | `search-suggestions-loading`, `search-suggestions-empty`, `search-suggestions-error` | The quick-search popup's loading row, no-results row and error row |
 | Browse and details | `details-header`, `details-tab-bar` | The details pane's header (its 20 px inset is measured on it) and its 36 px tab strip |
@@ -335,4 +335,4 @@ is a project or section name lower-cased, as above.
 | Sidebar | `sidebar-installed-progress`, `sidebar-updates-progress`, `sidebar-browse-progress` | The 2 px progress bar of each sidebar list (loading and revalidating) |
 | Sidebar | `sidebar-updates-error`, `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's missing state markers: the Updates error and the Browse empty and error states |
 
-**Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, and the Updates tab of one project since UX-P3.1a (its Direct packages group row): `installed-list-<name>`, `transitive-list` and `transitive-list-<tfm>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The per-project ids still in the table, `updates-list-<name>` and `sidebar-*-list-<name>`, name real listboxes until their lists move: `updates-list-<name>` becomes `group-row-project-<name>` at UX-P3.1b, `sidebar-installed-list-<name>` at UX-P3.7c and `sidebar-updates-list-<name>` at UX-P3.7d, each with its readers in that change.
+**Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The per-project ids still in the table, `sidebar-*-list-<name>`, name real listboxes until their lists move: `sidebar-installed-list-<name>` becomes a group row at UX-P3.7c and `sidebar-updates-list-<name>` at UX-P3.7d, each with its readers in that change.

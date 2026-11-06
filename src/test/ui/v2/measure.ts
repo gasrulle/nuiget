@@ -166,11 +166,16 @@ const ALL: StateGroup[] = [...MAIN, 'dialogs', 'sources', 'sidebar'];
 /** One status for the state groups where a rule's elements are rendered. */
 const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, status]));
 
-/** The Installed cells with no list yet: no group row, so no count badge and no gap under a header (design ruling DO 4, follow-up 3, UX-P2.8b). */
-const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error'];
+/**
+ * The cells with no list yet: no group row, so no count badge and no gap under a header (design ruling DO 4, follow-up 3,
+ * UX-P2.8b); the Updates tab of one project lists no group row without an update to list (UX-P3.1a), so its empty and
+ * unavailable cells join its loading and error cells (UX-P3.1b).
+ */
+const UPDATES_NO_LIST_STATES: readonly string[] = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable'];
+const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error', ...UPDATES_NO_LIST_STATES];
 /** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
-const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
-/** DS-STATE-1: the markers each Installed cell renders (design-system.md §9, UX-P2.8b). */
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, 'main-quicksearch-open', 'main-quicksearch-versions'];
+/** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-loading': ['installed-progress'],
     'main-installed-revalidating': ['installed-progress'],
@@ -179,6 +184,13 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
     'main-installed-unresolved': [],
     'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj'],
+    'main-updates-loading': ['updates-progress'],
+    'main-updates-revalidating': ['updates-progress'],
+    'main-updates-empty': ['updates-empty'],
+    'main-updates-empty-uptodate': ['updates-empty'],
+    'main-updates-error': ['updates-error'],
+    'main-updates-unavailable': ['updates-unavailable-banner'],
+    'main-updates-all': ['updates-unsupported-unsupported.csproj', 'updates-empty-empty.csproj'],
 };
 /** DS-COLOR-1, the roles these cells paint; the rest join per screen with their P3 items (UX-P2.8b). */
 const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: string; property: 'color' | 'backgroundColor'; key: string }> = [
@@ -239,7 +251,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES, pendingStates: { 'main-browse-details': 'P3.2' } }),
-    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'] } }),
+    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
@@ -298,8 +310,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
-    // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/ }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/ }),
@@ -337,6 +349,14 @@ export function stateGroup(state: string): StateGroup {
         return 'main-updates';
     }
     return 'main-installed';
+}
+
+/**
+ * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
+ * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
+ */
+export function cellList(state: string): 'installed' | 'updates' {
+    return stateGroup(state) === 'main-updates' ? 'updates' : 'installed';
 }
 
 /** The states whose first row MS-8 compares (Installed and Updates; hard since UX-P3.1a). */
@@ -709,7 +729,7 @@ const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
  * backtick in it, comments included, ends it (the registry test's parse check fails on that).
  */
 export const COLLECT_LAYOUT = `
-const [rootTestId, ramp, tolerance, containment = 0] = arguments;
+const [rootTestId, ramp, tolerance, containment = 0, cellList = 'installed'] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
 if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
@@ -1332,14 +1352,14 @@ const resolveKey = (key, property) => {
     probe.remove();
     return resolved;
 };
-const progressEl = shown('[data-testid="installed-progress"]')[0];
+const progressEl = shown('[data-testid="' + cellList + '-progress"]')[0];
 const contentEl = shown('.nuiget-skeleton-row, .nuiget-row')[0];
 const stateCells = {
     testIds: [...new Set(shown('[data-testid]').map(el => el.dataset.testid))],
     rows: shown('.nuiget-row-option').length,
     disabledVersions: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-version')?.textContent || '').trim()),
     skeletonRows: shown('.nuiget-skeleton-row').length,
-    listBusy: scope.querySelector('[data-testid="installed-list"]')?.getAttribute('aria-busy') === 'true',
+    listBusy: scope.querySelector('[data-testid="' + cellList + '-list"]')?.getAttribute('aria-busy') === 'true',
     progressTop: progressEl ? rectOf(progressEl).top : undefined,
     contentTop: contentEl ? rectOf(contentEl).top : undefined,
     empties: shown('.nuiget-empty').map(el => {
@@ -1890,7 +1910,7 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
 }
 
 /** Helpers 5 and 6 (UX-P0.12): the value and the verdict of a truncation, overlap or chrome rule, or undefined for another. */
-function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic', reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
+function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', reference: ChromeReference | undefined): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     switch (definition.id) {
         case 'PF-2': {
@@ -1998,7 +2018,7 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, layout: Layo
                 if (scope === 'headers' && layout.flatList) {
                     return { value: 'no group header (flat list)', pass: true };
                 }
-                if (scope === 'headers' && noListCell(layout)) {
+                if (scope === 'headers' && noListCell(layout, state)) {
                     return { value: 'no group header (no list)', pass: true };
                 }
                 return { value: NOT_MEASURABLE, pass: false };
@@ -2497,7 +2517,7 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
         case 'DS-TYPE-5': {
             const titled = layout.sections.filter(section => section.hasTitle === true && section.title !== undefined && (scope === 'sidebar' || section.variant !== 'pane'));
             if (titled.length === 0) {
-                if (scope === 'headers' && noListCell(layout)) {
+                if (scope === 'headers' && noListCell(layout, state)) {
                     return { value: 'no group header (no list)', pass: true };
                 }
                 return layout.flatList ? { value: 'no group header (flat list)', pass: true } : notMeasurable('no header');
@@ -2634,10 +2654,14 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
     }
 }
 
-/** A first load or a failed read of a single project: the tree has no group row yet (follow-up 3, UX-P2.8b). */
-function noListCell(layout: Layout): boolean {
+/**
+ * A first load or a failed read of a single project: the tree has no group row yet (follow-up 3, UX-P2.8b); or, in an
+ * Updates cell of one project without an update to list, a list with no row (UX-P3.1a, UX-P3.1b). The second clause is
+ * keyed to those states so a hard Installed cell that lost its group row still fails.
+ */
+function noListCell(layout: Layout, state: string): boolean {
     const cells = layout.endOfP0.stateCells;
-    return cells.skeletonRows > 0 || cells.banners.some(banner => banner.severity === 'error');
+    return cells.skeletonRows > 0 || cells.banners.some(banner => banner.severity === 'error') || (UPDATES_NO_LIST_STATES.includes(state) && cells.rows === 0);
 }
 
 /** The Installed cells (design-system.md §9, UX-P2.8b). */
@@ -2818,7 +2842,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, definition, scope, state);
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
+    const heightVerdict = evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
@@ -2912,7 +2936,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
                     if (groupBoxes.length === 0 && layout.flatList) {
                         return { value: 'no group header (flat list)', pass: true };
                     }
-                    if (groupBoxes.length === 0 && noListCell(layout)) {
+                    if (groupBoxes.length === 0 && noListCell(layout, state)) {
                         return { value: 'no group header (no list)', pass: true };
                     }
                     boxes = groupBoxes;

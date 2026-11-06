@@ -206,10 +206,14 @@ describe('main panel shell', () => {
         expect(host.requests('refresh/all')).toHaveLength(1);
     });
 
-    it('on Updates the header draws the bar while refresh/all is unanswered', async () => {
+    it('on Updates the header draws no bar while refresh/all is unanswered (the list draws its own); under Browse it does (UX-P3.1b)', async () => {
         const user = userEvent.setup();
-        await mountReady();
+        const { host } = await mountReady();
         await user.click(screen.getByTestId('updates-tab'));
+        await user.click(screen.getByRole('button', { name: 'Refresh' }));
+        expect(screen.queryByRole('progressbar', { name: 'Refreshing' })).toBeNull();
+        await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
+        await user.type(search(), 'serilog');
         await user.click(screen.getByRole('button', { name: 'Refresh' }));
         expect(screen.getByRole('progressbar', { name: 'Refreshing' })).toBeInTheDocument();
     });

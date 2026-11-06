@@ -31,14 +31,13 @@ describe('main panel parity: header controls and All Projects headers (P9.11)', 
         removeLayout();
     });
 
-    it('All Projects project headers take the pane-header type and the folder caption stays in capitals (DS-TYPE-5, UX-P2.6)', () => {
+    it('All Projects project headers take the pane-header type, as the direct header does (DS-TYPE-5, UX-P2.6; the folder heading is a group row since UX-P3.1b)', () => {
         render(
             <>
-                <h2 className="nuiget-installed-folder-title">src</h2>
-                <section className="nuiget-installed-project">
+                <section>
                     <SectionHeader title="App.csproj" titleId="t" level={3} expanded onToggle={() => undefined} contentId="c" testKey="app" />
                 </section>
-                <section className="nuiget-installed-project">
+                <section>
                     <SectionHeader title="Direct packages" titleId="u" level={3} expanded onToggle={() => undefined} contentId="d" testKey="direct" />
                 </section>
             </>,
@@ -50,7 +49,6 @@ describe('main panel parity: header controls and All Projects headers (P9.11)', 
             expect(getComputedStyle(box.querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
             expect(getComputedStyle(box.querySelector('h3') as HTMLElement).fontWeight).toContain('--nuiget-section-title-weight');
         }
-        expect(getComputedStyle(screen.getByText('src')).textTransform).toBe('uppercase');
     });
 
     it('the header check boxes and the drop-down are sized and coloured by the tokens', () => {

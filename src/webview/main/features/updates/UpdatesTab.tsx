@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
 import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
-import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
+import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -15,6 +15,7 @@ import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { AllProjectsUpdates } from './AllProjectsUpdates';
 import { UpdateAllDialog } from './UpdateAllDialog';
+import { sentence } from './updatesTree';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
@@ -182,6 +183,11 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         });
     };
 
+    // The bar lies over the list area's top edge while the list loads or asks again (DS-STATE-2, UX-P3.1b).
+    const loading = committed === undefined || (projectPath !== null && updates.status === 'loading');
+    const bar = loading || updates.revalidating
+        ? <div className="nuiget-installed-progress"><ProgressBar label={loading ? 'Loading updates' : 'Refreshing updates'} data-testid="updates-progress" /></div>
+        : null;
     let body: React.ReactNode;
     if (committed === undefined) {
         body = <Skeleton density="comfortable" />;
@@ -226,7 +232,8 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                         updateOne(item.update);
                     }
                 }}
-                empty={<EmptyState message={empty} />}
+                // The marker names the two empty cells only: nothing installed, and no update (not a filter that matches nothing).
+                empty={<EmptyState message={empty} data-testid={rows.length === 0 && !updates.sourcesUnavailable ? 'updates-empty' : undefined} />}
                 renderRow={(item, placement) => {
                     if (item.kind !== 'package') {
                         return null;
@@ -274,9 +281,9 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>
                 : null}
             {updates.error
-                ? <Banner severity="error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${updates.error.message}`}</Banner>
+                ? <Banner severity="error" data-testid="updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${sentence(updates.error.message)}`}</Banner>
                 : null}
-            <div className="nuiget-installed-lists">{body}</div>
+            <div className="nuiget-installed-lists">{bar}{body}</div>
             <UpdateAllDialog open={confirming && toUpdate.length > 0} updates={toUpdate} onConfirm={confirm} onCancel={() => setConfirming(false)} />
         </div>
     );

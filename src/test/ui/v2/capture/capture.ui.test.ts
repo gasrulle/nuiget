@@ -4,7 +4,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
@@ -98,62 +98,92 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
-const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error'];
+const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable'];
 
 /**
- * Holds every envelope of `installed/get` before it is dispatched: the outer frame hands the host's messages to the content
- * frame through its `postMessage`, so a wrapper there sees them first. A `message` listener cannot: on `window` listeners run in
- * registration order whatever their capture flag, so the bus's comes first (run on 2e5c48c; UX-P2.8b architecture follow-up).
- * The stream is held too, or the provisional chunk paints rows.
+ * Holds every envelope of one request type (`installed/get`, or `updates/get` since UX-P3.1b; one type per hold, never two)
+ * before it is dispatched: the outer frame hands the host's messages to the content frame through its `postMessage`, so a
+ * wrapper there sees them first. A `message` listener cannot: on `window` listeners run in registration order whatever their
+ * capture flag, so the bus's comes first (run on 2e5c48c; UX-P2.8b architecture follow-up). The stream is held too, or the
+ * provisional chunk paints rows. A failure (`failHeld`) or a rewrite (`rewriteHeld`) then applies to every later answer of
+ * the type until the state's `leave`.
  */
 const HOLD_SOURCE = `
 const real = window.postMessage;
-const hold = { real, held: [], failure: null, failed: 0 };
+const hold = { real, type: arguments[0], held: [], failure: null, failed: 0, rewrite: null, rewritten: 0 };
 window.__nuigetHold = hold;
+// The two answers the host itself gives to an update check (Catalog.updates, handlers.ts): no source answered, or no update.
+hold.literal = (mode, result) => (mode === 'unavailable' ? { projectPath: result.projectPath, updates: [], sourcesUnavailable: true } : { projectPath: result.projectPath, updates: [] });
+hold.apply = data => {
+    if (hold.failure !== null) {
+        hold.failed += 1;
+        if (data.kind === 'response') real.call(window, { kind: data.kind, id: data.id, type: data.type, ok: false, error: { code: 'failed', message: hold.failure } }, '*');
+        return;
+    }
+    if (data.kind !== 'response') return;
+    hold.rewritten += 1;
+    real.call(window, data.ok ? { ...data, result: hold.literal(hold.rewrite, data.result) } : data, '*');
+};
 window.postMessage = function (data, ...rest) {
-    if (!data || data.type !== 'installed/get' || (data.kind !== 'stream' && data.kind !== 'response')) return real.call(window, data, ...rest);
-    if (hold.failure === null) { hold.held.push(data); return undefined; }
-    hold.failed += 1;
-    if (data.kind === 'response') real.call(window, { kind: data.kind, id: data.id, type: data.type, ok: false, error: { code: 'failed', message: hold.failure } }, '*');
+    if (!data || data.type !== hold.type || (data.kind !== 'stream' && data.kind !== 'response')) return real.call(window, data, ...rest);
+    if (hold.failure === null && hold.rewrite === null) { hold.held.push(data); return undefined; }
+    hold.apply(data);
     return undefined;
 };`;
 
-async function holdInstalled(): Promise<void> {
-    await script<void>(HOLD_SOURCE);
+type HeldType = 'installed/get' | 'updates/get';
+
+async function holdRequest(type: HeldType): Promise<void> {
+    await script<void>(HOLD_SOURCE, type);
 }
 
 /** Ends the hold, handing the bus what was held in order, and prints what it held. */
-async function releaseInstalled(state: string): Promise<void> {
-    const counts = await script<{ stream: number; response: number }>(`
+async function releaseHeld(state: string): Promise<void> {
+    const counts = await script<{ stream: number; response: number; type: string }>(`
 const hold = window.__nuigetHold;
-if (!hold) return { stream: 0, response: 0 };
+if (!hold) return { stream: 0, response: 0, type: 'none' };
 window.postMessage = hold.real;
-const counts = { stream: hold.held.filter(d => d.kind === 'stream').length, response: hold.held.filter(d => d.kind === 'response').length };
+const counts = { stream: hold.held.filter(d => d.kind === 'stream').length, response: hold.held.filter(d => d.kind === 'response').length, type: hold.type };
 for (const d of hold.held) window.postMessage(d, '*');
 delete window.__nuigetHold;
 return counts;`);
-    console.warn(`[hold] ${state}: ${counts.stream + counts.response} held (stream ${counts.stream}, response ${counts.response})`);
+    console.warn(`[hold] ${state}: ${counts.stream + counts.response} held (stream ${counts.stream}, response ${counts.response}, ${counts.type})`);
 }
 
 /**
- * From here on every real answer of `installed/get` reaches the bus as a failure, its id and type kept, and its stream not at
+ * From here on every real answer of the held type reaches the bus as a failure, its id and type kept, and its stream not at
  * all: the host invalidates a provisional list once it is evaluated, and the answer to that second request would replace the
  * cell (UX-P2.8b). Printed as `[hold]` and ended by the state's `leave`.
  */
-async function failInstalled(state: string, message: string): Promise<void> {
-    const failed = await script<number>(`
+async function failHeld(state: string, message: string): Promise<void> {
+    const failed = await script<{ count: number; type: string }>(`
 const hold = window.__nuigetHold;
 hold.failure = arguments[0];
-for (const d of hold.held) if (d.kind === 'response') { hold.failed += 1; hold.real.call(window, { kind: d.kind, id: d.id, type: d.type, ok: false, error: { code: 'failed', message: hold.failure } }, '*'); }
+for (const d of hold.held) hold.apply(d);
 hold.held = [];
-return hold.failed;`, message);
-    console.warn(`[hold] ${state}: ${failed} answers failed`);
+return { count: hold.failed, type: hold.type };`, message);
+    console.warn(`[hold] ${state}: ${failed.count} answers failed (${failed.type})`);
 }
 
-/** Ends `failInstalled`. */
-async function endFailure(): Promise<void> {
+/**
+ * From here on every real ok answer of `updates/get` reaches the bus with its result replaced by one of the host's own two
+ * answers, the envelope spread so its id, type and generation stay, and its stream not at all: no source answered
+ * (`unavailable`) or no update (`uptodate`) (UX-P3.1b, architecture-advisor ruling of 2026-11-06). Ended by `endHold`.
+ */
+async function rewriteHeld(state: string, mode: 'unavailable' | 'uptodate'): Promise<void> {
+    const rewritten = await script<{ count: number; type: string }>(`
+const hold = window.__nuigetHold;
+hold.rewrite = arguments[0];
+for (const d of hold.held) hold.apply(d);
+hold.held = [];
+return { count: hold.rewritten, type: hold.type };`, mode);
+    console.warn(`[hold] ${state}: ${rewritten.count} answers rewritten (${rewritten.type})`);
+}
+
+/** Ends `failHeld` or `rewriteHeld`: the content frame's own `postMessage` back by assignment. */
+async function endHold(): Promise<void> {
     await script<void>('const hold = window.__nuigetHold; if (hold) { window.postMessage = hold.real; delete window.__nuigetHold; }');
 }
 
@@ -176,6 +206,14 @@ async function gatewayInstalled(): Promise<void> {
     await installedListAtTop();
     await until('document.querySelector(\'[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])\') !== null', 'the first package row of the list');
     await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
+}
+
+/** Gateway's Updates tab with an update row (the `main-updates` reach). */
+async function gatewayUpdates(): Promise<void> {
+    await chooseFixtureProject('Gateway.csproj');
+    await clickVisible('updates-tab');
+    await findByTestId('updates-list', 120_000);
+    await until('document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'an update row', 120_000);
 }
 
 async function typeInSearch(text: string): Promise<void> {
@@ -266,27 +304,27 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
     'main-installed-loading': {
         reach: async () => {
             await gatewayInstalled();
-            await holdInstalled();
+            await holdRequest('installed/get');
             await chooseFixtureProject('Utility.csproj');
             await until('document.querySelector(\'[data-testid="installed-progress"]\') !== null && document.querySelectorAll(".nuiget-skeleton-row").length === 3 && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option\') === null', 'the bar and the skeleton with no row');
         },
-        leave: () => releaseInstalled('main-installed-loading'),
+        leave: () => releaseHeld('main-installed-loading'),
     },
     'main-installed-revalidating': {
         reach: async () => {
             await gatewayInstalled();
-            await holdInstalled();
+            await holdRequest('installed/get');
             await clickVisible('refresh-button');
             await until('document.querySelector(\'[data-testid="installed-progress"]\') !== null && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option\') !== null && !document.querySelector(\'[data-testid="refresh-button"]\').disabled', 'the rows under the bar, the list busy');
         },
-        leave: () => releaseInstalled('main-installed-revalidating'),
+        leave: () => releaseHeld('main-installed-revalidating'),
     },
     'main-installed-empty': {
         reach: async () => {
@@ -299,13 +337,13 @@ const REACH: Record<string, Reach> = {
     'main-installed-error': {
         reach: async () => {
             await gatewayInstalled();
-            await holdInstalled();
+            await holdRequest('installed/get');
             await chooseFixtureProject('Utility.csproj');
             await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
-            await failInstalled('main-installed-error', 'The project file could not be read.');
+            await failHeld('main-installed-error', 'The project file could not be read.');
             await until('document.querySelector(\'[data-testid="installed-error"] button\') !== null', 'the inline error with Retry');
         },
-        leave: endFailure,
+        leave: endHold,
     },
     'main-installed-unresolved': {
         reach: async () => {
@@ -461,13 +499,85 @@ const REACH: Record<string, Reach> = {
             await until(TRANSITIVE_HEADER_STILL, 'the transitive header without its spinner', 60_000);
         },
     },
-    'main-updates': {
+    'main-updates': { reach: gatewayUpdates },
+    'main-updates-hover': {
         reach: async () => {
-            await chooseFixtureProject('Gateway.csproj');
-            await clickVisible('updates-tab');
-            await findByTestId('updates-list', 120_000);
-            await until('document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'an update row', 120_000);
+            await gatewayUpdates();
+            const [option] = await driverOf().findElements(By.css('[data-testid="updates-list"] .nuiget-row-option'));
+            await driverOf().actions().move({ origin: option }).perform();
+            await until('document.querySelector(\'[data-testid="updates-list"] .nuiget-row-option:hover\') !== null', 'an update row under the pointer', 10_000);
         },
+    },
+    'main-updates-all': {
+        reach: async () => {
+            await chooseFixtureProject(ALL_PROJECTS);
+            await clickVisible('updates-tab');
+            // The fan-out settled: the tab's count and the level-1 groups, the two workspace folders (UX-P3.1b, as main-installed-all).
+            await until('/\\d/.test(document.querySelector(\'[data-testid="updates-tab"]\').textContent) && Number(document.querySelector(\'[data-testid="updates-list"] [data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 2', 'the settled fan-out');
+            // The window is pinned at the Tools folder, renewed on every probe, until the Unsupported project's leaf is rendered.
+            const leaf = `const list = document.querySelector('[data-testid="updates-list"]'); const row = list.querySelector('[data-testid="group-row-folder-tools"]'); if (row) { list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top; } else { list.scrollTop += 300; } return document.querySelector('[data-testid="updates-unsupported-unsupported.csproj"]') !== null;`;
+            await poll(async () => ((await script<boolean>(leaf)) ? true : undefined), 'the Unsupported project\'s message leaf', 120_000);
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
+        },
+    },
+    'main-updates-loading': {
+        reach: async () => {
+            await gatewayUpdates();
+            await holdRequest('updates/get');
+            await chooseFixtureProject('Utility.csproj');
+            await until('document.querySelector(\'[data-testid="updates-progress"]\') !== null && document.querySelectorAll(".nuiget-skeleton-row").length === 3 && document.querySelector(\'[data-testid="updates-list"] .nuiget-row-option\') === null', 'the bar and the skeleton with no row');
+        },
+        leave: () => releaseHeld('main-updates-loading'),
+    },
+    'main-updates-revalidating': {
+        reach: async () => {
+            await gatewayUpdates();
+            await holdRequest('updates/get');
+            await clickVisible('refresh-button');
+            await until('document.querySelector(\'[data-testid="updates-progress"]\') !== null && document.querySelector(\'[data-testid="updates-list"]\').getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="updates-list"] .nuiget-row-option\') !== null && !document.querySelector(\'[data-testid="refresh-button"]\').disabled', 'the rows under the bar, the list busy');
+        },
+        leave: () => releaseHeld('main-updates-revalidating'),
+    },
+    'main-updates-empty': {
+        reach: async () => {
+            await chooseFixtureProject('Empty.csproj');
+            await clickVisible('updates-tab');
+            // "No updates available." first means the installed result had not arrived: the wait goes on (MU10).
+            await until('document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No packages installed."', 'the empty state');
+        },
+    },
+    'main-updates-error': {
+        reach: async () => {
+            await gatewayUpdates();
+            await holdRequest('updates/get');
+            await chooseFixtureProject('Utility.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await failHeld('main-updates-error', 'The package sources could not be read.');
+            await until('document.querySelector(\'[data-testid="updates-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endHold,
+    },
+    'main-updates-unavailable': {
+        reach: async () => {
+            await gatewayUpdates();
+            await holdRequest('updates/get');
+            await chooseFixtureProject('Utility.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await rewriteHeld('main-updates-unavailable', 'unavailable');
+            await until('document.querySelector(\'[data-testid="updates-unavailable-banner"] button\') !== null && document.querySelector(".nuiget-empty-text")?.textContent === "Updates could not be checked: no package source answered."', 'the unavailable banner with Retry and the sentence');
+        },
+        leave: endHold,
+    },
+    'main-updates-empty-uptodate': {
+        reach: async () => {
+            await gatewayUpdates();
+            await holdRequest('updates/get');
+            await chooseFixtureProject('Utility.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await rewriteHeld('main-updates-empty-uptodate', 'uptodate');
+            await until('document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No updates available."', 'the up-to-date sentence');
+        },
+        leave: endHold,
     },
     'main-browse-results': {
         reach: async () => {
@@ -1204,7 +1314,7 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
 async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout; overflowHard: boolean }> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
-    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment);
+    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment, cellList(state.name));
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
     const before = chromeReferences.get(key);
     // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.

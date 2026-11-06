@@ -109,6 +109,8 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
  * list does: masked whole, since a version of another length moves the name's ellipsis point (UX-P0.fix-2, P0 phase review).
  */
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
+/** The main Updates list: the newest versions on nuget.org change between runs. */
+const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_BULK_LIST: Mask = { selector: '.nuiget-sidebar-bulk-list', reason: 'the dialog lists the newest versions on nuget.org' };
 /** The versions level's `‹ <id>` header above the suggestions (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_POPUP_HEADER: Mask = { selector: '.nuiget-search-popup-header', reason: 'the popup text renders with greyscale or subpixel anti-aliasing from run to run (H27, corrected); the options are under LIVE_SUGGESTIONS' };
@@ -161,7 +163,11 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-transitive-details', 'main', [primary('main')],
         'Gateway selected, a transitive row made current; the details panel shows its id.', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-updates', 'main', [primary('main')],
-        'Gateway selected, the Updates tab; its list has rows.', [{ selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' }]), diffTolerance: 0 },
+        'Gateway selected, the Updates tab; its list has rows.', [LIVE_UPDATES]), diffTolerance: 0 },
+    { ...ready('main-updates-hover', 'main', [primary('main')],
+        'Gateway selected, the Updates tab, the pointer on its first update row; the row matches :hover (the band of DS-ROW-3, UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-all', 'main', [primary('main')],
+        'All Projects selected, the Updates tab: one tree with a group row per project under its workspace folder; scrolled to the Tools folder, whose Unsupported project says why it is read-only and whose Empty project says nothing is installed, as message leaves (UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-browse-results', 'main', [primary('main')],
         '"Newtonsoft.Json" searched with Enter; the Browse list shows package-row-newtonsoft.json.', [LIVE_RESULTS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-browse-details', 'main', [primary('main')],
@@ -191,7 +197,18 @@ export const STATES: readonly NamedState[] = [
         'Utility chosen with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker installed-error).'), diffTolerance: 0 },
     { ...ready('main-installed-unresolved', 'main', [primary('main')],
         'The Unresolved project: its Serilog reference has no version it can tell, and the row says so: its version reads unresolved, its status why. It is unrestored by design (NU1015), so the Transitive group shows its restore-needed message.', [LIVE_ICONS]), diffTolerance: 0 },
-    pending('main-updates-unavailable', 'main', 'P3.1b', 'No source answered the update check: the unavailable banner.'),
+    { ...ready('main-updates-loading', 'main', [primary('main')],
+        'Gateway on the Updates tab, its answers then held in the webview document and Utility chosen: the first list loading under the 2 px bar with three skeleton rows (marker updates-progress); released after the capture.', [LIVE_MOTION]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-revalidating', 'main', [primary('main')],
+        'Gateway on the Updates tab, its answers then held and Refresh pressed: the rows stay under the 2 px bar and the list is aria-busy; released after the capture.', [LIVE_MOTION, LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-empty', 'main', [primary('main')],
+        'The Empty project on the Updates tab: the welcome-style "No packages installed." (marker updates-empty), never "up to date" (MU10).'), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-error', 'main', [primary('main')],
+        'Utility chosen on the Updates tab with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker updates-error).'), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-empty-uptodate', 'main', [primary('main')],
+        'Utility chosen on the Updates tab with its held answer rewritten to the "no update" answer the host itself gives: the welcome-style "No updates available." (marker updates-empty); ended after the capture.'), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-updates-unavailable', 'main', [primary('main')],
+        'Utility chosen on the Updates tab with its held answer rewritten to the "no source answered" answer the host itself gives: the unavailable banner with Retry and the sentence that the updates are unknown, never "no updates"; ended after the capture.'), diffTolerance: DIFF_TOLERANCE_START },
     pending('main-browse-unavailable', 'main', 'P3.10', 'No source answered the search: the unavailable banner.'),
     pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),
     pending('sidebar-browse-unavailable', 'sidebar', 'P3.10', 'No source answered the search: the sidebar banner.'),
