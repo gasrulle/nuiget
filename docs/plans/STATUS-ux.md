@@ -249,6 +249,32 @@ P0 item provides.
 
 ## Phase gates
 
+### P2 gate on da75aff (UX-P2.fix-8), 2026-11-06: holds; tag `labs/ux-P2-done`
+
+Collected again after the eight fix rows of the P2 review (P2.fix-1 to P2.fix-8, all `done`). The plan's **P2 gate** line, item by item:
+
+- V1–V5 rules `hard` and green: as on 31527a3 (the block below), unchanged on push run 42189521898 (da75aff, `conclusion success`)
+  and the dispatch's `UI` job; `grep -c 'pending P2'` → 0 in `ui-output.txt`; `[diff] summary: 54 compared, 54 at 0 px, 0 above
+  tolerance, 0 without a golden, 0 refused` and no `fingerprint differs` (UX-P2.fix-7). V1–V5 closed in `findings-ledger.md`.
+- Every P2 primitive and file at zero baseline entries: as below; `node scripts/check-css-baseline.mjs --item P2.fix-4` and
+  `--item P2.fix-8` → `0 entries`.
+- The menu proven on 1.90.0: `E2E (1.90.0)` and `E2E (stable)` green on dispatch 42189564304.
+- The owner's `slice-1` answers and the re-base recorded: P2.10, P2.11.
+- One Tier B dispatch and one `ui-macos` run green: **met.** Dispatch 42189564304 on da75aff, every job green: `UI` `48 passing`,
+  capture `57 passing`, classic `8 passing`; `UI matrix` dark-modern, light-modern, dark-2026, light-2026 `88 passing` each,
+  dark-high-contrast and light-high-contrast `79 passing` each; `UI floor (1.90.0)` `49 passing`; `UI macOS` `48 passing`, `6 passing`;
+  Lint, both Test jobs, both E2E jobs, SDK probe, Build & Package; `not reachable` 0 in every lane. Lane logs in
+  `captures/42189564304/<artifact>/`. The earlier dispatch 42125845752 on edf70e8 was already green in every job (P2.fix-1 to P2.fix-7).
+- Entries (a)–(g) of the block below: (a) P2.fix-1, (b) P2.fix-2, (c) P2.fix-3, (d) P2.fix-4, (e) P2.fix-5, (f) P2.fix-6, (g)
+  P2.fix-7, each `done`; the round-3 artboards P2.fix-8 (`main-updates` to P3.1a).
+- PHASE REVIEW: the review below (PASS WITH FIXES); its blocking entries are the fix rows, all closed; RUN-ux §6 step 3 re-runs the
+  gate, not the review.
+- Recorded for the planning session (no stop): the P2.fix-5 process slip (two pushes before a green run; the runs of 5aaf0b0 and
+  9dbc58a cancelled; recorded in `docs/plans/handoff/P2.fix-5.md`); DS-TYPE-5's prose ("a project … the pane-header type") against
+  `measure.ts`'s `level` target (UX-P2.fix-8); D37 (a) after P2.fix-8: P9.fix-2 and P9.fix-5 met, V4 not met on both its cells, V3
+  not pixel-reachable without a `main-installed-unsupported` artboard (a plan-row decision, the design-advisor's CONTRACT CHANGE
+  note in `docs/plans/handoff/P2.fix-8.md`), `main-updates` pending P3.1a; the judge stays informational.
+
 ### P2 gate on 31527a3 (UX-P2.11), 2026-11-05: does not hold yet
 
 The plan's **P2 gate** line, item by item:
