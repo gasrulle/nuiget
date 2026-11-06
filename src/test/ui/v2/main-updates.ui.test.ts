@@ -40,7 +40,8 @@ describe('2.0 main panel: Updates tab', () => {
         this.timeout(180_000);
         // The first answer needs the SDK probe, the project's sources and a feed read per package: generous, and bounded.
         const list = await findByTestId('updates-list', 120_000);
-        expect(await list.getAttribute('role')).to.equal('listbox');
+        // One grouped list per view (D48, UX-P3.1a): the single project's updates are a tree under the Direct packages group row.
+        expect(await list.getAttribute('role')).to.equal('tree');
         expect(await list.getAttribute('aria-multiselectable')).to.equal('true');
         const row = await findByTestId('package-row-newtonsoft.json', 120_000);
         expect(await row.getAttribute('textContent')).to.contain('13.0.2 →');
