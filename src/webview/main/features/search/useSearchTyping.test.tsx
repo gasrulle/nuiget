@@ -252,6 +252,20 @@ describe('main panel: typing in the search box', () => {
         expect(host.requests('cpm/preview')).toHaveLength(0);
     });
 
+    it('a failed ask shows the error row while browsing, and ArrowRight on it asks the trimmed text again (UX-P3.2)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await user.type(box(), 'ser ');
+        await waitFor(() => expect(autocompletes(host)).toHaveLength(1));
+        await hostSays(() => host.fail(autocompletes(host)[0], 'failed', 'the feed did not answer'));
+        const row = screen.getByTestId('search-suggestions-error');
+        expect(row).toHaveTextContent('The suggestions could not be loaded. Press → to retry.');
+        await user.keyboard('{ArrowRight}');
+        await waitFor(() => expect(autocompletes(host)).toHaveLength(2));
+        expect(autocompletes(host)[1].payload).toMatchObject({ query: 'ser' });
+        expect(screen.queryByTestId('search-suggestions-error')).toBeNull();
+    });
+
     it('the loading row shows during the first fetch and the suggestions stay while the next one runs', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

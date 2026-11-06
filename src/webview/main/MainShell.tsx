@@ -224,6 +224,8 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         suggestions={typing.suggestions}
                         onPickSuggestion={typing.pick}
                         pending={typing.suggesting}
+                        suggestError={typing.suggestError}
+                        onRetrySuggestions={typing.retrySuggestions}
                         versions={typing.expanded}
                         onExpandSuggestion={typing.expand}
                         onCollapseVersions={typing.collapse}

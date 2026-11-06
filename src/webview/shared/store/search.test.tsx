@@ -213,6 +213,32 @@ describe('search slice: quick-search', () => {
         expect(text('suggestions')).toBe('nuget.org:Serilog');
     });
 
+    it('a failed suggest keeps its error, with no suggestion beside it, until the next ask (UX-P3.2)', async () => {
+        const host = mount();
+        await withSession(host);
+        await withSources(host);
+        await act(async () => slice.suggest('ser'));
+        await hostSays(() => host.respond(host.requests('search/autocomplete')[0], { query: 'ser', groups: [{ sourceName: 'nuget.org', sourceUrl: FEED, packageIds: ['Serilog'] }] }));
+        await act(async () => slice.suggest('seri'));
+        await hostSays(() => host.fail(host.requests('search/autocomplete')[1], 'failed', 'the feed did not answer'));
+        expect(slice.suggestError?.message).toBe('the feed did not answer');
+        expect(text('suggestions')).toBe('none');
+        await act(async () => slice.suggest('seril'));
+        expect(slice.suggestError).toBeUndefined();
+        expect(slice.suggesting).toBe(true);
+    });
+
+    it('clearSuggestions drops the error of a failed suggest (UX-P3.2)', async () => {
+        const host = mount();
+        await withSession(host);
+        await withSources(host);
+        await act(async () => slice.suggest('ser'));
+        await hostSays(() => host.fail(host.requests('search/autocomplete')[0], 'failed', 'the feed did not answer'));
+        expect(slice.suggestError).toBeDefined();
+        await act(async () => slice.clearSuggestions());
+        expect(slice.suggestError).toBeUndefined();
+    });
+
     it('sends nothing when the setting asks for full searches or none while typing', async () => {
         const host = mount();
         await withSession(host);

@@ -36,6 +36,8 @@ export interface SearchState {
     suggestions: readonly QuickSearchSourceResult[];
     /** A quick-search is on its way. */
     suggesting: boolean;
+    /** The last quick-search failed: kept until the next ask or a clear, with no suggestion beside it (UX-P3.2). */
+    suggestError: ProtocolRequestError | undefined;
     /**
      * Ask the quick-search for the text over the committed source (every enabled source under `all`). Nothing is
      * sent while the source list is unknown or names no source, or when the setting asks for full searches.
@@ -112,7 +114,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
     const [requesting, setRequesting] = useState(false);
     const { sources } = useSources();
     const { config } = useConfig();
-    const [suggested, setSuggested] = useState<{ groups: readonly QuickSearchSourceResult[]; pending: boolean }>({ groups: NO_SUGGESTIONS, pending: false });
+    const [suggested, setSuggested] = useState<{ groups: readonly QuickSearchSourceResult[]; pending: boolean; error?: ProtocolRequestError }>({ groups: NO_SUGGESTIONS, pending: false });
     const suggestion = useRef<AbortController>(undefined);
 
     const ready = committed !== undefined;
@@ -187,12 +189,14 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
         suggestion.current?.abort();
         const controller = new AbortController();
         suggestion.current = controller;
-        setSuggested(previous => ({ groups: previous.groups, pending: true }));
+        // A new ask drops the last failure (UX-P3.2).
+        setSuggested(previous => ({ groups: previous.error === undefined ? previous.groups : NO_SUGGESTIONS, pending: true }));
         bus.request('search/autocomplete', { query: text, sources: named, includePrerelease: committed?.includePrerelease ?? false }, { signal: controller.signal }).then(
             ({ result }) => setSuggested({ groups: result.groups, pending: false }),
-            () => {
+            (error: unknown) => {
                 if (!controller.signal.aborted) {
-                    setSuggested({ groups: NO_SUGGESTIONS, pending: false });
+                    // The failure is kept for the box to say so, with no stale suggestion beside it (UX-P3.2).
+                    setSuggested({ groups: NO_SUGGESTIONS, pending: false, error: error instanceof ProtocolRequestError ? error : new ProtocolRequestError('failed', String(error)) });
                 }
             },
         );
@@ -201,7 +205,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
     useEffect(() => () => suggestion.current?.abort(), []);
 
     const state = useMemo<SearchState>(() => {
-        const quick = { suggestions: suggested.groups, suggesting: suggested.pending, suggest, clearSuggestions };
+        const quick = { suggestions: suggested.groups, suggesting: suggested.pending, suggestError: suggested.error, suggest, clearSuggestions };
         if (asked === undefined) {
             return { query: '', exactMatch: false, version: undefined, status: 'idle', results: NO_RESULTS, sourcesUnavailable: false, error: undefined, revalidating: false, search, clear, retry, ...quick };
         }

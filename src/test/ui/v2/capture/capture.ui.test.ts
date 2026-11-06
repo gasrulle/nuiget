@@ -122,7 +122,14 @@ hold.literals = {
     unavailable: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [], sourcesUnavailable: true }) },
     uptodate: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [] }) },
     'browse-unavailable': { type: 'search/query', of: result => ({ ...result, sourcesUnavailable: true }) },
-    'quicksearch-grouped': { type: 'search/autocomplete', of: result => ({ ...result, groups: [result.groups[0], { ...result.groups[0], sourceName: 'Fixture source', sourceUrl: 'https://fixture.invalid/v3/index.json' }] }) },
+    // The one live nuget.org answer split in two, no id twice (design-advisor follow-up, UX-P3.2): the first half stays under
+    // nuget.org, the rest under a second source unreachable by construction (architecture-advisor, UX-P3.2).
+    'quicksearch-grouped': { type: 'search/autocomplete', of: result => {
+        const [first] = result.groups;
+        const half = Math.ceil(first.packageIds.length / 2);
+        return { ...result, groups: [{ ...first, packageIds: first.packageIds.slice(0, half) },
+            { ...first, sourceName: 'Fixture source', sourceUrl: 'https://fixture.invalid/v3/index.json', packageIds: first.packageIds.slice(half) }] };
+    } },
 };
 hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {

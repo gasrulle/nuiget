@@ -34,6 +34,10 @@ export interface SearchTyping {
     pick: (suggestion: Suggestion) => void;
     /** Suggestions are on their way. */
     suggesting: boolean;
+    /** The last ask for suggestions failed (the slice keeps it until the next ask, UX-P3.2). */
+    suggestError: boolean;
+    /** Ask the suggestions of the box's text again, through the slice (the error row's ArrowRight). */
+    retrySuggestions: () => void;
     /** The versions of the expanded suggestion (ArrowRight), five at most. */
     expanded: SuggestionVersions | undefined;
     expand: (suggestion: Suggestion) => void;
@@ -57,7 +61,7 @@ const VERSION_LIMIT = 5;
  */
 export function useSearchTyping({ text, setText, browsing, focused, announce, install: installAction }: SearchTypingInput): SearchTyping {
     const bus = useMessageBus();
-    const { search, suggest, suggestions, suggesting, clearSuggestions } = useSearch();
+    const { search, suggest, suggestions, suggesting, suggestError, clearSuggestions } = useSearch();
     const includePrerelease = useSession().committed?.includePrerelease ?? false;
     const [expanded, setExpanded] = useState<SuggestionVersions | undefined>();
     const versionsAsk = useRef<AbortController | undefined>(undefined);
@@ -184,6 +188,8 @@ export function useSearchTyping({ text, setText, browsing, focused, announce, in
         submit,
         pick,
         suggesting: browsing && suggesting,
+        suggestError: browsing && suggestError !== undefined,
+        retrySuggestions: () => suggest(text.trim()),
         expanded: browsing ? expanded : undefined,
         expand,
         collapse,

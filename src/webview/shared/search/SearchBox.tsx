@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
-import { CloseIcon, FilterIcon, IconButton, TextField } from '../primitives';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, FilterIcon, IconButton, TextField } from '../primitives';
 import './search.css';
 
 /** A package id the quick-search offers while the user types, with the source that knows it. */
@@ -32,6 +32,9 @@ export interface SearchBoxProps {
     onPickSuggestion?: (suggestion: Suggestion) => void;
     /** Suggestions are being asked: a loading row while there are none yet, and the list stays open meanwhile. */
     pending?: boolean;
+    /** The last ask for suggestions failed: an error row says so; ArrowRight on it asks again (`onRetrySuggestions`, UX-P3.2). */
+    suggestError?: boolean;
+    onRetrySuggestions?: () => void;
     /** The versions level: shown instead of the suggestions while set. */
     versions?: SuggestionVersions;
     /** ArrowRight on a suggestion (or on the error row of its versions, to retry). */
@@ -55,7 +58,7 @@ type Option =
     | { kind: 'suggestion'; suggestion: Suggestion }
     | { kind: 'version'; suggestion: Suggestion; version: string }
     /** A row that is no choice (loading, an error, nothing found): never active. */
-    | { kind: 'note'; text: string };
+    | { kind: 'note'; text: string; 'data-testid'?: string };
 
 const isCompletePrefix = (text: string, prefixes: readonly string[]): boolean => {
     const lower = text.toLowerCase();
@@ -84,7 +87,7 @@ function groupsOf(suggestions: readonly Suggestion[]): Array<{ sourceName: strin
  * layer stack nor a listener on the document.
  */
 export function SearchBox(props: SearchBoxProps): React.JSX.Element {
-    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, inputRef, onFocusChange } = props;
+    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, suggestError = false, onRetrySuggestions, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, inputRef, onFocusChange } = props;
     const listId = `${useId()}-options`;
     const [active, setActive] = useState(-1);
     const [versionActive, setVersionActive] = useState(0);
@@ -109,7 +112,9 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
     } else if (suggestions.length > 0) {
         options = groups.flatMap(group => group.suggestions.map((suggestion): Option => ({ kind: 'suggestion', suggestion })));
     } else if (pending) {
-        options = [{ kind: 'note', text: 'Searching…' }];
+        options = [{ kind: 'note', text: 'Searching…', 'data-testid': 'search-suggestions-loading' }];
+    } else if (suggestError) {
+        options = [{ kind: 'note', text: 'The suggestions could not be loaded. Press → to retry.', 'data-testid': 'search-suggestions-error' }];
     }
     const versionLevel = versions !== undefined && !prefixMode;
     let versionOptions: Option[] = [];
@@ -190,6 +195,12 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                 }
                 return;
             case 'ArrowRight':
+                // The error row of the suggestions asks again, nothing else (UX-P3.2).
+                if (open && !versionLevel && suggestError && options.length > 0 && options.every(option => option.kind === 'note') && onRetrySuggestions !== undefined) {
+                    event.preventDefault();
+                    onRetrySuggestions();
+                    return;
+                }
                 if (onExpandSuggestion !== undefined) {
                     if (!versionLevel && activeOption?.kind === 'suggestion') {
                         event.preventDefault();
@@ -249,28 +260,35 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
     // The box keeps focus: a press on the list must not blur it before the click lands.
     const keepFocus = (event: React.MouseEvent): void => event.preventDefault();
 
-    const renderOption = (option: Option, id: string, isActive: boolean): React.JSX.Element => {
+    /**
+     * One option. The first option of a group carries the group's label at its end, as the quick pick's separator does
+     * (`label`, aria-hidden: the group is named by it through `aria-labelledby`; DS-DIVIDER-3, UX-P3.2).
+     */
+    const renderOption = (option: Option, id: string, isActive: boolean, label?: { id: string; text: string }): React.JSX.Element => {
         if (option.kind === 'note') {
-            return <div key={id} id={id} role="option" aria-selected={false} aria-disabled="true" className="nuiget-search-option nuiget-search-option--disabled">{option.text}</div>;
+            return <div key={id} id={id} role="option" aria-selected={false} aria-disabled="true" className="nuiget-search-option nuiget-search-option--disabled" data-testid={option['data-testid']}>{option.text}</div>;
         }
         const name = option.kind === 'prefix' ? option.prefix : option.kind === 'suggestion' ? option.suggestion.id : option.version;
         const classes = ['nuiget-search-option', option.kind === 'version' ? 'nuiget-search-option--version' : '', isActive ? 'nuiget-search-option--active' : ''].filter(Boolean).join(' ');
         return (
             <div key={id} id={id} role="option" aria-selected={isActive} className={classes} onMouseDown={keepFocus} onClick={() => pick(option)}>
                 <span>{name}</span>
-                {option.kind === 'suggestion' && onExpandSuggestion !== undefined ? (
-                    <span
-                        className="nuiget-search-option-expand"
-                        aria-hidden="true"
-                        onClick={event => {
-                            event.stopPropagation();
-                            setActive(options.indexOf(option));
-                            onExpandSuggestion(option.suggestion);
-                        }}
-                    >
-                        ›
-                    </span>
-                ) : null}
+                <span className="nuiget-search-option-end">
+                    {label === undefined ? null : <span id={label.id} className="nuiget-search-group-header" aria-hidden="true">{label.text}</span>}
+                    {option.kind === 'suggestion' && onExpandSuggestion !== undefined ? (
+                        <span
+                            className="nuiget-search-chevron nuiget-search-option-expand"
+                            aria-hidden="true"
+                            onClick={event => {
+                                event.stopPropagation();
+                                setActive(options.indexOf(option));
+                                onExpandSuggestion(option.suggestion);
+                            }}
+                        >
+                            <ChevronRightIcon size={16} />
+                        </span>
+                    ) : null}
+                </span>
             </div>
         );
     };
@@ -280,14 +298,14 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
         content = versionOptions.map((option, index) => renderOption(option, versionId(index), index === activeVersion));
     } else if (grouped) {
         let index = 0;
-        content = groups.map(group => {
-            const headerId = `${listId}-group-${group.sourceName}`;
+        content = groups.map((group, groupIndex) => {
+            // By index: a source name may hold a space, and aria-labelledby is a list of ids split on spaces.
+            const labelId = `${listId}-group-${groupIndex}`;
             return (
-                <div key={group.sourceName} role="group" aria-labelledby={headerId}>
-                    <div id={headerId} className="nuiget-search-group-header">{group.sourceName}</div>
-                    {group.suggestions.map(() => {
+                <div key={group.sourceName} role="group" aria-labelledby={labelId} className="nuiget-search-group">
+                    {group.suggestions.map((_, position) => {
                         const current = index++;
-                        return renderOption(options[current], optionId(current), current === activeIndex);
+                        return renderOption(options[current], optionId(current), current === activeIndex, position === 0 ? { id: labelId, text: group.sourceName } : undefined);
                     })}
                 </div>
             );
@@ -336,7 +354,8 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                 <div className="nuiget-search-popup">
                     {versionLevel ? (
                         <div className="nuiget-search-popup-header" aria-hidden="true" onMouseDown={keepFocus} onClick={() => onCollapseVersions?.()}>
-                            {`‹ ${versions.suggestion.id}`}
+                            <span className="nuiget-search-chevron"><ChevronLeftIcon size={16} /></span>
+                            <span>{versions.suggestion.id}</span>
                         </div>
                     ) : null}
                     <div className="nuiget-search-options" id={listId} role="listbox" aria-label={listLabel} aria-busy={pending && !versionLevel ? true : undefined} data-testid="search-suggestions">

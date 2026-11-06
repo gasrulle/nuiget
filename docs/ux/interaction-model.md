@@ -277,6 +277,7 @@ project has several and one block per project in All Projects; no version select
 | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's 2 px progress bar (loading and revalidating, above the tree), empty state ("No packages installed." or "No updates available."; never when a source could not be checked, which `updates-unavailable-banner` says) and inline error with Retry (UX-P3.1b) |
 | `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
 | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' 2 px progress bar (over the list area's top edge: alone on a first search, over the rows while it asks again), empty state ("No results for "x"."; never when a source could not be searched, which `browse-unavailable-banner` says) and inline error with Retry (UX-P3.2) |
+| `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching…" row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
@@ -328,7 +329,6 @@ is a project or section name lower-cased, as above.
 | Added by | Test id or attribute | Element |
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
-| Browse and details | `search-suggestions-loading`, `search-suggestions-empty`, `search-suggestions-error` | The quick-search popup's loading row, no-results row and error row |
 | Browse and details | `details-header`, `details-tab-bar` | The details pane's header (its 20 px inset is measured on it) and its 36 px tab strip |
 | Browse and details | `details-progress`, `details-empty`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, empty state ("Select a package to see its details."), inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
 | Sources | `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The source settings dialog's progress bar, empty state and inline error |

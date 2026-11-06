@@ -93,15 +93,22 @@ describe('SearchBox', () => {
         expect(box()).not.toHaveFocus();
     });
 
-    it('lists suggestions for plain text grouped per source when several sources answer, and a click picks one', async () => {
+    it('lists suggestions grouped per source when several sources answer, each group named by the label at the end of its first row (DS-DIVIDER-3, UX-P3.2), and a click picks one', async () => {
         const user = userEvent.setup();
         const onPick = vi.fn();
-        const suggestions = [{ id: 'Serilog', sourceName: 'nuget.org' }, { id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' }, { id: 'Serilog', sourceName: 'Contoso' }];
+        const suggestions = [{ id: 'Serilog', sourceName: 'nuget.org' }, { id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' }, { id: 'Serilog', sourceName: 'Contoso Packages' }];
         render(<Harness suggestions={suggestions} onPick={onPick} />);
         await user.type(box(), 'seri');
 
         expect(screen.getByRole('listbox', { name: 'Suggestions' })).toBeInTheDocument();
-        expect(optionTexts()).toEqual(['Serilog', 'Serilog.Sinks.Console', 'Serilog']);
+        // The label is no option's name: it is aria-hidden at the end of the group's first row, and names the group.
+        expect(screen.getAllByRole('option', { name: 'Serilog' })).toHaveLength(2);
+        expect(screen.getByRole('option', { name: 'Serilog.Sinks.Console' })).toBeInTheDocument();
+        // A source name with a space still names its group (the label is found by an id that holds no space).
+        expect(screen.getAllByRole('group')).toEqual([screen.getByRole('group', { name: 'nuget.org' }), screen.getByRole('group', { name: 'Contoso Packages' })]);
+        const labels = [...document.querySelectorAll('.nuiget-search-group-header')];
+        expect(labels.map(label => label.textContent)).toEqual(['nuget.org', 'Contoso Packages']);
+        expect(labels.every(label => label.getAttribute('aria-hidden') === 'true' && label.closest('[role="option"]') !== null)).toBe(true);
         await user.click(screen.getAllByRole('option')[1]);
         expect(onPick).toHaveBeenCalledWith({ id: 'Serilog.Sinks.Console', sourceName: 'nuget.org' });
         expect(box()).toHaveFocus();
@@ -165,6 +172,33 @@ describe('SearchBox', () => {
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
     });
 
+    it('a failed ask is an error row that says so; ArrowRight on it asks again, and nothing else (UX-P3.2)', async () => {
+        const user = userEvent.setup();
+        const onRetry = vi.fn();
+        const onExpand = vi.fn();
+        render(<Harness extra={{ suggestError: true, onRetrySuggestions: onRetry, onExpandSuggestion: onExpand }} />);
+        await user.type(box(), 'seri');
+        const [row] = screen.getAllByRole('option');
+        expect(row).toHaveAttribute('data-testid', 'search-suggestions-error');
+        expect(row).toHaveTextContent('The suggestions could not be loaded. Press → to retry.');
+        expect(row).toHaveAttribute('aria-disabled', 'true');
+        await user.keyboard('{ArrowRight}');
+        expect(onRetry).toHaveBeenCalledTimes(1);
+        expect(onExpand).not.toHaveBeenCalled();
+    });
+
+    it('the expand and back marks are codicon chevrons, never text glyphs (V62, UX-P3.2)', async () => {
+        const user = userEvent.setup();
+        const serilog = { id: 'Serilog', sourceName: 'nuget.org' };
+        const { rerender, container } = render(<Harness suggestions={[serilog]} extra={{ onExpandSuggestion: vi.fn() }} />);
+        await user.type(box(), 'seri');
+        expect(container.querySelector('.nuiget-search-option-expand [data-codicon="chevron-right"]')).not.toBeNull();
+        rerender(<Harness suggestions={[serilog]} extra={{ onExpandSuggestion: vi.fn(), versions: { suggestion: serilog, status: 'ready', versions: ['1.0.0'] } }} />);
+        expect(container.querySelector('.nuiget-search-popup-header [data-codicon="chevron-left"]')).not.toBeNull();
+        expect(container.querySelector('.nuiget-search-popup-header')).toHaveTextContent('Serilog');
+        expect(container.textContent).not.toMatch(/[‹›]/);
+    });
+
     it('a loading row while nothing is shown, and the old suggestions stay while the next fetch runs', async () => {
         const user = userEvent.setup();
         const onSubmit = vi.fn();
@@ -172,6 +206,7 @@ describe('SearchBox', () => {
         await user.type(box(), 'seri');
         const [loading] = screen.getAllByRole('option');
         expect(loading).toHaveTextContent('Searching…');
+        expect(loading).toHaveAttribute('data-testid', 'search-suggestions-loading');
         expect(loading).toHaveAttribute('aria-disabled', 'true');
         await user.keyboard('{ArrowDown}');
         expect(box()).not.toHaveAttribute('aria-activedescendant');

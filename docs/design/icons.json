@@ -3,6 +3,7 @@
   "icons": {
     "ChevronRightIcon": "chevron-right",
     "ChevronDownIcon": "chevron-down",
+    "ChevronLeftIcon": "chevron-left",
     "SettingsGearIcon": "settings-gear",
     "WarningIcon": "warning",
     "ErrorIcon": "error",

@@ -128,22 +128,6 @@
     "item": "P3.6"
   },
   {
-    "file": "src/webview/shared/search/search.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-search-popup",
-    "property": "max-height",
-    "value": "16em",
-    "item": "P3.2"
-  },
-  {
-    "file": "src/webview/shared/search/search.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-search-popup",
-    "property": "box-shadow",
-    "value": "0 2px 8px var(--nuiget-color-shadow)",
-    "item": "P3.2"
-  },
-  {
     "file": "src/webview/main/main.css",
     "rule": "specificity",
     "selector": ".nuiget-readme h1:first-child",

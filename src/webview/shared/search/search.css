@@ -28,14 +28,15 @@
     top: 100%;
     right: 0;
     left: 0;
-    max-height: 16em;
+    /* Eight compact rows and the popup's padding, the quick pick's bound (UX-P3.2). */
+    max-height: calc(8 * var(--nuiget-row-height-compact) + 2 * var(--nuiget-space-1));
     margin: var(--nuiget-space-1) 0 0;
     padding: var(--nuiget-space-1) 0;
     overflow-y: auto;
     border: var(--nuiget-line-width) solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-xs);
+    border-radius: var(--nuiget-radius-layer);
     background: var(--nuiget-color-widget-bg);
-    box-shadow: 0 2px 8px var(--nuiget-color-shadow);
+    box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
     color: var(--nuiget-color-widget-fg);
 }
 
@@ -43,6 +44,7 @@
 .nuiget-search-popup-header {
     display: flex;
     align-items: center;
+    gap: var(--nuiget-space-1);
     min-height: var(--nuiget-target-min);
     padding: 0 var(--nuiget-space-3);
     color: var(--nuiget-color-fg-muted);
@@ -50,13 +52,18 @@
     cursor: pointer;
 }
 
-/* The name of the source over its suggestions, when they come from two or more sources (1.x). */
+/*
+ * Suggestions from two or more sources: a quick-pick separator above every group but the first, and the source's name at the
+ * end of the group's first row, in normal case (DS-DIVIDER-3, UX-P3.2).
+ */
+.nuiget-search-group + .nuiget-search-group {
+    border-top: var(--nuiget-line-width) solid var(--nuiget-color-picker-separator);
+}
+
 .nuiget-search-group-header {
-    padding: var(--nuiget-space-2) var(--nuiget-space-3) var(--nuiget-space-1);
     color: var(--nuiget-color-fg-muted);
     font-size: var(--nuiget-font-size-sm);
-    font-weight: 600;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .nuiget-search-option {
@@ -64,9 +71,16 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--nuiget-space-4);
-    min-height: var(--nuiget-target-min);
+    min-height: var(--nuiget-row-height-compact);
     padding: 0 var(--nuiget-space-3);
-    cursor: pointer;
+    border-radius: var(--nuiget-radius-popup-row);
+}
+
+/* The end of an option: the group's label, then the expand chevron. */
+.nuiget-search-option-end {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-3);
 }
 
 .nuiget-search-option:hover {
@@ -84,15 +98,16 @@
 .nuiget-search-option--disabled:hover {
     background: none;
     color: var(--nuiget-color-fg-muted);
-    cursor: default;
 }
 
 .nuiget-search-option--version {
     padding-inline-start: var(--nuiget-space-5);
 }
 
-.nuiget-search-option-expand {
-    color: var(--nuiget-color-fg-muted);
+/* The codicon chevrons: expand a suggestion, go back from its versions (V62, UX-P3.2). */
+.nuiget-search-chevron {
+    display: inline-flex;
+    color: var(--nuiget-color-icon);
 }
 
 .nuiget-search-option--active .nuiget-search-option-expand {
