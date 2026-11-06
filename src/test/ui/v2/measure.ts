@@ -26,7 +26,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -136,6 +136,8 @@ export interface RuleDefinition {
     exceptStates?: readonly string[];
     /** The states a scope is measured in, for a rule with several owners; a scope not listed follows `states` (UX-P2.2). */
     scopeStates?: Partial<Record<Scope, readonly string[]>>;
+    /** States a scope does not apply in, the rule's other scopes unchanged (DS-RADIUS-2's rows in the popup states, UX-P3.2). */
+    scopeExceptStates?: Partial<Record<Scope, readonly string[]>>;
 }
 
 /**
@@ -176,9 +178,16 @@ const inGroups = (status: RuleStatus, ...groups: StateGroup[]): Partial<Record<S
 const UPDATES_NO_LIST_STATES: readonly string[] = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable'];
 /** The Browse cells with no list: the bar alone, the empty sentence, the inline error (UX-P3.2). */
 const BROWSE_NO_LIST_STATES: readonly string[] = ['main-browse-loading', 'main-browse-empty', 'main-browse-error'];
+/** The states that show the quick-search popup: its own rows, no list row (UX-P3.2). */
+const POPUP_STATES: readonly string[] = ['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped'];
+/** The popup's state cells: their markers are DS-STATE-1's; the list-cell rules (a bar, a banner, a welcome sentence) do not read a popup row. */
+const POPUP_CELL_STATES: readonly string[] = ['main-quicksearch-loading', 'main-quicksearch-error'];
 const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES];
-/** The states without a row by design on this tree; P3.2 removes the quick-search entries if its popup shows rows (D56). */
-const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, 'main-quicksearch-open', 'main-quicksearch-versions'];
+/**
+ * The states without a list row by design. The quick-search popup states stay here: a popup option is no list row, and the
+ * `popup` scope of DS-RADIUS-2 and DS-HEIGHT-2 reads it (design-advisor ruling of 2026-11-06, UX-P3.2).
+ */
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
 /** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-loading': ['installed-progress'],
@@ -200,6 +209,8 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-browse-empty': ['browse-empty'],
     'main-browse-error': ['browse-error'],
     'main-browse-unavailable': ['browse-unavailable-banner'],
+    'main-quicksearch-loading': ['search-suggestions-loading'],
+    'main-quicksearch-error': ['search-suggestions-error'],
 };
 /** DS-COLOR-1, the roles these cells paint; the rest join per screen with their P3 items (UX-P2.8b). */
 const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: string; property: 'color' | 'backgroundColor'; key: string }> = [
@@ -232,7 +243,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
     // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar (P3.7a's files: the sidebar and the compact Row).
     rule('DS-HEIGHT-1', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-2', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
+    // UX-P3.2 (design-advisor ruling): the popup's rows are the compact row, as the quick pick's (22, `quickInputRow`); read at P3.7a.
+    rule('DS-HEIGHT-2', { helper: 3, scopes: { ...on('P3.7a', 'sidebar'), popup: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, scopeStates: { popup: POPUP_STATES } }),
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
@@ -242,8 +254,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     // The popup covers the strip and the list: no badge is shown.
-    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES] }),
-    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/ }),
+    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES] }),
+    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
@@ -276,15 +288,18 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3a' }, dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: ['main-quicksearch-open', 'main-quicksearch-versions', ...NO_LIST_STATES], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused', 'main-installed-hover-current'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
-    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    // UX-P3.2: the popup layer at the layer radius and its rows at the popup row radius, read in the popup states only.
+    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
+    // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
+    rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -307,7 +322,7 @@ export const RULES: readonly RuleDefinition[] = [
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
         helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.10' } },
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/,
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
@@ -323,10 +338,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
     rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/ }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/ }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -382,7 +397,7 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'main-updates':
             return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', ...firstRow];
         case 'browse':
-            return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons'];
+            return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':
             return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
         default:
@@ -689,12 +704,28 @@ export interface EndOfP0 {
     copyEnds: Array<{ kind: 'empty' | 'banner' | 'leaf'; text: string }>;
     /** The Installed cells: DS-STATE-1, -2, -3, -4 and DS-COLOR-1 (UX-P2.8b). */
     stateCells: StateCells;
+    /** The quick-search popup when it is open (UX-P3.2): its radii, rows, group separators and labels. */
+    popup?: PopupFacts;
     /** UX-P0.14: the focused element (`document.activeElement`, the body excepted) and its outline (DS-FOCUS-1..3). */
     focus: FocusFacts | undefined;
     /** The theme's focus colours as VS Code put them on the root (hex, or empty when the theme leaves the key unset). */
     focusColours: { focusBorder: string; listFocusOutline: string; contrastActiveBorder: string };
     /** Every visible disabled affordance (`aria-disabled` or a disabled button) and its reason in text (DS-STATE-7). */
     disabled: Array<{ label: string; reason: string }>;
+}
+
+/** The quick-search popup's facts (DS-RADIUS-2 popup, DS-HEIGHT-2 popup, DS-DIVIDER-3; UX-P3.2). */
+export interface PopupFacts {
+    radius: string;
+    layerTarget: string;
+    optionRadii: string[];
+    rowTarget: string;
+    rowHeightTarget: string;
+    optionHeights: number[];
+    groups: Array<{ width: number; style: string; colour: string }>;
+    labels: Array<{ transform: string; size: number; colour: string }>;
+    pickerBorder: string;
+    description: string;
 }
 
 /** What a list's state cell renders (UX-P2.8b). */
@@ -1406,6 +1437,20 @@ const stateCells = {
     })),
     roles: ${JSON.stringify(ROLE_ELEMENTS)}.flatMap(entry => shown(entry.selector).map(el => ({ role: entry.role, key: entry.key, actual: getComputedStyle(el, entry.pseudo || null)[entry.property], expected: resolveKey(entry.key, entry.property) }))),
 };
+// UX-P3.2: the quick-search popup, when open.
+const popupEl = shown('.nuiget-search-popup')[0];
+const popup = popupEl ? {
+    radius: getComputedStyle(popupEl).borderTopLeftRadius,
+    layerTarget: lookValue('--nuiget-radius-layer'),
+    optionRadii: [...popupEl.querySelectorAll('.nuiget-search-option:not(.nuiget-search-option--disabled)')].filter(visible).map(el => getComputedStyle(el).borderTopLeftRadius),
+    rowTarget: lookValue('--nuiget-radius-popup-row'),
+    rowHeightTarget: lookValue('--nuiget-row-height-compact'),
+    optionHeights: [...popupEl.querySelectorAll('.nuiget-search-option')].filter(visible).map(el => round(rectOf(el).height)),
+    groups: [...popupEl.querySelectorAll('[role="group"]')].map(group => { const style = getComputedStyle(group); return { width: px(style.borderTopWidth), style: style.borderTopStyle, colour: style.borderTopColor }; }),
+    labels: [...popupEl.querySelectorAll('.nuiget-search-group-header')].filter(visible).map(el => { const style = getComputedStyle(el); return { transform: style.textTransform, size: px(style.fontSize), colour: style.color }; }),
+    pickerBorder: resolveKey('--vscode-pickerGroup-border', 'color'),
+    description: resolveKey('--vscode-descriptionForeground', 'color'),
+} : undefined;
 // UX-P0.14: the facts of the six rules registered with the theme dump (design-advisor ruling of 2026-10-24).
 const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
 const focusKind = el => {
@@ -1481,6 +1526,7 @@ const endOfP0 = {
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
     stateCells,
+    popup,
     focus,
     focusColours: {
         focusBorder: rootVars.getPropertyValue('--vscode-focusBorder').trim(),
@@ -2729,7 +2775,8 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             if (state.endsWith('-revalidating') && (cells.rows === 0 || !cells.listBusy)) {
                 clauses.push(`rows ${cells.rows}, aria-busy ${cells.listBusy}`);
             }
-            if (state.endsWith('-error') && cells.banners.filter(banner => banner.buttons === 1).length !== 1) {
+            // A popup error is a row of its own, no banner (UX-P3.2).
+            if (state.endsWith('-error') && !POPUP_CELL_STATES.includes(state) && cells.banners.filter(banner => banner.buttons === 1).length !== 1) {
                 clauses.push('no banner with one button');
             }
             if (state.endsWith('-unresolved') && !cells.disabledVersions.includes('unresolved')) {
@@ -2790,6 +2837,53 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
         }
     }
 }
+
+/** The quick-search popup's rules (UX-P3.2): DS-RADIUS-2 and DS-HEIGHT-2 in the `popup` scope, DS-DIVIDER-3. */
+function evaluatePopup(definition: RuleDefinition, scope: Scope, layout: Layout): { value: string; pass: boolean } | undefined {
+    const isPopupScope = scope === 'popup' && (definition.id === 'DS-RADIUS-2' || definition.id === 'DS-HEIGHT-2');
+    if (!isPopupScope && definition.id !== 'DS-DIVIDER-3') {
+        return undefined;
+    }
+    const popup = layout.endOfP0.popup;
+    if (popup === undefined) {
+        return { value: `${NOT_MEASURABLE} (no popup)`, pass: false };
+    }
+    const lengthOf = (value: string): number => Number.parseFloat(value);
+    if (definition.id === 'DS-RADIUS-2') {
+        const rows = popup.optionRadii.length === 0 ? 'rows none' : `rows ${tally(popup.optionRadii.map(radius => `${lengthOf(radius)}`))}`;
+        return {
+            value: `layer ${lengthOf(popup.radius)}, ${rows} (target layer ${lengthOf(popup.layerTarget)}, rows ${lengthOf(popup.rowTarget)})`,
+            pass: popup.radius === popup.layerTarget && popup.optionRadii.every(radius => radius === popup.rowTarget),
+        };
+    }
+    if (definition.id === 'DS-HEIGHT-2') {
+        if (popup.optionHeights.length === 0) {
+            return notMeasurablePopup('no popup row');
+        }
+        const check = heightCheck('', popup.optionHeights, HEIGHTS.compactRow, definition.tolerance);
+        return { value: `${check.text}; token ${popup.rowHeightTarget}`, pass: check.pass };
+    }
+    const off: string[] = [];
+    if (popup.labels.length < 2) {
+        off.push(`labels ${popup.labels.length}`);
+    }
+    for (const label of popup.labels) {
+        if (label.transform !== 'none' || label.size !== 11 || label.colour !== popup.description) {
+            off.push(`label ${label.transform} ${label.size}px ${label.colour}`);
+        }
+    }
+    const [first, ...rest] = popup.groups;
+    const separators = rest.filter(group => group.width === 1 && group.style === 'solid' && group.colour === popup.pickerBorder).length;
+    if (first === undefined || first.width !== 0 || rest.length === 0 || separators !== rest.length) {
+        off.push(`first group border ${first?.width ?? 'none'}; separators ${separators}/${rest.length}`);
+    }
+    return {
+        value: off.length === 0 ? `labels ${popup.labels.length} (text-transform none, 11px descriptionForeground); separators ${separators}/${rest.length} pickerGroup.border` : off.join('; '),
+        pass: off.length === 0,
+    };
+}
+
+const notMeasurablePopup = (why: string): { value: string; pass: boolean } => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
 
 /** The outer webview frame's scroll offset before a shot: a moved frame puts the editor's chrome into the crop (UX-P2.8b follow-up 2). */
 export function outerScrollVerdict(x: number, y: number): { text: string; pass: boolean } {
@@ -2890,6 +2984,10 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     }
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, definition, scope, state);
+    }
+    const popupVerdict = evaluatePopup(definition, scope, layout);
+    if (popupVerdict !== undefined) {
+        return popupVerdict;
     }
     const heightVerdict = evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
@@ -3060,7 +3158,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
         }
         for (const scope of (definition.helper === 8 ? Object.keys(definition.scopes) : [group, ...elementGroups(group, state)]) as Scope[]) {
             const declared = definition.scopes[scope];
-            if (declared === undefined || definition.scopeStates?.[scope]?.includes(state) === false) {
+            if (declared === undefined || definition.scopeStates?.[scope]?.includes(state) === false || definition.scopeExceptStates?.[scope]?.includes(state) === true) {
                 continue;
             }
             // A hard scope that a state does not hold in yet prints as pending on the item named for that state.

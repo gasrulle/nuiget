@@ -266,7 +266,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
      */
     const renderOption = (option: Option, id: string, isActive: boolean, label?: { id: string; text: string }): React.JSX.Element => {
         if (option.kind === 'note') {
-            return <div key={id} id={id} role="option" aria-selected={false} aria-disabled="true" className="nuiget-search-option nuiget-search-option--disabled" data-testid={option['data-testid']}>{option.text}</div>;
+            return <div key={id} id={id} role="option" aria-selected={false} aria-disabled="true" className="nuiget-search-option nuiget-search-option--disabled" data-testid={option['data-testid']} title={option.text}>{option.text}</div>;
         }
         const name = option.kind === 'prefix' ? option.prefix : option.kind === 'suggestion' ? option.suggestion.id : option.version;
         const classes = ['nuiget-search-option', option.kind === 'version' ? 'nuiget-search-option--version' : '', isActive ? 'nuiget-search-option--active' : ''].filter(Boolean).join(' ');

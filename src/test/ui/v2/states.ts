@@ -180,6 +180,12 @@ export const STATES: readonly NamedState[] = [
         '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-quicksearch-versions', 'main', [primary('main')],
         'The first suggestion opened with ArrowRight; the versions level is listed.', [LIVE_SUGGESTIONS, LIVE_CARET, LIVE_POPUP_HEADER]), diffTolerance: 0 },
+    { ...ready('main-quicksearch-loading', 'main', [primary('main')],
+        '"Serilog" typed with its suggestions held in the webview document: the "Searching…" row (marker search-suggestions-loading); released after the capture (UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-quicksearch-error', 'main', [primary('main')],
+        '"Serilog" typed with its suggestions failed, one fixed sentence: the error row "Press → to retry" (marker search-suggestions-error, UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-quicksearch-grouped', 'main', [primary('main')],
+        '"Serilog" typed with its one live nuget.org answer split in two groups, the second under an unreachable source by design: the quick-pick separator and the two labels (UX-P3.2).', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-readme', 'main', [primary('main')],
         'Gateway selected, Newtonsoft.Json made current, the README tab; the README or its empty state is shown.', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('sidebar-sections', 'sidebar', [

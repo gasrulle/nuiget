@@ -98,7 +98,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable'];
 
@@ -691,6 +691,45 @@ const REACH: Record<string, Reach> = {
             await REACH['main-quicksearch-open'].reach();
             await (await findByTestId('search-input')).sendKeys(Key.ARROW_DOWN, Key.ARROW_RIGHT);
             await poll(async () => ((await (await findByTestId('search-suggestions', 10_000)).findElements(By.css('.nuiget-search-option--version'))).length > 0 ? true : undefined), 'a version', 60_000);
+        },
+    },
+    // Each keystroke aborts the previous quick-search ask and the bus drops answers to aborted ids, so a hold here counts more
+    // than one answer (architecture-advisor ruling, UX-P3.2).
+    'main-quicksearch-loading': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/autocomplete');
+            await typeInSearch('Serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'a held answer');
+            await until('document.querySelector(\'[data-testid="search-suggestions-loading"]\') !== null', 'the Searching row');
+        },
+        leave: () => releaseHeld('main-quicksearch-loading'),
+    },
+    'main-quicksearch-error': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/autocomplete');
+            await typeInSearch('Serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'a held answer');
+            await failHeld('main-quicksearch-error', 'The package source did not answer.');
+            await until('document.querySelector(\'[data-testid="search-suggestions-error"]\') !== null', 'the error row');
+        },
+        leave: endHold,
+    },
+    'main-quicksearch-grouped': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/autocomplete');
+            await typeInSearch('Serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'a held answer');
+            await rewriteHeld('main-quicksearch-grouped', 'quicksearch-grouped');
+            // Two groups, each with an option: fewer than two live suggestions is not reachable, never one group under the name.
+            // No key and no click from here to leave (the second source is unreachable by construction).
+            await until('(() => { const groups = [...document.querySelectorAll(\'[data-testid="search-suggestions"] [role="group"]\')]; return groups.length === 2 && groups.every(group => group.querySelector(\'[role="option"]:not([aria-disabled="true"])\') !== null) && groups[1].querySelector(".nuiget-search-group-header")?.textContent === "Fixture source"; })()', 'two groups with their labels');
+        },
+        leave: async () => {
+            await endHold();
+            await (await findByTestId('search-input')).sendKeys(Key.ESCAPE, Key.ESCAPE);
         },
     },
     'main-details-readme': {

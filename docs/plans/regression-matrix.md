@@ -265,3 +265,6 @@ How to read and maintain it:
 | R237 | Named states | A first search: the 2 px bar alone (marker browse-progress) | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-browse-loading.dark-modern.1200.png | covered |
 | R238 | Named states | A search asked again: the rows stay under the 2 px bar, the list busy | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-browse-revalidating.dark-modern.1200.png | covered |
 | R239 | Named states | The search failed: the inline error with Retry (marker browse-error) | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-browse-error.dark-modern.1200.png | covered |
+| R240 | Named states | The quick search asking: the "Searching…" row (marker search-suggestions-loading) | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-quicksearch-loading.dark-modern.1200.png | covered |
+| R241 | Named states | The quick search failed: the error row, ArrowRight asks again (marker search-suggestions-error) | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-quicksearch-error.dark-modern.1200.png | covered |
+| R242 | Named states | Suggestions from two sources: the quick-pick separator and each group's label (DS-DIVIDER-3) | main | ui | `src/test/ui/v2/capture/capture.ui.test.ts` | main-quicksearch-grouped.dark-modern.1200.png | covered |

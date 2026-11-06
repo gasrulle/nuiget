@@ -55,7 +55,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
@@ -93,7 +93,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'PF-5')?.states).toEqual(['main-installed-details']);
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
         expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' }, popup: { pending: 'P3.7a' } });
+        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: { pending: 'P3.2' } });
+        expect(scopes('DS-DIVIDER-3')).toEqual({ browse: { pending: 'P3.2' } });
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: { pending: 'P3.3b' } });
@@ -104,6 +106,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
+        // A popup cell has no bar: its marker is DS-STATE-1's (UX-P3.2).
+        expect(RULES.find(rule => rule.id === 'DS-HEIGHT-11')?.exceptStates).toEqual(['main-quicksearch-loading', 'main-quicksearch-error']);
         expect(scopes('DS-HEIGHT-11')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.10' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         // UX-P0.12: PF-2, PF-3a and PF-4 where P9.fix-2, -3 and -4 measured; MS-8 hard for chrome (Appendix B).
         expect(scopes('PF-2')).toEqual({ 'main-installed': 'hard' });
@@ -162,7 +166,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
@@ -185,7 +189,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
@@ -733,7 +737,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
-            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error', ...updatesNoList]);
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList]);
             expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
         }
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
@@ -767,6 +771,27 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(COLLECT_LAYOUT).not.toContain('installed-progress');
     });
 
+    it('reads the quick-search popup: its radii, its rows and its group separators and labels (UX-P3.2)', () => {
+        const popup = (overrides: Record<string, unknown> = {}) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, popup: {
+            radius: '8px', layerTarget: '8px', optionRadii: ['4px', '4px'], rowTarget: '4px', rowHeightTarget: '24px', optionHeights: [22, 22],
+            groups: [{ width: 0, style: 'none', colour: 'rgb(0, 0, 0)' }, { width: 1, style: 'solid', colour: 'rgb(60, 60, 60)' }],
+            labels: [{ transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }, { transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }],
+            pickerBorder: 'rgb(60, 60, 60)', description: 'rgb(157, 157, 157)', ...overrides,
+        } } as Layout['endOfP0'] });
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: { pending: 'P3.2' }, value: 'layer 8, rows 4 ×2 (target layer 8, rows 4)' });
+        expect(lineOf('main-quicksearch-open', popup({ radius: '2px' }), 'DS-RADIUS-2@main-quicksearch-open/popup')).toMatchObject({ pass: false });
+        // The rows scope does not apply in a popup state; the popup scope applies in no list state.
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/rows')).toBeUndefined();
+        expect(lineOf('main-browse-results', popup(), 'DS-RADIUS-2@main-browse-results/popup')).toBeUndefined();
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-HEIGHT-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: { pending: 'P3.7a' } });
+        expect(lineOf('main-quicksearch-open', popup({ optionHeights: [24] }), 'DS-HEIGHT-2@main-quicksearch-open/popup')).toMatchObject({ pass: false });
+        expect(lineOf('main-quicksearch-grouped', popup(), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: true, value: 'labels 2 (text-transform none, 11px descriptionForeground); separators 1/1 pickerGroup.border' });
+        expect(lineOf('main-quicksearch-grouped', popup({ labels: [{ transform: 'uppercase', size: 11, colour: 'rgb(157, 157, 157)' }, { transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }] }), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });
+        expect(lineOf('main-quicksearch-grouped', popup({ groups: [{ width: 0, style: 'none', colour: 'rgb(0, 0, 0)' }, { width: 0, style: 'none', colour: 'rgb(0, 0, 0)' }] }), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });
+        expect(lineOf('main-quicksearch-grouped', layout(), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-DIVIDER-3@main-quicksearch-open')).toBeUndefined();
+    });
+
     it('reads the outer frame\'s offset: anything but 0,0 fails the state (UX-P2.8b)', () => {
         expect(outerScrollVerdict(0, 0)).toEqual({ text: 'outer scroll 0,0', pass: true });
         expect(outerScrollVerdict(0, 5)).toEqual({ text: 'outer scroll 0,5', pass: false });
@@ -790,6 +815,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-unresolved', { disabledVersions: ['unresolved'] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: true });
         // UX-P3.2: a first Browse search is the bar alone, no skeleton (rows first under it are P5.9a, D56).
         expect(line('main-browse-loading', { testIds: ['browse-progress'] }, 'DS-STATE-1@main-browse-loading')).toMatchObject({ pass: true, value: 'present: browse-progress; missing: none' });
+        // A popup error is a row of its own: no banner is asked of it (UX-P3.2).
+        expect(line('main-quicksearch-error', { testIds: ['search-suggestions-error'] }, 'DS-STATE-1@main-quicksearch-error')).toMatchObject({ pass: true, value: 'present: search-suggestions-error; missing: none' });
         expect(line('main-browse-loading', { testIds: ['browse-progress'], rows: 2 }, 'DS-STATE-1@main-browse-loading')).toMatchObject({ pass: false });
         expect(line('main-browse-loading', { progressTop: 150, contentTop: undefined }, 'DS-STATE-2@main-browse-loading')).toMatchObject({ pass: true, value: 'bar at list top; skeleton rows 0, rows 0; rows-first pending P5.9a' });
         expect(line('main-browse-loading', { progressTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-browse-loading')).toMatchObject({ pass: false });

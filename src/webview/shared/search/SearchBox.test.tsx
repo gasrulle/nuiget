@@ -182,6 +182,8 @@ describe('SearchBox', () => {
         expect(row).toHaveAttribute('data-testid', 'search-suggestions-error');
         expect(row).toHaveTextContent('The suggestions could not be loaded. Press → to retry.');
         expect(row).toHaveAttribute('aria-disabled', 'true');
+        // A row that is no choice says why (DS-STATE-7): its own sentence.
+        expect(row).toHaveAttribute('title', 'The suggestions could not be loaded. Press → to retry.');
         await user.keyboard('{ArrowRight}');
         expect(onRetry).toHaveBeenCalledTimes(1);
         expect(onExpand).not.toHaveBeenCalled();
