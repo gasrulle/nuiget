@@ -493,6 +493,38 @@ export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = 
     'main-updates': 'P3.1a',
 };
 
+/** The tail of a grouped list's walk: its level-1 group rows, where End lands and where ArrowUp from End lands. */
+export interface TreeTail {
+    groups: number;
+    end: string;
+    upFromEnd: string;
+}
+
+/**
+ * The tail each tree screen's walk expects, declared, never derived from the DOM (design-advisor ruling of 2026-11-06,
+ * UX-P3.1a; interaction model §5 "Home/End jump to the first and last row", ADR-013 Decision 8). `{size}` is the package
+ * rows' `aria-setsize` and `{size-1}` one less. The walk reads the level-1 `aria-setsize` at Home and compares it with
+ * `groups`, so a group added or removed fails until the table follows. Only the item whose change moves a screen's level-1
+ * groups or its tail updates its entry here, in the same commit, with the reason in its note (P3.1b if its All Projects
+ * form ever walks). The flat screens have no entry.
+ */
+export const KEYS_TREE_TAIL: Readonly<Partial<Record<KeyScreen, TreeTail>>> = {
+    // The Transitive group row is the Installed tree's last row (D48): End lands on it and the last package row is one up.
+    'main-installed': { groups: 2, end: 'group 2', upFromEnd: 'row {size}' },
+    // The Updates tree has the Direct packages group alone (D14: an update is direct-only): End lands on the last row.
+    'main-updates': { groups: 1, end: 'row {size}', upFromEnd: 'row {size-1}' },
+};
+
+/** A screen's `KEYS_TREE_TAIL` entry with `{size}` and `{size-1}` filled in, or `undefined` for a screen without one. */
+export function treeTail(screen: KeyScreen, size: number): TreeTail | undefined {
+    const tail = KEYS_TREE_TAIL[screen];
+    if (tail === undefined) {
+        return undefined;
+    }
+    const fill = (text: string): string => text.replace('{size-1}', String(size - 1)).replace('{size}', String(size));
+    return { groups: tail.groups, end: fill(tail.end), upFromEnd: fill(tail.upFromEnd) };
+}
+
 /**
  * The `[keys]` lines of a screen and their failures: the tab sequence against `KEYS_EXPECTED`, a ring at every stop, and
  * each key outcome against its expectation. A failure fails the walk only while `status` is `hard`.

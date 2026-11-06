@@ -12,7 +12,7 @@ import { measureExemplar, measureWorkbench } from '../workbench';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -796,7 +796,7 @@ const focusedTestId = async (): Promise<string> => (await script<string | null>(
  * The row keys of interaction model §5 that write nothing, on the list reached from the search box: Ctrl+DownArrow, Home,
  * ArrowDown, ArrowUp, End, Enter where it only shows the details (else `enter` says why it is not pressed), Ctrl+UpArrow.
  */
-async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' | { skipped: string }): Promise<KeyOutcome[]> {
+async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: string, enter: 'press' | { skipped: string }): Promise<KeyOutcome[]> {
     const outcomes: KeyOutcome[] = [];
     await (await findByTestId(searchTestId, 30_000)).click();
     await press(Key.chord(MODIFIER, Key.ARROW_DOWN));
@@ -822,6 +822,9 @@ async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' 
     if (tree) {
         // A grouped list (D48): the group row comes first and the package rows count among themselves.
         await step('rows Home', Key.HOME, 'group 1');
+        // The level-1 set size checks the declared tail: a group added or removed fails until `KEYS_TREE_TAIL` follows.
+        const declared = KEYS_TREE_TAIL[screen];
+        outcomes.push({ path: 'rows Home groups', observed: String(await readSize()), expected: declared === undefined ? 'no KEYS_TREE_TAIL entry' : String(declared.groups) });
         await step('rows ArrowDown', Key.ARROW_DOWN, 'row 1');
         size = await readSize();
         await step('rows ArrowUp', Key.ARROW_UP, 'group 1');
@@ -830,10 +833,16 @@ async function rowKeys(listTestId: string, searchTestId: string, enter: 'press' 
         await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
         await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
     }
-    // The Transitive group row is the tree's last row (D48): End lands on it and the last package row is one up.
+    // A tree's tail is the screen's declaration in `KEYS_TREE_TAIL` (End on its last treeitem, interaction model §5), checked
+    // by the level-1 set size read at Home; a tree screen without an entry fails, never guessed.
     if (tree) {
-        await step('rows End', Key.END, 'group 2');
-        await step('rows ArrowUp from End', Key.ARROW_UP, `row ${size}`);
+        const tail = treeTail(screen, size);
+        if (tail === undefined) {
+            outcomes.push({ path: 'rows End', observed: await activeRow(listTestId), expected: 'no KEYS_TREE_TAIL entry' });
+        } else {
+            await step('rows End', Key.END, tail.end);
+            await step('rows ArrowUp from End', Key.ARROW_UP, tail.upFromEnd);
+        }
     } else {
         await step('rows End', Key.END, `row ${size}`);
     }
@@ -1392,7 +1401,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             const motion = motionLines('main panel at open', await script<MotionFacts>(RUNNING_ANIMATIONS));
             printLines(motion.lines);
             await gatewayInstalled();
-            await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('installed-list', 'search-input', 'press'), ...await dialogKeys()]);
+            await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-installed', 'installed-list', 'search-input', 'press'), ...await dialogKeys()]);
             if (MOTION_STATUS === 'hard' && motion.failures.length > 0) {
                 throw new Error(`[motion] ${motion.failures.join('; ')}`);
             }
@@ -1404,7 +1413,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('main-updates'), PANEL_WIDTH);
             await freshMainPanel();
             await REACH['main-updates'].reach();
-            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('updates-list', 'search-input', { skipped: 'Enter updates the package on today\'s tree (A1)' }));
+            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('main-updates', 'updates-list', 'search-input', { skipped: 'Enter updates the package on today\'s tree (A1)' }));
         });
 
         it('keyboard paths: main panel, Browse (UX-P0.24)', async function () {
@@ -1413,7 +1422,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('main-browse-results'), PANEL_WIDTH);
             await freshMainPanel();
             await REACH['main-browse-results'].reach();
-            await walkScreen('main-browse', 'nuiget-app', 'search-input', () => rowKeys('browse-list', 'search-input', 'press'));
+            await walkScreen('main-browse', 'nuiget-app', 'search-input', () => rowKeys('main-browse', 'browse-list', 'search-input', 'press'));
         });
 
         it('keyboard paths: sidebar (UX-P0.24)', async function () {
@@ -1421,7 +1430,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyTheme('dark-modern');
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
-            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
+            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state

@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
 /**
@@ -195,6 +195,19 @@ describe('the accessibility harness (UX-P0.23)', () => {
             'main-browse 3 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'sidebar 7 combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',
         ]);
+    });
+
+    it('declares each tree screen\'s tail, checked by the level-1 set size at Home, and fills in the package rows\' size (UX-P3.1a)', () => {
+        expect(Object.entries(KEYS_TREE_TAIL).map(([screen, tail]) => `${screen} ${tail?.groups} ${tail?.end} ${tail?.upFromEnd}`)).toEqual([
+            'main-installed 2 group 2 row {size}',
+            'main-updates 1 row {size} row {size-1}',
+        ]);
+        expect(treeTail('main-installed', 14)).toEqual({ groups: 2, end: 'group 2', upFromEnd: 'row 14' });
+        expect(treeTail('main-installed', 15)).toEqual({ groups: 2, end: 'group 2', upFromEnd: 'row 15' });
+        expect(treeTail('main-updates', 14)).toEqual({ groups: 1, end: 'row 14', upFromEnd: 'row 13' });
+        expect(treeTail('main-updates', 15)).toEqual({ groups: 1, end: 'row 15', upFromEnd: 'row 14' });
+        expect(treeTail('main-browse', 14)).toBeUndefined();
+        expect(treeTail('sidebar', 14)).toBeUndefined();
     });
 
     it('describes the focused element as a line of the screen\'s ARIA snapshot, with what would draw its ring (UX-P0.24)', () => {
