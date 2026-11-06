@@ -271,9 +271,9 @@
   },
   "main-updates.dark-modern.1200.png": {
     "status": "approved",
-    "run": "42121277111",
-    "sha256": "b9dbef6d948c691be02e0b51169388937ed5beb3e9ff23b603ff620ddca6d857",
-    "sidecarSha256": "bb3655e84609dfad4ccf3d0bee517b8093124ef49742a6ca02042db117d9a53f"
+    "run": "42227273041",
+    "sha256": "fe5e684e7c0b85f5c638b63f44d6207866bed6423b8aee8c9bdb98bd14c894c5",
+    "sidecarSha256": "ba8c540fded93a311ac18debaffaa0b4a698e9d13cdf3d036de4795c98e2c918"
   },
   "sidebar-narrow-200px.dark-modern.200.png": {
     "status": "baseline",

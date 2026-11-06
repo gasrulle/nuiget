@@ -488,10 +488,7 @@ export const KEYS_PENDING: Readonly<Record<string, string>> = {
  * A screen whose moved stops are not yet in its committed ARIA snapshot, with the item whose green run adopts it; that
  * item's closing commit removes the entry (UX-P2.1d).
  */
-export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = {
-    // UX-P3.1a: the grouped Updates list; its snapshot is adopted from the item's closing green run.
-    'main-updates': 'P3.1a',
-};
+export const KEYS_AWAITING_ARIA: Readonly<Partial<Record<KeyScreen, string>>> = {};
 
 /** The tail of a grouped list's walk: its level-1 group rows, where End lands and where ArrowUp from End lands. */
 export interface TreeTail {

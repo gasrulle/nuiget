@@ -1,0 +1,1436 @@
+{
+  "item": "P3.1a",
+  "runs": [
+    {
+      "runId": "42227273041",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "5c9c38e (labs/ux, attempt 2)",
+      "look": "modern",
+      "workflow": "wf_53da4e86-187",
+      "captures": {
+        "main-updates": {
+          "png": "captures/42227273041/a2-shots/main-updates.dark-modern.1200.png",
+          "sha256": "fe5e684e7c0b85f5c638b63f44d6207866bed6423b8aee8c9bdb98bd14c894c5",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 8,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] The split between the list and the details pane is painted at rest as a 4 px band (x 420-423, #313131, y 77 to the bottom), where the artboard draws a single 1 px separator at x 420 (#2b2b2b) with the details pane starting at x 421; a workbench split shows a 1 px separator and a transparent sash until hovered. | [geometry] The split between the list and the details pane paints a 4 px wide #313131 band at x 420-423 from y 77 to the bottom, where the artboard draws a 1 px separator at x 420 with a transparent sash; the details pane therefore starts at x 424 instead of the spec's package-details-panel x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest paints --nuiget-color-border; the sidecar masks the list only (0,147,420x656), the band x 420-423 is unmasked and [diff] reads 0 px, so the item did not touch it",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-updates#D1 (P2.9a); design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard and the copy rules draw the Title Case label \"Select All\". | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and DS-COPY-1 requires Title Case button labels (design-system §8 names \"Select All\").",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the two toolbar labels stay sentence case until P3.11 (DECISIONS 2026-11-01 UX-P2.8a; tracker row P3.11: KEYS_EXPECTED, snapshots, SPEC pendingIds); toolbar unmasked, [diff] 0 px",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-updates#D2 (P2.9a); design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D3",
+          "state": "main-updates",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard and the copy rules draw the Title Case label \"Update All (14)\". | [states] The primary bulk button reads \"Update all (14)\" in sentence case, where the artboard's update-all-button reads \"Update All (14)\" and DS-COPY-1 requires Title Case button labels (design-system §8 names \"Update All\").",
+          "severity": "major",
+          "box": [
+            296,
+            117,
+            108,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the two toolbar labels stay sentence case until P3.11 (DECISIONS 2026-11-01 UX-P2.8a; tracker row P3.11: KEYS_EXPECTED, snapshots, SPEC pendingIds); toolbar unmasked, [diff] 0 px",
+          "ruling": "The judge-log rule of docs/plans/STATUS-ux.md (design-advisor, UX-P2.1b); earlier entry main-updates#D3 (P2.9a); design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D4",
+          "state": "main-updates",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits about 12 px higher than in the artboard (glyphs at y 88-100 against 100-112), only about 11 px below the pane top while its start inset is 20 px, so it looks squeezed against the top edge compared with the artboard's 20 px inset on both axes. | [geometry] The details pane's empty sentence 'Select a package to see its details.' has its ink top at y 88, about 11 px below the pane top (77), where the artboard places it at y 100 (about 23 px, a 20 px inset); its start inset stays 20 px from the pane edge, so the top inset is about 12 px short of the artboard and no longer matches the start inset.",
+          "severity": "major",
+          "box": [
+            441,
+            88,
+            229,
+            25
+          ],
+          "rule": "NEW: the details pane's welcome content (the empty sentence) starts at the details inset on both axes: .nuiget-details .nuiget-empty top inset = 20 (DS-INSET-4's inset), measured by the DS-INSET-4 helper's details scope or by SPEC@main-updates/details once the sentence carries the details-empty hook",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "ink y 88-100 against the artboard's 100-112: primitives.css:929 pads 8 top, round3/main-updates.dc.html:191 pads var(--nuiget-inset-details) 20",
+          "ruling": "design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions); DECISIONS 2026-11-01 UX-P2.8b (P3.3b places it); earlier entry main-transitive-expanded#D18 (P2.fix-8)"
+        }
+      ]
+    },
+    {
+      "runId": "40111706433",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "57a9bdd (base)",
+      "look": "modern",
+      "workflow": "wf_044745db-ef9",
+      "captures": {
+        "main-updates": {
+          "png": "docs/ux/reference-2.0/main-updates.dark-modern.1200.png",
+          "sha256": "2be18e999ae6519b71520c84c9823a15b101f49aedae488650c3c9f8ee172d0a",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 45,
+        "standing": 16,
+        "blocking": 2,
+        "refuted": 0,
+        "singleJudge": 7,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-updates#D6",
+          "state": "main-updates",
+          "finding": "[native] The header check boxes (Restore after operations, Include prerelease) are 16 px, where the artboard draws 18 px check boxes.",
+          "severity": "minor",
+          "box": [
+            512,
+            12,
+            203,
+            16
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-8",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The header check boxes (Restore after operations, Include prerelease) are 16 px, where the artboard draws 18 px check boxes.",
+              "severity": "minor",
+              "box": [
+                512,
+                12,
+                203,
+                16
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The header check boxes are visibly smaller than the artboard's; DS-HEIGHT-9 measures 16x16 x2 (target 18x18).",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D12",
+          "state": "main-updates",
+          "finding": "[native] The selected tab's indicator is a 2 px underline, where the panel-title rule and the navbar draw a 1 px indicator.",
+          "severity": "minor",
+          "box": [
+            132,
+            91,
+            98,
+            2
+          ],
+          "rule": "DS-COLOR-4",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-12",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The selected tab's indicator is a 2 px underline, where the panel-title rule and the navbar draw a 1 px indicator.",
+              "severity": "minor",
+              "box": [
+                132,
+                91,
+                98,
+                2
+              ],
+              "rule": "DS-COLOR-4",
+              "verdict": "confirmed",
+              "reason": "Pixels at x 180 are 0,120,212 on both y 91 and 92 (a 2 px underline), where DS-COLOR-4 sets a 1 px panelTitle.activeBorder underline and the artboard's line is 1 px (y 111 only).",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D13",
+          "state": "main-updates",
+          "finding": "[native] The count badges (Installed 15, 1, Updates 14) are 24x17 rectangles with near-square corners, where the artboard draws Modern UI count badges as 19 px circles.",
+          "severity": "major",
+          "box": [
+            75,
+            72,
+            147,
+            17
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-13",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The count badges (Installed 15, 1, Updates 14) are 24x17 rectangles with near-square corners, where the artboard draws Modern UI count badges as 19 px circles.",
+              "severity": "major",
+              "box": [
+                75,
+                72,
+                147,
+                17
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The crop shows rounded-rectangle count badges, not circles; DS-HEIGHT-10 measures 17x17.5 and 24.1x17.5 x2 (at least 19x19), radius 4px (target round).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D8",
+          "state": "main-updates",
+          "finding": "[native] The author names are drawn at weight 400, where the artboard and the secondary-text rule draw the author emphasis at 11/600.",
+          "severity": "minor",
+          "box": [
+            103,
+            177,
+            210,
+            12
+          ],
+          "rule": "DS-TYPE-6",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-21",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The author names are drawn at weight 400, where the artboard and the secondary-text rule draw the author emphasis at 11/600.",
+              "severity": "minor",
+              "box": [
+                103,
+                177,
+                210,
+                12
+              ],
+              "rule": "DS-TYPE-6",
+              "verdict": "confirmed",
+              "reason": "The capture's author names are regular weight, where the artboard's are bold and DS-TYPE-6 sets the author emphasis at 11/600.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D20",
+          "state": "main-updates",
+          "finding": "[geometry] The main header's vertical padding is asymmetric: the first row of controls starts 8 px below the top (y 8), but the search box ends 4 px above the header line (search bottom y 63, line y 68). The artboard has 8 above and 8 below (selects y 8, search 42-68, line y 76).",
+          "severity": "major",
+          "box": [
+            0,
+            0,
+            1200,
+            69
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-5",
+              "lens": "geometry",
+              "state": "main-updates",
+              "finding": "The main header's vertical padding is asymmetric: the first row of controls starts 8 px below the top (y 8), but the search box ends 4 px above the header line (search bottom y 63, line y 68). The artboard has 8 above and 8 below (selects y 8, search 42-68, line y 76).",
+              "severity": "major",
+              "box": [
+                0,
+                0,
+                1200,
+                69
+              ],
+              "rule": "DS-INSET-2",
+              "verdict": "confirmed",
+              "reason": "The search border ends at y 63, the header line is at y 68 and the first row starts at y 8; DS-INSET-2 main-header measures 16/20 8/4.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D20b",
+          "state": "main-updates",
+          "finding": "[geometry] The Update all (14) button ends at x 413, 6-7 px from the list column's edge at x 420, while Select all starts at x 16. The spec ends it at x 404, a 16 px end inset matching the start.",
+          "severity": "major",
+          "box": [
+            291,
+            98,
+            129,
+            24
+          ],
+          "rule": "DS-INSET-3",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-8",
+              "lens": "geometry",
+              "state": "main-updates",
+              "finding": "The Update all (14) button ends at x 413, 6-7 px from the list column's edge at x 420, while Select all starts at x 16. The spec ends it at x 404, a 16 px end inset matching the start.",
+              "severity": "major",
+              "box": [
+                291,
+                98,
+                129,
+                24
+              ],
+              "rule": "DS-INSET-3",
+              "verdict": "confirmed",
+              "reason": "Update all ends about 6 px from the column edge while Select all starts at 16; DS-INSET-2 toolbars measures 16/6, and the hard PF-4 (button 414, scroll port 420) only checks containment, so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D22",
+          "state": "main-updates",
+          "finding": "[states] The refresh action uses a two-arrow sync glyph and the source-settings action a different gear from the artboard, which draws a single-arrow refresh and its own settings glyph at refresh-button and source-settings.",
+          "severity": "minor",
+          "box": [
+            1130,
+            9,
+            55,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-11",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The refresh action uses a two-arrow sync glyph and the source-settings action a different gear from the artboard, which draws a single-arrow refresh and its own settings glyph at refresh-button and source-settings.",
+              "severity": "minor",
+              "box": [
+                1130,
+                9,
+                55,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The capture's refresh action is a two-arrow sync glyph and the settings glyph differs, where the artboard crop draws a single-arrow refresh and another settings glyph.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] The Direct Packages group header the artboard draws at the top of the tree (chevron, 'Direct Packages' title, count badge 14 at the end, spec section-header-direct 16,147 349x28) is missing: the capture's rows start straight under the toolbar as a flat list. | [geometry] The Direct Packages group row with its 14 count badge, drawn by the artboard at y 147-175 between the toolbar and the first row (spec section-header-direct x 16 y 147 h 28), is missing: the capture starts the Dapper row directly under the toolbar at y 126. | [states] The 'Direct Packages' group row with its count badge (14), which the artboard draws at the top of the tree (section-header-direct, x 16, y 147, 28 px high, badge at its end), is missing: the capture starts the flat list of update rows directly under the bulk toolbar.",
+          "severity": "blocking",
+          "box": [
+            16,
+            147,
+            381,
+            28
+          ],
+          "rule": "DS-HEIGHT-1, judge-only, DS-TYPE-5",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.1a",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P3.1a (DS-HEIGHT-1, judge-only, DS-TYPE-5), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D21",
+          "state": "main-updates",
+          "finding": "[native] The list's scrollbar is a browser-default scrollbar with up and down arrow buttons and a rounded thumb in a 12 px track, where the artboard draws the workbench's token scrollbar (8 px thumb, no arrows, transparent track). | [geometry] The list's scrollbar is a 15 px opaque track (x 405-419) with arrow buttons at both ends, which narrows the rows to 405 px. The spec has an 8 px Modern UI scrollbar with a transparent track and rows 412 px wide (package-row w 412). | [states] The list's scrollbar has the browser's default arrow buttons at its top and bottom, but the artboard draws the slim token scrollbar with no arrow buttons.",
+          "severity": "blocking",
+          "box": [
+            405,
+            126,
+            15,
+            677
+          ],
+          "rule": "DS-SCROLL-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P3.9 (DS-SCROLL-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[native] Every update row is separated by a 1 px horizontal line (y 204, 283, 362 and so on), where the artboard and the Extensions view draw no line between rows. | [geometry] A full-width 1 px line (x 0-404) is drawn between every pair of package rows (y 204, 283, 362, 441, 520, 599, 678, 757); the artboard draws no line between rows. | [states] Horizontal divider lines are drawn between every pair of update rows (y about 204, 283, 362 and so on), and the artboard draws no line between rows.",
+          "severity": "major",
+          "box": [
+            0,
+            203,
+            405,
+            556
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.2",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.2 (DS-DIVIDER-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D3",
+          "state": "main-updates",
+          "finding": "[native] Rows are 79 px high with three text lines (name, version, authors on a line of their own), where the artboard rows are 72 px with two lines (name, then 'old → new · verified authors') centred in the band. | [geometry] Rows repeat every 79 px (78 px rows plus a 1 px line: lines at y 204, 283, 362 ... 757), against the spec's 72 px pitch (package-row-dapper y 175, fluentvalidation y 247). The text block has a third line for the authors, where the artboard draws two lines. | [states] Each update row has three text lines (name, version, then authors on a line of their own), but the artboard and the rule put the authors and Verified mark on the version line after a '·' separator, two lines in all.",
+          "severity": "major",
+          "box": [
+            0,
+            125,
+            405,
+            678
+          ],
+          "rule": "DS-ROW-1, DS-HEIGHT-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.2",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.2 (DS-ROW-1, DS-HEIGHT-3), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D7",
+          "state": "main-updates",
+          "finding": "[native] The Verified mark before each author list is a thin check glyph, where the artboard draws the filled verified-filled codicon in extensionIcon.verifiedForeground. | [states] The Verified mark beside each author is a thin text-like check in muted colour, but the artboard draws the filled blue verified badge (verified-filled in extensionIcon.verifiedForeground).",
+          "severity": "major",
+          "box": [
+            87,
+            176,
+            13,
+            14
+          ],
+          "rule": "DS-ICON-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P1.4b",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P1.4b (DS-ICON-4), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D4",
+          "state": "main-updates",
+          "finding": "[native] The package icon paints about 31 px with no tile, where the artboard and spec draw a 36 px icon with radius 2 (Extensions row icon). | [geometry] The row's icon column is 32 px at x 42 (12 px after the check box) and the name starts at x 86 (12 px after the icon). The artboard draws a 36 px icon at x 46 with the name at x 98 (16 px gap).",
+          "severity": "major",
+          "box": [
+            42,
+            140,
+            270,
+            52
+          ],
+          "rule": "DS-ICON-3, DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.2",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.2 (DS-ICON-3, DS-ROW-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D5",
+          "state": "main-updates",
+          "finding": "[native] The row check box is a 14 px empty outline whose border barely separates from the list background, where the artboard draws the 18 px radius-3 check box in checkbox.* colours. | [geometry] The row check box is 14 x 14 (x 16-29, y 158-171), against 18 x 18 in the artboard (x 16-34).",
+          "severity": "major",
+          "box": [
+            16,
+            158,
+            14,
+            14
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.3",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.3 (DS-HEIGHT-9), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D9",
+          "state": "main-updates",
+          "finding": "[native] The Updates tab carries no focus ring after the reach's click, where the artboard and spec draw the 1 px focusBorder ring at offset -1 around the selected Updates tab. | [states] The Updates tab shows no 1 px focusBorder ring, but the artboard draws one around it (updates-tab at 144.6,77,103x35; the composition says the reach's click leaves the ring), and the main panel draws focus rings after a click.",
+          "severity": "major",
+          "box": [
+            131,
+            69,
+            117,
+            43
+          ],
+          "rule": "DS-FOCUS-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.5 (DS-FOCUS-3), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D10",
+          "state": "main-updates",
+          "finding": "[native] The Installed/Updates tab strip is 25 px high with its line, where the spec's tab-bar is 36 px (Extensions editor navbar). | [geometry] The Installed/Updates tab strip is 25 px including its bottom line (y 69-93), against the spec's tab-bar height of 36 (y 77-112 in the artboard).",
+          "severity": "major",
+          "box": [
+            0,
+            69,
+            420,
+            25
+          ],
+          "rule": "DS-HEIGHT-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.5 (DS-HEIGHT-4), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D11",
+          "state": "main-updates",
+          "finding": "[native] Tab labels read 'Installed' and 'Updates' at 13 px in sentence case, where the artboard draws the navbar labels at 11 px uppercase ('INSTALLED', 'UPDATES'). | [states] The tab labels read 'Installed' and 'Updates' in mixed case, but the artboard draws 'INSTALLED' and 'UPDATES' (uppercase, the --nuiget-tab-transform of the Tab labels type row).",
+          "severity": "major",
+          "box": [
+            10,
+            70,
+            222,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.5 (judge-only), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D14",
+          "state": "main-updates",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Update all (14)' in sentence case, where the artboard and the copy rule give Title Case 'Select All' and 'Update All (14)'. | [states] The bulk toolbar's button labels are sentence case ('Select all', 'Update all (14)'), but the artboard draws 'Select All' and 'Update All (14)', and command labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            97,
+            398,
+            25
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P3.11 (DS-COPY-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D15",
+          "state": "main-updates",
+          "finding": "[native] The Select all and Update all buttons are 24 px high, where the spec's buttons are 26 px (workbench text button). | [geometry] The Select all and Update all (14) toolbar buttons are 24 px high (y 98-121), against the spec's 26 (select-all-button and update-all-button h 26 at y 117).",
+          "severity": "major",
+          "box": [
+            16,
+            98,
+            398,
+            24
+          ],
+          "rule": "DS-HEIGHT-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.3",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.3 (DS-HEIGHT-6), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D16",
+          "state": "main-updates",
+          "finding": "[native] The project and source selects are 24 px high, where the spec's project-selector and source-selector are 26 px. | [native] The search box is 24 px high, where the spec's search-input is 26 px. | [geometry] The project and source selects (y 8-31) and the search box (y 40-63) are 24 px high, against the spec's 26 (project-selector and source-selector h 26 at y 8, search-input h 26 at y 42).",
+          "severity": "major",
+          "box": [
+            16,
+            8,
+            1168,
+            56
+          ],
+          "rule": "DS-HEIGHT-7",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.4",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P2.4 (DS-HEIGHT-7), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D17",
+          "state": "main-updates",
+          "finding": "[native] The two selects show the browser's bold filled drop-down arrow, where the artboard draws the codicon chevron-down. | [states] The project and source selects show the browser's native bold dropdown arrow, but the artboard draws the codicon chevron-down in both.",
+          "severity": "major",
+          "box": [
+            846,
+            9,
+            274,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.4",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; the browser arrow left with UX-P2.4's Select rebuild (the DS-ICON-1 lint is UX-P1.4a's), whose rule reads hard on the state since",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D18",
+          "state": "main-updates",
+          "finding": "[native] Between the list and the details pane a 4 px grey bar is painted at rest, where the artboard draws a 1 px separator with a transparent sash. | [geometry] The split between the list and the details pane is a 4 px band painted at rest (x 420-423, y 69-802), against the artboard's 1 px separator at x 420 (package-details-panel x 421).",
+          "severity": "major",
+          "box": [
+            420,
+            69,
+            4,
+            734
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; fixed on labs/ux by UX-P3.9 (DS-DIVIDER-6), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D19",
+          "state": "main-updates",
+          "finding": "[native] The details pane's empty sentence is centred near the top of the pane, where the artboard places it left-aligned at the pane's inset (x 441, y 98) as a welcome-view message. | [geometry] The details pane's empty sentence is centred (ink x 700-916, y about 88-98), against the artboard's start-aligned sentence at the 20 px details inset (x 441, y about 100-110, panel x 421). | [states] The empty details sentence 'Select a package to see its details.' is centred at the top of the details pane (around x 699, y 93), but the artboard draws it left-aligned at the pane's inset (x 441, y 105) as welcome-view text.",
+          "severity": "major",
+          "box": [
+            441,
+            86,
+            485,
+            26
+          ],
+          "rule": "DS-STATE-3, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the frozen 57a9bdd capture of a criterion-(a) panel; the centring fixed by UX-P2.8b (DS-STATE-3 in the primitive), the top inset placed by UX-P3.3b",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        }
+      ]
+    },
+    {
+      "runId": "40110663066",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "80940aa (negative control (a))",
+      "look": "modern",
+      "workflow": "wf_3660f5a1-2e7",
+      "captures": {
+        "main-updates": {
+          "png": "captures/40110663066-negative/main-updates.dark-modern.1200.png",
+          "sha256": "3794ffff4364ddb2585923357333b9161601ba759020b7a3c92d2e71c515279a",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 47,
+        "standing": 16,
+        "blocking": 2,
+        "refuted": 1,
+        "singleJudge": 8,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-updates#D5",
+          "state": "main-updates",
+          "finding": "[native] The header check boxes (Restore after operations, Include prerelease) are 16 px, not the 18 px check box the artboard draws.",
+          "severity": "minor",
+          "box": [
+            512,
+            12,
+            192,
+            16
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-6",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The header check boxes (Restore after operations, Include prerelease) are 16 px, not the 18 px check box the artboard draws.",
+              "severity": "minor",
+              "box": [
+                512,
+                12,
+                192,
+                16
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "The crop shows the header check boxes slightly smaller than the artboard's. The measurement reads DS-HEIGHT-9 '16×16 ×2 (target 18×18)', a 2 px step visible only side by side.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D3",
+          "state": "main-updates",
+          "finding": "[native] The package icon is 32 px (the .NET icon spans x 42-73, y 408-439) and the name starts 12 px after it at x 86. The artboard draws a 36 px icon tile at 46-82 with the name at x 98, a 16 px gap. | [geometry] The row anatomy is off the redline. The package icon is 32 px at x 42-73 (spec 36 px at x 46-82), the gap from icon to name is 12 px, and the name starts at x 86 where the artboard draws it at x 98 (16 px gap).",
+          "severity": "major",
+          "box": [
+            42,
+            140,
+            321,
+            300
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-7",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The package icon is 32 px (the .NET icon spans x 42-73, y 408-439) and the name starts 12 px after it at x 86. The artboard draws a 36 px icon tile at 46-82 with the name at x 98, a 16 px gap.",
+              "severity": "major",
+              "box": [
+                42,
+                408,
+                140,
+                32
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows a 32 px .NET icon with the name close after it, against the artboard's 36 px tile and wider gap. The measurement reads DS-ROW-1 'icon 32×32 ×14 (target 36×36); name after icon 12 ×14 (target 16)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-4",
+              "lens": "geometry",
+              "state": "main-updates",
+              "finding": "The row anatomy is off the redline. The package icon is 32 px at x 42-73 (spec 36 px at x 46-82), the gap from icon to name is 12 px, and the name starts at x 86 where the artboard draws it at x 98 (16 px gap).",
+              "severity": "major",
+              "box": [
+                42,
+                140,
+                321,
+                32
+              ],
+              "rule": "DS-ROW-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows a 32 px icon at x 42 with the name at x 86. The measurement reads DS-ROW-1 'icon 32×32 (target 36×36); name after icon 12 (target 16)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D9",
+          "state": "main-updates",
+          "finding": "[native] The tab count badges (15, 1, 14) are 17 px rounded rectangles with a small radius, not the Modern UI circular 19 px count badges the artboard draws.",
+          "severity": "major",
+          "box": [
+            67,
+            71,
+            149,
+            18
+          ],
+          "rule": "DS-HEIGHT-10",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-12",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The tab count badges (15, 1, 14) are 17 px rounded rectangles with a small radius, not the Modern UI circular 19 px count badges the artboard draws.",
+              "severity": "major",
+              "box": [
+                67,
+                71,
+                149,
+                18
+              ],
+              "rule": "DS-HEIGHT-10",
+              "verdict": "confirmed",
+              "reason": "The crop shows square-cornered 15/1/14 badges, not the circular pills the artboard draws. The measurement reads DS-HEIGHT-10 'count 17×17.5 … radius 4px (target round)'.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D14",
+          "state": "main-updates",
+          "finding": "[geometry] The Select All button starts at x 8 instead of the spec's x 16 (select-all-button 16,117), so the toolbar's first control misses the 16 px panel inset.",
+          "severity": "major",
+          "box": [
+            0,
+            98,
+            93,
+            24
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-8",
+              "lens": "geometry",
+              "state": "main-updates",
+              "finding": "The Select All button starts at x 8 instead of the spec's x 16 (select-all-button 16,117), so the toolbar's first control misses the 16 px panel inset.",
+              "severity": "major",
+              "box": [
+                0,
+                98,
+                93,
+                24
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the Select all border starting at x 8, against the spec's select-all-button x of 16.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D18",
+          "state": "main-updates",
+          "finding": "[geometry] The main header's vertical padding is not symmetric: 8 px above the first control row (y 0-7) but only 4 px below the search box (y 64-67) before the header line at y 68. The artboard keeps 8 px below the search box before the line at y 76.",
+          "severity": "major",
+          "box": [
+            0,
+            0,
+            1200,
+            69
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-13",
+              "lens": "geometry",
+              "state": "main-updates",
+              "finding": "The main header's vertical padding is not symmetric: 8 px above the first control row (y 0-7) but only 4 px below the search box (y 64-67) before the header line at y 68. The artboard keeps 8 px below the search box before the line at y 76.",
+              "severity": "major",
+              "box": [
+                0,
+                0,
+                1200,
+                69
+              ],
+              "rule": "DS-INSET-2",
+              "verdict": "confirmed",
+              "reason": "The capture leaves 4 px (y 64-67) between the search box and the header line at y 68, against 8 px above the first row. The artboard leaves 8 px (y 68-75) before its line at y 76.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D24",
+          "state": "main-updates",
+          "finding": "[states] The project and source selects show a browser-default filled dropdown arrow, where the artboard draws the codicon chevron-down in each select's arrow slot.",
+          "severity": "major",
+          "box": [
+            846,
+            8,
+            274,
+            25
+          ],
+          "rule": "DS-ICON-1",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-8",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The project and source selects show a browser-default filled dropdown arrow, where the artboard draws the codicon chevron-down in each select's arrow slot.",
+              "severity": "major",
+              "box": [
+                846,
+                8,
+                274,
+                25
+              ],
+              "rule": "DS-ICON-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows a heavy, filled 2-3 px chevron in each select (pixel rows 17-22 at x 993-1002). The artboard crop shows the thin codicon chevron-down.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D10",
+          "state": "main-updates",
+          "finding": "[states] The tab labels read \"Installed\" and \"Updates\" in mixed case at body size, where the artboard draws them in the smaller uppercase tab style (INSTALLED, UPDATES) that the spec's --nuiget-tab-transform and --nuiget-tab-font-size tokens set.",
+          "severity": "major",
+          "box": [
+            8,
+            69,
+            215,
+            24
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-11",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The tab labels read \"Installed\" and \"Updates\" in mixed case at body size, where the artboard draws them in the smaller uppercase tab style (INSTALLED, UPDATES) that the spec's --nuiget-tab-transform and --nuiget-tab-font-size tokens set.",
+              "severity": "major",
+              "box": [
+                8,
+                69,
+                215,
+                24
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop reads 'Installed' and 'Updates' in mixed case at body size. The artboard crop reads 'INSTALLED' and 'UPDATES' in the smaller uppercase tab style that the spec's tab-transform token sets.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-updates#D21",
+          "state": "main-updates",
+          "finding": "[states] The author text in every row is regular weight with no separator after the version, where the artboard draws a \"·\" separator and the author at 11/600.",
+          "severity": "minor",
+          "box": [
+            86,
+            157,
+            280,
+            16
+          ],
+          "rule": "DS-TYPE-6",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-12",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The author text in every row is regular weight with no separator after the version, where the artboard draws a \"·\" separator and the author at 11/600.",
+              "severity": "minor",
+              "box": [
+                86,
+                157,
+                280,
+                16
+              ],
+              "rule": "DS-TYPE-6",
+              "verdict": "confirmed",
+              "reason": "The crop shows the author in regular weight right after the version with no separator. The artboard crop shows a '·' separator and a bold author.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-19",
+          "lens": "native",
+          "state": "main-updates",
+          "finding": "The header/body line, the tab-strip line and the sash share a lighter divider colour than the artboard's single settings.headerBorder role (the artboard's line at y 76 and x 420 is darker), so the main panel's divider role differs from the artboard.",
+          "severity": "major",
+          "box": [
+            0,
+            68,
+            1200,
+            1
+          ],
+          "rule": "DS-DIVIDER-4",
+          "verdict": "refuted",
+          "reason": "The capture uses one divider value (49) at y 68, y 93 and x 420, so DS-DIVIDER-4's one-role-per-surface holds. The 6-level difference from the artboard's 43 cannot be seen in the 1:1 crop.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] The Direct Packages group header with its chevron and 14 count badge, which the artboard draws at 16,147 (28 px, section-header-direct), is missing: the flat list starts straight under the toolbar at y 125. | [geometry] The Direct Packages group row the artboard draws at y 147-175 (chevron at x 16, count badge ending at x 396, spec section-header-direct 16,147,349x28) is missing: the capture starts the flat list of rows straight under the toolbar at y 126. | [states] The Direct Packages group row with its count badge (14), which the artboard draws at 16,147 to 396,175 above the first update row (spec section-header-direct 16,147 349x28), is missing; the capture starts the flat list of update rows directly under the toolbar.",
+          "severity": "blocking",
+          "box": [
+            16,
+            147,
+            380,
+            28
+          ],
+          "rule": "DS-HEIGHT-1",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.1a",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P3.1a (DS-HEIGHT-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D15",
+          "state": "main-updates",
+          "finding": "[native] The list scrollbar has stepper arrows at both ends and a painted 15 px track (x 405-419), so it reads as a browser default. The artboard draws the 8 px token scrollbar (thumb at x 412-419, transparent track, no arrows). | [states] The list scrollbar shows browser-default arrow buttons at its top and bottom ends (x 405-418), where the artboard draws a plain token thumb with no arrow buttons.",
+          "severity": "blocking",
+          "box": [
+            405,
+            126,
+            15,
+            677
+          ],
+          "rule": "DS-SCROLL-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P3.9 (DS-SCROLL-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D22",
+          "state": "main-updates",
+          "finding": "[native] A 1 px line separates every pair of package rows (y 192, 259, 326, ...). The artboard draws no line between rows. | [geometry] A 1 px line is drawn under every row (y 192, 259, 326, 393, 460, 527, 594, 661, 728, 795). The artboard has no line between rows, and the rule allows lines only between groups. | [states] A 1 px line is drawn between every pair of update rows (y 192, 259, 326, ...), where the artboard draws no line between rows.",
+          "severity": "major",
+          "box": [
+            0,
+            190,
+            406,
+            606
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.2",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.2 (DS-DIVIDER-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[native] Rows are 67 px apart (dividers at 192 and 259) instead of the 72 px Extensions pitch of the spec's package rows, so the list looks squeezed against the artboard. | [geometry] Rows are 67 px apart (row lines at y 192, 259, 326 ... 795) where the spec gives every package row a 72 px pitch (package-row-dapper 0,175,412x72).",
+          "severity": "major",
+          "box": [
+            0,
+            125,
+            405,
+            678
+          ],
+          "rule": "DS-HEIGHT-3",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.2",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.2 (DS-HEIGHT-3), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D4",
+          "state": "main-updates",
+          "finding": "[native] The row check box is a 14 px hairline square with no checkbox.background fill, aligned to the name line instead of centred in the row. The artboard draws an 18 px filled check box with radius 3 at 16-34, centred vertically. | [geometry] The row check box is 14 x 14 px (x 16-29, y 138-151), not 18 x 18. It is also top-aligned in its 66 px row (centre y 144.5 against a row centre near 158), while the artboard centres it vertically beside the icon. | [states] The row check boxes are about 13 px and sit at the top of the row beside the package name (Dapper's at 16,138), where the artboard draws an 18 px check box centred vertically in each row.",
+          "severity": "major",
+          "box": [
+            16,
+            137,
+            14,
+            15
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.3",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.3 (DS-HEIGHT-9), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D20",
+          "state": "main-updates",
+          "finding": "[native] The Verified mark beside the author is an outline check glyph and the author is regular weight. The artboard draws the filled verified codicon in the verified colour, a dot separator, and the author at 11/600. | [states] Each row's Verified mark is a thin plain check glyph beside the author (for example Dapper's at x 184), not the filled verified-filled codicon the artboard draws beside every author.",
+          "severity": "major",
+          "box": [
+            183,
+            157,
+            183,
+            15
+          ],
+          "rule": "DS-ICON-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P1.4b",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P1.4b (DS-ICON-4), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D6",
+          "state": "main-updates",
+          "finding": "[native] The Installed/Updates tab strip is 25 px with its line (y 69-93), not the 36 px Extensions navbar that the artboard and spec draw (tab-bar 77-113). | [geometry] The Installed/Updates tab strip is 25 px including its bottom line (y 69-93) where the spec tab-bar is 36 px (0,77,420x36).",
+          "severity": "major",
+          "box": [
+            0,
+            69,
+            420,
+            25
+          ],
+          "rule": "DS-HEIGHT-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.5 (DS-HEIGHT-4), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D8",
+          "state": "main-updates",
+          "finding": "[native] The Installed tab label starts at x 9, not at the 16 px main-panel inset that the title, search box and artboard tab labels share. | [geometry] The first tab label (Installed) starts at x 10 instead of the 16 px start inset that the spec (installed-tab inset 16) and the other main-panel content (title, search box) use.",
+          "severity": "major",
+          "box": [
+            0,
+            69,
+            70,
+            24
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.7",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.7 (DS-INSET-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D7",
+          "state": "main-updates",
+          "finding": "[native] The Updates tab is focused in this state, but it shows only an accent underline and no 1 px focusBorder ring. The artboard and the spec's composition draw a ring at offset -1 around it. | [states] The selected Updates tab, which the spec's composition says is selected and focused after the reach's click, shows only an accent underline and no 1 px focusBorder ring, while the artboard draws the ring around the tab at 145,77 103x35.",
+          "severity": "major",
+          "box": [
+            124,
+            69,
+            124,
+            44
+          ],
+          "rule": "DS-FOCUS-1, DS-FOCUS-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.5 (DS-FOCUS-1, DS-FOCUS-3), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D11",
+          "state": "main-updates",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Update all (14)' in sentence case. The artboard and the copy rules use Title Case: Select All and Update All (14). | [states] The secondary toolbar button reads \"Select all\" in sentence case where the artboard and the copy rule give the Title Case label \"Select All\". | [states] The primary toolbar button reads \"Update all (14)\" in sentence case where the artboard and the copy rule give \"Update All (14)\".",
+          "severity": "major",
+          "box": [
+            8,
+            98,
+            213,
+            24
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P3.11 (DS-COPY-1), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D12",
+          "state": "main-updates",
+          "finding": "[native] The primary Update all button sits 4 px after Select all at x 97. The artboard places it at the end of the toolbar (295-404), aligned with the list's end inset. | [geometry] The primary Update All (14) button sits next to Select All and ends at x 220. The spec puts it at the toolbar's end, ending at x 404 (update-all-button 295.4,117,108.6 wide), 16 px from the list pane edge.",
+          "severity": "major",
+          "box": [
+            97,
+            98,
+            307,
+            24
+          ],
+          "rule": "judge-only, DS-INSET-3",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.5",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; P9.fix-4's defect, PF-4 hard at P0.12, negative-control.md:32, the primary in Toolbar's end slot since UX-P2.5",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D13",
+          "state": "main-updates",
+          "finding": "[native] The toolbar buttons are 24 px tall (y 98-121) and Select all starts at x 8. The artboard's buttons are 26 px and start at the 16 px inset (select-all-button 16,117). | [geometry] The toolbar text buttons are 24 px tall (y 98-121) where the spec draws both at 26 px (select-all-button and update-all-button h 26).",
+          "severity": "major",
+          "box": [
+            0,
+            98,
+            221,
+            24
+          ],
+          "rule": "DS-HEIGHT-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.3",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.3 (DS-HEIGHT-6), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D23",
+          "state": "main-updates",
+          "finding": "[native] The project and source selects are 24 px tall (y 8-31), not the 26 px the spec gives project-selector and source-selector. | [geometry] The project and source selects are 24 px tall (y 8-31) where the spec gives both 26 px (project-selector 862,8,157x26; source-selector 1027,8,101x26).",
+          "severity": "major",
+          "box": [
+            846,
+            8,
+            274,
+            24
+          ],
+          "rule": "DS-HEIGHT-7",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.4",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.4 (DS-HEIGHT-7), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D17",
+          "state": "main-updates",
+          "finding": "[native] The search box is 24 px tall (y 40-63) and its bottom sits 5 px above the header line. The spec's search-input is 26 px with the header line 8 px below it, so the header looks squeezed. | [geometry] The search box is 24 px tall (y 40-63) where the spec gives search-input 26 px (16,42,1168x26).",
+          "severity": "major",
+          "box": [
+            16,
+            40,
+            1168,
+            29
+          ],
+          "rule": "DS-HEIGHT-7",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P2.4",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P2.4 (DS-HEIGHT-7), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D16",
+          "state": "main-updates",
+          "finding": "[native] The split between the list and the details pane is a solid 4 px grey bar (x 420-423). The artboard draws a 1 px separator at x 420 with a transparent sash. | [geometry] The divider between the list pane and the details pane is a 4 px solid line (x 420-423). The artboard draws a 1 px separator at x 420, with the details pane starting at x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            69,
+            4,
+            734
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; fixed on labs/ux by UX-P3.9 (DS-DIVIDER-6), whose rule reads hard on the state since (or will)",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates#D19",
+          "state": "main-updates",
+          "finding": "[native] The details empty sentence is centred in the pane at y 86. The artboard draws it left-aligned at the 20 px details inset (x 441, y 105), as welcome-view text is. | [geometry] The details pane's empty sentence is centred in the pane (x 699-923, y 88-100). The artboard places it at the pane's 20 px start inset (x 441-666, y 100-112). | [states] The details pane's empty sentence \"Select a package to see its details.\" is centred across the pane at x 699-925, where the artboard draws it left-aligned at the pane's 20 px inset (x 441, y 105) as a welcome-view message.",
+          "severity": "major",
+          "box": [
+            441,
+            86,
+            485,
+            27
+          ],
+          "rule": "DS-STATE-3, judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the frozen 80940aa capture of a negative-control panel; the centring fixed by UX-P2.8b (DS-STATE-3 in the primitive), the top inset placed by UX-P3.3b",
+          "ruling": "docs/plans/handoff/P2.fix-8.md, Advisor decisions, 2026-11-05 UX-P2.fix-8 (design-advisor): every standing finding on an old tree is `fixed` with the rule and the item that fixed it, as P0.19 did; design-advisor, UX-P3.1a trigger 4, 2026-11-06 (docs/plans/handoff/P3.1a.md, Advisor decisions)"
+        }
+      ]
+    }
+  ],
+  "criterionA": {
+    "V1": "met (base D10 DS-HEIGHT-4 [0,69,420,25], D15 DS-HEIGHT-6 [16,98,398,24], D16 DS-HEIGHT-7 [16,8,1168,56]; squeezed: 80940aa D2, D17)",
+    "V5": "met on single-judge evidence (base D20 DS-INSET-2 [0,0,1200,69], the header's 8 above / 4 below, refuter-confirmed; D20b DS-INSET-3 [291,98,129,24]); the DS-GRID-1/2a loci (base log captures/40111706433/ui-output.txt:723-724, [tab-bar] padding-left 7px, gaps 0 (3 off {4, 8})) are not pixel-visible, as P0.19 recorded for main-installed-single on the same header; no classic panel exists for main-updates, so no standing finding backs it",
+    "P9.fix-4": "met (80940aa D12 judge-only/DS-INSET-3 [97,98,307,24]: the primary bunched 4 px after Select all, ending at x 220 against the artboard's 295-404; negative-control.md:32 PF-4)",
+    "note": "Read with UX-P0.19's and UX-P2.fix-8's blocks (neither edited): main-updates is no longer pending artboard; D37 (a) stays not met on P2.fix-8's record (V4 not met on both cells; V3 not pixel-reachable); D37's date not recorded"
+  }
+}

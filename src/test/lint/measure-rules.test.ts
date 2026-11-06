@@ -122,7 +122,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const specLines = (lane: 'ui' | 'floor' | 'macos') => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 932, undefined, 'dark-modern', undefined, lane).filter(line => line.name.startsWith('SPEC@'));
         expect(specLines('ui').length).toBeGreaterThan(0);
         expect([...specLines('floor'), ...specLines('macos')]).toEqual([]);
-        expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': { pending: 'P3.1b' } });
+        expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': 'hard' });
         // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state.
         expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toBeUndefined();
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
@@ -460,9 +460,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The reference state passes its own first row.
         expect(measureLines('main-installed-single', now({ 'main-header': header }, 160), 'modern').find(line => line.name === 'MS-8@main-installed-single/first-row'))
             .toMatchObject({ pass: true, value: 'reference 160' });
-        // The Installed↔Updates first-row y waits for P3.1b, and is compared in those two states only.
+        // The Installed↔Updates first-row y is hard since UX-P3.1a (owner moved from P3.1b, design-advisor ruling of 2026-11-06), and is compared in those two states only.
         expect(measureLines('main-updates', now({ 'main-header': header }, 172), 'modern', {}, reference).find(line => line.name === 'MS-8@main-updates/first-row'))
-            .toMatchObject({ pass: false, status: { pending: 'P3.1b' }, value: '172 (main-installed-single 160)' });
+            .toMatchObject({ pass: false, status: 'hard', value: '172 (main-installed-single 160)' });
         expect(measureLines('main-installed-details', now({ 'main-header': header }, 172), 'modern', {}, reference).some(line => line.name.endsWith('/first-row'))).toBe(false);
         // WebDriver's nulls in the reference read as absent.
         const fromDriver = JSON.parse(JSON.stringify(reference, (_key, value: unknown) => (value === undefined ? null : value)));
@@ -887,9 +887,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(specOf(state, 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', 'hard']);
             expect(specOf(state, 932)).toEqual([]);
         }
-        // UX-P3.1a: main-updates at 1200 against its round-3 page, header and list pending P3.1a for the reading run.
+        // UX-P3.1a: main-updates at 1200 against its round-3 page, header and list hard since the item's closing commit.
         expect(specOf('main-updates', 1200).map(line => line.name)).toEqual(['header', 'list', 'details', 'readme'].map(scope => `SPEC@main-updates/${scope}`));
-        expect(specOf('main-updates', 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual([{ pending: 'P3.1a' }, { pending: 'P3.1a' }]);
+        expect(specOf('main-updates', 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', 'hard']);
         expect(specOf('main-updates', 932)).toEqual([]);
         const transitiveSpec: SpecLook = { 'transitive-details': element(420, 77, 780, 726) };
         const lines = measureLines('main-transitive-details', layout({ testIds: { 'transitive-details': element(420, 77, 780, 726) } }), 'modern', {}, undefined, 1200, transitiveSpec);

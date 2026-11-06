@@ -227,7 +227,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
-    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': { pending: 'P3.1b' } }, tolerance: TOLERANCES.chrome }),
+    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
@@ -288,7 +288,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'section-header-transitive-net8.0': 'P3.7a' }, pendingStates: { 'main-updates': 'P3.1a' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'section-header-transitive-net8.0': 'P3.7a' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -339,7 +339,7 @@ export function stateGroup(state: string): StateGroup {
     return 'main-installed';
 }
 
-/** The states whose first row MS-8 compares (Installed and Updates, P3.1b). */
+/** The states whose first row MS-8 compares (Installed and Updates; hard since UX-P3.1a). */
 const FIRST_ROW_STATES: readonly string[] = ['main-installed-single', 'main-updates'];
 
 /** The element groups measured in a state group (DS-INSET-2, DS-INSET-3, MS-8), and MS-8's first row in its two states. */
