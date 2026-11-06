@@ -105,6 +105,11 @@ export interface RuleDefinition {
     statePattern?: RegExp;
     /** Webview widths the rule is limited to (PF-3a at 1200), or undefined for every width. */
     widths?: readonly number[];
+    /**
+     * Per state, the widths the rule is limited to, consulted before `widths` for a state it names: SPEC reads each state's
+     * artboard at the width it is drawn at (932 for artboard A, 1200 for the round-3 pages; UX-P2.fix-8).
+     */
+    stateWidths?: Readonly<Record<string, readonly number[]>>;
     /** Themes the rule is limited to (DS-FOCUS-4 in the two high-contrast themes), or undefined for every theme. */
     themes?: readonly string[];
     /**
@@ -139,7 +144,8 @@ export interface RuleDefinition {
  */
 export const appliesTo = (definition: RuleDefinition, state: string, width?: number, theme?: string, lane: Lane = 'ui'): boolean =>
     (definition.states === undefined || definition.states.includes(state)) && (definition.statePattern === undefined || definition.statePattern.test(state))
-    && (definition.widths === undefined || (width !== undefined && definition.widths.some(candidate => Math.abs(candidate - width) <= 1)))
+    && ((definition.stateWidths?.[state] ?? definition.widths) === undefined
+        || (width !== undefined && (definition.stateWidths?.[state] ?? definition.widths ?? []).some(candidate => Math.abs(candidate - width) <= 1)))
     && (definition.themes === undefined || (theme !== undefined && definition.themes.includes(theme)))
     && (definition.lanes === undefined || definition.lanes.includes(lane))
     && !(definition.exceptStates ?? []).includes(state);
@@ -282,7 +288,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'], widths: [932], lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11' }, pendingStates: { 'main-transitive-expanded': 'P2.fix-8', 'main-transitive-details': 'P2.fix-8' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -2731,7 +2737,7 @@ function sameLength(actual: string, expected: string, tolerance: number): boolea
 /** SPEC's scopes by test id; `list` is every other id (UX-P2.8a). */
 const SPEC_SCOPE_IDS: Readonly<Partial<Record<Scope, readonly string[]>>> = {
     header: ['project-selector', 'source-selector', 'source-settings', 'refresh-button', 'search-input'],
-    details: ['package-details-panel', 'uninstall-button', 'version-selector', 'install-update-button', 'details-tab-details', 'details-tab-readme'],
+    details: ['package-details-panel', 'uninstall-button', 'version-selector', 'install-update-button', 'details-tab-details', 'details-tab-readme', 'transitive-details'],
     readme: ['readme-content'],
 };
 const SPEC_NAMED = Object.values(SPEC_SCOPE_IDS).flat();
@@ -2989,7 +2995,8 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
             const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec, laneWorkbench) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
-            const name = scope === group ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
+            // A spec scope keeps its name in every state group (a state whose group is `details`; UX-P2.fix-8).
+            const name = scope === group && definition.helper !== 8 ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }
     }

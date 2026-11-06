@@ -875,6 +875,21 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
         expect(measureLines('main-installed-single', layout({ testIds: {} }), 'modern', {}, undefined, 932, undefined).find(line => line.name === 'SPEC@main-installed-single/header')).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
         expect(at('header', {}, spec, 800)).toBeUndefined();
+        // UX-P2.fix-8: each state at its artboard's width. main-installed-single's 1200 cells print no SPEC line; a round-3
+        // transitive state at 1200 prints its four scopes, held `pending P2.fix-8` for the reading run; transitive-details is a
+        // details id (no list entry, and the details scope names it).
+        const specOf = (state: string, width: number, given: SpecLook | undefined = spec) =>
+            measureLines(state, layout({ testIds: {} }), 'modern', {}, undefined, width, given).filter(line => line.name.startsWith(`SPEC@${state}/`));
+        expect(specOf('main-installed-single', 1200)).toEqual([]);
+        for (const state of ['main-transitive-expanded', 'main-transitive-details']) {
+            expect(specOf(state, 1200).map(line => line.name)).toEqual(['header', 'list', 'details', 'readme'].map(scope => `SPEC@${state}/${scope}`));
+            expect(specOf(state, 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual([{ pending: 'P2.fix-8' }, { pending: 'P2.fix-8' }]);
+            expect(specOf(state, 932)).toEqual([]);
+        }
+        const transitiveSpec: SpecLook = { 'transitive-details': element(420, 77, 780, 726) };
+        const lines = measureLines('main-transitive-details', layout({ testIds: { 'transitive-details': element(420, 77, 780, 726) } }), 'modern', {}, undefined, 1200, transitiveSpec);
+        expect(lines.find(line => line.name === 'SPEC@main-transitive-details/details')).toMatchObject({ value: '1/1 within 1' });
+        expect(lines.find(line => line.name === 'SPEC@main-transitive-details/list')?.value).not.toContain('transitive-details');
     });
 
     it('holds DS-SCROLL-1 to the look\'s bar thickness in every scrolling list and the root\'s scrollbar-color reset (UX-P0.22)', () => {
