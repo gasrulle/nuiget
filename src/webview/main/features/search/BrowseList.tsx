@@ -3,7 +3,7 @@ import type React from 'react';
 import { ALL_PROJECTS, type PackageSearchResult } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { allProjectsBrowseContext, browseRowContext, installedProjectsOf } from '../../../shared/installed/rules';
-import { Badge, Banner, EmptyState, Listbox, ProgressBar, Row, Skeleton } from '../../../shared/primitives';
+import { Badge, Banner, EmptyState, Listbox, ProgressBar, Row } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
@@ -18,6 +18,12 @@ interface Item {
 }
 
 const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project. Shift+F10 opens the actions menu.';
+
+/** A reason from the host as the end of a sentence with one full stop (DS-COPY-3). */
+const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
+
+/** The 2 px bar over the list area's top edge while the search runs or runs again (DS-STATE-2, UX-P3.2). */
+const bar = (label: string): React.JSX.Element => <div className="nuiget-installed-progress"><ProgressBar label={label} data-testid="browse-progress" /></div>;
 
 const formatDownloads = (count: number | undefined): string | undefined => {
     if (count === undefined) {
@@ -36,6 +42,8 @@ const formatDownloads = (count: number | undefined): string | undefined => {
  * current at once, and a new text whose results lack the current row clears the pane (a browse selection is never
  * stale). Ctrl+Enter installs the row's version into the selected project through the panel's one install action
  * (`install`, the shell's `useInstallAction`). A source that could not be searched is a banner over the list, never "no results".
+ * The list keeps the check column's space, so its icons and names line up with the Installed and Updates rows (DS-ROW-2,
+ * V58); a first search shows the bar alone, rows first under it later (D56, P5.9a) (UX-P3.2).
  */
 export function BrowseList({ text, announce, install }: BrowseView): React.JSX.Element {
     const search = useSearch();
@@ -91,24 +99,25 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
         return <EmptyState message={`Press Enter to search for "${text.trim()}".`} />;
     }
     if (status === 'loading') {
-        return <Skeleton density="comfortable" />;
+        return <div className="nuiget-browse">{bar('Searching')}</div>;
     }
     if (status === 'error') {
-        return <Banner severity="error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${search.error?.message ?? 'unknown error'}`}</Banner>;
+        return <div className="nuiget-browse"><Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error?.message ?? 'unknown error')}`}</Banner></div>;
     }
     return (
         <div className="nuiget-browse">
-            {search.revalidating ? <ProgressBar label="Searching again" /> : null}
+            {search.revalidating ? bar('Searching again') : null}
             {sourcesUnavailable
                 ? <Banner severity="warning" data-testid="browse-unavailable-banner" action={{ label: 'Retry', onClick: search.retry }}>Some package sources could not be searched; the results may be incomplete.</Banner>
                 : null}
-            {search.error ? <Banner severity="error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${search.error.message}`}</Banner> : null}
+            {search.error ? <Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error.message)}`}</Banner> : null}
             <Listbox
                 items={items}
                 label={`Search results for ${query}`}
                 hint={HINT}
                 testId="browse-list"
                 density="comfortable"
+                checkColumn="reserved"
                 busy={search.revalidating}
                 selectedId={currentId}
                 onSelect={item => makeCurrent(item.result)}
@@ -121,7 +130,7 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
                     }
                     install.install({ packageId: item.result.id, version: item.result.version, sourceUrl: item.result.sourceUrl });
                 }}
-                empty={<EmptyState message={sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
+                empty={<EmptyState message={sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} data-testid={sourcesUnavailable ? undefined : 'browse-empty'} />}
                 renderRow={(item, placement) => {
                     const { result } = item;
                     const installedVersion = installedVersions.get(result.id.toLowerCase());

@@ -89,7 +89,9 @@ describe('main panel: browse', () => {
 
         await user.keyboard('{Enter}');
         expect(queries(host).map(request => request.payload)).toEqual([{ query: 'json', sourceUrls: undefined, includePrerelease: false, exactMatch: undefined }]);
-        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(3);
+        // A first search shows the bar alone, rows first under it later (D56, P5.9a; UX-P3.2).
+        expect(screen.getByTestId('browse-progress')).toHaveAccessibleName('Searching');
+        expect(document.querySelectorAll('.nuiget-skeleton-row')).toHaveLength(0);
     });
 
     it('lists the results with the metadata that came first: icon, authors, downloads, Verified and Installed', async () => {
@@ -196,6 +198,8 @@ describe('main panel: browse', () => {
         expect(screen.getByTestId('browse-unavailable-banner')).toHaveTextContent('Some package sources could not be searched');
         expect(screen.getByText('No package source could be searched for "contoso".')).toBeInTheDocument();
         expect(screen.queryByText('No results for "contoso".')).toBeNull();
+        // Empty is not unknown: the no-row form under sourcesUnavailable never carries the empty marker (UX-P3.2).
+        expect(screen.queryByTestId('browse-empty')).toBeNull();
         await user.click(within(screen.getByTestId('browse-unavailable-banner')).getByRole('button', { name: 'Retry' }));
         expect(queries(host)).toHaveLength(2);
     });
@@ -205,13 +209,29 @@ describe('main panel: browse', () => {
         const host = await mountReady();
         await user.type(box(), 'zzzz{Enter}');
         await hostSays(() => host.respond(queries(host)[0], { query: 'zzzz', results: [] }));
-        expect(screen.getByText('No results for "zzzz".')).toBeInTheDocument();
+        expect(screen.getByTestId('browse-empty')).toHaveTextContent('No results for "zzzz".');
         await waitFor(() => expect(said()).toBe('No results for "zzzz"'));
 
         await user.click(box());
         await user.keyboard('{Enter}');
         await hostSays(() => host.fail(queries(host)[1], 'failed', 'dotnet failed'));
-        expect(screen.getByRole('alert')).toHaveTextContent('The search failed: dotnet failed');
+        // One sentence with one full stop, Retry its one button, under its marker (DS-STATE-4, UX-P3.2).
+        expect(screen.getByTestId('browse-error')).toHaveTextContent('The search failed: dotnet failed.');
+        expect(within(screen.getByTestId('browse-error')).getAllByRole('button').map(button => button.textContent)).toEqual(['Retry']);
+    });
+
+    it('keeps the space of the check column on every row, an empty mark that takes no click (DS-ROW-2, V58; UX-P3.2)', async () => {
+        const host = await mountReady();
+        await searchFor(host, 'json', [result('Newtonsoft.Json'), result('System.Text.Json')]);
+        const marks = [...list().querySelectorAll('.nuiget-row-check')];
+        expect(marks).toHaveLength(2);
+        for (const mark of marks) {
+            expect(mark).toHaveClass('nuiget-row-check--reserved');
+            expect(mark).toHaveAttribute('aria-hidden', 'true');
+            expect(mark).toBeEmptyDOMElement();
+        }
+        expect(list()).not.toHaveAttribute('aria-multiselectable');
+        expect(option('Newtonsoft.Json')).not.toHaveAttribute('aria-selected', 'true');
     });
 
     it('clearing the box cancels the search and brings the tabs back', async () => {

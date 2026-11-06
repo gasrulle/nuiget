@@ -4,7 +4,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
@@ -98,7 +98,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable'];
 
@@ -114,8 +114,17 @@ const HOLD_SOURCE = `
 const real = window.postMessage;
 const hold = { real, type: arguments[0], held: [], failure: null, failed: 0, rewrite: null, rewritten: 0 };
 window.__nuigetHold = hold;
-// The two answers the host itself gives to an update check (Catalog.updates, handlers.ts): no source answered, or no update.
-hold.literal = (mode, result) => (mode === 'unavailable' ? { projectPath: result.projectPath, updates: [], sourcesUnavailable: true } : { projectPath: result.projectPath, updates: [] });
+// Each rewrite is an answer the host itself gives for its type, bound to that type (UX-P3.1b, UX-P3.2 architecture rulings):
+// an update check with no source answered or no update (Catalog.updates); a search one source could not answer, the rows of
+// the others kept (Catalog.ts:447); a quick search answered by two sources, the second unreachable by construction (RFC 2606
+// .invalid), so no request the product sends can reach it.
+hold.literals = {
+    unavailable: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [], sourcesUnavailable: true }) },
+    uptodate: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [] }) },
+    'browse-unavailable': { type: 'search/query', of: result => ({ ...result, sourcesUnavailable: true }) },
+    'quicksearch-grouped': { type: 'search/autocomplete', of: result => ({ ...result, groups: [result.groups[0], { ...result.groups[0], sourceName: 'Fixture source', sourceUrl: 'https://fixture.invalid/v3/index.json' }] }) },
+};
+hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {
     if (hold.failure !== null) {
         hold.failed += 1;
@@ -133,7 +142,9 @@ window.postMessage = function (data, ...rest) {
     return undefined;
 };`;
 
-type HeldType = 'installed/get' | 'updates/get';
+type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete';
+/** The rewrite modes, each bound to the one type whose answer it replaces. */
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped';
 
 async function holdRequest(type: HeldType): Promise<void> {
     await script<void>(HOLD_SOURCE, type);
@@ -172,13 +183,15 @@ return { count: hold.failed, type: hold.type };`, message);
  * answers, the envelope spread so its id, type and generation stay, and its stream not at all: no source answered
  * (`unavailable`) or no update (`uptodate`) (UX-P3.1b, architecture-advisor ruling of 2026-11-06). Ended by `endHold`.
  */
-async function rewriteHeld(state: string, mode: 'unavailable' | 'uptodate'): Promise<void> {
+async function rewriteHeld(state: string, mode: RewriteMode): Promise<void> {
     const rewritten = await script<{ count: number; type: string }>(`
 const hold = window.__nuigetHold;
+const bound = hold.literals[arguments[0]];
+if (bound === undefined || bound.type !== hold.type) throw new Error('[hold] ' + arguments[1] + ': mode ' + arguments[0] + ' on type ' + hold.type);
 hold.rewrite = arguments[0];
 for (const d of hold.held) hold.apply(d);
 hold.held = [];
-return { count: hold.rewritten, type: hold.type };`, mode);
+return { count: hold.rewritten, type: hold.type };`, mode, state);
     console.warn(`[hold] ${state}: ${rewritten.count} answers rewritten (${rewritten.type})`);
 }
 
@@ -214,6 +227,12 @@ async function gatewayUpdates(): Promise<void> {
     await clickVisible('updates-tab');
     await findByTestId('updates-list', 120_000);
     await until('document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'an update row', 120_000);
+}
+
+/** Types a search and submits it with Enter (a Browse search, UX-P3.2). */
+async function searchWithEnter(text: string): Promise<void> {
+    await typeInSearch(text);
+    await (await findByTestId('search-input')).sendKeys(Key.ENTER);
 }
 
 async function typeInSearch(text: string): Promise<void> {
@@ -310,7 +329,7 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
@@ -587,6 +606,64 @@ const REACH: Record<string, Reach> = {
             await findByTestId('browse-list', 120_000);
             await until('document.querySelector(\'[data-testid="browse-list"] [data-testid="package-row-newtonsoft.json"]\') !== null', 'the Newtonsoft.Json Browse row');
         },
+    },
+    'main-browse-hover': {
+        reach: async () => {
+            await REACH['main-browse-results'].reach();
+            const option = await optionOf('package-row-newtonsoft.json');
+            await driverOf().actions().move({ origin: option }).perform();
+            await until('document.querySelector(\'[data-testid="browse-list"] .nuiget-row-option:hover\') !== null', 'a Browse row under the pointer', 10_000);
+        },
+    },
+    'main-browse-empty': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await typeInSearch('zz-no-such-package-nuiget');
+            await (await findByTestId('search-input')).sendKeys(Key.ENTER);
+            await until('document.querySelector(\'[data-testid="browse-empty"]\')?.textContent === \'No results for "zz-no-such-package-nuiget".\'', 'the Browse empty state', 120_000);
+        },
+    },
+    'main-browse-loading': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/query');
+            await searchWithEnter('Newtonsoft.Json');
+            // The bar stands because the answer is held, not because nuget.org is slow (VERIFY: `[hold] … N held`, N ≥ 1).
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await until('document.querySelector(\'[data-testid="browse-progress"]\') !== null && document.querySelector(\'[data-testid="browse-list"]\') === null && document.querySelectorAll(".nuiget-skeleton-row").length === 0', 'the bar alone');
+        },
+        leave: () => releaseHeld('main-browse-loading'),
+    },
+    'main-browse-revalidating': {
+        reach: async () => {
+            await REACH['main-browse-results'].reach();
+            await holdRequest('search/query');
+            await (await findByTestId('search-input')).sendKeys(Key.ENTER);
+            await until('document.querySelector(\'[data-testid="browse-progress"]\') !== null && document.querySelector(\'[data-testid="browse-list"]\')?.getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="browse-list"] .nuiget-row-option\') !== null', 'the rows under the bar, the list busy');
+        },
+        leave: () => releaseHeld('main-browse-revalidating'),
+    },
+    'main-browse-error': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/query');
+            await searchWithEnter('Newtonsoft.Json');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await failHeld('main-browse-error', 'The package source could not be read.');
+            await until('document.querySelector(\'[data-testid="browse-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endHold,
+    },
+    'main-browse-unavailable': {
+        reach: async () => {
+            await chooseFixtureProject('Gateway.csproj');
+            await holdRequest('search/query');
+            await searchWithEnter('Newtonsoft.Json');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await rewriteHeld('main-browse-unavailable', 'browse-unavailable');
+            await until('document.querySelector(\'[data-testid="browse-unavailable-banner"] button\') !== null && document.querySelector(\'[data-testid="browse-list"] [data-testid="package-row-newtonsoft.json"]\') !== null', 'the banner over the rows');
+        },
+        leave: endHold,
     },
     'main-browse-details': {
         reach: async () => {
@@ -1373,6 +1450,10 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
             merged.chrome[name] ??= rect ?? undefined;
         }
         merged.firstRow ??= layout.firstRow ?? undefined;
+        // DS-ROW-2 across views reads the Browse rows against these (UX-P3.2).
+        if (state.name === ROW_LEFTS_REFERENCE) {
+            merged.rowLefts ??= rowLeftsOf(state.name, layout);
+        }
         chromeReferences.set(key, merged);
     }
     for (const line of lines) {

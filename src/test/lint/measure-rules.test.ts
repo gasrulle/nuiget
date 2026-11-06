@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, COLLECT_LAYOUT, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -73,14 +73,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         }
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
-        expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'] });
+        expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
         expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'] });
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
-        expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
+        // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling).
+        const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse'));
+        expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
@@ -155,12 +157,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-TYPE-6')).toEqual({ ...hard('main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } });
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.10' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-quicksearch-open', 'main-quicksearch-versions'];
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
@@ -559,6 +561,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const noIcon = (nameLeft: number) => row({ icon: undefined, nameLeft });
         expect(value('main-installed-single', facts({ rows: [noIcon(30), noIcon(30)] }), 'DS-ROW-2@main-installed-single')).toMatchObject({ pass: true, value: 'icon column hidden (DS-ROW-6), name left spread 0 (2 rows)' });
         expect(value('main-installed-single', facts({ rows: [noIcon(0), noIcon(100)] }), 'DS-ROW-2@main-installed-single')).toMatchObject({ pass: false });
+        // Across views (UX-P3.2): a Browse row against the first row of main-installed-single, read from the run's reference.
+        expect(ROW_LEFTS_REFERENCE).toBe('main-installed-single');
+        expect(rowLeftsOf('main-installed-single', facts({ rows: [row({ compact: true }), row()] }))).toEqual({ state: 'main-installed-single', icon: 46, name: 98 });
+        expect(rowLeftsOf('main-installed-single', facts({ rows: [] }))).toBeUndefined();
+        const across = (built: Layout, reference: ChromeReference | undefined) => measureLines('main-browse-results', built, 'modern', {}, reference).find(line => line.name === 'DS-ROW-2@main-browse-results');
+        const reference = (name: number): ChromeReference => ({ state: 'main-installed-single', chrome: {}, firstRow: undefined, rowLefts: { state: 'main-installed-single', icon: 46, name } });
+        const browse = facts({ rows: [row({ list: 'browse-list' }), row({ list: 'browse-list' })] });
+        expect(across(browse, reference(98))).toMatchObject({ pass: true, value: 'icon left spread 0, name left spread 0 (2 rows); against main-installed-single: icon 0, name 0' });
+        expect(across(browse, reference(128))).toMatchObject({ pass: false, value: 'icon left spread 0, name left spread 0 (2 rows); against main-installed-single: icon 0, name -30' });
+        expect(across(browse, undefined)).toMatchObject({ pass: false, value: expect.stringContaining('against main-installed-single: not measurable (no reference row)') });
         // DS-ROW-3: the painted box of a selected row is the band.
         expect(value('main-installed-details', facts({ rows: [row({ state: 'current', painted: { ...band, left: 4, right: 396 } })] }), 'DS-ROW-3@main-installed-details')).toMatchObject({ pass: false, value: 'current painted 4 from the band' });
         expect(value('main-installed-hover', facts({ rows: [row({ state: 'hover', painted: band })] }), 'DS-ROW-3@main-installed-hover')).toMatchObject({ pass: true });
@@ -718,7 +730,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
     it('leaves the group header unread in the cells with no list (UX-P2.8b; the Updates cells without a row, UX-P3.1b)', () => {
-        const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable'];
+        const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-loading', 'main-installed-error', ...updatesNoList]);
@@ -744,7 +756,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-all', cells({ testIds: ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj'] }), 'DS-STATE-1@main-installed-all')).toMatchObject({ pass: false, value: expect.stringContaining('missing: installed-empty-empty.csproj') });
     });
 
-    it('reads a state cell on its own list, keyed by the state group: the Updates cells on updates-*, every other on installed-* (UX-P3.1b)', () => {
+    it('reads a state cell on its own list, keyed by the state group: the Updates cells on updates-*, the Browse cells on browse-*, every other on installed-* (UX-P3.1b, UX-P3.2)', () => {
+        expect(cellList('main-browse-loading')).toBe('browse');
+        expect(cellList('main-quicksearch-open')).toBe('browse');
         expect(cellList('main-updates-loading')).toBe('updates');
         expect(cellList('main-updates-all')).toBe('updates');
         expect(cellList('main-installed-loading')).toBe('installed');
@@ -760,9 +774,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('holds the Installed and Updates cells hard, with their later owners (UX-P2.8b, UX-P3.1b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' } });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         }
     });
 
@@ -774,6 +788,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-loading', { testIds: ['installed-progress'], skeletonRows: 3 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: true });
         expect(line('main-installed-loading', { testIds: ['installed-progress'], rows: 2 }, 'DS-STATE-1@main-installed-loading')).toMatchObject({ pass: false });
         expect(line('main-installed-unresolved', { disabledVersions: ['unresolved'] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: true });
+        // UX-P3.2: a first Browse search is the bar alone, no skeleton (rows first under it are P5.9a, D56).
+        expect(line('main-browse-loading', { testIds: ['browse-progress'] }, 'DS-STATE-1@main-browse-loading')).toMatchObject({ pass: true, value: 'present: browse-progress; missing: none' });
+        expect(line('main-browse-loading', { testIds: ['browse-progress'], rows: 2 }, 'DS-STATE-1@main-browse-loading')).toMatchObject({ pass: false });
+        expect(line('main-browse-loading', { progressTop: 150, contentTop: undefined }, 'DS-STATE-2@main-browse-loading')).toMatchObject({ pass: true, value: 'bar at list top; skeleton rows 0, rows 0; rows-first pending P5.9a' });
+        expect(line('main-browse-loading', { progressTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-browse-loading')).toMatchObject({ pass: false });
+        expect(line('main-browse-loading', { progressTop: 150, rows: 1, contentTop: 150 }, 'DS-STATE-2@main-browse-loading')).toMatchObject({ pass: false });
         expect(line('main-installed-unresolved', { disabledVersions: [''] }, 'DS-STATE-1@main-installed-unresolved')).toMatchObject({ pass: false });
         expect(line('main-installed-single', {}, 'DS-STATE-1@main-installed-single')).toBeUndefined();
 

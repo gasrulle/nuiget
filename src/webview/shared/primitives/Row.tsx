@@ -19,8 +19,12 @@ export interface RowPlacement {
     selected: boolean;
     /** In a multi-selectable list: the row whose details are shown (`aria-current`); `selected` is then the bulk set. */
     current?: boolean;
-    /** In a multi-selectable list: the option begins with a decorative check mark that shows `selected`. */
-    checkable?: boolean;
+    /**
+     * In a multi-selectable list: the option begins with a decorative check mark that shows `selected`. `'reserved'`: a list
+     * without bulk actions keeps the check column's space with an empty, borderless mark, so its icons and names line up
+     * with the panel's other lists (DS-ROW-2, V58; UX-P3.2).
+     */
+    checkable?: boolean | 'reserved';
     /** The row can be focused and selected, but its actions do not apply (an unresolved package). */
     disabled?: boolean;
     /** In a multi-selectable list, the check mark's own click; the list decides whether a disabled row toggles. */
@@ -163,7 +167,8 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
                 aria-describedby={describedBy === '' ? undefined : describedBy}
             >
                 {/* Decoration: the state is `aria-selected`; a click on it calls the list's `onToggle`, nothing here takes focus. */}
-                {checkable ? <span className={`nuiget-row-check${selectable === false ? ' nuiget-row-check--off' : ''}`} aria-hidden="true" onClick={event => { event.stopPropagation(); onToggle?.(); }}>{selected && selectable !== false ? <CheckIcon size={16} /> : null}</span> : null}
+                {checkable === 'reserved' ? <span className="nuiget-row-check nuiget-row-check--reserved" aria-hidden="true" /> : null}
+                {checkable === true ? <span className={`nuiget-row-check${selectable === false ? ' nuiget-row-check--off' : ''}`} aria-hidden="true" onClick={event => { event.stopPropagation(); onToggle?.(); }}>{selected && selectable !== false ? <CheckIcon size={16} /> : null}</span> : null}
                 {density === 'comfortable' ? <span className="nuiget-row-icon" aria-hidden="true">{icon}</span> : null}
                 <span className="nuiget-row-body" title={tooltip}>
                     <span className="nuiget-row-line">

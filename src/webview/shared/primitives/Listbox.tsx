@@ -111,6 +111,11 @@ interface ListboxBaseProps<T extends { id: string }> {
      */
     selectedIds?: ReadonlySet<string>;
     /**
+     * A list without bulk actions keeps the check column's space (`'reserved'`), so its rows line up with the panel's
+     * multi-selectable lists (DS-ROW-2, V58; UX-P3.2). Ignored when `selectedIds` is given.
+     */
+    checkColumn?: 'reserved';
+    /**
      * Space on the active row, Ctrl+click (Cmd+click on macOS) on a row, or a click on its check mark: the row's
      * membership in `selectedIds` is to be flipped. Not called for a disabled row.
      */
@@ -139,7 +144,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, busy, empty } = props;
+    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, checkColumn, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, busy, empty } = props;
     const rowHeight = ROW_HEIGHT[density];
     const groupHeight = groupRowHeight();
     const tree = useMemo(() => (groups === undefined ? undefined : treeOf(items, groups)), [items, groups]);
@@ -412,7 +417,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                                     active,
                                     selected: selectedIds ? selectedIds.has(item.id) : item.id === selectedId,
                                     current: selectedIds ? item.id === selectedId : undefined,
-                                    checkable: selectedIds !== undefined,
+                                    checkable: selectedIds !== undefined ? true : checkColumn === 'reserved' ? 'reserved' : false,
                                     disabled,
                                     onToggle: selectedIds === undefined ? undefined : () => {
                                         if (!disabled) {

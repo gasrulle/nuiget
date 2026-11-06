@@ -223,6 +223,15 @@ describe('Row in a multi-selectable list', () => {
         expect(option.querySelector('.nuiget-row-check svg')).toBeNull();
         rerender(<div role="listbox" aria-label="Installed packages">{row({ checkable: false })}</div>);
         expect(option.querySelector('.nuiget-row-check')).toBeNull();
+        // UX-P3.2: a reserved check column is an empty, aria-hidden mark that never toggles, selected or not.
+        const onToggle = vi.fn();
+        rerender(<div role="listbox" aria-label="Installed packages">{row({ checkable: 'reserved', selected: true, onToggle })}</div>);
+        const reserved = option.querySelector('.nuiget-row-check') as HTMLElement;
+        expect(reserved).toHaveClass('nuiget-row-check--reserved');
+        expect(reserved).toHaveAttribute('aria-hidden', 'true');
+        expect(reserved).toBeEmptyDOMElement();
+        fireEvent.click(reserved);
+        expect(onToggle).not.toHaveBeenCalled();
     });
 
     it('a row that cannot join a bulk action shows a muted check mark', async () => {

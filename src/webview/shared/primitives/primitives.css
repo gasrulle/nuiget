@@ -277,6 +277,12 @@
     --nuiget-row-check-border: var(--nuiget-color-fg-disabled);
 }
 
+/* The check column of a list without bulk actions: its space only, so icons and names line up across lists (DS-ROW-2, V58). */
+.nuiget-row-check--reserved {
+    --nuiget-row-check-border: transparent;
+    --nuiget-row-check-bg: transparent;
+}
+
 /* The name ellipsizes beside its badges, which keep their width, as the Extensions name does (DS-ROW-5). */
 .nuiget-row-name {
     flex: 0 1 auto;
@@ -288,14 +294,17 @@
 }
 
 .nuiget-row-version,
-.nuiget-row-description,
 .nuiget-row-status {
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
     font-size: var(--nuiget-font-size-sm);
     white-space: nowrap;
 }
 
+/* A Browse description reads at 13, the Extensions description's size (DS-TYPE-6, UX-P3.2). */
 .nuiget-row-description {
+    color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
+    font-size: var(--nuiget-font-size-md);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }

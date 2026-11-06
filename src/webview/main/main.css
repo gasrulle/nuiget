@@ -164,7 +164,9 @@ body {
 
 /* ── Browse results ── */
 
+/* Positioned for the list's bar, which lies over its top edge (DS-STATE-2, UX-P3.2). */
 .nuiget-browse {
+    position: relative;
     display: flex;
     flex: 1;
     flex-direction: column;
