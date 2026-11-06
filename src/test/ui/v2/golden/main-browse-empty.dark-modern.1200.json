@@ -1,0 +1,31 @@
+{
+  "state": "main-browse-empty",
+  "theme": "dark-modern",
+  "look": "modern",
+  "width": 1200,
+  "tolerance": 0.5,
+  "masks": [
+    {
+      "selector": "[data-testid=\"search-input\"]",
+      "reason": "the caret blinks and the selection differs between runs (H27)",
+      "rects": [
+        {
+          "h": 26,
+          "w": 1168,
+          "x": 16,
+          "y": 42
+        }
+      ]
+    }
+  ],
+  "fingerprint": {
+    "fontFamily": "system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "font": "13px system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "referenceWidth": 379.23,
+    "dpr": 1,
+    "vscode": "1.140.0",
+    "chromium": "150",
+    "image": "ubuntu26 20261101.186.1"
+  },
+  "run": "42292613923"
+}

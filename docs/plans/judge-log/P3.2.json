@@ -1,0 +1,482 @@
+{
+  "item": "P3.2",
+  "runs": [
+    {
+      "runId": "42292613923",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "7b45e6f (the -b reading commit)",
+      "look": "modern",
+      "workflow": "wf_80e65d3c-e6d",
+      "note": "The Browse states have no artboard of their own: judged against main-installed-details.dark-modern.1200.png and its spec (design-advisor ruling, P3.1b precedent). The quick-search states (main-quicksearch-open, -versions, -loading, -error, -grouped) are pending artboard: their gate is the measurements (DS-DIVIDER-3, DS-RADIUS-2 popup, DS-STATE-1).",
+      "captures": {
+        "main-browse-results": {
+          "png": "captures/42292613923/main-browse-results.dark-modern.1200.png",
+          "sha256": "c69af8140e13a9b875107af8cf9231e1395aa438a3a1007559daab414d627c82",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-details": {
+          "png": "captures/42292613923/main-browse-details.dark-modern.1200.png",
+          "sha256": "4c7873912d10af22962f9e2058978b8255448602ccbe285ced55aaf8e72f1d75",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-hover": {
+          "png": "captures/42292613923/main-browse-hover.dark-modern.1200.png",
+          "sha256": "d266ab6ddabe44d9e3c3ee4de8842f15bedd27575c81977923dc4e75268acc43",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-empty": {
+          "png": "captures/42292613923/main-browse-empty.dark-modern.1200.png",
+          "sha256": "bf7b780b0d43bff0a6e41ec6e0058ac25486dc094c529576fb9d9e32866502f0",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-loading": {
+          "png": "captures/42292613923/main-browse-loading.dark-modern.1200.png",
+          "sha256": "21a0f5474b841ad6684bb3d1dff97ec87d2ff8acfc9eeafa22239b6e574f7675",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-revalidating": {
+          "png": "captures/42292613923/main-browse-revalidating.dark-modern.1200.png",
+          "sha256": "edf4514358aef491f2968454b49c2ed2d3b272db97108774b2f830a41d9fd7a6",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 43,
+        "standing": 13,
+        "blocking": 0,
+        "refuted": 6,
+        "singleJudge": 6,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-browse-results#D3",
+          "state": "main-browse-results",
+          "finding": "[native] The refresh button draws a two-arrow glyph (sync-like), where the artboard and the Extensions view's refresh action draw the single circular-arrow refresh codicon.",
+          "severity": "minor",
+          "rule": "judge-only"
+        },
+        {
+          "id": "main-browse-details#D3",
+          "state": "main-browse-details",
+          "finding": "[geometry] The Uninstall button (y 116-141) and the version select/Update row (y 148-173) are 6 px apart on a 32 px pitch, where the spec has uninstall-button y 130.2 and version-selector/install-update-button y 160.2, a 4 px gap on a 30 px pitch.",
+          "severity": "major",
+          "rule": "DS-GRID-2"
+        },
+        {
+          "id": "main-browse-details#D4",
+          "state": "main-browse-details",
+          "finding": "[geometry] The Details tab content starts about 8 px below the tab strip's bottom line: the line is at y 217 and the description's glyph top at y 229. The artboard leaves about 20 px (line at y 241, glyph top at y 265), so the body sits cramped under the tabs.",
+          "severity": "major",
+          "rule": "DS-DENSITY-1"
+        },
+        {
+          "id": "main-browse-details#D6",
+          "state": "main-browse-details",
+          "finding": "[geometry] The dependency rows' chevrons start at x 450, 9 px inside the Dependencies heading (x 441), and their labels start at x 465. The artboard puts the chevron at x 446 and the label at x 462.",
+          "severity": "minor",
+          "rule": "judge-only"
+        },
+        {
+          "id": "main-browse-empty#D2",
+          "state": "main-browse-empty",
+          "finding": "[native] The header's Refresh button uses the two-arrow sync glyph. The artboard's refresh-button and the workbench's own view Refresh actions use the single circular-arrow refresh glyph, so a VS Code user reads this one as Sync.",
+          "severity": "minor",
+          "rule": "judge-only"
+        },
+        {
+          "id": "main-browse-revalidating#D2",
+          "state": "main-browse-revalidating",
+          "finding": "[geometry] The details pane's empty-state sentence \"Select a package to see its details.\" starts about 8 px below the pane top (line top near y 85, pane top 77). The artboard starts the details content at the pane's 20 px inset (title line top near y 97), so the message sits tight against the header divider and the pane's top inset no longer matches its side inset of 20.",
+          "severity": "minor",
+          "rule": "judge-only"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-browse-results#D1",
+          "state": "main-browse-results",
+          "finding": "[native] The split between the result list and the details pane is painted as a 4 px grey band (x 420-423) at rest, where the artboard draws a 1 px settings.sashBorder separator at x 420 with the details pane starting at 421; the sash should be transparent until hovered. | [geometry] The split between the Browse list and the details pane is a solid 4 px band (x 420-423, colour #313131 at rest, no pointer on it), so the details pane starts at x 424. The artboard draws a 1 px separator at x 420 with the pane at 421, the spec puts package-details-panel at x 421, and DS-DIVIDER-6 asks for a 1 px separator under a transparent 4 px sash at rest. | [states] The split between the results list and the details pane is painted as a 4 px grey band (x 420 to 423, rgb 49,49,49) along the full height while at rest. The artboard and DS-DIVIDER-6 draw a 1 px separator (x 420) with a transparent sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-results#D2",
+          "state": "main-browse-results",
+          "finding": "[native] Rows 2 to 10 show the bundled bright-orange raster box as the default package icon, where the artboard draws the default icon as a neutral grey tile with a codicon package glyph; nine identical saturated boxes do not read like the Extensions view's muted default icon. | [states] The Browse rows without their own icon (rows 2 to 10) draw the bright orange raster box of resources/package-icon.png with no tile, where the artboard draws a package without an icon as the codicon `package` in icon.foreground on a 36 px dark tile. The default icon reads as decoration in a colour role the workbench does not use.",
+          "severity": "major",
+          "box": [
+            46,
+            167,
+            38,
+            612
+          ],
+          "rule": "judge-only, DS-ICON-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P7.1",
+          "evidence": "the default package icon is the host's `data-package-icon` raster; P7.1 carries it from UX-P2.8b (`main-installed-single#D4`)",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D1",
+          "state": "main-browse-details",
+          "finding": "[native] The details header is squeezed against the artboard and DS-INSET-4: the title ink starts 13 px below the pane top (artboard 25 px, i.e. a 20 px header inset), the controls sit 12 px higher (version select y 148 vs spec 160.2), only about 8 px separate the Update row from the Details/README strip (artboard 20 px), and the description starts 12 px under the tab strip (artboard 24 px). | [geometry] The details header is squeezed against the artboard. The title's glyph top is at y 90, 13 px below the pane top, where the artboard has it at y 102 (25 px). Only 8 px separate the Update button's bottom (y 173) from the Details/README strip (top y 182), where the spec has 20 (185.2 to 206.2). Content starts 16 px from the pane edge instead of 20, so the header uses about 8/16/8 instead of 20 on every side.",
+          "severity": "major",
+          "box": [
+            424,
+            77,
+            776,
+            166
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "the details header's insets; the P3.3b row carries them",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D2",
+          "state": "main-browse-details",
+          "finding": "[native] The 1 px pane separator from the artboard (x 420, settings.sashBorder grey 43) is drawn as a 4 px band (x 420–423) in a lighter grey (49) for the full height of the panel. That gives the split a second, heavier divider colour that does not match the header line (43), against DS-DIVIDER-6 (1 px separator, transparent sash at rest) and the one divider role per surface. | [geometry] The list/details split is painted as a solid 4 px band (x 420-423, input-grey) the full height of the body, and the details pane starts at x 424, where the artboard and spec draw a 1 px separator line at x 420 and start package-details-panel at x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D7",
+          "state": "main-browse-details",
+          "finding": "[native] Dependency group counts are drawn as \"(0)\", \"(4)\" and \"(6)\" text after the framework name, where the artboard draws a workbench count badge after each group. This is a different count style from the pill badges used elsewhere on the surface. | [states] Each dependency group shows its count as \"(0)\", \"(4)\" or \"(6)\" text after the framework name. The artboard draws a count badge (pill) beside each group name, so the count style differs from the artboard and from the badges used elsewhere on the surface.",
+          "severity": "major",
+          "box": [
+            448,
+            470,
+            182,
+            188
+          ],
+          "rule": "DS-HEIGHT-10, DS-COPY-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3a",
+          "evidence": "the group caption's count is its badge (PropertyList, GroupCaption)",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D8",
+          "state": "main-browse-details",
+          "finding": "[native] The details header labels read \"Installed:\" and \"Version:\" with a trailing colon, where the artboard's labels \"Installed\" and \"Version\" have none (label–value pairs carry no colon). | [states] The details header labels read \"Installed:\" and \"Version:\" with a trailing colon, where the artboard draws \"Installed\" and \"Version\" without one and the copy rule forbids a colon on label–value pairs.",
+          "severity": "major",
+          "box": [
+            438,
+            119,
+            64,
+            51
+          ],
+          "rule": "DS-COPY-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3a",
+          "evidence": "label-value pairs carry no colon (PropertyList)",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D9",
+          "state": "main-browse-details",
+          "finding": "[native] The properties label reads \"Author(s)\" where the artboard and DS-COPY-2 use the single noun \"Authors\". | [states] The properties list labels the author field \"Author(s)\", where the artboard reads \"Authors\" and the rule bans \"Author(s)\" (one noun per field).",
+          "severity": "major",
+          "box": [
+            438,
+            279,
+            66,
+            18
+          ],
+          "rule": "DS-COPY-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3a",
+          "evidence": "one noun per field (PropertyList)",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D10",
+          "state": "main-browse-details",
+          "finding": "[native] The \"Date published\" value (2025-09-16) starts at x 547, while every other value in the facts block starts at x 539. The label column is not max-content, so the value column breaks, unlike the artboard where all values share one left edge. | [geometry] The facts grid has no shared value column. The Date published value starts at x 547, while every other value (Version, Author(s), License, Downloads, Package size, Project URL, Report abuse) starts at x 540. In the artboard every value starts at one column, x 552. | [states] In the properties list the \"Date published\" value starts at about x 546 while every other value starts at x 539. The label is wider than the value column, so the column is broken; the artboard keeps all values on one column edge at x 552.",
+          "severity": "major",
+          "box": [
+            438,
+            347,
+            187,
+            62
+          ],
+          "rule": "DS-ALIGN-1, judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3a",
+          "evidence": "one value column (PropertyList)",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-details#D5",
+          "state": "main-browse-details",
+          "finding": "[native] Dependency group rows sit on a 24 px pitch with the chevron at x 450, where the artboard draws them on a 22 px pitch, the tree-row height, with the chevron at x 445. The list looks looser than the native tree rows. | [geometry] The dependency framework rows under Dependencies sit on a 24 px pitch (glyph tops 476, 500, 524 … 644), where the artboard draws 22 px details group rows (554, 576, 598 …).",
+          "severity": "major",
+          "box": [
+            440,
+            468,
+            200,
+            192
+          ],
+          "rule": "judge-only, DS-DENSITY-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "the dependency rows' pitch in the details pane",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-hover#D1",
+          "state": "main-browse-hover",
+          "finding": "[native] The split between the results list and the details pane is drawn as a 4 px opaque band (x 420-423, #313131) from y 77 to the bottom. The artboard draws a 1 px separator in the divider role (#2b2b2b at x 420) with the details pane starting at x 421, and DS-DIVIDER-6 requires a transparent sash at rest. The split reads as a thick light bar, not the workbench's hairline. | [geometry] The split between the Browse list and the details pane paints a 4 px band (x 420-423, the same grey as the input background) along the full pane height, where the artboard draws a 1 px separator at x 420 and starts the details pane at 421 (spec package-details-panel x 421). This moves the details pane edge to 424 and its content to x 444, against 441 in the artboard.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-empty#D1",
+          "state": "main-browse-empty",
+          "finding": "[native] The split between the results list and the details pane is a 4 px opaque grey band (rgb 49,49,49 at x 420-423 from y 77 to the bottom) at rest. The artboard draws a 1 px separator in the divider colour (rgb 43,43,43 at x 420 only), and VS Code splits show the same 1 px line with a transparent sash. | [geometry] The split between the list and the details pane is a 4 px opaque bar (x 420-423, painted the same at rest for the full height), where the artboard draws a 1 px separator at x 420. Because of the bar, the details pane starts at x 424 instead of the spec's package-details-panel x 421, and the details placeholder sits 3 px right of the artboard's details column (444 vs 441). | [states] The split between the Browse list and the details pane is drawn as a solid 4 px light band (x 420 to 423, rgb 49,49,49 at rest, the full height from y 77). The artboard draws a 1 px separator at x 420 (rgb 43,43,43), and the sash should stay transparent until hovered or dragged, so this band is an extra element at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-loading#D1",
+          "state": "main-browse-loading",
+          "finding": "[native] The split between the list and details panes is drawn as a solid 4 px grey band (x 420–423, rgb 49,49,49) at rest, where the artboard draws a 1 px separator in the divider colour at x 420 with a transparent sash, so the split reads as a thick bar rather than VS Code's hairline split-view separator. | [geometry] The split between the list pane and the details pane is a 4 px band painted at rest (x 420-423, rgb 49,49,49, full height from y 77 to the bottom), where the artboard draws a 1 px separator at x 420. As a result the details pane starts at x 424 instead of the spec's package-details-panel x 421, and its empty-state text sits 3 px further right than the artboard's details content. | [states] The split between the list and the details pane is a 4 px grey band at rest (x 419–422, rgb 49,49,49, full height). The artboard draws a 1 px separator at x 419 (rgb 43,43,43) with nothing beside it. DS-DIVIDER-6 requires a 1 px settings.sashBorder separator and a transparent sash at rest, so the sash is painted when nothing is hovering or dragging it.",
+          "severity": "major",
+          "box": [
+            419,
+            77,
+            5,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-revalidating#D1",
+          "state": "main-browse-revalidating",
+          "finding": "[native] The split between the Browse list and the details pane is drawn as a 4 px band in a lighter grey (x 420-423, rgb 49,49,49) down the full height. The artboard draws a 1 px separator at x 420 in the divider colour (rgb 43,43,43), so at rest the sash reads as painted, not as the workbench's thin split line. | [geometry] The list/details split is drawn as a 4 px painted band (x 420-423, #313131 at rest, full height) instead of the artboard's 1 px separator at x 420 with the details pane starting at x 421 (spec package-details-panel x 421). The details pane and its content therefore shift 3 px right (empty-state text at x 444 against the artboard's 441). | [states] The split between the Browse list and the details pane is a solid 4 px band in a lighter grey (x 420-423, #313131) for the full pane height, although nothing hovers or drags it in this state; the artboard draws a 1 px separator at x 420 (#2b2b2b), with the details pane starting at x 421 and the sash transparent at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        }
+      ]
+    },
+    {
+      "runId": "42292613923",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "7b45e6f (the -b reading commit)",
+      "look": "modern",
+      "workflow": "wf_860cbbfe-b58",
+      "note": "The Browse states have no artboard of their own: judged against main-installed-details.dark-modern.1200.png and its spec (design-advisor ruling, P3.1b precedent). The quick-search states (main-quicksearch-open, -versions, -loading, -error, -grouped) are pending artboard: their gate is the measurements (DS-DIVIDER-3, DS-RADIUS-2 popup, DS-STATE-1).",
+      "captures": {
+        "main-browse-error": {
+          "png": "captures/42292613923/main-browse-error.dark-modern.1200.png",
+          "sha256": "158361ce2a22794a32fdc01c9ca3e682cac50ebd4ebf19ee20775fa3c0e33eda",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-unavailable": {
+          "png": "captures/42292613923/main-browse-unavailable.dark-modern.1200.png",
+          "sha256": "aaa0872c80b3bca0d319abfbdff2e522320864860db47702b1829305dbd5f95e",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 7,
+        "standing": 3,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-browse-error#D1",
+          "state": "main-browse-error",
+          "finding": "[native] The split between the result list and the details pane is a 4 px grey bar (#313131, x 420-423) painted at rest along the full height. The artboard draws a 1 px divider-role separator (#2b2b2b at x 420) with no visible sash, so the split reads as a custom gutter rather than the workbench's splitview separator. | [geometry] The split between the list and the details pane is drawn as an opaque 4 px band (x 420-423, #313131, from y 77 to the bottom) at rest, where the artboard draws a 1 px divider at x 420 (#2b2b2b, package-details-panel starting at x 421). As a result the details pane starts at x 424, and its placeholder text starts at x 444 instead of the artboard's details-content x of 441. | [states] The split between the Browse list and the details pane is drawn as an opaque 4 px band (#313131, x 420-423) the full height of the body. The artboard and spec draw a 1 px separator at x 420 with the details pane starting at 421, and the sash should be transparent at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-error#D2",
+          "state": "main-browse-error",
+          "finding": "[native] The inline error copy reads \"The search failed: The package source could not be read.\", which is two capitalised clauses built on \"failed\". The design system's failure pattern is one sentence of the form \"<What> could not be searched: <reason>.\" and avoids \"failed\" for a read (§10.8; DS-STATE-4 asks for one sentence). | [states] The Browse error message joins two messages with a colon and restarts with a capital ('The search failed: The package source could not be read.'). It is a stitched prefix plus a second capitalised sentence, where DS-STATE-4 calls for one sentence and the sentence-case copy rules allow no capital after a colon.",
+          "severity": "major",
+          "box": [
+            40,
+            82,
+            292,
+            34
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "the composed error family, beside P3.1b's Updates error: `The packages could not be searched: <reason>.`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        },
+        {
+          "id": "main-browse-unavailable#D1",
+          "state": "main-browse-unavailable",
+          "finding": "[native] The split between the Browse list and the details pane is painted as a 4 px opaque grey band (x 420-423, rgb 49,49,49, lighter than the 43,43,43 header rule) for the whole height of the panes. The artboard draws a 1 px separator at x 420 with the details pane starting at 421, and the rule wants a 1 px sashBorder separator with a transparent sash at rest, so the divider reads as a heavy non-native bar rather than a workbench split. | [geometry] The divider between the list pane and the details pane is a 4 px stripe (x 420-423) painted at rest in a lighter grey than the header divider, where the artboard draws a 1 px line at x 420 in the divider colour and the spec puts package-details-panel at x 421. The whole details pane therefore starts at x 424, 3 px right of the spec, and its empty-state text ink starts at x 444 instead of the artboard's 441 content edge.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash at rest, untouched by this item; as P3.1b's `main-updates*#D1`",
+          "ruling": "design-advisor, UX-P3.2 trigger 4, 2026-11-06 (docs/plans/handoff/P3.2.md, Advisor decisions)"
+        }
+      ]
+    }
+  ]
+}

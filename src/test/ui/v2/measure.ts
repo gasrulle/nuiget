@@ -156,7 +156,7 @@ export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefin
     return { id, ...options };
 }
 
-const asGrid1 = { 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
 /** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2). */
 const { browse: _noGroupHeader, ...grid2b } = asGrid1;
 
@@ -273,8 +273,8 @@ export const RULES: readonly RuleDefinition[] = [
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES, pendingStates: { 'main-browse-details': 'P3.2' } }),
-    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] } }),
+    rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
+    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
@@ -297,9 +297,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused', 'main-installed-hover-current'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P3.2: the popup layer at the layer radius and its rows at the popup row radius, read in the popup states only.
-    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
+    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
-    rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
+    rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -313,15 +313,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-TYPE-6', {
-        helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES,
-        // The Browse list under the details pane: a details-group state by `stateGroup` (`-details`), its description to P3.2
-        // with the browse scope (design-advisor follow-up of 2026-10-24, UX-P0.18, run 40114517304).
-        pendingStates: { 'main-browse-details': 'P3.2' },
+        helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES,
     }),
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.10' } },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' } },
         tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
@@ -337,11 +334,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the

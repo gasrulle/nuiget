@@ -332,7 +332,7 @@ div.nuiget-row[role="presentation"][data-index][data-testid="package-row-<id>"] 
 ├─ div.nuiget-row-option[role="option" | role="treeitem" with aria-level][tabIndex 0 | -1][aria-selected][aria-posinset][aria-setsize]
 │  │  [aria-labelledby → name, version][aria-describedby → badges, meta, authors, description, status]
 │  │  [aria-busy][aria-disabled]                                                    ← text only
-│  ├─ span.nuiget-row-check[aria-hidden]      (multi-selectable lists)
+│  ├─ span.nuiget-row-check[aria-hidden]      (multi-selectable lists; empty and borderless, --reserved, in a list that keeps the column, Browse)
 │  ├─ span.nuiget-row-icon[aria-hidden]       (comfortable rows, with or without an icon)
 │  └─ span.nuiget-row-body[title="<id> <version>"]                                  ← the tooltip
 │     ├─ span.nuiget-row-line   name, badges
@@ -376,7 +376,9 @@ A list names its keys in a visually hidden sentence it is described by (`hint`).
 and Delete. A list that offers bulk actions passes `selectedIds` (since P5.4): it is then `aria-multiselectable`,
 the rows of the set are `aria-selected` and show a check mark (an `aria-hidden` span inside the option, so
 nothing in the option can take focus), and `selectedId` becomes the current row, `aria-current`, the one whose
-details are shown. Without `selectedIds` nothing of this exists and Space is not handled. Shift ranges, Ctrl+A,
+details are shown. Without `selectedIds` nothing of this exists and Space is not handled; a list without bulk actions
+may keep the check column's space (`checkColumn="reserved"`: an empty, borderless, `aria-hidden` mark that takes no click),
+so its icons and names line up with the panel's multi-selectable lists (Browse, UX-P3.2). Shift ranges, Ctrl+A,
 PageUp/PageDown and type-ahead are not handled.
 
 `Listbox` reads from the DOM only the `[data-index]` wrapper and the focusable element inside it; every row fact crosses as
@@ -544,7 +546,9 @@ starts; the other slices ask when they have something to ask for.
   blanking the list; `sourcesUnavailable` is a flag over the results. The slice also owns quick-search:
   `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
   one) and sends nothing while the list is unknown or names none; the latest suggestion wins. A new `suggest` keeps
-  the groups it shows while it asks (`suggesting`), so the list does not blink between keys (P9.6).
+  the groups it shows while it asks (`suggesting`), so the list does not blink between keys (P9.6). A failed ask keeps its
+  error (`suggestError`) with no suggestion beside it until the next ask or `clearSuggestions`; the box shows it as an
+  error row whose ArrowRight asks the text again (UX-P3.2).
 - `details` (P5.7): the package selected in a main-panel list (`select()`: id, version to show first, source, origin
   `installed`/`updates`/`browse`/`transitive`, owning project; a `transitive` selection asks none of the three
   requests below), the chosen version, and its `package/versions`,

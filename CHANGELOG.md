@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Installed tab shows where it is loading, and empty or unsupported projects say so in place**
 - **The Updates list is grouped like the Installed list, under a Direct packages header**
 - **Updates for All Projects are one list grouped by project and folder, and the Updates tab shows where it is loading, and when the check failed, in place**
+- **Search results line up with the installed packages, show their description in the regular size and show where they are loading or failed in place**
+- **Quick-search suggestions from several sources are separated as in VS Code's quick open, and a failed quick search says so and can be retried with the Right arrow**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

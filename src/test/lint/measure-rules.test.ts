@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -94,8 +94,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
         expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' }, popup: { pending: 'P3.7a' } });
-        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: { pending: 'P3.2' } });
-        expect(scopes('DS-DIVIDER-3')).toEqual({ browse: { pending: 'P3.2' } });
+        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard' });
+        expect(scopes('DS-DIVIDER-3')).toEqual({ browse: 'hard' });
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: { pending: 'P3.3b' } });
@@ -141,9 +141,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         expect(scopes('DS-INSET-4')).toEqual({ details: { pending: 'P3.3b' } });
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
-        expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } });
-        expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
-        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
+        expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
+        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-ROW-6')).toEqual(mainHard());
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
         // UX-P1.4b: the two states whose readiness holds a Verified mark.
@@ -159,12 +159,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } });
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
-        expect(scopes('DS-TYPE-6')).toEqual({ ...hard('main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } });
+        expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.10' } });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
-        // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
-        expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
+        // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
+        expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
         const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
@@ -718,7 +718,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The computed 11.05 of the run is within the rule's own 0.1.
         expect(value('main-installed-single', facts({ metaText: meta(11.05), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-browse-details', facts({ metaText: [...meta(11), { kind: 'description', fontSize: 11.05, colour: 'rgb(157, 157, 157)', selected: false }], descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-browse-details'))
-            .toMatchObject({ pass: false, status: { pending: 'P3.2' } });
+            .toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-unsupported', facts({ copyEnds: [{ kind: 'banner', text: 'Unsupported project: requires .NET SDK 10 or newer' }] }), 'DS-COPY-3@main-installed-unsupported'))
             .toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
@@ -778,7 +778,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             labels: [{ transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }, { transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }],
             pickerBorder: 'rgb(60, 60, 60)', description: 'rgb(157, 157, 157)', ...overrides,
         } } as Layout['endOfP0'] });
-        expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: { pending: 'P3.2' }, value: 'layer 8, rows 4 ×2 (target layer 8, rows 4)' });
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: 'hard', value: 'layer 8, rows 4 ×2 (target layer 8, rows 4)' });
         expect(lineOf('main-quicksearch-open', popup({ radius: '2px' }), 'DS-RADIUS-2@main-quicksearch-open/popup')).toMatchObject({ pass: false });
         // The rows scope does not apply in a popup state; the popup scope applies in no list state.
         expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/rows')).toBeUndefined();
@@ -799,9 +799,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('holds the Installed and Updates cells hard, with their later owners (UX-P2.8b, UX-P3.1b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' } });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard' });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         }
     });
 
