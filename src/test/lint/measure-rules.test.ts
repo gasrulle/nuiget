@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: { pending: 'P3.2' }, details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -137,7 +137,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: { pending: 'P3.2' } });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
-        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: { pending: 'P3.2' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-ROW-6')).toEqual(mainHard());
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
         // UX-P1.4b: the two states whose readiness holds a Verified mark.
@@ -155,7 +155,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-TYPE-6')).toEqual({ ...hard('main-installed', 'main-updates', 'details', 'sidebar'), browse: { pending: 'P3.2' } });
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description waits for P3.2 (run 40114517304).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toEqual({ 'main-browse-details': 'P3.2' });
@@ -758,11 +758,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(outerScrollVerdict(0, 5)).toEqual({ text: 'outer scroll 0,5', pass: false });
     });
 
-    it('holds the Installed cells hard in main-installed, with their later owners (UX-P2.8b; the Updates cells pending P3.1b until its closing commit)', () => {
+    it('holds the Installed and Updates cells hard, with their later owners (UX-P2.8b, UX-P3.1b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' } });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': { pending: 'P3.1b' }, browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: { pending: 'P3.10' }, details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
         }
     });
 

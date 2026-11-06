@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Author names stand out in package lists**
 - **The Installed tab shows where it is loading, and empty or unsupported projects say so in place**
 - **The Updates list is grouped like the Installed list, under a Direct packages header**
+- **Updates for All Projects are one list grouped by project and folder, and the Updates tab shows where it is loading, and when the check failed, in place**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

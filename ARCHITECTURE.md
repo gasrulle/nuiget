@@ -723,11 +723,20 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
   `CentralUpdateDialog` (`cpm-preview-dialog`) lists the projects the central version applies to, and its confirm
   sends `ops/update`; Space announces that the package cannot join a bulk update (N76).
 - **Unknown is not empty.** `sourcesUnavailable` is a warning banner with Retry over the list
-  (`updates-unavailable-banner`), and the empty list then says that updates could not be checked; "No updates
-  available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9): one section per
-  project under its workspace folder over the `allProjects/updates` stream, rows of an unsupported project read-only,
-  one banner over every section when a source could not be checked, and Update all as one `ops/bulkUpdateAllProjects`
-  listing the packages under their project; the tab count is the sum once every listed project has answered.
+  (`updates-unavailable-banner`); when no row came back the banner is the cell's one message (no list, no sentence:
+  `sourcesUnavailable` cannot tell a partial answer from none; UX-P3.1b), and only the All Projects leaf of a project says
+  "Updates could not be checked."; "No updates available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9, UX-P3.1b): one
+  tree over the `allProjects/updates` stream, a group row per project (`group-row-project-<name>`, ids from
+  `shared/allProjects/folderGroups.tsx`'s `projectGroupIds`, as the Installed tab's) under a group row per workspace
+  folder when there are two or more; a project's action-less sentence (no updates, nothing installed, unknown, an
+  unsupported project before its read-only rows) is a message leaf of its group, a failed check a banner with Retry
+  above the tree (`updates-error-<name>`); the bulk set is `useBulkSelection`'s with row ids; one banner over the tree
+  when a source could not be checked, and Update all as one `ops/bulkUpdateAllProjects` listing the packages under
+  their project; the tab count is the sum once every listed project has answered.
+- **State cells (UX-P3.1b).** The tab draws its own 2 px bar over the list area's top edge while the list loads or asks
+  again (`updates-progress`; the header's `RefreshBar` is Browse's only), three skeleton rows on a first load, the
+  empty state `updates-empty` ("No packages installed." or "No updates available.") and the inline error
+  `updates-error` with Retry; a host's reason ends as one sentence (`updatesTree.ts`'s `sentence`).
 
 The sidebar's `UpdatesSection` (`src/webview/sidebar`) reads the same slice: compact rows in
 `sidebar-updates-list` under `section-header-updates`, the count only when known, Enter and the row button
@@ -841,10 +850,10 @@ confirmation says the source goes from the nearest config file.
 
 ### All Projects (main)
 
-With All Projects committed, the Installed and Updates tabs show one section per project, grouped by
-`shared/allProjects/folderGroups.tsx` under a heading per workspace folder when there are two or more (sections one
-heading level down). An unsupported project keeps its section in its folder with an `Unsupported` badge and the banner
-"Unsupported project: <message>"; a project whose SDK is below 10 lists its packages read-only (D13), the other reasons
+With All Projects committed, the Installed and Updates tabs show one tree each, a group row per project
+(`projectGroupIds` of `shared/allProjects/folderGroups.tsx`) under a group row per workspace folder when there are two or
+more (`groupByFolder`; UX-P2.1d, UX-P3.1b). An unsupported project keeps its group row in its folder, with an `Unsupported` badge and its reason as a
+message leaf ("Unsupported project: <message>."), its rows read-only; a project whose SDK is below 10 lists its packages read-only (D13), the other reasons
 have no packages and show no list. The Installed tab's Transitive group row aggregates `allProjects/transitive` on
 expand: one row per lower-cased id and version, with each project's top-level roots ("no traceable top-level package"
 for none) and Restore for the projects not restored. In the details pane an installed or update row changes its own

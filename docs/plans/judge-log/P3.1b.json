@@ -1,0 +1,1221 @@
+{
+  "item": "P3.1b",
+  "runs": [
+    {
+      "runId": "42250359112",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "1fa929f (reading commit)",
+      "look": "modern",
+      "workflow": "wf_5fa51b7f-20c",
+      "note": "The Updates cells have no artboard of their own: judged against main-updates.dark-modern.1200.png and main-updates.spec.json (P2.8b's precedent).",
+      "captures": {
+        "main-updates-all": {
+          "png": "captures/42250359112/main-updates-all.dark-modern.1200.png",
+          "sha256": "2b62bcb6b4efe7907da86f7ead73969e45e877c551bc2be8cd1b9523b0c0e1d8",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-hover": {
+          "png": "captures/42250359112/main-updates-hover.dark-modern.1200.png",
+          "sha256": "ba091fd3271f88b782fdcbefe2385035ceca6e6ef96a98d5a6bd1f6798ba0b9a",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-loading": {
+          "png": "captures/42250359112/main-updates-loading.dark-modern.1200.png",
+          "sha256": "627e7ce979cfb3baade0920e8bf1e5d186190f07ca60e402163f1814cd57f1ce",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-revalidating": {
+          "png": "captures/42250359112/main-updates-revalidating.dark-modern.1200.png",
+          "sha256": "7197379133c543ce7d96ef9ab18ecc3dee7ad00d143b10b572b8d456ad7d46da",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-empty": {
+          "png": "captures/42250359112/main-updates-empty.dark-modern.1200.png",
+          "sha256": "58a62d7efcad8c30acae46813a0f26ef7702058615985876c3c96ebf88212948",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-error": {
+          "png": "captures/42250359112/main-updates-error.dark-modern.1200.png",
+          "sha256": "84bb5f092db775423bdc22909280b679e0b528d14ffe5ccc932300ad85aefc84",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 66,
+        "standing": 25,
+        "blocking": 0,
+        "refuted": 9,
+        "singleJudge": 4,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-updates-all#D5",
+          "state": "main-updates-all",
+          "finding": "[geometry] The list is scrolled away from its start (scrollbar thumb at y 532-657, not at the top of the track at y 147), but the list's top edge below y 147 has no scroll shadow (pixels go straight from the 1 px line to the #181818 surface at y 148). The rule asks for the workbench's inset 0 6px 6px -6px scrollbar.shadow decoration whenever scrollTop > 0.",
+          "severity": "major",
+          "rule": "DS-SCROLL-2"
+        },
+        {
+          "id": "main-updates-loading#D5",
+          "state": "main-updates-loading",
+          "finding": "[geometry] Under the 2 px progress bar the list shows only the three skeleton rows (y 147-363); the 'Loading …' status line that the rule requires under the bar on a first load is not drawn anywhere in the list column.",
+          "severity": "major",
+          "rule": "DS-STATE-2"
+        },
+        {
+          "id": "main-updates-error#D5",
+          "state": "main-updates-error",
+          "finding": "[native] The header's settings and refresh actions use different glyphs from the artboard: a gear and the two-arrow sync glyph, where the artboard draws the rayed settings glyph and the single-arrow refresh glyph that the Extensions view uses for refresh.",
+          "severity": "minor",
+          "rule": "judge-only"
+        },
+        {
+          "id": "main-updates-error#D7",
+          "state": "main-updates-error",
+          "finding": "[geometry] The details pane's empty sentence 'Select a package to see its details.' sits with its ink at y 88-100, 11 px below the pane top, where the artboard draws it at y 100-112, 23 px below the pane top. Its x is 444 against the artboard's 441, which follows from the wide sash. The top inset is about 12 px tighter than the artboard.",
+          "severity": "major",
+          "rule": "judge-only"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-updates-all#D1",
+          "state": "main-updates-all",
+          "finding": "[native] The split between the Updates list and the details pane is painted as a 4 px grey strip (x 420-423, rgb 49) over the full height, where the artboard draws a 1 px divider at x 420 with a transparent sash; a resting sash reads as hovered or as a heavy rule, not as the workbench's split. | [geometry] The split between the list column and the details pane is an opaque 4 px band (x 420-423, #313131) at rest, where the artboard draws a 1 px separator at x 420. Because of it the details pane starts at x 424 instead of the spec's package-details-panel x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D2",
+          "state": "main-updates-all",
+          "finding": "[native] The bulk toolbar's buttons read \"Select all\" and \"Update all (28)\" in sentence case, where the artboard and the copy rules use Title Case (\"Select All\", \"Update All (14)\"). | [states] The secondary bulk button reads \"Select all\" in sentence case; the artboard's select-all-button draws \"Select All\" and DS-COPY-1 requires Title Case on button labels. | [states] The primary bulk button reads \"Update all (28)\" in sentence case; the artboard's update-all-button draws \"Update All (14)\" and DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D4",
+          "state": "main-updates-all",
+          "finding": "[native] The rows under Unsupported.csproj (a read-only project, per its message) have the same check box and name colours as the actionable rows above, with no muted check, so they look selectable for a bulk update. | [states] The three update rows under Unsupported.csproj, a read-only project (its note says it requires .NET SDK 10), draw the same enabled bulk check boxes as Utility.csproj's rows. There is no muted check and no per-row reason, so the user can select rows that cannot be updated, against DS-STATE-7's muted-check rows with a status text.",
+          "severity": "major",
+          "box": [
+            14,
+            412,
+            22,
+            166
+          ],
+          "rule": "DS-STATE-7",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.1b",
+          "evidence": "91bce73: selectable={false} and status \"Read-only\" on an unsupported project's update rows; run 42257211352 `DS-STATE-7@main-updates-all: 0 disabled, 3 unselectable (0 under Transitive), 0 without a reason (hard)`; absent from the re-judge wf_f9fb33d9-742",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D3",
+          "state": "main-updates-all",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits at y 88 and x 445, where the artboard draws it at y 100 and x 442. Its top inset is about 11 px against the artboard's 23 px and its start inset 24 px against 21 px, so the pane's empty state looks squeezed against the tab-strip line. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than the artboard draws it: glyph top at y 88 against the artboard's y 100. That gives a top inset of about 8 px against a 20 px start inset, where the artboard uses 20 px on both.",
+          "severity": "major",
+          "box": [
+            441,
+            85,
+            229,
+            30
+          ],
+          "rule": "DS-STATE-3, judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D1",
+          "state": "main-updates-hover",
+          "finding": "[native] The split between the Updates list and the details pane is painted as a 4 px grey bar (x 420-423, sash colour at rest) from the tab strip to the bottom, where the artboard draws a single 1 px separator at x 420 and the rule wants a transparent 4 px sash over a 1 px settings.sashBorder line; the row hovered is Dapper, not the sash. | [geometry] The split between the Updates list and the details pane is a 4 px painted band (x 420-423, colour distinct from the 1 px divider) running from y 77 to the bottom, so the details pane starts at x 424; the artboard draws a 1 px separator at x 420 with the pane at x 421, as the spec's package-details-panel rect (x 421) requires.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D2",
+          "state": "main-updates-hover",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and workbench button labels are Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\"; button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D3",
+          "state": "main-updates-hover",
+          "finding": "[native] The primary bulk button reads \"Update all (14)\" in sentence case, where the artboard draws \"Update All (14)\" and workbench button labels are Title Case. | [states] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case where the artboard draws \"Update All (14)\"; button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            295,
+            117,
+            109,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D4",
+          "state": "main-updates-hover",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits at y 88-100, 12 px higher than the artboard's y 100-112, so the empty-state text is tighter against the tab-strip line than the artboard's welcome-view placement. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits about 8 px below the pane's top edge (glyphs at y 88-100), about 12 px higher than the artboard, which places it 20 px in (glyphs at y 100-112); its start inset is still 20 from the pane edge.",
+          "severity": "major",
+          "box": [
+            424,
+            77,
+            246,
+            36
+          ],
+          "rule": "judge-only, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-loading#D1",
+          "state": "main-updates-loading",
+          "finding": "[native] The split between the Updates list and the details pane is a visible 4 px grey bar (x 420-423, #313131) at rest, where the artboard draws a 1 px separator at x 420 with the details pane starting at 421; a built-in split view shows only the 1 px line and keeps the sash transparent until hovered, and the bar also pushes the details pane 3 px right of the spec's x 421. | [geometry] The split between the list and the details pane is a 4 px painted band (x 420-423, a lighter grey than the divider) with the details pane starting at x 424, where the artboard draws a 1 px divider at x 420 and the package-details-panel rect starts at x 421 (spec rect x 421); at rest the sash should be transparent over a 1 px separator.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-loading#D2",
+          "state": "main-updates-loading",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and button labels are Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, but the artboard's select-all-button and the copy rules use the Title Case label \"Select All\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-loading#D3",
+          "state": "main-updates-loading",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard draws \"Update All (14)\" and button labels are Title Case. | [states] The primary bulk button reads \"Update all (0)\" in sentence case, but the artboard's update-all-button uses the Title Case label \"Update All (14)\".",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-loading#D4",
+          "state": "main-updates-loading",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits 11 px below the pane top (text at y 88), where the artboard places it 23 px below (y 100), with about 21 px of side inset. The top padding no longer matches the side padding of a welcome-view message, so the sentence looks squeezed against the tab-strip line. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits about 8 px below the pane top (ink at y 89-98), where the artboard draws it 20 px down (ink at y 101-110). That is 12 px higher than the artboard, and the top inset no longer matches the 20 px start inset.",
+          "severity": "major",
+          "box": [
+            444,
+            85,
+            227,
+            17
+          ],
+          "rule": "DS-STATE-3, DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D1",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The split between the Updates list and the details pane is a 4 px grey band (x 420-423, list background to pane background) where the artboard draws a 1 px separator at x 420 with a transparent sash. The thick bar does not look like a workbench split view, and it pushes the details pane's content edge 3 px right. | [geometry] The split between the list and the details pane is a 4 px painted band (x 420-423, grey at rest over the full height) instead of the artboard's 1 px separator at x 420, so the details pane starts at x 424 rather than the spec's package-details-panel x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D2",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\". Button labels are Title Case in the workbench. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D3",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case where the artboard draws \"Update All (14)\". Button labels are Title Case in the workbench. | [states] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard draws \"Update All (14)\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            295,
+            117,
+            110,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D4",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits about 12 px higher than the artboard's (text top near y 87 against y 99), so it looks squeezed against the pane's top edge compared with the artboard. | [geometry] The details pane's empty sentence \"Select a package to see its details.\" sits 12 px higher than the artboard draws it: its glyphs start at y 88, about 11 px below the pane top at y 77, where the artboard has y 100 (about 23 px). The top inset no longer matches the pane's 20 px inset.",
+          "severity": "major",
+          "box": [
+            441,
+            85,
+            232,
+            29
+          ],
+          "rule": "judge-only, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty#D1",
+          "state": "main-updates-empty",
+          "finding": "[native] At rest the split between the list column and the details pane shows a 4 px grey band (x 420-423, y 77-803, rgb 49,49,49). The artboard draws a 1 px separator at x 420, and the rest of the line is transparent sash. | [geometry] The split between the list and details panes is drawn as a 4 px opaque band (x 420-423, #313131 from y 77 to the bottom). The artboard draws a 1 px settings.sashBorder separator at x 420, and the details pane starts at x 421 (spec package-details-panel x 421). Here the details pane starts at x 424, so the pane is narrower and its left edge is 3 px further right. | [states] The split between the list pane and the details pane is a 4 px painted grey bar (x 420-423, rgb 49,49,49, full height from the tab strip down), where the artboard draws a 1 px separator in settings.sashBorder (x 420, rgb 43,43,43) and the rule keeps the 4 px sash transparent at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty#D2",
+          "state": "main-updates-empty",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case. The artboard's select-all-button reads \"Select All\", and button labels must be Title Case. | [states] The secondary bulk button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rules require Title Case for button labels (Microcopy §10 item 1 names \"Select All\").",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty#D3",
+          "state": "main-updates-empty",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (0)\" in sentence case. The artboard's update-all-button reads \"Update All (14)\", and button labels must be Title Case. | [states] The primary bulk button reads \"Update all (0)\" in sentence case, where the artboard draws \"Update All (14)\" and the copy rules require Title Case for button labels (Microcopy §10 item 1 names \"Update All\").",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty#D4",
+          "state": "main-updates-empty",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits about 12 px higher and 3 px further right than in the artboard. Its ink is at y 88-100, x 444; the artboard draws it at y 100-112, x 441. The pane's top padding therefore looks squeezed against the artboard's 20 px details inset. | [geometry] The details pane's empty sentence 'Select a package to see its details.' starts its glyphs at y 88, about 11 px below the pane top at 77. The artboard places the same sentence at y 100, 23 px below the pane top, which matches the details pane's 20 px inset. The sentence therefore sits 12 px higher than the artboard draws it.",
+          "severity": "major",
+          "box": [
+            441,
+            88,
+            229,
+            25
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-error#D1",
+          "state": "main-updates-error",
+          "finding": "[native] The split between the list and the details pane is a 4 px wide light-grey bar (x 420-423, rgb 49) painted at rest over the full pane height, where the artboard and spec draw a 1 px divider at x 420 with the details pane starting at x 421; no built-in split view paints its sash at rest. | [geometry] The split between the list and details panes is a 4 px band painted rgb(49,49,49) at x 420-423 from y 77 to the bottom, where the artboard draws a 1 px separator at x 420 with the details pane starting at x 421 (spec package-details-panel x 421); the details pane therefore starts at x 424, 3 px right of the spec. | [states] The split between the list pane and the details pane is a 4 px grey band painted full height from y 77, while no pointer rests on it. The artboard draws a 1 px separator at x 420, and DS-DIVIDER-6 requires a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-error#D2",
+          "state": "main-updates-error",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" in Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            73,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-error#D3",
+          "state": "main-updates-error",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button reads \"Update All (14)\" in Title Case. | [states] The primary bulk button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button reads \"Update All (14)\" and DS-COPY-1 requires Title Case.",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-error#D4",
+          "state": "main-updates-error",
+          "finding": "[native] While the error says updates could not be checked, the toolbar still shows \"Update all (0)\" and \"Select all\" above it, so the count claims zero updates when the number is unknown; a built-in view's inline error stands alone with its one Retry action. | [states] In the error state the primary button shows the count \"(0)\". That says there are zero updates when the updates could not be checked: the count is unknown and should not be drawn as zero, which contradicts what the state's name promises.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the label rule in the P3.11 row's Notes (no count while unknown, as the tab badge, MU6)",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-error#D6",
+          "state": "main-updates-error",
+          "finding": "[native] The inline error is written as two clauses joined by a colon, with a capital letter after the colon (\"Updates could not be checked: The package sources could not be read.\"), where an inline error is one sentence. | [states] The inline error message is a headline and a second clause joined by a colon, with a capital letter after the colon (\"Updates could not be checked: The package sources could not be read.\"). DS-STATE-4 asks for one sentence and DS-COPY-3 for sentence case.",
+          "severity": "major",
+          "box": [
+            40,
+            151,
+            290,
+            35
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "one composed-error form for the family, in the P3.11 row's Notes; never a blind lower-case",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        }
+      ]
+    },
+    {
+      "runId": "42250359112",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "1fa929f (reading commit)",
+      "look": "modern",
+      "workflow": "wf_267862ac-5ea",
+      "note": "The Updates cells have no artboard of their own: judged against main-updates.dark-modern.1200.png and main-updates.spec.json (P2.8b's precedent).",
+      "captures": {
+        "main-updates-empty-uptodate": {
+          "png": "captures/42250359112/main-updates-empty-uptodate.dark-modern.1200.png",
+          "sha256": "0f7efe53df60e465b02595a952787dd800bd863ee82f76689ed48f5ce2f7adfd",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-unavailable": {
+          "png": "captures/42250359112/main-updates-unavailable.dark-modern.1200.png",
+          "sha256": "c5f83c81b4755e19faa9afe0586cd0455f8220f3265f69732710d1d00008df53",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 24,
+        "standing": 9,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-updates-unavailable#D6",
+          "state": "main-updates-unavailable",
+          "finding": "[geometry] The list's 'Updates could not be checked' message starts at x 20, directly under the banner, whose warning glyph and toolbar edge are at the 16 px list inset. The two stacked blocks therefore have start edges 4 px apart in one region.",
+          "severity": "minor",
+          "rule": "DS-INSET-1"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-updates-empty-uptodate#D1",
+          "state": "main-updates-empty-uptodate",
+          "finding": "[native] The split between the list pane and the details pane is a 4 px bar painted #313131 at rest (x 420-423), so the details pane starts at x 424. The artboard draws a 1 px #2b2b2b separator at x 420 with the details pane at x 421 (spec package-details-panel x 421). A VS Code sash is transparent at rest over a 1 px separator. | [geometry] The list/details split is drawn as a 4 px painted band (x 420-423, rgb 49,49,49, y 77 to the bottom), so the details pane starts at x 424. The artboard draws a 1 px divider at x 420 with the pane from x 421 (spec package-details-panel x 421), and DS-DIVIDER-6 asks for a 1 px separator under a sash that is transparent at rest. | [states] The split between the list pane and the details pane is painted as a 4 px solid band (#313131, x 420-423, the full pane height) at rest. The artboard draws a 1 px separator at x 420 with the details pane starting at 421 (spec package-details-panel x 421), and the rule requires a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty-uptodate#D2",
+          "state": "main-updates-empty-uptodate",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case. The artboard's select-all-button reads \"Select All\", and button labels are Title Case. | [states] The secondary bulk button reads \"Select all\" in sentence case; the artboard's select-all-button reads \"Select All\", and the rules require button labels in Title Case (§10 names \"Select All\").",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty-uptodate#D3",
+          "state": "main-updates-empty-uptodate",
+          "finding": "[native] The primary bulk button reads \"Update all (0)\" in sentence case. The artboard's update-all-button reads \"Update All (14)\", and button labels are Title Case. | [states] The primary bulk button reads \"Update all (0)\" in sentence case; the artboard's update-all-button reads \"Update All (14)\", and the rules require Title Case button labels (§10 names \"Update All\").",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-empty-uptodate#D4",
+          "state": "main-updates-empty-uptodate",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits 12 px higher (ink top y 88) than the artboard draws it (ink top y 100), and 3 px further right (x 444 against 441). Its top inset under the tab-strip line looks squeezed against the artboard. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than the artboard draws it: glyph top at y 88, about 8 px of top padding under the pane top (y 77), against y 100 (about 20 px, equal to its 20 px start inset) in the artboard. Its top and start insets are therefore unequal.",
+          "severity": "major",
+          "box": [
+            441,
+            84,
+            229,
+            29
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D1",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The split between the list column and the details pane is drawn as a 4 px opaque grey band (x 420-423, #313131 at rest, the same in every main-updates capture of the run) where the artboard draws a 1 px divider at x 420; a native split view shows a 1 px separator with a transparent sash at rest, so the bar reads as a non-workbench splitter. | [geometry] The split between the list and the details pane is a 4 px opaque grey band at x 420-423, so the details pane starts at 424. The artboard draws a 1 px separator at x 420 with the details pane from x 421, which is the spec's package-details-panel rect x 421, and DS-DIVIDER-6 requires a transparent sash at rest over a 1 px separator. | [states] A 4 px light-grey band runs the full height of the split at x 420 to 424, where the artboard draws only the 1 px separator after the list scrollbar. DS-DIVIDER-6 requires the sash to be transparent at rest, and its hover colour would be sash.hoverBorder, not this grey, so the band is an element the artboard does not draw.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            5,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D2",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The bulk toolbar buttons read 'Select all' and 'Update all (0)' in sentence case, while the artboard draws 'Select All' and 'Update All (14)'; button labels must be Title Case like workbench commands. | [states] The bulk toolbar's secondary button reads 'Select all' in sentence case, where the artboard's select-all-button reads 'Select All' and DS-COPY-1 and design-system §10.1 require Title Case. | [states] The primary bulk button reads 'Update all (0)' in sentence case, where the artboard's update-all-button reads 'Update All (14)' and DS-COPY-1 names 'Update All'.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D3",
+          "state": "main-updates-unavailable",
+          "finding": "[native] One failure is reported twice and the two messages contradict each other: a warning banner with Retry says 'Some package sources could not be checked; the list may be incomplete.', which is the partial-results wording for a list that is not there, and below it a second line with no glyph says 'Updates could not be checked: no package source answered.'; a workbench inline error is one severity glyph, one sentence and at most one action. | [states] The unavailable state draws two messages for one condition: the warning banner says 'Some package sources could not be checked; the list may be incomplete.' with Retry, and below it a second, glyph-less sentence says 'Updates could not be checked: no package source answered.'. The banner promises a partial list that is not there and contradicts the sentence under it ('some' against 'no package source'). DS-STATE-4 asks for one severity glyph, one sentence and at most one action in the area that failed.",
+          "severity": "major",
+          "box": [
+            16,
+            152,
+            388,
+            84
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.1b",
+          "evidence": "91bce73: with sourcesUnavailable and no row the banner is the one message (body null); run 42257211352 `DS-COPY-3@main-updates-unavailable: 2 end with a full stop`; absent from the re-judge wf_f9fb33d9-742",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D4",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The disabled primary button reads 'Update all (0)' while the updates could not be checked, so it states a count of zero for an unknown result (in the artboard the count is the real number of updates, 14). | [states] The disabled primary button's '(0)' says there are zero updates when no source answered and the count is unknown. The Updates tab correctly leaves out its count badge, so the toolbar and the tab disagree about whether a count is known.",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the label rule in the P3.11 row's Notes (no count while unknown, as the tab badge, MU6)",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D5",
+          "state": "main-updates-unavailable",
+          "finding": "[native] In the details pane, 'Select a package to see its details.' sits about 12 px higher than in the artboard (glyph top y 89 against y 101, about 12 px below the tab-strip line instead of about 24), so the pane's top inset is tighter than the approved one. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than the artboard draws it: its ink top is at y 88, about 11 px below the pane top at 77. In the artboard the ink top is at y 100, a 20 px top inset that matches the 20 px start inset both images keep.",
+          "severity": "major",
+          "box": [
+            441,
+            85,
+            229,
+            30
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        }
+      ]
+    },
+    {
+      "runId": "42257211352",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "91bce73 (fix commit)",
+      "look": "modern",
+      "workflow": "wf_f9fb33d9-742",
+      "note": "The Updates cells have no artboard of their own: judged against main-updates.dark-modern.1200.png and main-updates.spec.json (P2.8b's precedent).",
+      "captures": {
+        "main-updates-all": {
+          "png": "captures/42257211352/main-updates-all.dark-modern.1200.png",
+          "sha256": "844559c1b3291ca8efa91fd55fe80af19ff97694786c3998ad67e31418a5cfd5",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-hover": {
+          "png": "captures/42257211352/main-updates-hover.dark-modern.1200.png",
+          "sha256": "e754825e2d4e2b7d9a27e026344599f4148266f87d114663af0ed1030cdf64f8",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-revalidating": {
+          "png": "captures/42257211352/main-updates-revalidating.dark-modern.1200.png",
+          "sha256": "e4485289c5d96b0dcb45174a9a62b8d35563429c5c24ce51b7b5e2851f8966d0",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        },
+        "main-updates-unavailable": {
+          "png": "captures/42257211352/main-updates-unavailable.dark-modern.1200.png",
+          "sha256": "2ef80f21854619e89305054435de05dcd6fef5070a9fc43aae14c811a461bf9d",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "7568c98eed81795386c0491640b4ef2d0803873e7de9d0ed64ac3330d730fb1f"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 41,
+        "standing": 15,
+        "blocking": 0,
+        "refuted": 7,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-updates-unavailable#D4",
+          "state": "main-updates-unavailable",
+          "finding": "[states] The unavailable banner reads \"Some package sources could not be checked; the list may be incomplete.\" It names no source and gives no reason, so it does not follow the failure pattern of Design System §10 item 8 (\"<What> could not be checked: <reason>.\").",
+          "severity": "minor",
+          "rule": "judge-only"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-updates-all#D1",
+          "state": "main-updates-all",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\" in Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and command labels are Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D2",
+          "state": "main-updates-all",
+          "finding": "[native] The primary button reads \"Update all (28)\" in sentence case where the artboard draws \"Update All (14)\" in Title Case. | [states] The primary bulk button reads \"Update all (28)\" in sentence case, where the artboard's update-all-button reads \"Update All (14)\" and command labels are Title Case.",
+          "severity": "major",
+          "box": [
+            296,
+            117,
+            108,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D3",
+          "state": "main-updates-all",
+          "finding": "[native] The split between the list and the details pane is a 4 px grey band (x 420-423, full height) at rest, where the artboard draws a 1 px separator line at x 420 and the sash stays transparent until hovered. | [geometry] The split between the list pane and the details pane is a 4 px painted band (x 420-423, #313131) from y 77 to the bottom, and the details pane starts at x 424. The artboard draws a 1 px separator at x 420 in the divider colour, the spec puts package-details-panel at x 421, and DS-DIVIDER-6 requires a 1 px separator with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D4",
+          "state": "main-updates-all",
+          "finding": "[native] The check boxes of the read-only rows under Unsupported.csproj (Newtonsoft.Json, Polly, Serilog) have a brighter border than the enabled check boxes of other rows (e.g. Unresolved.csproj's Newtonsoft.Json and the artboard's rows), so the disabled affordance looks more prominent than an enabled one, unlike the workbench's dimmed disabled controls. | [states] The read-only check boxes on the Unsupported.csproj rows (Newtonsoft.Json, Polly, Serilog) are drawn with a brighter border (about #7e7e7e) than the enabled check boxes on the Unresolved and Utility rows and in the artboard's rows (about #3c3c3c). The muted, read-only control therefore looks more active than the ones that work.",
+          "severity": "major",
+          "box": [
+            16,
+            413,
+            18,
+            164
+          ],
+          "rule": "judge-only, DS-STATE-7",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-10-31 (UX-P2.3): the non-selectable mark is solid disabledForeground; design-system.md §4 :296 Check box, disabled; primitives.css:276-278 .nuiget-row-check--off (as main-installed-unsupported#D4 and main-installed-all#D3, P2.8b)",
+          "ruling": "design-advisor, UX-P3.1b trigger 4 follow-up, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-all#D5",
+          "state": "main-updates-all",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits about 12 px higher (text top 88 vs 100) and 3 px further right (x 445 vs 442) than the artboard draws it, so it looks tight under the top edge of the pane. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than in the artboard: its ink spans y 88-100, about 11 px below the pane top at 77, while the artboard's spans y 100-112, about 23 px below. The start inset is 20 px in both, so the empty-state text's top and start insets are unequal and the text does not line up with the artboard element.",
+          "severity": "minor",
+          "box": [
+            441,
+            88,
+            229,
+            25
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D1",
+          "state": "main-updates-hover",
+          "finding": "[native] The split between the list column and the details pane is painted at rest as a 4 px grey band (x 420-423, rgb 49,49,49, from the tab strip to the bottom) where the artboard draws a 1 px separator at x 420. A native split shows only the 1 px separator and paints its sash only on hover or drag, so this reads as a non-workbench divider. | [geometry] The split between the list column and the details pane is drawn as an opaque 4 px band (x 420-423, rgb 49,49,49) from y 77 to the bottom, so the details pane starts at x 424; the artboard draws a 1 px separator at x 420 with the pane from x 421 (spec package-details-panel rect x 421), and the rule asks for a 1 px separator with a transparent sash at rest. | [states] At rest the split between the updates list and the details pane is a 4 px opaque #313131 band (x 420-423), with no pointer on it, and the details pane starts at x 424. The artboard draws a 1 px separator at x 420 with the details pane from x 421 (spec package-details-panel x 421). This adds a visible sash band that the artboard does not have.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D2",
+          "state": "main-updates-hover",
+          "finding": "[native] The bulk toolbar buttons read 'Select all' and 'Update all (14)' in sentence case, but the artboard's select-all-button and update-all-button read 'Select All' and 'Update All (14)', and workbench button labels are Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\". The artboard's select-all-button (rect 16,117,73.7x26) reads \"Select All\", and button labels must be Title Case. | [states] The primary bulk button reads \"Update all (14)\". The artboard's update-all-button (rect 295.4,117,108.6x26) reads \"Update All (14)\", and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-hover#D3",
+          "state": "main-updates-hover",
+          "finding": "[native] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher and 3 px further right than in the artboard. Its text top is at y 88 (about 11 px under the tab-strip line), against y 100 in the artboard, and its start is at x 445 against x 442. The sentence looks squeezed against the top edge, and the pane's start inset is no longer the artboard's 20 px. | [geometry] The details pane's empty sentence sits at text top y 88, 11 px below the pane top (y 77), and starts at x 445; the artboard places it at text top y 100 (23 px below the pane top) and x 442, so the capture's top inset is about half its 21 px start inset and the text sits 12 px higher than the artboard's.",
+          "severity": "major",
+          "box": [
+            442,
+            88,
+            227,
+            25
+          ],
+          "rule": "DS-STATE-3, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D1",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard's select-all-button reads \"Select All\"; workbench button labels are Title Case. | [states] The secondary bulk button reads \"Select all\" in sentence case, but the artboard's select-all-button reads \"Select All\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D2",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The primary bulk button reads \"Update all (14)\" in sentence case where the artboard's update-all-button reads \"Update All (14)\"; workbench button labels are Title Case. | [states] The primary bulk button reads \"Update all (14)\" in sentence case, but the artboard's update-all-button reads \"Update All (14)\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            295,
+            117,
+            110,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D3",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The split between the list and the details pane is painted at rest as a 4 px grey band (x 420-423), where the artboard draws a 1 px separator at x 420 with a transparent sash, as the workbench's split views do. | [geometry] The split between the list and the details pane is a 4 px band of a lighter grey (x 420-423, y 77-802) painted at rest, so the details pane starts at x 424. The artboard draws a 1 px separator at x 420 with the details pane from x 421, which matches the spec's package-details-panel rect x 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-revalidating#D4",
+          "state": "main-updates-revalidating",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" starts 12 px higher (text top y 88 against 100) and 3 px further right (x 445 against 442) than the artboard's, so it sits level with the tab labels instead of keeping the artboard's top inset in the details pane. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than in the artboard: its glyph top is at y 88 (about 8 px below the pane top at 77), against y 100 in the artboard (about 20 px down, the details pane's 20 px editor inset). Its start inset of 21 px from the pane edge matches.",
+          "severity": "major",
+          "box": [
+            442,
+            86,
+            228,
+            27
+          ],
+          "rule": "DS-STATE-3, judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D1",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The split between the list pane and the details pane is a 4 px bar in a lighter grey (#313131, x 420-423, full height from y 77). The artboard draws a 1 px separator at x 420 here, and a workbench sash stays transparent at rest beside a 1 px settings.sashBorder line, so the details pane starts 3 px later than the spec's x 421. | [geometry] The split between the list and the details pane is painted as a 4 px solid band (x 420-423, a lighter grey than the 1 px separator) at rest, so the details pane starts at x 424; the artboard draws a 1 px separator at x 420 with the details pane from x 421 (spec package-details-panel x 421).",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.9",
+          "evidence": "the sash at rest; unchanged by this item (`[diff] main-updates.dark-modern.1200: 0 px` on runs 42250359112 and 42257211352); as P3.1a main-updates#D1",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D2",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The toolbar labels are in sentence case, \"Select all\" and \"Update all (0)\". The artboard's select-all-button and update-all-button read \"Select All\" and \"Update All (14)\", and the workbench capitalises button labels in Title Case. | [states] The secondary bulk button reads \"Select all\" in sentence case, but the artboard's select-all-button reads \"Select All\" and button labels must be Title Case. | [states] The primary bulk button reads \"Update all (0)\" in sentence case, but the artboard's update-all-button reads \"Update All (14)\" and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.11",
+          "evidence": "the toolbar labels \"Select all\" / \"Update all (N)\" are unchanged by this item; as P3.1a main-updates#D2/#D3",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        },
+        {
+          "id": "main-updates-unavailable#D3",
+          "state": "main-updates-unavailable",
+          "finding": "[native] The details pane's empty sentence \"Select a package to see its details.\" sits about 12 px higher than in the artboard: ink at y 88-100 in the capture against y 100-112 in the artboard. It also starts at x 444 against x 441, following the wider split, so the details pane's top inset looks tighter than the approved one. | [geometry] The details pane's empty sentence 'Select a package to see its details.' sits 12 px higher than the artboard draws it: its text spans y 88-100, about 11 px under the pane top at 77, while the artboard places it at y 100-112, about 23 px under the top, which matches the pane's 20 px start inset (x 444 = 424 + 20).",
+          "severity": "major",
+          "box": [
+            441,
+            88,
+            229,
+            25
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "UX-P3.3b",
+          "evidence": "the details pane's empty state, unchanged by this item; the tracker row P3.3b carries it from P3.1a main-updates#D4",
+          "ruling": "design-advisor, UX-P3.1b trigger 4, 2026-11-06 (docs/plans/handoff/P3.1b.md, Advisor decisions)"
+        }
+      ]
+    }
+  ]
+}
