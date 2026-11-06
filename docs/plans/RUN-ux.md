@@ -227,7 +227,10 @@ the pass yields notes for a new named state, not evidence.
    and add files by explicit path.
 2. `git push origin labs/ux` (never `--force`).
 3. Wait for CI on that push: `gh run list --branch labs/ux --limit 1 --json databaseId,headSha,status` until a run for
-   the pushed SHA appears, then `gh run watch <id> --exit-status`. Green → §4.1 for UI items, then the next item.
+   the pushed SHA appears, then `gh run watch <id> --exit-status --interval 60`, in the foreground, in calls of at most
+   ten minutes repeated until the run ends; never `run_in_background` and never a `sleep` loop: a turn that ends while
+   a run is in progress releases the app's keep-awake hold and the owner's Mac idle-sleeps (2026-11-06, the P2.fix-8
+   session lost a night this way). Green → §4.1 for UI items, then the next item.
    Red → `gh run view <id> --log-failed`; the known environmental failures of the gotcha table ("A red CI run is not
    always a code failure") are handled as it says; otherwise fix forward in a new commit citing the same item, push,
    wait again; after two red runs mark the item `blocked` and stop. Never start the next item on a red branch.
@@ -238,7 +241,7 @@ When the last row of a phase (or of a P5.x feature mini-phase) is `done` and CI 
 
 1. Run the plan's bold **P# gate** line. At every phase boundary P0–P7 (not after a P5.x mini-phase) also dispatch
    the full matrix, the 1.90.0 floor lane and the macOS lane:
-   `gh workflow run ci.yml --ref labs/ux -f tier=B`, wait for it (`gh run watch <id> --exit-status`) and download its
+   `gh workflow run ci.yml --ref labs/ux -f tier=B`, wait for it (`gh run watch <id> --exit-status --interval 60`, in the foreground as §5 step 3 waits) and download its
    artifacts into CAPTURES. The P0 gate also needs the UI job green twice on one SHA (`gh run rerun <id>` once, the
    flake budget) with identical `[measure]` output. Paste the results into the tracker under `## Phase gates`.
 2. Call `phase-review` with `args` `{ "phase": "<phase>", "range": "<REVIEW RANGE>", "gateOutput": "<pasted gate
