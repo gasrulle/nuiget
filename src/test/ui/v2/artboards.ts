@@ -91,6 +91,17 @@ export const ARTBOARDS: readonly ArtboardEntry[] = [
         looks: ['modern', 'classic'],
         widths: ROUND3_WIDTHS,
     },
+    {
+        // UX-P3.1a: Gateway's Updates tab with the Direct packages group row; modern only, as the state has no classic capture.
+        state: 'main-updates',
+        source: 'artboards/round3/main-updates.dc.html',
+        panel: 'nuiget-app',
+        // The seventh row, drawn current below the first-row locus; its action is composed under a state that does not exist.
+        sample: '[data-testid="package-row-microsoft.extensions.http"]',
+        themes: ['dark-modern'],
+        looks: ['modern'],
+        widths: ROUND3_WIDTHS,
+    },
 ];
 
 /** One render: an entry at a width, a theme and a look. */

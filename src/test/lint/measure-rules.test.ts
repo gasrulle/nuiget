@@ -887,6 +887,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(specOf(state, 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', 'hard']);
             expect(specOf(state, 932)).toEqual([]);
         }
+        // UX-P3.1a: main-updates at 1200 against its round-3 page, header and list pending P3.1a for the reading run.
+        expect(specOf('main-updates', 1200).map(line => line.name)).toEqual(['header', 'list', 'details', 'readme'].map(scope => `SPEC@main-updates/${scope}`));
+        expect(specOf('main-updates', 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual([{ pending: 'P3.1a' }, { pending: 'P3.1a' }]);
+        expect(specOf('main-updates', 932)).toEqual([]);
         const transitiveSpec: SpecLook = { 'transitive-details': element(420, 77, 780, 726) };
         const lines = measureLines('main-transitive-details', layout({ testIds: { 'transitive-details': element(420, 77, 780, 726) } }), 'modern', {}, undefined, 1200, transitiveSpec);
         expect(lines.find(line => line.name === 'SPEC@main-transitive-details/details')).toMatchObject({ value: '1/1 within 1' });

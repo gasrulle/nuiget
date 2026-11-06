@@ -15,7 +15,7 @@ import { artboardFile, artboardFilter, artboardJobs, ARTBOARDS, type ColourSampl
 const SELECTED = '[data-testid="package-row-newtonsoft.json"]';
 
 describe('the artboard manifest (UX-P0.27)', () => {
-    it('renders artboard A at 932 px and the four round-3 pages at 1200 px in Dark Modern, under the capture names (UX-P2.fix-8)', () => {
+    it('renders artboard A at 932 px and the five round-3 pages at 1200 px in Dark Modern, under the capture names (UX-P2.fix-8, UX-P3.1a)', () => {
         const jobs = artboardJobs();
         expect(jobs.map(artboardFile)).toEqual([
             'main-installed-single.dark-modern.932.png',
@@ -26,8 +26,9 @@ describe('the artboard manifest (UX-P0.27)', () => {
             'main-installed-details.dark-modern-classic.1200.png',
             'main-installed-all.dark-modern.1200.png',
             'main-installed-all.dark-modern-classic.1200.png',
+            'main-updates.dark-modern.1200.png',
         ]);
-        expect(jobs.map(job => job.width.viewport)).toEqual(Array(8).fill(1280));
+        expect(jobs.map(job => job.width.viewport)).toEqual(Array(9).fill(1280));
         expect(jobs.every(isSpecRender)).toBe(true);
     });
 
@@ -62,7 +63,8 @@ describe('the artboard manifest (UX-P0.27)', () => {
             'main-installed-all.dark-modern.1200.png',
             'main-installed-all.dark-modern-classic.1200.png',
         ]);
-        expect(() => artboardFilter({ NUIGET_ARTBOARD_STATES: 'main-updates' })).toThrow('no artboard for main-updates');
+        expect(artboardJobs(ARTBOARDS, artboardFilter({ NUIGET_ARTBOARD_STATES: 'main-updates' })).map(artboardFile)).toEqual(['main-updates.dark-modern.1200.png']);
+        expect(() => artboardFilter({ NUIGET_ARTBOARD_STATES: 'main-updates-unavailable' })).toThrow('no artboard for main-updates-unavailable');
         expect(() => artboardFilter({ NUIGET_ARTBOARD_THEMES: 'solarized' })).toThrow('no theme solarized');
         expect(() => artboardFilter({ NUIGET_ARTBOARD_LOOKS: 'compact' })).toThrow('no look compact');
     });
