@@ -282,6 +282,12 @@ async function sidebarSections(): Promise<void> {
 interface Reach {
     /** Brings the surface to the state and waits for its readiness predicate. */
     reach: () => Promise<void>;
+    /**
+     * A JS predicate, true when every truth the state's hard rules read holds at once; polled again inside `measure()` before
+     * the collector reads (UX-P3.1b, architecture-advisor ruling on run 42263438578). A function, since the module's later
+     * constants (`UNSETTLED`) are not initialised when this table is.
+     */
+    settled?: () => string;
     /** Leaves the state after the capture (closes a dialog, clears a search); nothing is confirmed. */
     leave?: () => Promise<void>;
 }
@@ -366,15 +372,10 @@ const REACH: Record<string, Reach> = {
             // The suite's data budget: the leaf renders when the Unsupported chunk has answered through the fan-out (macOS Intel, dispatch 41310624224).
             // UX-P2.fix-6: the pin is renewed on every probe; rows above the folder that grow as their data arrives move it
             // past the rendered window between a single pin and the leaf (the light-theme cell, floor and macOS lanes).
-            const leaf = `const list = document.querySelector('[data-testid="installed-list"]'); const row = list.querySelector('[data-testid="group-row-folder-tools"]'); if (row) { list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top; } else { list.scrollTop += 300; } return document.querySelector('[data-testid="installed-unsupported-unsupported.csproj"]') !== null;`;
-            try {
-                await poll(async () => ((await script<boolean>(leaf)) ? true : undefined), 'the Unsupported project\'s message leaf', 120_000);
-            } catch (error) {
-                console.warn(`[reach] main-installed-all: ${await script<string>(LEAF_FACTS)}`);
-                throw error;
-            }
-            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
+            // UX-P3.1b: every truth on one probe (the pin, the three markers, nothing unsettled), re-checked before the collector.
+            await settleOrReport('main-installed-all', INSTALLED_ALL_SETTLED());
         },
+        settled: () => INSTALLED_ALL_SETTLED(),
     },
     'main-installed-unsupported': {
         reach: async () => {
@@ -514,11 +515,10 @@ const REACH: Record<string, Reach> = {
             await clickVisible('updates-tab');
             // The fan-out settled: the tab's count and the level-1 groups, the two workspace folders (UX-P3.1b, as main-installed-all).
             await until('/\\d/.test(document.querySelector(\'[data-testid="updates-tab"]\').textContent) && Number(document.querySelector(\'[data-testid="updates-list"] [data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 2', 'the settled fan-out');
-            // The window is pinned at the Tools folder, renewed on every probe, until the Unsupported project's leaf is rendered.
-            const leaf = `const list = document.querySelector('[data-testid="updates-list"]'); const row = list.querySelector('[data-testid="group-row-folder-tools"]'); if (row) { list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top; } else { list.scrollTop += 300; } return document.querySelector('[data-testid="updates-unsupported-unsupported.csproj"]') !== null;`;
-            await poll(async () => ((await script<boolean>(leaf)) ? true : undefined), 'the Unsupported project\'s message leaf', 120_000);
-            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'every project\'s counts and authors', 120_000);
+            // The window is pinned at the Tools folder with its markers and nothing unsettled, on one probe (as main-installed-all).
+            await settleOrReport('main-updates-all', UPDATES_ALL_SETTLED());
         },
+        settled: () => UPDATES_ALL_SETTLED(),
     },
     'main-updates-loading': {
         reach: async () => {
@@ -772,6 +772,37 @@ for (const id of ['installed-tab', 'updates-tab']) {
 if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]'))) clauses.push('a comfortable row without authors');
 return clauses.join('; ');
 `;
+
+/**
+ * An All Projects list pinned at the Tools folder with every marker its hard rules read rendered and nothing unsettled, in one
+ * evaluation (UX-P3.1b, architecture-advisor ruling on run 42263438578; the P2.fix-6 pin). A probe that has to move the pin
+ * answers false: the virtualizer renders the new window after it, and the next probe reads it.
+ */
+const allProjectsSettled = (listTestId: string, markers: readonly string[]): string => `
+const list = document.querySelector('[data-testid="${listTestId}"]');
+if (list === null) return false;
+const row = list.querySelector('[data-testid="group-row-folder-tools"]');
+if (row === null) { list.scrollTop += 300; return false; }
+const delta = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+if (Math.abs(delta) >= 1) { list.scrollTop += delta; return false; }
+if (!${JSON.stringify(markers)}.every(id => document.querySelector('[data-testid="' + id + '"]') !== null)) return false;
+const unsettled = (() => { ${UNSETTLED} })();
+return unsettled === '';`;
+
+/** `STATE_MARKERS['main-installed-all']` of `measure.ts`: the markers DS-STATE-1 reads in this state. */
+const INSTALLED_ALL_SETTLED = (): string => allProjectsSettled('installed-list', ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj']);
+/** `STATE_MARKERS['main-updates-all']` of `measure.ts`. */
+const UPDATES_ALL_SETTLED = (): string => allProjectsSettled('updates-list', ['updates-unsupported-unsupported.csproj', 'updates-empty-empty.csproj']);
+
+/** Polls a state's settle predicate; on a timeout prints the list's facts as a `[reach]` line, then fails. */
+async function settleOrReport(state: string, predicate: string): Promise<void> {
+    try {
+        await poll(async () => ((await script<boolean>(predicate)) ? true : undefined), `${state} settled (the pin, its markers, nothing unsettled)`, 120_000);
+    } catch (error) {
+        console.warn(`[reach] ${state}: ${await script<string>(LEAF_FACTS)}`);
+        throw error;
+    }
+}
 
 /** The settle wait's budget: bounded and never fatal. */
 const SETTLE_MS = 120_000;
@@ -1314,6 +1345,11 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
 async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout; overflowHard: boolean }> {
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
+    // A state that declares its settled truths has them re-checked here, before the collector reads (UX-P3.1b).
+    const settled = REACH[state.name]?.settled;
+    if (settled !== undefined) {
+        await settleOrReport(state.name, settled());
+    }
     const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment, cellList(state.name));
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
     const before = chromeReferences.get(key);
