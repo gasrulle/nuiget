@@ -5,7 +5,7 @@ import { useConfig } from '../../../shared/store/config';
 import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
-import { useInstallAction, type InstallAction } from '../details/useInstallAction';
+import type { InstallAction } from '../details/useInstallAction';
 
 /** How long typing pauses before a quick-search, and before a full search when the setting asks for one. */
 export const QUICK_SEARCH_DELAY_MS = 150;
@@ -22,6 +22,8 @@ export interface SearchTypingInput {
     focused: boolean;
     /** Says in the live region why a quick install did not happen. */
     announce: (message: string) => void;
+    /** The panel's one install action: Ctrl+Enter installs through it. */
+    install: InstallAction;
 }
 
 export interface SearchTyping {
@@ -40,8 +42,6 @@ export interface SearchTyping {
     pickVersion: (suggestion: Suggestion, version: string) => void;
     /** Ctrl+Enter: installs the version, or the suggestion's newest one, into the selected project. */
     quickInstall: (suggestion: Suggestion, version?: string) => void;
-    /** The preview dialog of a quick install into a Central Package Management project. */
-    install: Pick<InstallAction, 'preview' | 'closePreview' | 'confirmPreview'>;
 }
 
 /** How many versions the versions level shows, newest first. */
@@ -55,11 +55,10 @@ const VERSION_LIMIT = 5;
  * with the id and searches for it exactly, carrying the version it names to the details. On mount it enables the config and sources slices, whose answers the first
  * keystroke needs.
  */
-export function useSearchTyping({ text, setText, browsing, focused, announce }: SearchTypingInput): SearchTyping {
+export function useSearchTyping({ text, setText, browsing, focused, announce, install: installAction }: SearchTypingInput): SearchTyping {
     const bus = useMessageBus();
     const { search, suggest, suggestions, suggesting, clearSuggestions } = useSearch();
     const includePrerelease = useSession().committed?.includePrerelease ?? false;
-    const installAction = useInstallAction(announce);
     const [expanded, setExpanded] = useState<SuggestionVersions | undefined>();
     const versionsAsk = useRef<AbortController | undefined>(undefined);
     const { config, enable: enableConfig } = useConfig();
@@ -149,7 +148,7 @@ export function useSearchTyping({ text, setText, browsing, focused, announce }: 
     const pickVersion = useCallback((suggestion: Suggestion, version: string): void => goTo(suggestion.id, version), [goTo]);
 
     const quickInstall = (suggestion: Suggestion, version?: string): void => {
-        const install = (chosen: string): void => {
+        const installVersion = (chosen: string): void => {
             clearTimeout(timer.current);
             clearSuggestions();
             collapse();
@@ -163,7 +162,7 @@ export function useSearchTyping({ text, setText, browsing, focused, announce }: 
             return;
         }
         if (known !== undefined) {
-            install(known);
+            installVersion(known);
             return;
         }
         // The newest version of the suggestion's source: an install always names its version.
@@ -171,7 +170,7 @@ export function useSearchTyping({ text, setText, browsing, focused, announce }: 
             if (versions.length === 0) {
                 announce(`No version of ${suggestion.id} was found.`);
             } else {
-                install(versions[0]);
+                installVersion(versions[0]);
             }
         }, (error: unknown) => announce(`Versions of ${suggestion.id} could not be listed: ${error instanceof Error ? error.message : String(error)}`));
     };
@@ -180,7 +179,6 @@ export function useSearchTyping({ text, setText, browsing, focused, announce }: 
         () => suggestions.flatMap(group => group.packageIds.map(id => ({ id, sourceName: group.sourceName, sourceUrl: group.sourceUrl }))),
         [suggestions],
     );
-    const { preview, closePreview, confirmPreview } = installAction;
     return {
         suggestions: browsing ? flat : [],
         submit,
@@ -191,6 +189,5 @@ export function useSearchTyping({ text, setText, browsing, focused, announce }: 
         collapse,
         pickVersion,
         quickInstall,
-        install: { preview, closePreview, confirmPreview },
     };
 }

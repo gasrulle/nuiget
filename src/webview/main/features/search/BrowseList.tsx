@@ -11,8 +11,6 @@ import { useOps } from '../../../shared/store/ops';
 import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import type { BrowseView } from '../../MainShell';
-import { useInstallAction } from '../details/useInstallAction';
-import { CentralUpdateDialog } from '../updates/CentralUpdateDialog';
 
 interface Item {
     id: string;
@@ -36,10 +34,10 @@ const formatDownloads = (count: number | undefined): string | undefined => {
  * submitted: the 1.x card with icon, downloads, authors and Verified mark, and the description. A click or Enter makes a
  * row current and selects it for the details pane; after a navigation to a package (an exact search) the package found is
  * current at once, and a new text whose results lack the current row clears the pane (a browse selection is never
- * stale). Ctrl+Enter installs the row's version into the selected project through the details pane's install path
- * (`useInstallAction`). A source that could not be searched is a banner over the list, never "no results".
+ * stale). Ctrl+Enter installs the row's version into the selected project through the panel's one install action
+ * (`install`, the shell's `useInstallAction`). A source that could not be searched is a banner over the list, never "no results".
  */
-export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
+export function BrowseList({ text, announce, install }: BrowseView): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const [currentId, setCurrentId] = useState<string | null>(null);
@@ -48,7 +46,6 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
     const allMode = useSession().committed?.selectedProject === ALL_PROJECTS;
     const all = useAllProjects();
     const whereInstalled = useMemo(() => installedProjectsOf(all.chunks.values()), [all.chunks]);
-    const installAction = useInstallAction(announce);
     // The details pane follows the row made current by the user or by a navigation.
     const makeCurrent = (result: PackageSearchResult, version = result.version): void => {
         setCurrentId(result.id);
@@ -122,7 +119,7 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
                         announce('Under All Projects, Install… in the details picks the projects.');
                         return;
                     }
-                    installAction.install({ packageId: item.result.id, version: item.result.version, sourceUrl: item.result.sourceUrl });
+                    install.install({ packageId: item.result.id, version: item.result.version, sourceUrl: item.result.sourceUrl });
                 }}
                 empty={<EmptyState message={sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
                 renderRow={(item, placement) => {
@@ -147,7 +144,6 @@ export function BrowseList({ text, announce }: BrowseView): React.JSX.Element {
                     );
                 }}
             />
-            <CentralUpdateDialog request={installAction.preview} onClose={installAction.closePreview} onConfirm={installAction.confirmPreview} />
         </div>
     );
 }

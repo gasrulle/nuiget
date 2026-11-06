@@ -634,7 +634,13 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   the unified search box (`search-input`), the tabs Installed and Updates (`tab-bar`, `installed-tab`,
   `updates-tab`) and the split between the list and the details (`sash`, `package-details-panel`), with the one
   live region (`status-live`). The lists and the details are props (`installed`, `updates`, `details`), so a
-  feature is added in `index.tsx` and the shell does not grow.
+  feature is added in `index.tsx` and the shell does not grow. The shell owns the panel's one central change
+  (`features/updates/useCentralChange.ts`: the request, `ask`, `close`, `confirm`) and its one install action
+  (`useInstallAction`), and hands them down in the views: `ListView.central` and the details view's `central` carry
+  `ask`, `BrowseView.install`, the details view's `install` and `useSearchTyping`'s `install` carry the install action.
+  The one `CentralUpdateDialog` is mounted by the shell on `central.request`; its confirm runs `ops/install` or
+  `ops/update` by the request's `kind` through the ops slice, and a change of the committed project closes it (X53,
+  N77).
 
 | Part | Behaviour |
 |---|---|
@@ -699,8 +705,11 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `updates={view => <UpdatesTab {...view} />}`; the shell shows the count on the tab only when the answer is
 complete (not while loading, not with `sourcesUnavailable`, never `0`).
 
-- **List.** One multi-selectable list (`updates-list`) of the `updates` slice's rows, sorted by id: icon, authors
-  and the Verified mark from the answer (P9.4; in All Projects the `icons` chunk when a row carries no icon),
+- **List.** The single project is one grouped, multi-selectable tree (`updates-list`, D48, UX-P3.1a): the `direct`
+  group row (`group-row-direct`, "Direct packages") with its count (`k of N` under a filter), collapsible, over the
+  `updates` slice's rows, keyed `rowId(projectPath, id)` as the Installed tab's and sorted by id; the bulk set is
+  `useBulkSelection`'s, a subset of the shown, non-central, non-busy updates that resets on a project change. A row
+  shows its icon, authors and the Verified mark from the answer (P9.4; in All Projects the `icons` chunk when a row carries no icon),
   `installed → latest` with the new version marked (`nextVersion`), the `CPM` badge, and `row-action-update` per
   row. A project with no packages says "No packages installed.", not "No updates available.". Every row of a bulk
   update stays busy until it ends: the ops slice keeps the union of the projects and packages an operation
@@ -709,9 +718,10 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
   list. `@updates <text>` filters by id.
 - **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)", centrally
   managed and busy rows left out); the `ConfirmDialog` lists `id: from → to` and Confirm sends `ops/bulkUpdate`.
-- **Centrally managed packages.** Until the central editor of P6.3 exists, a package declared in
-  `Directory.Packages.props` is never updated from a project: Enter opens a read-only dialog
-  (`cpm-preview-dialog`) that names the central change, and Space announces that it cannot join a bulk update.
+- **Centrally managed packages.** Enter or the button on a package whose version `Directory.Packages.props` sets
+  calls `central.ask({ kind: 'update', … })` (both the single project and All Projects): the shell's one
+  `CentralUpdateDialog` (`cpm-preview-dialog`) lists the projects the central version applies to, and its confirm
+  sends `ops/update`; Space announces that the package cannot join a bulk update (N76).
 - **Unknown is not empty.** `sourcesUnavailable` is a warning banner with Retry over the list
   (`updates-unavailable-banner`), and the empty list then says that updates could not be checked; "No updates
   available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9): one section per
@@ -736,7 +746,7 @@ is why it is not a `Popover`.
 - **Main panel.** Plain text is a browse search: `BrowseList` (`browse-list`) takes the place of the tab bar and
   lists the results as the 1.x card (P9.6): the icon (`packageIconSrc`, the bundled default when no `data:` URI),
   the version with the downloads (`Row.meta`), authors with the Verified mark, the description line and the
-  Installed badge. Ctrl+Enter on a row installs its version through `useInstallAction`; a new text whose results lack
+  Installed badge. Ctrl+Enter on a row installs its version through the shell's `useInstallAction` (`BrowseView.install`); a new text whose results lack
   the current row clears the pane. `useSearchTyping` owns the timers by `searchDebounceMode`: `quicksearch` asks for suggestions
   150 ms after the last key from two characters on while the box has focus, `full` searches 300 ms after the last
   key, and `off` runs nothing while typing; Enter always searches at once. The sidebar ignores the setting: it
@@ -752,7 +762,7 @@ is why it is not a `Popover`.
   answers replace the list in place (P9.6). ArrowRight on a suggestion asks `package/versions` of the suggestion's
   source under the committed prerelease flag and shows its five newest versions under a `‹ <id>` header; ArrowLeft
   goes back, Enter on a version shows the details at that version. Ctrl+Enter installs the highlighted suggestion's
-  newest version (one `package/versions` ask) or the highlighted version through `useInstallAction`, which refuses
+  newest version (one `package/versions` ask) or the highlighted version through the shell's `useInstallAction` (`SearchTypingInput.install`), which refuses
   first, and says why, without a single listed project or for an installed package.
 - **Sidebar.** `@installed <text>` and `@updates <text>` show that section alone, filtered; any other text (also
   `@vulnerable`) is a browse search, 300 ms after the last key from two characters on, or at once on Enter.
@@ -783,7 +793,7 @@ action, so Uninstall and Update share their left edge; P9.fix-5): Install when t
 project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
 from the list says Update). The target is the committed project for a browse row and the row's own project otherwise;
 without a single project, while stale, for a floating or ranged reference or an unresolved one, the button is
-disabled with the reason. Every install of the main panel goes through `useInstallAction` (P9.6), the one sender of `ops/install`: it refuses without a single project, while the project's list has not answered (CPM unknown), for an installed package or a busy one, and names the version always; into a CPM project it asks `cpm/preview` first (the caller's control waits; a selection change cancels the ask): `null` installs at once, a preview or an error opens the caller's `CentralUpdateDialog` with `kind: 'install'` and its confirm runs `ops/install` (N77). A centrally managed package opens `CentralUpdateDialog`, which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
+disabled with the reason. Every install of the main panel goes through the shell's one `useInstallAction` (P9.6), and every `ops/install` of the main panel names its version: `useInstallAction` sends it, or `useCentralChange.confirm` for a request `useInstallAction` asked. It refuses without a single project, while the project's list has not answered (CPM unknown), for an installed package or a busy one, and while another preview is asked (one ask at a time, X53); into a CPM project it asks `cpm/preview` first (every install control waits): `null` installs at once, a preview or an error asks the shell's `CentralUpdateDialog` with `kind: 'install'`, and its confirm runs `ops/install` (N77). `install()` returns the cancel of its own ask: the pane keeps the one it started and cancels it when the selection changes or the pane goes away, never a Browse row's or the search box's ask. A centrally managed package asks the shell's `CentralUpdateDialog` (`central.ask`), which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
 `isPackageBusy`.
 
 The Details tab (P9.8) shows the description, then Version, Author(s) with the Verified mark, License, Downloads,

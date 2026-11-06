@@ -31,4 +31,8 @@ describe('the webviews\' controls', () => {
     it('every check box renders through Checkbox: no input type=checkbox outside Checkbox.tsx', () => {
         expect(holders('type="checkbox"')).toEqual(['Checkbox.tsx']);
     });
+
+    it('the central-change dialog is mounted once, in MainShell.tsx', () => {
+        expect(holders('<CentralUpdateDialog')).toEqual(['MainShell.tsx']);
+    });
 });

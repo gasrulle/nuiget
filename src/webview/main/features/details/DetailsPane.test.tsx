@@ -166,6 +166,31 @@ describe('main panel: details', () => {
         expect(host.requests('ops/install')).toHaveLength(0);
     });
 
+    it('another selection cancels the pane\'s own preview ask', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0', { declaration: 'central' })], true);
+        await user.type(screen.getByTestId('search-input'), 'polly{Enter}');
+        await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [
+            { id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED },
+            { id: 'Xunit', version: '2.9.0', description: '', authors: '', versions: ['2.9.0'], sourceUrl: FEED },
+        ] }));
+        await user.click(option('browse-list', 'Polly'));
+        await hostSays(() => host.respond(versionsOf(host)[0], { packageId: 'Polly', versions: ['8.4.2'] }));
+        await user.click(primary());
+        const [asked] = host.requests('cpm/preview');
+        expect(asked.payload).toEqual({ projectPath: A, packageId: 'Polly', version: '8.4.2' });
+        expect(host.cancelled()).not.toContain(asked.id);
+
+        await user.click(option('browse-list', 'Xunit'));
+        expect(host.cancelled()).toContain(asked.id);
+        // An answer that comes after all opens nothing and installs nothing; the pane's Install is free again.
+        await hostSays(() => host.respond(asked, { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A, B] } }));
+        expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
+        expect(host.requests('ops/install')).toHaveLength(0);
+        await hostSays(() => host.respond(versionsOf(host).at(-1)!, { packageId: 'Xunit', versions: ['2.9.0'] }));
+        expect(primary()).toBeEnabled();
+    });
+
     it('a browse result that is not installed is installed into the selected project from its source', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

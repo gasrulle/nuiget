@@ -314,6 +314,47 @@ describe('main panel: browse', () => {
         ]);
     });
 
+    it('Ctrl+Enter on a row keeps its preview ask while the details pane shows the row', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady({ isCpm: true, details: true });
+        await searchFor(host, 'moq', [result('Moq', '4.20.72')]);
+        option('Moq').focus();
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        // The row became the pane's selection; the pane's selection change does not stop the row's own ask.
+        expect(screen.getByTestId('package-details-panel')).toHaveTextContent('Moq');
+        const [asked] = host.requests('cpm/preview');
+        expect(asked.payload).toEqual({ projectPath: A, packageId: 'Moq', version: '4.20.72' });
+        expect(host.cancelled()).not.toContain(asked.id);
+        await hostSays(() => host.respond(asked, { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Moq', fromVersion: '4.20.0', toVersion: '4.20.72', affectedProjects: [A] } }));
+        const dialog = screen.getByTestId('cpm-preview-dialog');
+        expect(host.requests('ops/install')).toHaveLength(0);
+        await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Moq', fromVersion: '4.20.0', toVersion: '4.20.72', affectedProjects: [A] } }));
+        await user.click(within(dialog).getByTestId('cpm-preview-confirm'));
+        expectFocusAfterClose('browse-details-cpm-install-confirm');
+        expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
+    });
+
+    it('one preview ask at a time: a second Ctrl+Enter waits while a row\'s preview is asked', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady({ isCpm: true, details: true });
+        await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Moq', '4.20.72')]);
+        option('Polly').focus();
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        expect(host.requests('cpm/preview').map(request => request.payload.packageId)).toEqual(['Polly']);
+        option('Moq').focus();
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        // The second row is made current, and installs nothing until the first ask has settled (X53).
+        expect(screen.getByTestId('package-details-panel')).toHaveTextContent('Moq');
+        expect(host.requests('cpm/preview')).toHaveLength(1);
+        expect(host.cancelled()).not.toContain(host.requests('cpm/preview')[0].id);
+        expect(host.requests('ops/install')).toHaveLength(0);
+        // Once it has settled, an install of the first row runs and the next Ctrl+Enter asks again.
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
+        expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly']);
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        expect(host.requests('cpm/preview').map(request => request.payload.packageId)).toEqual(['Polly', 'Moq']);
+    });
+
     it('a new text without the current row clears the details', async () => {
         const user = userEvent.setup();
         const host = await mountReady({ details: true });

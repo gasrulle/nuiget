@@ -122,6 +122,17 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('updates/get').map(sent => sent.payload)).toEqual([{ projectPath: A, includePrerelease: false }, { projectPath: A, includePrerelease: true }]);
     });
 
+    it('Space on a busy row says an operation runs and leaves the bulk selection as it was (UX-P3.1a)', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        await user.click(optionOf('Serilog'));
+        await user.keyboard('{Enter}');
+        expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
+        await user.keyboard(' ');
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('An operation on this package is running.'));
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+    });
+
     it('Enter or the row button updates one package to its latest version, and the row is busy until the outcome', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
@@ -167,6 +178,22 @@ describe('main panel: Updates tab', () => {
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expectFocusAfterClose('updates-update-selected-confirm');
         expect(host.requests('ops/bulkUpdate')[0].payload.packages.map(entry => entry.id)).toEqual(['Moq']);
+    });
+
+    it('a selected update that the filter hides leaves the bulk selection and is not selected when it shows again', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        await user.click(optionOf('Moq'));
+        await user.keyboard(' ');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+        await user.type(screen.getByTestId('search-input'), '@updates Se');
+        await waitFor(() => expect(names()).toEqual(['Serilog']));
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        await user.clear(screen.getByTestId('search-input'));
+        await waitFor(() => expect(names()).toHaveLength(3));
+        // The bulk set keeps only candidates (UX-P2.1c): Moq came back unselected.
+        expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (2)');
     });
 
     it('a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed', async () => {

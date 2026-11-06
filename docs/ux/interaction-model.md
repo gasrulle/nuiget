@@ -194,7 +194,8 @@ installs it, ArrowLeft returns to the suggestions. Both take the Install button'
 Package Management project asks `cpm/preview` first and opens the preview dialog when the package has a central entry
 (N77); the package is busy from the key press. Ctrl+Enter installs nothing, and the live region says why, under All
 Projects or without a project, while the selected project's packages are not listed yet, when the package is installed
-already, or while an operation on it runs; under All Projects a Browse row's Ctrl+Enter makes it current so the pane
+already, while an operation on it runs, or while another install's central-package preview is being asked (one ask at a
+time); under All Projects a Browse row's Ctrl+Enter makes it current so the pane
 offers Install... with the project picker. In the Updates list Ctrl+Enter updates the row to its new version under the
 same rules; the Installed list has no Ctrl+Enter action.
 

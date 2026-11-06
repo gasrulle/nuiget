@@ -6,6 +6,7 @@ import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButto
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
+import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useSession } from '../../../shared/store/session';
 import { useUpdates } from '../../../shared/store/updates';
@@ -13,7 +14,6 @@ import type { ListView } from '../../MainShell';
 import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { AllProjectsUpdates } from './AllProjectsUpdates';
-import { CentralUpdateDialog, type CentralUpdateRequest } from './CentralUpdateDialog';
 import { UpdateAllDialog } from './UpdateAllDialog';
 
 /**
@@ -29,8 +29,9 @@ const HINT = 'Space selects the package for a bulk update. Enter updates it. Shi
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
  * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates". A
- * centrally managed package is updated through the preview of the central change (`CentralUpdateDialog`) and joins no
- * bulk update (N76); a row with a `VersionOverride` updates in its project alone, without a preview, and joins one (N74).
+ * centrally managed package is updated through the preview of the central change (`central.ask`, the shell's one
+ * `CentralUpdateDialog`) and joins no bulk update (N76); a row with a `VersionOverride` updates in its project alone,
+ * without a preview, and joins one (N74).
  * Nothing is removed here: a row is busy from the request on and leaves when the host's next list no longer has it.
  * In All Projects the tab is `AllProjectsUpdates`, one section per project.
  */
@@ -39,24 +40,21 @@ export function UpdatesTab(view: ListView): React.JSX.Element {
     return allMode ? <AllProjectsUpdates {...view} /> : <ProjectUpdates {...view} />;
 }
 
-function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
+function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const updates = useUpdates();
     const installed = useInstalled();
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const [currentId, setCurrentId] = useState<string | null>(null);
-    const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [confirming, setConfirming] = useState(false);
-    const [central, setCentral] = useState<CentralUpdateRequest | null>(null);
 
+    // The bulk set follows the project selection (`useBulkSelection`'s reset key); the central change is the shell's.
     const selection = committed?.selectedProject;
     useEffect(() => {
         setCurrentId(null);
-        setSelected(new Set());
         setConfirming(false);
-        setCentral(null);
     }, [selection]);
 
     const { projectPath, rows } = updates;
@@ -118,11 +116,15 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
             ? <SectionHeader presentation="content" title="Direct packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
             : null),
     }), [collapsed]);
-    // A bulk update takes the rows shown that are neither centrally managed nor busy.
+    // A bulk update takes the rows shown that are neither centrally managed nor busy; the bulk set is a subset of them,
+    // keyed as the rows are, and a row that leaves them leaves the set (UX-P2.1c).
     const candidates = unsupported ? [] : shown.filter(update => !changesCentral(update.id) && !isBusy(update.id));
-    const chosen = candidates.filter(update => selected.has(keyOf(update.id)));
+    const candidateKey = candidates.map(update => keyOf(update.id)).join('\0');
+    const candidateIds = useMemo(() => (candidateKey === '' ? [] : candidateKey.split('\0')), [candidateKey]);
+    const bulk = useBulkSelection(candidateIds, selection);
+    const chosen = candidates.filter(update => bulk.selected.has(keyOf(update.id)));
     const toUpdate = chosen.length > 0 ? chosen : candidates;
-    const allSelected = candidates.length > 0 && chosen.length === candidates.length;
+    const { allSelected } = bulk;
 
     const busyStatus = (packageId: string): string => {
         const id = packageId.toLowerCase();
@@ -145,7 +147,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
         }
         const entry = entryOf(update.id);
         if (entry !== undefined && isCentralRow(entry)) {
-            setCentral({ kind: 'update', projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
+            central.ask({ kind: 'update', projectPath, packageId: update.id, fromVersion: update.installedVersion, toVersion: update.latestVersion, sourceUrl: update.sourceUrl });
             return;
         }
         // The row is busy from this call on (ops slice); the outcome is announced from the slice.
@@ -164,18 +166,14 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
             announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
             return;
         }
-        setSelected(previous => {
-            const next = new Set(previous);
-            if (!next.delete(key)) {
-                next.add(key);
-            }
-            return next;
-        });
+        if (!bulk.toggle(key)) {
+            announce('An operation on this package is running.');
+        }
     };
 
     const confirm = (): void => {
         setConfirming(false);
-        setSelected(new Set());
+        bulk.clear();
         if (projectPath === null || toUpdate.length === 0) {
             return;
         }
@@ -210,7 +208,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                 density="comfortable"
                 busy={updates.revalidating || updates.status === 'loading'}
                 selectedId={currentId}
-                selectedIds={selected}
+                selectedIds={bulk.selected}
                 onToggleSelected={item => {
                     if (item.kind === 'package') {
                         toggle(item.update);
@@ -268,7 +266,7 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
             <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} title={toUpdate.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setConfirming(true)}>
                 {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
             </Button>}>
-                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setSelected(allSelected ? new Set() : new Set(candidates.map(update => keyOf(update.id))))}>
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={bulk.selectAll}>
                     Select all
                 </Button>
             </Toolbar>
@@ -280,20 +278,6 @@ function ProjectUpdates({ filter, announce }: ListView): React.JSX.Element {
                 : null}
             <div className="nuiget-installed-lists">{body}</div>
             <UpdateAllDialog open={confirming && toUpdate.length > 0} updates={toUpdate} onConfirm={confirm} onCancel={() => setConfirming(false)} />
-            <CentralUpdateDialog
-                request={central}
-                onClose={() => setCentral(null)}
-                onConfirm={() => {
-                    const change = central;
-                    setCentral(null);
-                    if (change === null) {
-                        return;
-                    }
-                    run('ops/update', { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch((error: unknown) => {
-                        announce(`Update of ${change.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
-                    });
-                }}
-            />
         </div>
     );
 }

@@ -7,7 +7,7 @@ import { ALL_PROJECTS, resourceKeys, type SessionSnapshot } from '../../protocol
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import type { ViewStateStore } from '../shared/viewState';
-import { MainShell, type ListView } from './MainShell';
+import { MainShell, type BrowseView, type DetailsView, type ListView } from './MainShell';
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
@@ -59,6 +59,35 @@ describe('main panel shell', () => {
         fireEvent.change(search(), { target: { value: 'serilog' } });
         fireEvent.change(search(), { target: { value: '' } });
         expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+    });
+
+    it('hands the lists, the browse results and the details the one install action and central-change ask', async () => {
+        const host = createFakeHost();
+        let list: ListView | undefined;
+        let browse: BrowseView | undefined;
+        let details: DetailsView | undefined;
+        let detailsWithBrowse: DetailsView | undefined;
+        render(
+            <StoreProvider bus={host.bus}>
+                <MainShell
+                    installed={view => { list = view; return <p>Installed list</p>; }}
+                    browse={view => { browse = view; return <p>Browse results</p>; }}
+                    details={view => { details = view; if (browse !== undefined) { detailsWithBrowse = view; } return <p>Details</p>; }}
+                />
+            </StoreProvider>,
+        );
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        expect(typeof list?.central.ask).toBe('function');
+        expect(details?.central.ask).toBe(list?.central.ask);
+        expect(typeof details?.install.install).toBe('function');
+        expect(typeof details?.install.check).toBe('function');
+        expect(details?.install.asking).toBe(false);
+
+        fireEvent.change(search(), { target: { value: 'serilog' } });
+        expect(browse).toBeDefined();
+        // One render hands the browse results and the details the same install action.
+        expect(detailsWithBrowse?.install).toBe(browse?.install);
+        expect(detailsWithBrowse?.central.ask).toBe(list?.central.ask);
     });
 
     it('the Updates tab shows no 0', async () => {

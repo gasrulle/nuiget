@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
 import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
@@ -10,12 +10,11 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
-import { CentralUpdateDialog, type CentralUpdateRequest } from '../updates/CentralUpdateDialog';
 import { DetailsInfo } from './DetailsInfo';
 import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
+import type { DetailsView } from '../../MainShell';
 import { TransitiveDetails } from './TransitiveDetails';
-import { useInstallAction } from './useInstallAction';
 
 type DetailsTab = 'details' | 'readme';
 
@@ -24,10 +23,10 @@ const TABS: ReadonlyArray<TabItem<DetailsTab>> = [
     { id: 'readme', label: 'README', 'data-testid': 'details-tab-readme' },
 ];
 
-export interface DetailsPaneProps {
-    /** Says a sentence through the one live region of the panel. */
-    announce: (message: string) => void;
-}
+/** The shell's details view: the live region, the panel's one install action and its central-change ask. */
+export type DetailsPaneProps = DetailsView;
+
+const NOTHING_TO_CANCEL = (): void => undefined;
 
 /**
  * What the primary button does with the chosen version: Install when the package is not installed, Update for a
@@ -48,7 +47,7 @@ export function primaryAction(installedVersion: string | undefined, chosen: stri
  * Uninstall, the version selector with Install, Update or Downgrade, and the Details and README tabs. Without a single
  * project nothing is changed from here; a stale selection is shown read-only with the project it belongs to.
  */
-export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
+export function DetailsPane({ announce, install, central }: DetailsPaneProps): React.JSX.Element {
     const details = useDetails();
     const { chooseVersion, showReadme, retryVersions } = useDetailsActions();
     const installed = useInstalled();
@@ -60,10 +59,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
     const [tab, setTab] = useState<DetailsTab>('details');
-    // The preview of an update that changes a central version; an install's preview is the install action's (N77).
-    const [centralPreview, setCentralPreview] = useState<CentralUpdateRequest | null>(null);
-    const installAction = useInstallAction(announce);
-    const { asking, cancel: cancelInstall } = installAction;
+    const { asking } = install;
+    // The cancel of the preview this pane asked; a Browse row's or the search box's ask is not the pane's to stop.
+    const ownAsk = useRef(NOTHING_TO_CANCEL);
 
     // Another package or version starts on the Details tab; the same one made current again, or confirmed for another
     // project, keeps the tab.
@@ -73,8 +71,11 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         setShownFor(shownKey);
         setTab('details');
     }
-    // Another package, or the pane going away, cancels a preview that is still being asked.
-    useEffect(() => () => cancelInstall(), [shownKey, cancelInstall]);
+    // Another package, or the pane going away, cancels the pane's own preview that is still being asked.
+    useEffect(() => () => {
+        ownAsk.current();
+        ownAsk.current = NOTHING_TO_CANCEL;
+    }, [shownKey]);
     // A new selection asks no README until it is shown: on the README tab it is shown already.
     const readmeIdle = details.readme.status === 'idle';
     useEffect(() => {
@@ -134,9 +135,9 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
         }
         if (entry === undefined) {
             // The one install path of the main panel: the CPM preview, the listed-list and busy rules (N77).
-            installAction.install({ packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl });
+            ownAsk.current = install.install({ packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl });
         } else if (isCentral(entry)) {
-            setCentralPreview({ kind: 'update', projectPath: target, packageId: selection.packageId, fromVersion: installedVersion ?? entry.version, toVersion: chosen, sourceUrl: selection.sourceUrl });
+            central.ask({ kind: 'update', projectPath: target, packageId: selection.packageId, fromVersion: installedVersion ?? entry.version, toVersion: chosen, sourceUrl: selection.sourceUrl });
         } else {
             run('ops/update', { projectPath: target, packageId: selection.packageId, version: chosen, sourceUrl: selection.sourceUrl }).catch(fail(action === 'Downgrade' ? 'Downgrade' : 'Update'));
         }
@@ -224,18 +225,6 @@ export function DetailsPane({ announce }: DetailsPaneProps): React.JSX.Element {
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections">
                 {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView announce={announce} />}
             </Tabs>
-            <CentralUpdateDialog
-                request={centralPreview}
-                onClose={() => setCentralPreview(null)}
-                onConfirm={() => {
-                    const change = centralPreview;
-                    setCentralPreview(null);
-                    if (change !== null) {
-                        run('ops/update', { projectPath: change.projectPath, packageId: change.packageId, version: change.toVersion, sourceUrl: change.sourceUrl }).catch(fail('Update'));
-                    }
-                }}
-            />
-            <CentralUpdateDialog request={installAction.preview} onClose={installAction.closePreview} onConfirm={installAction.confirmPreview} />
             <MultiInstallDialog
                 open={picking}
                 packageId={selection.packageId}

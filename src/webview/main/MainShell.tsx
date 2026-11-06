@@ -11,8 +11,10 @@ import { useSearch } from '../shared/store/search';
 import { useSession, useSessionActions } from '../shared/store/session';
 import { useShellChrome } from '../shared/shellChrome';
 import type { ViewStateStore } from '../shared/viewState';
+import { useInstallAction, type InstallAction } from './features/details/useInstallAction';
 import { useSearchTyping } from './features/search/useSearchTyping';
 import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
+import { useCentralChange, type CentralChange } from './features/updates/useCentralChange';
 import { SourcesControl } from './features/sources/SourcesControl';
 import { MainTabs } from './MainTabs';
 import { RefreshBar } from './RefreshBar';
@@ -27,6 +29,8 @@ export interface ListView {
     vulnerableOnly: boolean;
     /** Says a sentence through the one live region of the panel. */
     announce: (message: string) => void;
+    /** Asks the panel's one central-change dialog for a centrally managed row's update. */
+    central: Pick<CentralChange, 'ask'>;
 }
 
 /** What the browse results are given by the shell. */
@@ -34,6 +38,17 @@ export interface BrowseView {
     /** The text in the box, which Enter searches for. */
     text: string;
     announce: (message: string) => void;
+    /** The panel's one install action (Ctrl+Enter on a row). */
+    install: InstallAction;
+}
+
+/** What the details of the selected package are given by the shell. */
+export interface DetailsView {
+    announce: (message: string) => void;
+    /** The panel's one install action (Install). */
+    install: InstallAction;
+    /** Asks the panel's one central-change dialog for a centrally managed package's update. */
+    central: Pick<CentralChange, 'ask'>;
 }
 
 export interface MainShellProps {
@@ -44,7 +59,7 @@ export interface MainShellProps {
     /** The browse results; they take the place of the tabs while the box holds a browse search. */
     browse?: (view: BrowseView) => React.ReactNode;
     /** The details of the selected package; without it, the details pane says how to get one. */
-    details?: (view: { announce: (message: string) => void }) => React.ReactNode;
+    details?: (view: DetailsView) => React.ReactNode;
     /** The webview's state store: the chosen tab is kept there across a reload of the panel. */
     viewState?: ViewStateStore;
 }
@@ -82,6 +97,9 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     // The user moved the sash before the kept position arrived: the kept one no longer applies.
     const moved = useRef(false);
     const { announce, live, searchRef } = useShellChrome();
+    // One central change and one install action for the whole panel, handed to the features (X53, N77).
+    const central = useCentralChange(announce);
+    const installAction = useInstallAction(announce, central.ask);
     const listPaneId = `${useId()}-list`;
 
     // The split is a layout preference the host keeps (ADR-001); once per page, under StrictMode too.
@@ -121,7 +139,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     const parsed = parseSearchQuery(query);
     const browsing = parsed.mode === 'browse';
     const [focused, setFocused] = useState(false);
-    const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused, announce });
+    const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused, announce, install: installAction });
     // Leaving browse (an empty box, a filter) ends the search and cancels what it still asks.
     const { clear: clearSearch } = useSearch();
     useEffect(() => {
@@ -134,7 +152,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     // The details pane shows the active view's own selection; Browse starts without one.
     const { showView } = useDetailsActions();
     useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
-    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce };
+    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central };
 
     const selectTab = (next: MainTab): void => {
         setChosenTab(next);
@@ -219,7 +237,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
             <div className="nuiget-main-split" style={cssVars({ '--nuiget-split': `${split}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
-                    {browsing ? browse?.({ text: query, announce }) : (
+                    {browsing ? browse?.({ text: query, announce, install: installAction }) : (
                         <MainTabs selected={tab} onSelect={selectTab}>
                             {tab === 'installed' ? installed?.(view) : updates?.(view)}
                         </MainTabs>
@@ -236,10 +254,10 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                     }}
                 />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">
-                    {details?.({ announce }) ?? <EmptyState message="Select a package to see its details." />}
+                    {details?.({ announce, install: installAction, central }) ?? <EmptyState message="Select a package to see its details." />}
                 </section>
             </div>
-            <CentralUpdateDialog request={typing.install.preview} onClose={typing.install.closePreview} onConfirm={typing.install.confirmPreview} />
+            <CentralUpdateDialog request={central.request} onClose={central.close} onConfirm={central.confirm} />
             <LiveStatus message={live.message} repeat={live.repeat} />
         </main>
     );
