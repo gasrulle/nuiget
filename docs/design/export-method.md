@@ -9,8 +9,10 @@ and two PNGs). Gate 0, the route on the ubuntu `ui` job, was met by UX-P0.27a's 
 
 - **The manifest** `src/test/ui/v2/artboards.ts` (`ARTBOARDS`) lists each artboard: the named state it draws, its page under
   `docs/design`, the panel's test id (the clip), a `sample` element filled with one saturated colour, its themes, looks
-  and widths (`{ panel, viewport }`: the panel's width at that viewport, checked to ±0.5 px). Today it holds artboard A
-  (`main-installed-single`, Dark Modern, both looks, panel 932 at viewport 1280).
+  and widths (`{ panel, viewport }`: the panel's width at that viewport, checked to ±0.5 px). Today it holds five entries:
+  artboard A (`main-installed-single`, Dark Modern, both looks, panel 932 at viewport 1280) and the four round-3 pages
+  (UX-P2.fix-8: `main-transitive-expanded`, `main-transitive-details` in Modern UI, `main-installed-details`,
+  `main-installed-all` in both looks; Dark Modern, panel 1200 at viewport 1280).
 - **The suite** `src/test/ui/v2/capture/zz-artboards.ui.test.ts` renders every width, theme and look by the route below
   and writes `artboards/<state>.<theme>.<width>.png` (the capture naming of `states.ts`: `<theme>-classic` for the classic
   look) and `artboards/<state>.spec.json` for the entry's first theme and width. The `ui` job runs it after the capture

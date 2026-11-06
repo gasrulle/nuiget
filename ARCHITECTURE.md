@@ -1033,7 +1033,7 @@ These parts are the current truth for the build, test and release pipeline.
   `themes/<theme>.modern.css` and the computed `--nuiget-*` tokens into the token record beside it (`[theme]` lines); the
   `ui` job's files are kept in `docs/design/themes/`. After the capture suite, in the `ui` lane's Modern UI pass only, the artboard export
   (`src/test/ui/v2/capture/zz-artboards.ui.test.ts`) starts `scripts/serve-artboards.mjs` on `docs/design`, opens each
-  artboard of the manifest `src/test/ui/v2/artboards.ts` (today artboard A) in VS Code's integrated browser
+  artboard of the manifest `src/test/ui/v2/artboards.ts` (artboard A at 932 and the four round-3 pages at 1200, UX-P2.fix-8) in VS Code's integrated browser
   (`docs/design/export-method.md`) and writes its panel per width, theme and look under the capture names, and its spec,
   into `artboards/`; every render reads back one saturated pixel the page computes and fails on a colour-profile mismatch
   (`[artboard]` lines, UX-P0.27); the copies kept are in `docs/design/artboards/`. `scripts/render-artboards.mjs` runs the

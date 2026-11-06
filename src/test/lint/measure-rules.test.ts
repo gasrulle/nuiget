@@ -223,7 +223,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
                     // SPEC's scopes divide the artboard's ids, whatever the state's group (UX-P2.8a).
                     && (rule.helper === 8 || stateGroup(candidate) === scope || elementGroups(stateGroup(candidate), candidate).includes(scope as never))) as string;
                 expect(state, `a state for ${rule.id}/${scope}`).toBeDefined();
-                const name = stateGroup(state) === scope ? `${rule.id}@${state}` : `${rule.id}@${state}/${scope}`;
+                // A spec line keeps its scope in its name in every state group (UX-P2.fix-8).
+                const name = rule.helper !== 8 && stateGroup(state) === scope ? `${rule.id}@${state}` : `${rule.id}@${state}/${scope}`;
                 const line = measureLines(state, layout(), 'modern', {}, undefined, width, undefined, theme).find(candidate => candidate.name === name);
                 expect(line, name).toMatchObject({ pass: false, value: expect.stringMatching(/^not measurable/) });
             }
