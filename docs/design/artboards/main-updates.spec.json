@@ -1,0 +1,444 @@
+{
+  "state": "main-updates",
+  "theme": "dark-modern",
+  "width": 1200,
+  "source": "docs/design/artboards/round3/main-updates.dc.html",
+  "vscode": "1.140.0",
+  "chromium": "150",
+  "platform": "linux",
+  "run": "42196886959",
+  "composition": "The state's scene at scrollTop 0: Gateway's Updates tab, selected and focused (the reach's click leaves the 1 px focusBorder ring at offset -1 on it), the bulk toolbar with Select All and the primary Update All (14) enabled, and the Direct packages group row at the top of the tree with its count badge, the ruled target of UX-P3.1a (MS-8, D48): the product today renders a flat list from y 147, and the page draws the group row at 147-175 and the fourteen update rows from 175. The Microsoft.Extensions.Http row is drawn current (list.activeSelectionBackground band, focus outline, its update action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed carry main-updates-current, a state that does not exist, so nothing compares them. The other rows' actions are not drawn, as the product hides them until a row is hovered or current. Versions are live content: the rects count, not the numbers.",
+  "looks": {
+    "modern": {
+      "project-selector": {
+        "rect": {
+          "x": 862,
+          "y": 8,
+          "w": 157,
+          "h": 26
+        },
+        "inset": 869,
+        "padding": "0px 22px 0px 6px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-control-height",
+          "--nuiget-select-arrow-space",
+          "--nuiget-space-3",
+          "--nuiget-color-dropdown-border",
+          "--nuiget-radius-control",
+          "--nuiget-color-dropdown-bg",
+          "--nuiget-color-dropdown-fg"
+        ]
+      },
+      "source-selector": {
+        "rect": {
+          "x": 1027,
+          "y": 8,
+          "w": 101,
+          "h": 26
+        },
+        "inset": 1034,
+        "padding": "0px 22px 0px 6px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-control-height",
+          "--nuiget-select-arrow-space",
+          "--nuiget-space-3",
+          "--nuiget-color-dropdown-border",
+          "--nuiget-radius-control",
+          "--nuiget-color-dropdown-bg",
+          "--nuiget-color-dropdown-fg"
+        ]
+      },
+      "source-settings": {
+        "rect": {
+          "x": 1136,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 1136,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "refresh-button": {
+        "rect": {
+          "x": 1162,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 1162,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "search-input": {
+        "rect": {
+          "x": 16,
+          "y": 42,
+          "w": 1168,
+          "h": 26
+        },
+        "inset": 23,
+        "padding": "0px 24px 0px 6px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-control-height",
+          "--nuiget-search-action-space",
+          "--nuiget-space-3",
+          "--nuiget-color-input-border",
+          "--nuiget-radius-control",
+          "--nuiget-color-input-bg",
+          "--nuiget-color-input-fg"
+        ]
+      },
+      "tab-bar": {
+        "rect": {
+          "x": 0,
+          "y": 77,
+          "w": 420,
+          "h": 36
+        },
+        "inset": 6,
+        "padding": "0px 6px 0px 6px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-tab-height",
+          "--nuiget-inset",
+          "--nuiget-tab-padding",
+          "--nuiget-color-divider"
+        ]
+      },
+      "installed-tab": {
+        "rect": {
+          "x": 6,
+          "y": 77,
+          "w": 138.6,
+          "h": 35
+        },
+        "inset": 16,
+        "padding": "0px 10px 0px 10px",
+        "gap": "6px 6px",
+        "tokens": [
+          "--nuiget-space-3",
+          "--nuiget-tab-padding",
+          "--nuiget-color-tab-fg",
+          "--nuiget-tab-font-size",
+          "--nuiget-tab-transform"
+        ]
+      },
+      "updates-tab": {
+        "rect": {
+          "x": 144.6,
+          "y": 77,
+          "w": 103,
+          "h": 35
+        },
+        "inset": 154.6,
+        "padding": "0px 10px 0px 10px",
+        "gap": "6px 6px",
+        "tokens": [
+          "--nuiget-space-3",
+          "--nuiget-tab-padding",
+          "--nuiget-color-tab-active-border",
+          "--nuiget-color-tab-active-fg",
+          "--nuiget-tab-font-size",
+          "--nuiget-tab-transform"
+        ]
+      },
+      "select-all-button": {
+        "rect": {
+          "x": 16,
+          "y": 117,
+          "w": 73.7,
+          "h": 26
+        },
+        "inset": 25,
+        "padding": "4px 8px 4px 8px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-control-height",
+          "--nuiget-space-2",
+          "--nuiget-space-4",
+          "--nuiget-color-button-secondary-border",
+          "--nuiget-radius-control",
+          "--nuiget-color-button-secondary-bg",
+          "--nuiget-color-button-secondary-fg",
+          "--nuiget-font-size-label",
+          "--nuiget-control-line-height"
+        ]
+      },
+      "update-all-button": {
+        "rect": {
+          "x": 295.4,
+          "y": 117,
+          "w": 108.6,
+          "h": 26
+        },
+        "inset": 304.4,
+        "padding": "4px 8px 4px 8px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-control-height",
+          "--nuiget-space-2",
+          "--nuiget-space-4",
+          "--nuiget-color-button-border",
+          "--nuiget-radius-control",
+          "--nuiget-color-button-bg",
+          "--nuiget-color-button-fg",
+          "--nuiget-font-size-label",
+          "--nuiget-control-line-height"
+        ]
+      },
+      "updates-list": {
+        "rect": {
+          "x": 0,
+          "y": 147,
+          "w": 420,
+          "h": 656
+        },
+        "inset": 0,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": []
+      },
+      "section-header-direct": {
+        "rect": {
+          "x": 16,
+          "y": 147,
+          "w": 349.3,
+          "h": 28
+        },
+        "inset": 16,
+        "padding": "0px 0px 0px 0px",
+        "gap": "4px 4px",
+        "tokens": [
+          "--nuiget-gap-group",
+          "--nuiget-header-font-size",
+          "--nuiget-font-weight-section-title",
+          "--nuiget-header-transform"
+        ]
+      },
+      "package-row-dapper": {
+        "rect": {
+          "x": 0,
+          "y": 175,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-fluentvalidation": {
+        "rect": {
+          "x": 0,
+          "y": 247,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-humanizer.core": {
+        "rect": {
+          "x": 0,
+          "y": 319,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-microsoft.extensions.ai.abstractions": {
+        "rect": {
+          "x": 0,
+          "y": 391,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-microsoft.extensions.configuration.environmentvariables": {
+        "rect": {
+          "x": 0,
+          "y": 463,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-microsoft.extensions.dependencyinjection.abstractions": {
+        "rect": {
+          "x": 0,
+          "y": 535,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-microsoft.extensions.http": {
+        "rect": {
+          "x": 0,
+          "y": 607,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 6px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-inset",
+          "--nuiget-radius-row",
+          "--nuiget-color-list-active-bg",
+          "--nuiget-color-list-active-fg",
+          "--nuiget-color-list-focus-outline"
+        ]
+      },
+      "row-action-update": {
+        "rect": {
+          "x": 384,
+          "y": 632,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 384,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-list-active-icon"
+        ],
+        "composed": "main-updates-current"
+      },
+      "package-row-microsoft.extensions.logging.abstractions": {
+        "rect": {
+          "x": 0,
+          "y": 679,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-microsoft.extensions.options.configurationextensions": {
+        "rect": {
+          "x": 0,
+          "y": 751,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-details-panel": {
+        "rect": {
+          "x": 421,
+          "y": 77,
+          "w": 779,
+          "h": 726
+        },
+        "inset": 421,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": []
+      }
+    }
+  }
+}
