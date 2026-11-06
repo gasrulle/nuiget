@@ -323,7 +323,9 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
                                 verified={update.verified}
                                 icon={src === undefined ? undefined : <img src={src} alt="" />}
                                 busy={busy}
-                                status={busy ? busyStatus(section.projectPath, update.id) : undefined}
+                                // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
+                                selectable={section.installed?.unsupported === undefined}
+                                status={busy ? busyStatus(section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
                                 badges={isCentralIn(section.installed, update.id) ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                                 actions={section.installed?.unsupported ? undefined : (
                                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(section, update)}><ArrowUpIcon /></IconButton>

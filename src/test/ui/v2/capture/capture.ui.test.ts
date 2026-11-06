@@ -564,7 +564,7 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Utility.csproj');
             await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
             await rewriteHeld('main-updates-unavailable', 'unavailable');
-            await until('document.querySelector(\'[data-testid="updates-unavailable-banner"] button\') !== null && document.querySelector(".nuiget-empty-text")?.textContent === "Updates could not be checked: no package source answered."', 'the unavailable banner with Retry and the sentence');
+            await until('document.querySelector(\'[data-testid="updates-unavailable-banner"] button\') !== null && document.querySelector(\'[data-testid="updates-list"]\') === null', 'the unavailable banner with Retry, alone');
         },
         leave: endHold,
     },

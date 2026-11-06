@@ -238,7 +238,8 @@ describe('main panel: Updates tab', () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [], sourcesUnavailable: true });
         expect(screen.getByTestId('updates-unavailable-banner')).toHaveTextContent('could not be checked');
-        expect(screen.getByText('Updates could not be checked: no package source answered.')).toBeInTheDocument();
+        // The banner stands alone: no list, no sentence beside it (design-advisor, UX-P3.1b).
+        expect(screen.queryByTestId('updates-list')).toBeNull();
         expect(screen.queryByText('No updates available.')).toBeNull();
         expect(screen.getByTestId('updates-tab')).toHaveAccessibleName('Updates');
         await user.click(within(screen.getByTestId('updates-unavailable-banner')).getByRole('button', { name: 'Retry' }));
@@ -323,10 +324,11 @@ describe('main panel: Updates tab', () => {
             expect(screen.queryByTestId('updates-progress')).toBeNull();
         });
 
-        it('sources unavailable: the banner and a sentence that the updates are unknown, never the empty hook', async () => {
+        it('sources unavailable: the banner stands alone, never the empty hook', async () => {
             await mountWith({ updates: [], sourcesUnavailable: true });
             expect(screen.getByTestId('updates-unavailable-banner')).toBeInTheDocument();
-            expect(screen.getByText('Updates could not be checked: no package source answered.')).toBeInTheDocument();
+            expect(screen.queryByTestId('updates-list')).toBeNull();
+            expect(document.querySelector('.nuiget-updates .nuiget-empty')).toBeNull();
             expect(screen.queryByTestId('updates-empty')).toBeNull();
         });
 
@@ -485,6 +487,9 @@ describe('main panel: Updates tab', () => {
             expect(leaf).toHaveTextContent('Unsupported project: requires .NET SDK 10 or newer.');
             expect(leaf.closest('[data-row-kind="message"]')).not.toBeNull();
             expect(screen.getByTestId('package-row-moq').querySelector('[data-testid="row-action-update"]')).toBeNull();
+            // Read-only rows cannot join a bulk update and say why (DS-STATE-7).
+            expect(screen.getByTestId('package-row-moq').querySelector('.nuiget-row-check--off')).not.toBeNull();
+            expect(optionOf('Moq')).toHaveTextContent('Read-only');
         });
 
         it('All Projects: the tab draws its own bar while the stream runs, and a project with no chunk after it is unknown, never "no updates"', async () => {

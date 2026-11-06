@@ -208,7 +208,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-updates-empty-uptodate', 'main', [primary('main')],
         'Utility chosen on the Updates tab with its held answer rewritten to the "no update" answer the host itself gives: the welcome-style "No updates available." (marker updates-empty); ended after the capture.'), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-updates-unavailable', 'main', [primary('main')],
-        'Utility chosen on the Updates tab with its held answer rewritten to the "no source answered" answer the host itself gives: the unavailable banner with Retry and the sentence that the updates are unknown, never "no updates"; ended after the capture.'), diffTolerance: DIFF_TOLERANCE_START },
+        'Utility chosen on the Updates tab with its held answer rewritten to the "no source answered" answer the host itself gives: the unavailable banner with Retry, the one message of the cell (no list, never "no updates"); ended after the capture.'), diffTolerance: DIFF_TOLERANCE_START },
     pending('main-browse-unavailable', 'main', 'P3.10', 'No source answered the search: the unavailable banner.'),
     pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),
     pending('sidebar-browse-unavailable', 'sidebar', 'P3.10', 'No source answered the search: the sidebar banner.'),

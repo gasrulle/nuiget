@@ -29,7 +29,8 @@ const HINT = 'Space selects the package for a bulk update. Enter updates it. Shi
 
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
- * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates". A
+ * toolbar over them. A source that could not be checked is a banner over the list, never an empty "no updates"; when no
+ * row came back the banner is the cell's one message, as the error's (design-advisor, UX-P3.1b). A
  * centrally managed package is updated through the preview of the central change (`central.ask`, the shell's one
  * `CentralUpdateDialog`) and joins no bulk update (N76); a row with a `VersionOverride` updates in its project alone,
  * without a preview, and joins one (N74).
@@ -193,17 +194,15 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         body = <Skeleton density="comfortable" />;
     } else if (projectPath === null) {
         body = <EmptyState message="No .NET projects found in this workspace." />;
-    } else if (updates.status === 'error' && rows.length === 0) {
+    } else if ((updates.status === 'error' || updates.sourcesUnavailable) && rows.length === 0) {
+        // The banner above is the one message: `sourcesUnavailable` cannot tell a partial answer from none.
         body = null;
     } else if (updates.status === 'loading' && rows.length === 0) {
         body = <Skeleton density="comfortable" />;
     } else {
-        // Empty is not unknown: with a source that could not be checked, no row does not mean no update.
-        const empty = updates.sourcesUnavailable
-            ? 'Updates could not be checked: no package source answered.'
-            : rows.length > 0 ? `No update matches "${filter.trim()}".`
-                // Nothing installed is not "up to date" (MU10); an unsupported project lists no packages either.
-                : !unsupported && installed.result !== undefined && installed.result.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
+        const empty = rows.length > 0 ? `No update matches "${filter.trim()}".`
+            // Nothing installed is not "up to date" (MU10); an unsupported project lists no packages either.
+            : !unsupported && installed.result !== undefined && installed.result.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
         body = (
             <Listbox
                 items={items}
@@ -233,7 +232,7 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                     }
                 }}
                 // The marker names the two empty cells only: nothing installed, and no update (not a filter that matches nothing).
-                empty={<EmptyState message={empty} data-testid={rows.length === 0 && !updates.sourcesUnavailable ? 'updates-empty' : undefined} />}
+                empty={<EmptyState message={empty} data-testid={rows.length === 0 ? 'updates-empty' : undefined} />}
                 renderRow={(item, placement) => {
                     if (item.kind !== 'package') {
                         return null;
@@ -254,7 +253,9 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                             verified={update.verified}
                             icon={src === undefined ? undefined : <img src={src} alt="" />}
                             busy={busy}
-                            status={busy ? busyStatus(update.id) : undefined}
+                            // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
+                            selectable={!unsupported}
+                            status={busy ? busyStatus(update.id) : unsupported ? 'Read-only' : undefined}
                             badges={<>
                                 {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
                             </>}
