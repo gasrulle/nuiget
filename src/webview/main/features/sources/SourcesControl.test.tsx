@@ -74,6 +74,10 @@ describe('main panel: sources', () => {
         expect(row('nuget.org')).toHaveTextContent('/home/me/.nuget/NuGet/NuGet.Config');
         // UX-P3.6: the box is named by the source alone and described by its URL and file.
         expect(within(row('nuget.org')).getByRole('checkbox', { name: 'nuget.org' })).toHaveAccessibleDescription(`${NUGET} /home/me/.nuget/NuGet/NuGet.Config`);
+        // Once the host names the config files, a file shows by its label (case-insensitively); one with no label keeps its path.
+        await hostSays(() => host.respond(host.requests('sources/configFiles')[0], { configFiles: [{ path: '/HOME/me/.nuget/NuGet/NuGet.Config', label: 'User' }] }));
+        expect(within(row('nuget.org')).getByRole('checkbox', { name: 'nuget.org' })).toHaveAccessibleDescription(`${NUGET} User`);
+        expect(row('Contoso')).toHaveTextContent('/w/nuget.config');
         expect(within(row('Old')).getByRole('checkbox')).not.toBeChecked();
         await user.click(within(row('Contoso')).getByRole('checkbox', { name: /Contoso/ }));
         expect(host.requests('sources/disable').map(request => request.payload)).toEqual([{ sourceName: 'Contoso' }]);

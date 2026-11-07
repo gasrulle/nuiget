@@ -770,14 +770,17 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
     });
 
     it('reads the open dialog\'s layer: its radius, its shadow, the scrim, the surface under it and the footer\'s padding (UX-P3.5)', () => {
-        document.head.insertAdjacentHTML('beforeend', '<style id="layer-facts">:root { --nuiget-radius-layer: 8px; --nuiget-color-shadow: rgba(0, 0, 0, 0.36); --nuiget-color-bg: rgb(31, 31, 31); } .nuiget-dialog-layer { background-color: rgba(0, 0, 0, 0.5); } .nuiget-dialog { border-top-left-radius: 8px; box-shadow: rgba(0, 0, 0, 0.36) 0px 2px 8px 0px; } .nuiget-dialog-footer { padding: 0px; } .glow { box-shadow: rgb(0, 0, 0) 0px 0px 4px 0px; }</style>');
+        document.head.insertAdjacentHTML('beforeend', '<style id="layer-facts">:root { --nuiget-radius-layer: 8px; --nuiget-color-shadow: rgba(0, 0, 0, 0.36); --nuiget-color-bg: rgb(31, 31, 31); } .nuiget-dialog-layer { background-color: rgba(0, 0, 0, 0.5); } .nuiget-dialog { border-top-left-radius: 8px; box-shadow: rgba(0, 0, 0, 0.36) 0px 2px 8px 0px; } ' + '.nuiget-dialog { padding-left: 16px; } .nuiget-empty { padding-left: 0px; padding-right: 0px; } .nuiget-dialog-footer { padding: 0px; } .glow { box-shadow: rgb(0, 0, 0) 0px 0px 4px 0px; }</style>');
         document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,1200,803"><div class="glow" data-rect="10,10,50,50"></div></main>
-          <div class="nuiget-dialog-layer" data-rect="0,0,1200,803"><div class="nuiget-dialog" role="alertdialog" data-rect="375,332,825,471"><h2 class="nuiget-dialog-title" data-rect="391,344,700,368">Uninstall 1 package?</h2><div class="nuiget-dialog-footer" data-rect="391,440,809,466"></div></div></div>`;
+          <div class="nuiget-dialog-layer" data-rect="0,0,1200,803"><div class="nuiget-dialog" role="alertdialog" data-rect="375,332,825,471"><h2 class="nuiget-dialog-title" data-rect="391,344,700,368">Uninstall 1 package?</h2><ul><li class="nuiget-source-row" data-rect="391,372,809,410">nuget.org</li></ul><div class="nuiget-empty" data-rect="391,412,809,430"><p class="nuiget-empty-text">No package sources.</p></div><div class="nuiget-dialog-footer" data-rect="391,440,809,466"></div></div></div>`;
         try {
             const layers = collect().endOfP0.layers;
             expect(layers).toMatchObject({ radius: '8px', radiusTarget: '8px', boxShadow: 'rgba(0, 0, 0, 0.36) 0px 2px 8px 0px', scrim: 'rgba(0, 0, 0, 0.5)', footer: { left: 0, right: 0, top: 0, bottom: 0 } });
             // Every other element with a shadow is named; the dialog is not.
             expect(layers?.shadowed).toEqual(['.glow']);
+            // UX-P3.6: a sources row counts as a row; an empty state in a dialog reads the dialog's inset.
+            expect(collect().endOfP0.stateCells.rows).toBe(1);
+            expect(collect().endOfP0.stateCells.empties[0]).toMatchObject({ paddingLeft: 0, paddingRight: 0, dialogInset: 16 });
             expect(collect().endOfP0.titles.dialog).toMatchObject({ fontWeight: expect.any(String) });
             document.querySelector('.nuiget-dialog-layer')?.remove();
             expect(collect().endOfP0.layers).toBeUndefined();

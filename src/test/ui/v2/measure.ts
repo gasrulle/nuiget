@@ -157,9 +157,9 @@ export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefin
     return { id, ...options };
 }
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
-/** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2), and no dialogs (UX-P3.5). */
-const { browse: _noGroupHeader, dialogs: _noDialogHeader, ...grid2b } = asGrid1;
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: { pending: 'P3.7a' } } as const;
+/** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2), no dialogs (UX-P3.5) and no sources dialog (UX-P3.6). */
+const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHeader, ...grid2b } = asGrid1;
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
@@ -258,10 +258,10 @@ export const RULES: readonly RuleDefinition[] = [
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details'] }),
-    rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'] } }),
+    rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
@@ -325,15 +325,15 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
-    rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.gapMembership }),
+    rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: 'hard' }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES,
     }),
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' },
         tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
@@ -351,11 +351,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -783,7 +783,8 @@ export interface StateCells {
     listBusy: boolean;
     progressTop: number | undefined;
     contentTop: number | undefined;
-    empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; gap: number; buttons: number; buttonWidth: number | undefined; width: number }>;
+    /** `dialogInset`: the padding-left of the dialog an empty state sits in, whose inset carries it there (UX-P3.6). */
+    empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; gap: number; buttons: number; buttonWidth: number | undefined; width: number; dialogInset?: number }>;
     banners: Array<{ severity: string; glyphs: string[]; buttons: number; text: string }>;
     roles: Array<{ role: string; key: string; actual: string; expected: string }>;
 }
@@ -1472,10 +1473,11 @@ const resolveKey = (key, property) => {
     return resolved;
 };
 const progressEl = shown('[data-testid="' + cellList + '-progress"]')[0];
-const contentEl = shown('.nuiget-skeleton-row, .nuiget-row')[0];
+const contentEl = shown('.nuiget-skeleton-row, .nuiget-row, .nuiget-source-row')[0];
 const stateCells = {
     testIds: [...new Set(shown('[data-testid]').map(el => el.dataset.testid))],
-    rows: shown('.nuiget-row-option').length,
+    // The sources dialog's rows are list items of their own (UX-P3.6).
+    rows: shown('.nuiget-row-option, .nuiget-source-row').length,
     disabledVersions: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-version')?.textContent || '').trim()),
     skeletonRows: shown('.nuiget-skeleton-row').length,
     listBusy: scope.querySelector('[data-testid="' + cellList + '-list"]')?.getAttribute('aria-busy') === 'true',
@@ -1484,7 +1486,7 @@ const stateCells = {
     empties: shown('.nuiget-empty').map(el => {
         const style = getComputedStyle(el);
         const buttons = [...el.querySelectorAll('button')];
-        return { textAlign: style.textAlign, paddingLeft: px(style.paddingLeft), paddingRight: px(style.paddingRight), gap: px(style.rowGap), buttons: buttons.length, buttonWidth: buttons[0] ? rectOf(buttons[0]).width : undefined, width: rectOf(el).width };
+        return { textAlign: style.textAlign, paddingLeft: px(style.paddingLeft), paddingRight: px(style.paddingRight), gap: px(style.rowGap), buttons: buttons.length, buttonWidth: buttons[0] ? rectOf(buttons[0]).width : undefined, width: rectOf(el).width, dialogInset: el.closest('.nuiget-dialog') ? px(getComputedStyle(el.closest('.nuiget-dialog')).paddingLeft) : undefined };
     }),
     banners: shown('.nuiget-banner').map(el => ({
         severity: (el.className.match(/nuiget-banner--(\\w+)/) || [])[1] || '',
@@ -2918,14 +2920,18 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
                 const wanted = empty.buttonWidth === undefined ? undefined : Math.min(empty.width - 40, 300);
                 return [
                     ...(empty.textAlign === 'start' ? [] : [`text-align ${empty.textAlign}`]),
-                    ...(Math.abs(empty.paddingLeft - 20) > tolerance || Math.abs(empty.paddingRight - 20) > tolerance ? [`padding ${empty.paddingLeft}/${empty.paddingRight}`] : []),
+                    // Inside a dialog the inline padding is 0 and the dialog's own 16 px inset carries it (DS-STATE-3, UX-P3.6).
+                    ...(empty.dialogInset !== undefined
+                        ? (empty.paddingLeft === 0 && empty.paddingRight === 0 && Math.abs(empty.dialogInset - 16) <= tolerance ? [] : [`padding ${empty.paddingLeft}/${empty.paddingRight} in a dialog inset ${empty.dialogInset} (target 0/0 in 16)`])
+                        : (Math.abs(empty.paddingLeft - 20) > tolerance || Math.abs(empty.paddingRight - 20) > tolerance ? [`padding ${empty.paddingLeft}/${empty.paddingRight}`] : [])),
                     ...(Math.abs(empty.gap - 8) > tolerance ? [`gap ${empty.gap}`] : []),
                     ...(empty.buttons > 1 ? [`${empty.buttons} buttons`] : []),
                     ...(wanted !== undefined && Math.abs((empty.buttonWidth ?? 0) - wanted) > tolerance ? [`button ${empty.buttonWidth} (target ${wanted})`] : []),
                 ];
             });
             const first = cells.empties[0];
-            return { value: off.length === 0 ? `${first.textAlign}, ${first.paddingLeft}/${first.paddingRight}, ${first.buttons} buttons, gap ${first.gap} (${cells.empties.length})` : off.join('; '), pass: off.length === 0 };
+            const inset = first.dialogInset === undefined ? `${first.paddingLeft}/${first.paddingRight}` : `${first.paddingLeft}/${first.paddingRight} in a dialog inset ${first.dialogInset}`;
+            return { value: off.length === 0 ? `${first.textAlign}, ${inset}, ${first.buttons} buttons, gap ${first.gap} (${cells.empties.length})` : off.join('; '), pass: off.length === 0 };
         }
         case 'DS-STATE-4': {
             if (cells.banners.length === 0) {

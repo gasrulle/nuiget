@@ -571,7 +571,6 @@ body {
     gap: var(--nuiget-space-4);
     min-height: var(--nuiget-target-min);
     padding: var(--nuiget-space-2) 0;
-    border-bottom: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 .nuiget-source-text {

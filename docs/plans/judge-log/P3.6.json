@@ -1,0 +1,268 @@
+{
+  "item": "P3.6",
+  "runs": [
+    {
+      "runId": "42413441389",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "902a402 (series -a reading commit d16a444 and its fix-forward)",
+      "look": "modern",
+      "workflow": "wf_f0a0925b-d6e",
+      "note": "Series -a. No sources artboard exists: main-sources and main-sources-remove-dialog are judged against main-installed-details.dark-modern.1200.png and its spec as the page beneath (design-advisor ruling UX-P3.6 DO 11, P3.5 DO 9); a finding outside `.nuiget-dialog` that compares the page beneath is accepted-as-design under it. The three cells (main-sources-revalidating, -empty, -error) are pending artboard: their gate is the hard measurements (DS-STATE-1..4, DS-COLOR-1, DS-COPY-3, DS-GRID-1/2a, DS-HEIGHT-6/8/9, DS-TYPE-1/4).",
+      "captures": {
+        "main-sources": {
+          "png": "captures/42413441389/main-sources.dark-modern.1200.png",
+          "sha256": "7f9f61cf6fa20a8d1f829a1903b090fa03ebbeda751449f081346ed2fe064540",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-sources-remove-dialog": {
+          "png": "captures/42413441389/main-sources-remove-dialog.dark-modern.1200.png",
+          "sha256": "18afc9f4665799f1bc5cf82625ae75d337ed1c94bac3495f9c0538cf6e1ffe8a",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 19,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 6,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-sources#D3",
+          "state": "main-sources",
+          "finding": "[native] A 1 px widget-border line runs across the dialog between the single source row and the footer (x 392 to 807, y 449). It reads as a rule under the row or above the button row, and the workbench's own dialogs draw no such separator above their buttons.",
+          "severity": "minor",
+          "box": [
+            392,
+            449,
+            416,
+            1
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational (design-advisor follow-up 2); P3.6 (the row's hairline removed in the -a closing)"
+        },
+        {
+          "id": "main-sources-remove-dialog#D3",
+          "state": "main-sources-remove-dialog",
+          "finding": "[states] The primary button of the NuGet sources dialog behind the confirm reads \"Add source\" in sentence case. DS-COPY-1 requires Title Case button labels (\"Add Source\").",
+          "severity": "major",
+          "box": [
+            723,
+            458,
+            85,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "states"
+          ],
+          "informational": "singleJudge, informational (design-advisor follow-up 2); P3.11"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-sources#D1",
+          "state": "main-sources",
+          "finding": "[native] The Installed toolbar labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard's select-all-button and uninstall-selected-button read \"Select All\" and \"Uninstall Selected (0)\" in Title Case, as workbench button labels do. | [states] The list toolbar's first button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" at the same place; button labels are Title Case. | [states] The list toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" at the same place; button labels are Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "\"Select all\", \"Uninstall selected (0)\": DS-COPY-1, as P3.5 bulk#D1",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 2 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources#D2",
+          "state": "main-sources",
+          "finding": "[native] The sources dialog's footer button reads \"Add source\" in sentence case, where Title Case is the rule for button labels (exemplar: Settings' \"Add Pattern\"). The artboard does not draw the dialog, so the copy rule is the reference. | [states] The dialog's footer button reads \"Add source\" in sentence case; a button label is Title Case (\"Add Source\"), and since it opens the add form it also takes the trailing \"...\" of a label that opens further UI.",
+          "severity": "major",
+          "box": [
+            723,
+            458,
+            85,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "\"Add source\" Title Case; whether it takes DS-COPY-4's \"...\" is P3.11's (the button swaps the dialog's body and opens no window)",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 2 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources-remove-dialog#D1",
+          "state": "main-sources-remove-dialog",
+          "finding": "[native] The remove confirm is stacked 29 px below the top of the Sources dialog, at the same x and width. Its top edge cuts through the lower half of the parent's heading 'NuGet sources' and leaves the parent's close button and 'Add source' button showing above and below it. A workbench modal is a single dialog centred over the scrim and never covers part of another dialog's title, so this reads as a layering glitch, not a built-in confirm. | [geometry] The stacked confirm layer (outer rect x 375-824, y 335-468) shares both side borders of the sources dialog to the pixel (x 375 and 824) and its top border at y 335 cuts the dialog beneath through its header: the 'NuGet sources' title glyphs (ink y 324-334) are sliced at their lower edge, and the close X ends at y 334, touching the confirm's border with no gap. The page beneath is the sources dialog (y 306-496), not the main-installed-details artboard, and nothing in the artboard or spec places a layer edge across another layer's header. | [geometry] Below the confirm's bottom border (y 468), the sources dialog's 'Add source' button shows only a 15 px sliver (x 723-807, y 469-483; full height 26). Its right edge falls on the same x (807) as the confirm's Remove button, so it reads as a cut-off second footer button under Remove rather than as a layer beneath.",
+          "severity": "major",
+          "box": [
+            375,
+            306,
+            450,
+            191
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.6",
+          "evidence": "the covered layer is hidden while a later layer is open (`data-covered` from the layer stack, `.nuiget-dialog-layer[data-covered] { visibility: hidden }`); one scrim, one box, the workbench's single-modal look",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 2 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources-remove-dialog#D2",
+          "state": "main-sources-remove-dialog",
+          "finding": "[native] The list toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws 'Select All' and 'Uninstall Selected (0)' and button labels must be Title Case. | [states] The list toolbar's bulk-select button reads \"Select all\" in sentence case, where the artboard's select-all-button draws the Title Case label \"Select All\". | [states] The list toolbar's bulk action reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws the Title Case label \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "as main-sources#D1 (DS-COPY-1)",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 2 (docs/plans/handoff/P3.6.md)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-sources",
+          "finding": "The dialog footer pads the 26 px Add source button unevenly: 8 px from the divider at y 449 down to the button top at 458, and 12 px from the button bottom at 483 to the dialog border at 496. The rule requires equal top and bottom padding on a dialog footer.",
+          "severity": "major",
+          "box": [
+            376,
+            449,
+            448,
+            48
+          ],
+          "rule": "DS-INSET-2",
+          "verdict": "refuted",
+          "reason": "Probing the pixels gives divider y 449, button y 458-483 and border y 496, so 8 px above and 12 px below the button. The divider spans x 392-807, the content column, so it belongs to the list and is not a footer border. The 8 px is the block gap (DS-GRID-2a@main-sources: gaps 8) and the 12 px is the dialog's own padding: the sibling remove dialog shows the same spacing and measures DS-INSET-2 footer 0/0 0/0 (hard). The footer itself is not asymmetric; the stray line is a separate defect (D3).",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-sources",
+          "finding": "The Sources dialog footer is not vertically symmetric: the Add source button (y 458-483) has 8 px of space above it, below the footer divider at y 449, and 12 px below it, above the dialog's inner bottom edge at y 495. DS-INSET-2 requires equal top and bottom padding on a dialog footer.",
+          "severity": "major",
+          "box": [
+            376,
+            449,
+            448,
+            47
+          ],
+          "rule": "DS-INSET-2",
+          "verdict": "refuted",
+          "reason": "The pixels give the 1 px line at y 449, the button at y 458-483 and the dialog border at y 496, but the line is inset to the content column (x 392-807), so it is the list's edge and not a footer border. The 8 px above the button is the measured block gap (DS-GRID-2a@main-sources: gaps 8), the 12 px below is the dialog padding, and the same Dialog footer measures DS-INSET-2 footer 0/0 0/0 (hard) in main-sources-remove-dialog.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "main-sources",
+          "finding": "The sources list sits unevenly in the dialog column. Read from the ink, there are about 14 px on line boxes (about 19 px ink to ink, y 375 to 394) between the description's last line and the nuget.org row, but only about 3-4 px (5 px ink, y 443 to 449) between the row's last line and the footer divider. These two block gaps differ and neither pair is on the {4, 8} rhythm.",
+          "severity": "major",
+          "box": [
+            392,
+            349,
+            416,
+            101
+          ],
+          "rule": "DS-GRID-2",
+          "verdict": "refuted",
+          "reason": "The measured content-box gaps of the dialog body are all 8 (DS-GRID-2a@main-sources: gaps 8), which is on the {4, 8} rhythm. The judge's 14 px vs 3-4 px reading mixes ink, line boxes and the row's own padding. What looks tight at the bottom is the stray list line (D3) hugging the row, not a block gap.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-sources",
+          "finding": "The source row's config-file path wraps at the hyphen inside the folder name, so it reads as \"…/fixtures/dense-\" and then \"workspace/nuget.config\" on its own line, which looks like two paths and not one.",
+          "severity": "minor",
+          "box": [
+            418,
+            419,
+            330,
+            26
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the config path wrapping as \"…/fixtures/dense-\" then \"workspace/nuget.config\". The path is live content: it is the runner's checkout path, and the row keeps its layout (the text stays inside the row, clear of the delete icon). The finding cites no rule, artboard element or exemplar, so rubric §6 excludes it.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-sources-remove-dialog",
+          "finding": "In the confirm's footer, the Remove button ends 16 px from the dialog's end border but only 12 px above its bottom border (button 430–455, border at 468). The bottom of the confirm therefore looks tighter than its 16 px start and end insets.",
+          "severity": "minor",
+          "box": [
+            375,
+            430,
+            450,
+            39
+          ],
+          "rule": "DS-INSET-2",
+          "verdict": "refuted",
+          "reason": "Probed pixels: the Remove button spans y 430–455 with 12 px to the border at y 468, and ends at x 807 with 16 px to the border at x 824. The title's ink starts 17 px under the top border at y 335 (at 18 px type, consistent with 12 px top padding), so the insets match per axis as DS-INSET-2 requires. The hard measurement reads 'DS-INSET-2@main-sources-remove-dialog: footer 0/0 0/0 (hard)'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-sources-remove-dialog",
+          "finding": "The header actions draw a gear and a two-arrow sync glyph. The artboard draws different glyphs in those two slots: a single circular refresh arrow, and a different settings mark.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            48,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "verdict": "refuted",
+          "reason": "The crop shows a gear and a sync glyph, which are the codicons settings-gear and sync that docs/design/icons.json assigns, so DS-ICON-1 holds. The spec names only the slots source-settings and refresh-button, with no glyph, so the browser-drawn artboard glyph is not the target (rubric §6).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    }
+  ]
+}

@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -76,7 +76,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
-        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'] });
+        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
         expect(definition('DS-DIVIDER-2')?.states).toEqual(dialogStates);
@@ -90,7 +90,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling); UX-P3.5: nor dialogs.
-        const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs'));
+        const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: { pending: 'P3.7a' } });
@@ -111,10 +111,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: 'hard' });
-        expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } });
+        expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } });
-        expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: { pending: 'P3.6' } });
-        expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: { pending: 'P3.6' } });
+        expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: 'hard' });
+        expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
@@ -176,11 +176,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.18 (design-advisor ruling of 2026-10-24): hard where the unchanged tree read green in every capture of the
         // group; the red groups and the groups no state measures yet to the items that make them hold.
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
-        expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } });
-        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: 'hard' });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
@@ -877,9 +877,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('holds the Installed and Updates cells hard, with their later owners (UX-P2.8b, UX-P3.1b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
         // UX-P3.6: the sources dialog's cells read pending for its reading run.
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: { pending: 'P3.6' } });
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard' });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' });
         }
     });
 
@@ -913,6 +913,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-empty', { empties: [empty] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: true });
         expect(line('main-installed-empty', { empties: [{ ...empty, textAlign: 'center' }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'text-align center' });
         expect(line('main-installed-empty', { empties: [{ ...empty, buttonWidth: 200 }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'button 200 (target 260)' });
+        // UX-P3.6: inside a dialog the empty state's inline padding is 0 and the dialog's 16 px inset carries it.
+        const inDialog = { textAlign: 'start', paddingLeft: 0, paddingRight: 0, gap: 8, buttons: 0, buttonWidth: undefined, width: 418, dialogInset: 16 };
+        expect(line('main-sources-empty', { empties: [inDialog] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: true, value: 'start, 0/0 in a dialog inset 16, 0 buttons, gap 8 (1)' });
+        expect(line('main-sources-empty', { empties: [{ ...inDialog, paddingLeft: 20, paddingRight: 20 }] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: false, value: 'padding 20/20 in a dialog inset 16 (target 0/0 in 16)' });
+        // The sources rows count as rows under the bar.
+        expect(line('main-sources-revalidating', { progressTop: 150, contentTop: 150, rows: 1, listBusy: true }, 'DS-STATE-2@main-sources-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 1; aria-busy' });
 
         const banner = { severity: 'warning', glyphs: ['warning'], buttons: 0, text: 'Unsupported project: too old.' };
         expect(line('main-installed-unsupported', { banners: [banner] }, 'DS-STATE-4@main-installed-unsupported')).toMatchObject({ pass: true });

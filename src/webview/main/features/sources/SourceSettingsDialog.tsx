@@ -200,7 +200,9 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
         wasAdding.current = adding;
     }, [adding]);
 
-    const labelOf = (path: string | undefined): string | undefined => (path === undefined ? undefined : configFiles?.find(file => file.path === path)?.label);
+    // The file's label for display only: verbatim, then case-insensitively; a file above the workspace folder has none (the path shows).
+    const labelOf = (path: string | undefined): string | undefined => (path === undefined ? undefined
+        : configFiles?.find(file => file.path === path)?.label ?? configFiles?.find(file => file.path.toLowerCase() === path.toLowerCase())?.label);
     const confirmRemove = (): void => {
         const source = removing;
         setRemoving(null);

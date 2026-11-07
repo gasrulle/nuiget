@@ -1176,6 +1176,11 @@
     background: var(--nuiget-color-scrim);
 }
 
+/* A layer under a later one is hidden while the later one is open: one scrim, one box (UX-P3.6). */
+.nuiget-dialog-layer[data-covered] {
+    visibility: hidden;
+}
+
 .nuiget-dialog {
     --nuiget-text-field-radius: var(--nuiget-radius-layer-input);
     display: flex;

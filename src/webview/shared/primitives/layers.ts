@@ -10,8 +10,17 @@ export interface Layer {
 
 const stack: Layer[] = [];
 
+/**
+ * Marks every layer under the topmost one `data-covered` on its `.nuiget-dialog-layer`, which hides it: one scrim and one box,
+ * the workbench's single-modal look (UX-P3.6). Synchronous, so a layer uncovered by `removeLayer` can take focus back at once.
+ */
+function markCovered(): void {
+    stack.forEach((entry, index) => entry.element()?.parentElement?.toggleAttribute('data-covered', index < stack.length - 1));
+}
+
 export function pushLayer(layer: Layer): void {
     stack.push(layer);
+    markCovered();
 }
 
 export function removeLayer(layer: Layer): void {
@@ -19,6 +28,7 @@ export function removeLayer(layer: Layer): void {
     if (index >= 0) {
         stack.splice(index, 1);
     }
+    markCovered();
 }
 
 export function isTopLayer(layer: Layer): boolean {

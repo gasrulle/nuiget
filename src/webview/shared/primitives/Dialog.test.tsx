@@ -133,6 +133,10 @@ describe('Dialog', () => {
         await user.click(remove);
         const confirm = screen.getByRole('alertdialog', { name: 'Remove source?' });
         expect(screen.getByTestId('confirm-dialog-cancel')).toHaveFocus();
+        // UX-P3.6: the outer layer is covered (hidden) while the inner one is open; the inner one is not.
+        const outerLayer = (): Element | null => screen.getByRole('dialog', { name: 'NuGet sources', hidden: true }).parentElement;
+        expect(outerLayer()).toHaveAttribute('data-covered');
+        expect(confirm.parentElement).not.toHaveAttribute('data-covered');
         // The inner dialog traps: Tab cycles between its two buttons and never reaches the outer one.
         await user.tab();
         expect(screen.getByTestId('confirm-dialog-confirm')).toHaveFocus();
@@ -142,6 +146,7 @@ describe('Dialog', () => {
         await user.keyboard('{Escape}');
         expect(confirm).not.toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'NuGet sources' })).toBeInTheDocument();
+        expect(outerLayer()).not.toHaveAttribute('data-covered');
         expect(remove).toHaveFocus();
         // Now the outer dialog is on top again and answers Escape.
         await user.keyboard('{Escape}');
