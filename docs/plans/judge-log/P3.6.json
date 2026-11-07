@@ -263,6 +263,137 @@
           "refuterSeverity": "minor"
         }
       ]
+    },
+    {
+      "runId": "42420897265",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "57e91c3 (series -b reading commit)",
+      "look": "modern",
+      "workflow": "wf_ca2a8061-302",
+      "note": "Series -b. main-sources-add is judged against main-installed-details.dark-modern.1200.png and its spec as the page beneath (design-advisor ruling UX-P3.6 DO 11). main-sources-add-invalid is gated by the hard measurements (DS-HEIGHT-6/7, DS-RADIUS-1, DS-GRID-1). The geometry judge returned no findings (an empty list, not an error).",
+      "captures": {
+        "main-sources-add": {
+          "png": "captures/42420897265/main-sources-add.dark-modern.1200.png",
+          "sha256": "1bccbc73a895cabbf96d55195b534fbf58b6c390d37c8152f8c399a6dbdd98b7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 9,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-sources-add#D5",
+          "state": "main-sources-add",
+          "finding": "[native] The header's refresh action draws the two-arrow sync glyph where the approved artboard (and the workbench's view refresh actions) draws the single-arrow refresh codicon.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: outside the dialog (main ruling DO 11); the round-3 page draws `refresh` where the product renders `sync`, joined to the P3.1b hand-off on the next re-render of a round-3 page (design-advisor follow-up 3)"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-sources-add#D1",
+          "state": "main-sources-add",
+          "finding": "[native] The toolbar's first button reads \"Select all\" in sentence case where the artboard's Select All button (and DS-COPY-1's own example) is Title Case \"Select All\". | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button and the design system's copy list (§ copy rules, line 473) draw \"Select All\" in Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep (Select all, Uninstall selected (0), Add source), as UX-P3.6 follow-up 2 and UX-P3.5 follow-up 3",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 3 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources-add#D2",
+          "state": "main-sources-add",
+          "finding": "[native] The toolbar's bulk button reads \"Uninstall selected (0)\" in sentence case where the artboard draws \"Uninstall Selected (0)\" in Title Case per DS-COPY-1. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the design system's copy list draw \"Uninstall Selected (0)\" in Title Case.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep (Select all, Uninstall selected (0), Add source), as UX-P3.6 follow-up 2 and UX-P3.5 follow-up 3",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 3 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources-add#D3",
+          "state": "main-sources-add",
+          "finding": "[native] The dialog's primary footer button reads \"Add source\" in sentence case; DS-COPY-1 requires Title Case button labels (\"Add Source\"), as the workbench's own buttons (\"Add Pattern\") do. | [states] The add form's primary button in the dialog footer reads \"Add source\" in sentence case; DS-COPY-1 requires Title Case for button labels (\"Add Source\", as the workbench's \"Add Pattern\").",
+          "severity": "major",
+          "box": [
+            723,
+            499,
+            86,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep (Select all, Uninstall selected (0), Add source), as UX-P3.6 follow-up 2 and UX-P3.5 follow-up 3",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 3 (docs/plans/handoff/P3.6.md)"
+        },
+        {
+          "id": "main-sources-add#D4",
+          "state": "main-sources-add",
+          "finding": "[native] \"Credentials\" is a secondary text button stretched across the dialog's full 416 px content width with a centred label and no chevron or ellipsis, so it reads as a web-form bar rather than a workbench control: the workbench sizes text buttons to their content (Settings \"Add Pattern\", dialog footers) and draws an expandable section with a codicon chevron. | [states] The \"Credentials\" control is drawn as a plain full-width centred text button with no twisty or other expanded/collapsed cue and no \"...\", so the capture does not show whether it opens further UI or expands a section in place; its collapsed state is not drawn.",
+          "severity": "minor",
+          "box": [
+            392,
+            465,
+            416,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.6",
+          "evidence": "disclosure form: content-sized, start-aligned, the twistie glyph before the label, aria-expanded/aria-controls (design-advisor follow-up 3, 2026-11-07; no DS rule names a disclosure cue, the workbench twistie is the exemplar)",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 3 (docs/plans/handoff/P3.6.md)"
+        }
+      ],
+      "refuted": []
     }
   ]
 }

@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dialogs dim the page behind them in every theme and match VS Code's dialogs**
 - **Removing a package source asks in a confirmation dialog**
 - **The NuGet sources dialog shows when it is refreshing, empty or could not be read**
+- **Adding a package source checks the URL in place, and Credentials shows whether its fields are open**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

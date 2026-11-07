@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import type { NuGetSource, RequestPayload } from '../../../../protocol';
-import { Banner, Button, Checkbox, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon } from '../../../shared/primitives';
+import { Banner, Button, Checkbox, ChevronDownIcon, ChevronRightIcon, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
 
@@ -152,9 +152,15 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                 <label htmlFor={`${ids}-name`}>Name (optional)</label>
                 <TextField id={`${ids}-name`} value={name} placeholder="Made from the URL when empty" onChange={setName} />
             </div>
-            <Button variant="secondary" data-testid="add-source-credentials" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</Button>
+            {/* A disclosure, sized to its label: the workbench twistie before it (UX-P3.6, design-advisor follow-up 3). */}
+            <span className="nuiget-add-source-toggle">
+                <Button variant="secondary" data-testid="add-source-credentials" aria-expanded={advanced} aria-controls={`${ids}-credentials`} onClick={() => setAdvanced(previous => !previous)}>
+                    {advanced ? <ChevronDownIcon className="nuiget-add-source-chevron" /> : <ChevronRightIcon className="nuiget-add-source-chevron" />}
+                    Credentials
+                </Button>
+            </span>
             {advanced ? (
-                <>
+                <div id={`${ids}-credentials`} className="nuiget-add-source-credentials">
                     <div className="nuiget-field">
                         <label htmlFor={`${ids}-user`}>Username</label>
                         <TextField id={`${ids}-user`} autoComplete="off" value={username} onChange={setUsername} />
@@ -171,7 +177,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                                 : isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
                         </label>
                     ) : null}
-                </>
+                </div>
             ) : null}
             <div className="nuiget-add-source-actions">
                 <Button variant="secondary" onClick={onDone}>Back</Button>

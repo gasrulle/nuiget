@@ -172,7 +172,17 @@ describe('main panel: sources', () => {
         await user.selectOptions(within(panel).getByLabelText('Add to config file'), '/home/me/NuGet.Config');
         await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');
         await user.type(within(panel).getByLabelText('Name (optional)'), 'Example');
-        await user.click(within(panel).getByRole('button', { name: 'Credentials' }));
+        // A disclosure (UX-P3.6, design-advisor follow-up 3): collapsed, it controls a block that is not rendered yet.
+        const toggle = within(panel).getByRole('button', { name: 'Credentials' });
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        const controlled = toggle.getAttribute('aria-controls');
+        expect(controlled).toBeTruthy();
+        expect(document.getElementById(controlled!)).toBeNull();
+        expect(within(panel).queryByLabelText('Password')).toBeNull();
+        await user.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(document.getElementById(controlled!)).toContainElement(within(panel).getByLabelText('Password'));
+        expect(axeRuleOutcome(await axe(document.body), 'aria-valid-attr-value')).toBe('passes');
         await user.type(within(panel).getByLabelText('Username'), 'me');
         await user.type(within(panel).getByLabelText('Password'), '%TOKEN%');
         await user.click(within(panel).getByRole('button', { name: 'Add source' }));
