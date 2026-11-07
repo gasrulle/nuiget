@@ -7,6 +7,7 @@ import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
+import { hasEnvironmentPlaceholder } from './SourceSettingsDialog';
 import { SourcesControl } from './SourcesControl';
 
 const A = '/w/App/App.csproj';
@@ -163,6 +164,11 @@ describe('main panel: sources', () => {
         await hostSays(() => host.respond(host.requests('sources/configFiles')[0], { configFiles: [{ path: '/w/nuget.config', label: 'Workspace' }, { path: '/home/me/NuGet.Config', label: 'User' }] }));
 
         const panel = screen.getByTestId('add-source-panel');
+        // UX-P3.6: the form validates inline (noValidate) and carries the hooks the capture suite reads.
+        expect(panel).toHaveAttribute('novalidate');
+        for (const hook of ['add-source-url', 'add-source-credentials', 'add-source-submit']) {
+            expect(within(panel).getByTestId(hook)).toBeInTheDocument();
+        }
         await user.selectOptions(within(panel).getByLabelText('Add to config file'), '/home/me/NuGet.Config');
         await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');
         await user.type(within(panel).getByLabelText('Name (optional)'), 'Example');
@@ -191,13 +197,18 @@ describe('main panel: sources', () => {
         // An ordinary password on Windows is encrypted by default.
         expect(within(panel).getByRole('checkbox', { name: 'Store the password encrypted' })).toBeChecked();
         await user.clear(within(panel).getByLabelText('Password'));
-        await user.type(within(panel).getByLabelText('Password'), '%TOKEN%');
+        // N82 (UX-P3.6): a placeholder anywhere in the value forces clear text.
+        await user.type(within(panel).getByLabelText('Password'), 'pre%TOKEN%post');
         const box = within(panel).getByRole('checkbox', { name: /Stored in clear text/ });
         expect(box).not.toBeChecked();
         expect(box).toBeDisabled();
         await user.click(within(panel).getByRole('button', { name: 'Add source' }));
         expect(host.requests('sources/add')[0].payload.storeEncrypted).toBe(false);
-        expect(host.requests('sources/add')[0].payload.password).toBe('%TOKEN%');
+        expect(host.requests('sources/add')[0].payload.password).toBe('pre%TOKEN%post');
+    });
+
+    it.each([['%TOKEN%', true], ['pre%TOKEN%post', true], ['a%b%c', true], ['100%', false], ['%%', false], ['% A %', false], ['', false]])('a %VAR% placeholder anywhere in %j is %s (N82, UX-P3.6)', (password, expected) => {
+        expect(hasEnvironmentPlaceholder(password)).toBe(expected);
     });
 
     it('an HTTP source needs the insecure option; a refusal is shown in the form, which stays', async () => {
@@ -208,18 +219,37 @@ describe('main panel: sources', () => {
         const panel = screen.getByTestId('add-source-panel');
         expect(within(panel).getByLabelText('URL')).toHaveFocus();
         await user.type(within(panel).getByLabelText('URL'), 'http://feed.local/v3/index.json');
+        // UX-P3.6: the warning is a Banner, the option a check box field under it.
+        expect(within(panel).getByText('This source uses HTTP, which is not encrypted.')).toBeInTheDocument();
         await user.click(within(panel).getByRole('checkbox', { name: /insecure/ }));
         await user.click(within(panel).getByRole('button', { name: 'Add source' }));
         expect(host.requests('sources/add')[0].payload).toEqual({ url: 'http://feed.local/v3/index.json', allowInsecure: true });
 
         await hostSays(() => host.fail(host.requests('sources/add')[0], 'failed', 'A source with this URL exists'));
-        expect(within(panel).getByRole('alert')).toHaveTextContent('A source with this URL exists');
+        expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('A source with this URL exists');
         expect(screen.getByTestId('add-source-panel')).toBeInTheDocument();
         expect(within(panel).getByLabelText('URL')).toHaveValue('http://feed.local/v3/index.json');
         await user.click(within(panel).getByRole('button', { name: 'Back' }));
         expect(dialog()).toHaveAccessibleName('NuGet sources');
         // Focus stays in the dialog, on the button that opened the form.
         expect(within(dialog()).getByRole('button', { name: 'Add source' })).toHaveFocus();
+    });
+
+    it('an empty or malformed URL is refused inline with aria-invalid and the description (UX-P3.6)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await openDialog();
+        await user.click(screen.getByTestId('add-source-button'));
+        const panel = screen.getByTestId('add-source-panel');
+        const url = within(panel).getByTestId('add-source-url');
+        await user.click(within(panel).getByTestId('add-source-submit'));
+        expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('Enter the URL of the source.');
+        expect(url).toHaveAttribute('aria-invalid', 'true');
+        expect(url).toHaveAccessibleDescription(/Enter the URL of the source\./);
+        await user.type(url, 'not a url');
+        await user.click(within(panel).getByTestId('add-source-submit'));
+        expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('Enter a valid URL, such as https://api.nuget.org/v3/index.json.');
+        expect(host.requests('sources/add')).toHaveLength(0);
     });
 
     it('the host can open the dialog; Escape closes it', async () => {

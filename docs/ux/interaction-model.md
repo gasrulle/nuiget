@@ -270,6 +270,7 @@ project has several and one block per project in All Projects; no version select
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |
+| `add-source-button`, `add-source-url`, `add-source-credentials`, `add-source-password`, `add-source-submit`, `add-source-error`, `add-source-clear-text` | The sources dialog's Add source button, the add form's URL field, Credentials toggle, password field and submit button, its inline error under the URL field and the clear-text sentence of a `%VAR%` password (UX-P3.6) |
 | `source-settings-list`, `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The sources dialog's list (`aria-busy` while it refreshes), its progress bar over the top, its empty state and its inline error with Retry above the kept list (UX-P3.6) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |

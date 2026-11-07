@@ -594,32 +594,19 @@ body {
 .nuiget-add-source {
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-4);
-    min-width: min(28em, 80vw);
+    gap: var(--nuiget-block-gap-outer);
 }
 
 .nuiget-field {
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-1);
-}
-
-.nuiget-field--warning {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--nuiget-space-2);
-    color: var(--nuiget-color-warning);
-}
-
-.nuiget-field-error {
-    margin: 0;
-    color: var(--nuiget-color-error);
+    gap: var(--nuiget-block-gap-inner);
 }
 
 .nuiget-add-source-actions {
     display: flex;
     justify-content: flex-end;
-    gap: var(--nuiget-space-3);
+    gap: var(--nuiget-space-4);
 }
 
 /* ── Install in several projects ── */

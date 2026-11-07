@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**
+- **A password with a %VAR% placeholder inside a longer value is stored in clear text so the variable is read**
 - **Scrollbars in the package manager are thin again**
 - **No second scrollbar on the Installed tab in All Projects or with the transitive section expanded**
 

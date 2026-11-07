@@ -233,7 +233,7 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
@@ -259,7 +259,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details'] }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, scopeStates: { sources: ['main-sources-add', 'main-sources-add-invalid'] } }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
@@ -344,7 +344,7 @@ export const RULES: readonly RuleDefinition[] = [
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
     // UX-P3.5 (design-advisor follow-up 2): a dialog opened by a pointer click shows no ring on Cancel under Modern UI, the
     // DS-FOCUS-3 premise (run 42402701440: outline none); the dialog ring's form is read by the keyboard walk's bulk dialog.
-    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES }, pendingStates: { 'main-sources-add': 'P3.6' } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
@@ -489,7 +489,10 @@ export interface Heights {
     tabStrip: number | undefined;
     detailsTabs: number | undefined;
     buttons: Array<{ height: number; fontSize: string; lineHeight: string; padding: string; radius: string; disabled: boolean; opacity: string; hovered: boolean; secondary: boolean; background: string }>;
-    inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string }>;
+    /** `inLayer`: inside a dialog, where a field takes the layer's input radius (DS-RADIUS-2, UX-P3.6). */
+    inputs: Array<{ kind: 'search' | 'select' | 'field'; id: string; height: number; radius: string; inLayer?: boolean }>;
+    /** `--nuiget-radius-layer-input` as computed on the root (UX-P3.6). */
+    layerInputRadius?: string;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number }; label: string; glyph: { w: number; h: number } | undefined; colour: string; background: string; radius: string; disabled: boolean; hovered: boolean; band: 'current' | 'selected' | undefined; listFocused: boolean; multi: boolean; severity: boolean }>;
     toggles: Array<{ label: string; height: number; hit: { width: number; height: number } }>;
     tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string; text?: string; countBadges?: number }>;
@@ -1114,7 +1117,8 @@ const heights = {
     tabStrip: visibleHeight('[data-testid="tab-bar"]'),
     detailsTabs: visibleHeight('[data-testid="package-details-panel"] [role="tablist"]'),
     buttons: shown('.nuiget-button').map(el => { const style = getComputedStyle(el); return { height: heightOf(el), disabled: el.matches(':disabled'), opacity: style.opacity, hovered: el.matches(':hover'), secondary: el.classList.contains('nuiget-button--secondary'), background: style.backgroundColor, fontSize: style.fontSize, lineHeight: style.lineHeight, padding: paddingOf(style), radius: style.borderTopLeftRadius }; }),
-    inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el), radius: getComputedStyle(el).borderTopLeftRadius }))),
+    inputs: inputKinds.flatMap(([kind, selector]) => shown(selector).map(el => ({ kind, id: el.dataset.testid ?? label(el), height: heightOf(el), radius: getComputedStyle(el).borderTopLeftRadius, inLayer: Boolean(el.closest('.nuiget-dialog')) }))),
+    layerInputRadius: getComputedStyle(document.documentElement).getPropertyValue('--nuiget-radius-layer-input').trim(),
     iconButtons: shown('.nuiget-icon-button').map(el => {
         const rect = rectOf(el);
         const hit = hitOf(el);
@@ -2370,11 +2374,15 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return notMeasurable('no control');
             }
             const target = CONTROL_STYLES.button.radius;
-            const groups: Array<[string, string[]]> = [['buttons', buttons.map(button => button.radius)], ...(['search', 'select', 'field'] as const).map((kind): [string, string[]] => [kind, inputs.filter(input => input.kind === kind).map(input => input.radius)])];
+            // UX-P3.6: a text field inside a layer takes the layer's input radius (DS-RADIUS-2), read apart.
+            const inLayerFields = inputs.filter(input => input.kind === 'field' && input.inLayer === true).map(input => input.radius);
+            const layerTarget = layout.heights.layerInputRadius ?? target;
+            const groups: Array<[string, string[]]> = [['buttons', buttons.map(button => button.radius)], ...(['search', 'select', 'field'] as const).map((kind): [string, string[]] => [kind, inputs.filter(input => input.kind === kind && !(kind === 'field' && input.inLayer === true)).map(input => input.radius)])];
             const shownGroups = groups.filter(([, radii]) => radii.length > 0);
+            const layerText = inLayerFields.length === 0 ? '' : `; field-in-layer ${tally(inLayerFields)} (target ${layerTarget})`;
             return {
-                value: `${shownGroups.map(([name, radii]) => `${name} ${tally(radii)}`).join('; ')} (target ${target})`,
-                pass: shownGroups.every(([, radii]) => radii.every(radius => radius === target)),
+                value: `${shownGroups.map(([name, radii]) => `${name} ${tally(radii)}`).join('; ')} (target ${target})${layerText}`,
+                pass: shownGroups.every(([, radii]) => radii.every(radius => radius === target)) && inLayerFields.every(radius => radius === layerTarget),
             };
         }
         case 'DS-COLOR-6': {

@@ -72,8 +72,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
-        expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        // UX-P3.6: the add form's focused field reads pending for the -b reading run.
+        expect(definition('DS-FOCUS-1')?.pendingStates).toEqual({ 'main-sources-add': 'P3.6' });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
@@ -112,7 +113,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
         expect(scopes('DS-HEIGHT-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' });
-        expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } });
+        // UX-P3.6: no dialog state renders a field; the add form is a sources state.
+        expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', sources: { pending: 'P3.6' } });
+        expect(definition('DS-HEIGHT-7')?.scopeStates).toEqual({ sources: ['main-sources-add', 'main-sources-add-invalid'] });
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: 'hard' });
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
@@ -617,6 +620,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const onlyInputs = (radius: string) => layout({}, { buttons: [], inputs: [{ kind: 'search', id: 'search-input', height: 26, radius }, { kind: 'select', id: 'project-selector', height: 26, radius }, { kind: 'field', id: 'url', height: 25, radius }] } as never);
         expect(lineOf('sidebar-sections', onlyInputs('4px'), 'DS-RADIUS-1@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'search 4px; select 4px; field 4px (target 4px)' });
         expect(lineOf('sidebar-sections', onlyInputs('2px'), 'DS-RADIUS-1@sidebar-sections')).toMatchObject({ pass: false });
+        // UX-P3.6: a field inside a layer is read against the layer's input radius.
+        const layered = (radius: string) => layout({}, { buttons: [button()], inputs: [{ kind: 'field', id: 'add-source-url', height: 25, radius, inLayer: true }], layerInputRadius: '4px' } as never);
+        expect(lineOf('main-sources-add', layered('4px'), 'DS-RADIUS-1@main-sources-add')).toMatchObject({ pass: true, status: { pending: 'P3.6' }, value: 'buttons 4px (target 4px); field-in-layer 4px (target 4px)' });
+        expect(lineOf('main-sources-add', layered('6px'), 'DS-RADIUS-1@main-sources-add')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-single', withButtons([]), 'DS-COLOR-6@main-installed-single/icon-buttons')).toMatchObject({ status: { pending: 'P3.10' }, value: 'not measurable (no disabled icon button)' });
         const gone = layout({}, { iconButtons: [iconButton({ disabled: true, colour: 'rgb(90, 90, 90)' })] });
         expect(lineOf('main-installed-single', gone, 'DS-COLOR-6@main-installed-single/icon-buttons')).toMatchObject({ pass: true, value: 'disabled 1: colour rgb(90, 90, 90) (target disabledForeground)' });

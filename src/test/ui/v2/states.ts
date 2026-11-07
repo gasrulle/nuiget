@@ -111,6 +111,7 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
 /** The main Updates list: the newest versions on nuget.org change between runs. */
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
+const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };
 const LIVE_DIALOG_TITLE: Mask = { selector: '.nuiget-dialog-title', reason: 'the title names the newest version on nuget.org' };
 const LIVE_BULK_LIST: Mask = { selector: '.nuiget-dialog-list', reason: 'the dialog lists the newest versions on nuget.org' };
 /** The versions level's `‹ <id>` header above the suggestions (UX-P0.15, design-advisor ruling of CI run 40097664968). */
@@ -180,6 +181,10 @@ export const STATES: readonly NamedState[] = [
     // UX-P3.6 (design-advisor ruling of 2026-11-07, DO 6): the sources dialog over Gateway, its confirm and its cells.
     { ...ready('main-sources', 'main', [primary('main')],
         'Gateway selected, the gear pressed; the NuGet sources dialog lists nuget.org with its config file label; closed with Escape after the capture (UX-P3.6).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-sources-add', 'main', [primary('main')],
+        'Add source pressed; the form with the config file select, the URL field focused, Name and the Credentials toggle; closed with Escape after the capture (UX-P3.6).', [LIVE_ICONS, LIVE_FIELD_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-sources-add-invalid', 'main', [primary('main')],
+        'Credentials expanded, %NUGET_TOKEN% typed as the password, Add source pressed with the URL empty: the inline error under the URL field, aria-invalid, the clear-text sentence with its disabled box; nothing is sent (UX-P3.6).', [LIVE_ICONS, LIVE_FIELD_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-sources-remove-dialog', 'main', [primary('main')],
         'Remove nuget.org pressed; the confirmation is open over the sources dialog and is cancelled after the capture, never confirmed (UX-P3.6).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-sources-revalidating', 'main', [primary('main')],

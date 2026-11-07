@@ -610,6 +610,25 @@ const REACH: Record<string, Reach> = {
         },
         leave: closeSources,
     },
+    'main-sources-add': {
+        reach: async () => {
+            await gatewayInstalled();
+            await openSources();
+            await clickVisible('add-source-button');
+            await until('document.querySelector(\'[data-testid="add-source-panel"] .nuiget-select-input\') !== null && document.activeElement?.getAttribute("data-testid") === "add-source-url"', 'the add form with its config file select and the URL field focused', 30_000);
+        },
+        leave: closeSources,
+    },
+    'main-sources-add-invalid': {
+        reach: async () => {
+            await REACH['main-sources-add'].reach();
+            await clickVisible('add-source-credentials');
+            await (await findByTestId('add-source-password', 10_000)).sendKeys('%NUGET_TOKEN%');
+            await clickVisible('add-source-submit');
+            await until('document.querySelector(\'[data-testid="add-source-error"]\') !== null && document.querySelector(\'[data-testid="add-source-url"]\')?.getAttribute("aria-invalid") === "true" && document.querySelector(\'[data-testid="add-source-clear-text"]\') !== null', 'the inline error, aria-invalid and the clear-text sentence', 30_000);
+        },
+        leave: closeSources,
+    },
     'main-sources-remove-dialog': {
         reach: async () => {
             await gatewayInstalled();

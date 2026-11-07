@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import type { NuGetSource, RequestPayload } from '../../../../protocol';
-import { Banner, Button, Checkbox, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, Button, Checkbox, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
 
@@ -49,10 +49,13 @@ function SourceRow({ source, fileLabel, announce, onRemove }: { source: NuGetSou
 }
 
 /**
- * A password that is one `%VAR%` placeholder: the reader expands it from the environment in clear text only, so such a
- * value is never encrypted (N82).
+ * A password that holds a `%VAR%` placeholder anywhere: the reader expands it from the environment in clear text only, so
+ * such a value is never encrypted (N82, UX-P3.6).
  */
-const ENVIRONMENT_PLACEHOLDER = /^%[^%\s]+%$/;
+const ENVIRONMENT_PLACEHOLDER = /%[^%\s]+%/;
+
+/** Whether a password holds an environment placeholder (`%VAR%`) anywhere. */
+export const hasEnvironmentPlaceholder = (password: string): boolean => ENVIRONMENT_PLACEHOLDER.test(password.trim());
 
 function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (message: string) => void }): React.JSX.Element {
     const { add, configFiles, loadConfigFiles, pending } = useSources();
@@ -76,13 +79,19 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
     const chosenFile = configFile || configFiles?.[0]?.path || '';
     const insecure = /^http:\/\//i.test(url.trim());
     const adding = pending.has(name.trim() || url.trim());
-    const placeholder = ENVIRONMENT_PLACEHOLDER.test(password.trim());
+    const placeholder = hasEnvironmentPlaceholder(password);
 
     const submit = (event: React.FormEvent): void => {
         event.preventDefault();
         const trimmed = url.trim();
         if (trimmed.length === 0) {
             setError('Enter the URL of the source.');
+            return;
+        }
+        try {
+            new URL(trimmed);
+        } catch {
+            setError('Enter a valid URL, such as https://api.nuget.org/v3/index.json.');
             return;
         }
         const payload: RequestPayload<'sources/add'> = { url: trimmed };
@@ -113,7 +122,8 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
     };
 
     return (
-        <form className="nuiget-add-source" data-testid="add-source-panel" onSubmit={submit} aria-label="Add a source">
+        // noValidate: the form validates inline, the platform's constraint bubble would block the submit (UX-P3.6).
+        <form className="nuiget-add-source" data-testid="add-source-panel" noValidate onSubmit={submit} aria-label="Add a source">
             {configFiles !== undefined && configFiles.length > 0 ? (
                 <div className="nuiget-field">
                     <label htmlFor={`${ids}-file`}>Add to config file</label>
@@ -124,23 +134,25 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             ) : null}
             <div className="nuiget-field">
                 <label htmlFor={`${ids}-url`}>URL</label>
-                <TextField ref={urlRef} id={`${ids}-url`} type="url" required value={url} placeholder="https://api.nuget.org/v3/index.json" aria-invalid={error !== null || undefined} aria-describedby={error ? `${ids}-error` : undefined} onChange={value => { setUrl(value); setError(null); }} />
+                <TextField ref={urlRef} id={`${ids}-url`} data-testid="add-source-url" type="url" required value={url} placeholder="https://api.nuget.org/v3/index.json" aria-invalid={error !== null || undefined} aria-describedby={error ? `${ids}-error` : undefined} onChange={value => { setUrl(value); setError(null); }} />
+                {error ? <div id={`${ids}-error`}><Banner severity="error" data-testid="add-source-error">{error}</Banner></div> : null}
             </div>
             {insecure ? (
-                <div className="nuiget-field nuiget-field--warning">
-                    <WarningIcon />
-                    <label>
-                        <Checkbox checked={allowInsecure} onChange={checked => setAllowInsecure(checked)} />
-                        Allow an insecure (HTTP) connection to this source
-                    </label>
-                </div>
+                <>
+                    <Banner severity="warning">This source uses HTTP, which is not encrypted.</Banner>
+                    <div className="nuiget-field">
+                        <label>
+                            <Checkbox checked={allowInsecure} onChange={checked => setAllowInsecure(checked)} />
+                            Allow an insecure (HTTP) connection to this source
+                        </label>
+                    </div>
+                </>
             ) : null}
-            {error ? <p id={`${ids}-error`} className="nuiget-field-error" role="alert">{error}</p> : null}
             <div className="nuiget-field">
                 <label htmlFor={`${ids}-name`}>Name (optional)</label>
                 <TextField id={`${ids}-name`} value={name} placeholder="Made from the URL when empty" onChange={setName} />
             </div>
-            <Button variant="secondary" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</Button>
+            <Button variant="secondary" data-testid="add-source-credentials" aria-expanded={advanced} onClick={() => setAdvanced(previous => !previous)}>Credentials</Button>
             {advanced ? (
                 <>
                     <div className="nuiget-field">
@@ -149,13 +161,13 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                     </div>
                     <div className="nuiget-field">
                         <label htmlFor={`${ids}-password`}>Password</label>
-                        <TextField id={`${ids}-password`} type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={setPassword} />
+                        <TextField id={`${ids}-password`} data-testid="add-source-password" type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={setPassword} />
                     </div>
                     {password ? (
-                        <label className="nuiget-field">
+                        <label className="nuiget-field" data-testid="add-source-clear-text">
                             <Checkbox checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} onChange={checked => setStoreEncrypted(checked)} />
                             {placeholder
-                                ? 'Stored in clear text: %VAR% is read from the environment when the source is used'
+                                ? 'Stored in clear text: a %VAR% placeholder is read from the environment when the source is used'
                                 : isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
                         </label>
                     ) : null}
@@ -163,7 +175,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             ) : null}
             <div className="nuiget-add-source-actions">
                 <Button variant="secondary" onClick={onDone}>Back</Button>
-                <Button type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add source'}</Button>
+                <Button type="submit" data-testid="add-source-submit" disabled={adding}>{adding ? 'Adding…' : 'Add source'}</Button>
             </div>
         </form>
     );
@@ -252,7 +264,7 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             description={adding ? undefined : 'Sources of the selected project\'s config files. Remove deletes a source from the file that declares it.'}
             closeLabel="Close NuGet sources"
             data-testid="source-settings-modal"
-            footer={adding ? undefined : <Button ref={addButton} onClick={() => setAdding(true)}>Add source</Button>}
+            footer={adding ? undefined : <Button ref={addButton} data-testid="add-source-button" onClick={() => setAdding(true)}>Add source</Button>}
         >
             {body}
             <ConfirmDialog

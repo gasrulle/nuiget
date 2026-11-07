@@ -16,14 +16,6 @@
     "item": "P3.7a"
   },
   {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-add-source",
-    "property": "min-width",
-    "value": "min(28em, 80vw)",
-    "item": "P3.6"
-  },
-  {
     "file": "src/webview/sidebar/sidebar.css",
     "rule": "specificity",
     "selector": ".nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle",
