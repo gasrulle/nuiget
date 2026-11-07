@@ -41,6 +41,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // the first-row scene wait for UX-P3.4, on that one state.
         expect(AXE_PENDING).toEqual([
             { rule: 'link-in-text-block', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+            { rule: 'link-in-text-block', kind: 'incomplete', item: 'P3.4', states: ['main-details-readme'] },
             { rule: 'target-size', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
         ]);
         expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group', 'target-size .nuiget-row-message', 'target-size .nuiget-row-message']);

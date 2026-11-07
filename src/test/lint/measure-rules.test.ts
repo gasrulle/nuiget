@@ -974,6 +974,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
         expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 85, 601, 60) }, withEmpty))
             .toMatchObject({ pass: false, value: expect.stringContaining('off: details-empty Δy 8') });
+        // A header control lies across the panel's x range but above it: never read relative to the panel (UX-P3.3b fix-forward).
+        const header = { ...withEmpty, 'project-selector': { ...element(862, 8, 157, 26), tokens: ['--nuiget-inset'] } };
+        expect(at('header', { 'project-selector': element(862, 8, 157, 26), 'package-details-panel': element(331, 77, 601, 726) }, header))
+            .toMatchObject({ pass: true, value: '1/1 within 1' });
         expect(at('readme', {})).toMatchObject({ status: { pending: 'P3.4' }, value: 'composed (main-details-readme): readme-content' });
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
         expect(measureLines('main-installed-single', layout({ testIds: {} }), 'modern', {}, undefined, 932, undefined).find(line => line.name === 'SPEC@main-installed-single/header')).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });

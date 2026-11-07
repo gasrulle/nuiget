@@ -2982,7 +2982,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         }
         const outer = spec[PANEL].rect;
         const inner = spec[id].rect;
-        return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5;
+        return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5 && inner.y >= outer.y - 0.5 && inner.y + inner.h <= outer.y + outer.h + 0.5;
     };
     let relative = false;
     for (const id of required) {

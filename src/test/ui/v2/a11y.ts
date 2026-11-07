@@ -143,6 +143,9 @@ export const AXE_PENDING: readonly AxePending[] = [
     // Microsoft.Extensions.DependencyInjection.Abstractions has inline links at 1.54:1 against the body text and link-only
     // list items under 24 px; README link styling and type are UX-P3.4's (A5, A8, DETAILS-CONTRAST).
     { rule: 'link-in-text-block', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+    // The runner's axe cannot determine the link's contrast over the rendered README (run 42375078619); macOS reads the
+    // violation: one defect, two readings, both P3.4's.
+    { rule: 'link-in-text-block', kind: 'incomplete', item: 'P3.4', states: ['main-details-readme'] },
     { rule: 'target-size', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
 ];
 
