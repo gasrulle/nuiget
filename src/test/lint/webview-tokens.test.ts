@@ -33,7 +33,7 @@ const REDUCED_DURATIONS = { '--nuiget-duration-fast': '0ms', '--nuiget-duration-
 const ALIASED_SIZES = [
     ...[1, 2, 3, 4, 5, 6, 7].map(step => `--nuiget-space-${step}`),
     ...['xs', 'sm', 'md', 'lg', 'xl', 'circle'].map(tier => `--nuiget-radius-${tier}`),
-    ...['xs', 'sm', 'label', 'md', 'lg'].map(step => `--nuiget-font-size-${step}`),
+    ...['xs', 'sm', 'label', 'md', 'lg', 'xl'].map(step => `--nuiget-font-size-${step}`),
     '--nuiget-font-weight-regular', '--nuiget-font-weight-semibold', '--nuiget-icon-size-sm', '--nuiget-icon-size-md', '--nuiget-line-width',
 ];
 const THEME_DUMPS = readdirSync('docs/design/themes').filter(file => file.endsWith('.css') && !file.endsWith('.tokens.css'));

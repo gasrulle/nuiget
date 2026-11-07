@@ -158,6 +158,8 @@ const cells = (pairs: readonly string[], themes: readonly string[], item: string
  * UX-P0.25; Appendix B: A8 → P3.4, A14 → P4.6; the high-contrast records' empty selection tokens → P1.1, T-21).
  */
 export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
+    // UX-P3.4 re-aliased the three roles (design-advisor ruling of 2026-11-07); the cells leave with the token records its
+    // proving run regenerates (the records are CI output, UX-P0.14).
     ...cells(['syntax-number/code-bg', 'syntax-type/code-bg', 'syntax-variable/code-bg'], ['light-2026', 'light-high-contrast', 'light-modern'], 'P3.4'),
     ...cells(['version-new/list-hover-bg over bg', 'version-new/list-hover-bg over bg-sidebar'], ['light-2026', 'light-modern'], 'P4.6'),
     ...cells(['fg-muted/list-hover-bg over bg-sidebar'], ['dark-2026'], 'P4.6'),

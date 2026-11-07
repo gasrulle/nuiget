@@ -692,6 +692,8 @@ export interface EndOfP0 {
     fonts: { root: string; others: string[] };
     /** UX-P1.1: per visible text outside the README, its computed size and weight, and whether it is a section title or group header (DS-TYPE-2, DS-TYPE-3). */
     textStyles: Array<{ fontSize: number; fontWeight: number; header: boolean }>;
+    /** UX-P3.4: the computed font size of each rendered README heading, h1 to h6 (DS-TYPE-2: README headings on the ramp). */
+    readmeHeadings: number[];
     /** UX-P1.4b: each Verified mark's box and colour, and the colour it stands for (DS-ICON-4). */
     verifiedMarks: Array<{ w: number; h: number; colour: string }>;
     verifiedForeground: string;
@@ -1534,6 +1536,7 @@ const endOfP0 = {
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
+    readmeHeadings: shown('.nuiget-readme h1, .nuiget-readme h2, .nuiget-readme h3, .nuiget-readme h4, .nuiget-readme h5, .nuiget-readme h6').map(el => px(getComputedStyle(el).fontSize)),
     verifiedMarks: shown('[data-codicon="verified-filled"]').map(el => { const box = rectOf(el); return { w: round(box.width), h: round(box.height), colour: getComputedStyle(el).color }; }),
     verifiedForeground: rootVars.getPropertyValue('--vscode-extensionIcon-verifiedForeground').trim(),
     dataLook: document.documentElement.dataset.look,
@@ -2579,8 +2582,13 @@ function evaluateType(definition: RuleDefinition, layout: Layout, look: 'modern'
             if (facts.textStyles.length === 0) {
                 return notMeasurable('no text');
             }
-            const off = facts.textStyles.map(text => text.fontSize).filter(size => !FONT_RAMP.some(step => Math.abs(step - size) <= definition.tolerance));
-            return { value: off.length === 0 ? `${tally(facts.textStyles.map(text => text.fontSize))} on the ramp` : `off the ramp: ${tally(off)}`, pass: off.length === 0 };
+            const offRamp = (sizes: number[]) => sizes.filter(size => !FONT_RAMP.some(step => Math.abs(step - size) <= definition.tolerance));
+            const off = offRamp(facts.textStyles.map(text => text.fontSize));
+            // UX-P3.4 (design-advisor ruling of 2026-11-07): README headings are on the ramp; the README body stays exempt.
+            const headings = facts.readmeHeadings ?? [];
+            const headingsOff = offRamp(headings);
+            const readme = headings.length === 0 ? '' : headingsOff.length === 0 ? `; readme headings ${headings.length} on the ramp` : `; readme headings off the ramp: ${tally(headingsOff)}`;
+            return { value: `${off.length === 0 ? `${tally(facts.textStyles.map(text => text.fontSize))} on the ramp` : `off the ramp: ${tally(off)}`}${readme}`, pass: off.length === 0 && headingsOff.length === 0 };
         }
         case 'DS-TYPE-3': {
             if (facts.textStyles.length === 0) {

@@ -3,7 +3,7 @@ import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Banner, EmptyState, Skeleton } from '../../../shared/primitives';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
-import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, renderMarkdownToHtml, rewriteImages } from './markdown';
+import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages } from './markdown';
 
 /**
  * The README tab (interaction model §7): the rendered, sanitized README of the chosen version. Its images are fetched
@@ -37,6 +37,7 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
         // The HTML is DOMPurify's output; it is set here, after sanitizing, with the copy buttons added to the DOM.
         element.innerHTML = html;
         addCopyButtons(element);
+        markLinkItems(element);
         const controller = new AbortController();
         void rewriteImages(element, async url => (await bus.request('readme/image', { url, sourceUrl }, { signal: controller.signal })).result.dataUri, controller.signal);
         return () => controller.abort();

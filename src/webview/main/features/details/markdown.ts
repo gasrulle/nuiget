@@ -153,6 +153,23 @@ export function addCopyButtons(container: HTMLElement): void {
     }
 }
 
+/**
+ * Marks every list item whose only content is one link (whitespace and one trailing nested list aside) with
+ * `nuiget-readme-link-item`, so its link stands on a 24 px line (WCAG 2.5.8, UX-P3.4). A link inside a sentence stays inline.
+ */
+export function markLinkItems(container: HTMLElement): void {
+    for (const item of container.querySelectorAll('li')) {
+        const nodes = [...item.childNodes].filter(node => node.nodeType !== Node.TEXT_NODE || (node.textContent ?? '').trim() !== '');
+        const last = nodes.at(-1);
+        if (last instanceof HTMLElement && (last.tagName === 'UL' || last.tagName === 'OL')) {
+            nodes.pop();
+        }
+        if (nodes.length === 1 && nodes[0] instanceof HTMLAnchorElement) {
+            item.classList.add('nuiget-readme-link-item');
+        }
+    }
+}
+
 /** The copy button `target` is in, or `undefined` for any other element. */
 export function copyButtonOf(target: EventTarget | null): HTMLButtonElement | undefined {
     const button = target instanceof Element ? target.closest('.nuiget-readme-copy') : null;

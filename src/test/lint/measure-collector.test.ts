@@ -585,6 +585,8 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(facts.textStyles.length).toBeGreaterThan(0);
             // The README's 21 px and every hidden description stay out; a title and a row name are read.
             expect(facts.textStyles.filter(text => text.fontSize === 21)).toEqual([]);
+            // UX-P3.4: the README heading is read apart, at its own size (DS-TYPE-2's README clause).
+            expect(facts.readmeHeadings).toEqual([21]);
             expect(facts.textStyles).toContainEqual({ fontSize: 11, fontWeight: 700, header: true });
             expect(facts.textStyles).toContainEqual({ fontSize: 13, fontWeight: 600, header: false });
             // A badge inside a section header is no title: only the title may be 700 (DS-TYPE-3).

@@ -19,7 +19,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     browsing: false, flatList: false, documentOverflow: undefined,
     endOfP0: {
         rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, focusCoincides: [], buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, titles: { panel: undefined, details: undefined, dialog: undefined }, headings: [], dividers: { key: '', header: undefined, tabStrips: [], groupLines: [] }, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
-        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], detailsEmpty: undefined, split: undefined,
+        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], readmeHeadings: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], detailsEmpty: undefined, split: undefined,
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [], unselectable: [],
         stateCells: { testIds: [], rows: 0, disabledVersions: [], skeletonRows: 0, listBusy: false, progressTop: undefined, contentTop: undefined, empties: [], banners: [], roles: [] },
     },
@@ -720,6 +720,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const text = (fontSize: number, fontWeight: number, header = false) => ({ fontSize, fontWeight, header });
         expect(value('main-installed-single', facts({ textStyles: [text(13, 600), text(11, 400)] }), 'DS-TYPE-2@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-installed-single', facts({ textStyles: [text(14.95, 600)] }), 'DS-TYPE-2@main-installed-single')).toMatchObject({ pass: false, value: 'off the ramp: 14.95' });
+        // UX-P3.4 (design-advisor ruling of 2026-11-07): README headings are on the ramp; the README body is not read.
+        expect(value('main-details-readme', facts({ textStyles: [text(13, 600)], readmeHeadings: [18, 18, 13, 26] }), 'DS-TYPE-2@main-details-readme'))
+            .toMatchObject({ pass: true, status: 'hard', value: expect.stringMatching(/; readme headings 4 on the ramp$/) });
+        expect(value('main-details-readme', facts({ textStyles: [text(13, 600)], readmeHeadings: [18.2, 18] }), 'DS-TYPE-2@main-details-readme'))
+            .toMatchObject({ pass: false, value: expect.stringMatching(/; readme headings off the ramp: 18\.2$/) });
         expect(value('main-installed-single', facts({}), 'DS-TYPE-2@main-installed-single')).toMatchObject({ pass: false, value: expect.stringContaining('not measurable') });
         expect(value('main-installed-single', facts({ textStyles: [text(11, 700, true)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-installed-single', facts({ textStyles: [text(11, 700, true)], dataLook: 'modern' }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });

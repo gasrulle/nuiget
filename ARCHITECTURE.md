@@ -822,11 +822,12 @@ offline, saying whether a source is down (`sources/health`) or no source knows t
 local source says that it cannot be listed. The README tab renders with `features/details/markdown.ts` (main panel
 only: its module-level imports would otherwise reach the sidebar bundle): marked with highlight.js (token classes
 prefixed `nuiget-hljs-`, coloured by the `--nuiget-color-syntax-*` tokens), then DOMPurify without `<style>`, `style`,
-form elements or `<button>`. Copy buttons are added to the sanitized DOM afterwards, and every image is fetched by the
+form elements or `<button>`. Copy buttons are added to the sanitized DOM afterwards, a list item whose only content is a
+link is marked (`markLinkItems`) so its link stands on a 24 px line, and every image is fetched by the
 host (`readme/image`, `http:` URLs of known hosts upgraded first, four at a time, cancelled with the selection); an
 image the host cannot fetch is replaced by its alt text, because the CSP's `img-src` allows `data:` only.
-The README's typography (headings marked on the left, inline code, tables, block quotes, lists, rules) is `main.css` on
-tokens (`--nuiget-color-table-*`, `--nuiget-color-blockquote-*`). A copy button holds a copy and a check icon (built with
+The README's typography (headings on the type ramp, underlined links, inline code, tables, block quotes, lists, rules) is
+`main.css` on tokens (`--nuiget-color-table-*`, `--nuiget-color-blockquote-*`); the README block is the tab's scroller. A copy button holds a copy and a check icon (built with
 `createElementNS`, no React) and the language label; a click writes the code with `navigator.clipboard`, else asks the
 host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `COPIED_MS` and the live region says so
 (P9.8).
@@ -1029,8 +1030,8 @@ These parts are the current truth for the build, test and release pipeline.
   state after its crop is written, a `pending` rule names the item that flips it and is only printed, and the run ends
   with the pending list. In the `ui` lane each state is also audited once per run, at its first capture, after the crop
   and before its setup closes a layer (UX-P0.23, `src/test/ui/v2/a11y.ts`): the full axe ruleset over the page, with
-  `target-size` and `label-content-name-mismatch` turned on (`[axe]` lines; a violation, or an `incomplete` result other
-  than contrast inside the details pane, fails the state, since the rule `a11y-full-axe-real-page` is `hard`, unless
+  `target-size` and `label-content-name-mismatch` turned on (`[axe]` lines; a violation, or an `incomplete` result the
+  resolve pass did not decide, the details pane included since UX-P3.4, fails the state, since the rule `a11y-full-axe-real-page` is `hard`, unless
   `AXE_PENDING` names the item that removes it or `AXE_ACCEPTED` the decision that declares it on one selector or one
   surface), and in
   the Modern UI pass a snapshot of the accessible tree read with axe's own role and name functions, digits masked,

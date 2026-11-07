@@ -427,10 +427,13 @@ describe('main panel: details', () => {
 
         await user.click(screen.getByTestId('details-tab-readme'));
         expect(host.requests('package/readme').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.0.0', sourceUrl: undefined }]);
-        await hostSays(() => host.respond(host.requests('package/readme')[0], { readme: '# Serilog\n\n![build](http://img.shields.io/b.svg)\n\n<script>alert(1)</script>\n\n```csharp\nvar log = 1;\n```' }));
+        await hostSays(() => host.respond(host.requests('package/readme')[0], { readme: '# Serilog\n\n![build](http://img.shields.io/b.svg)\n\n<script>alert(1)</script>\n\n```csharp\nvar log = 1;\n```\n\n- [Docs](https://serilog.net)\n- See [the wiki](https://serilog.net/wiki)' }));
 
         const content = screen.getByTestId('readme-content');
         expect(within(content).getByRole('heading', { name: 'Serilog' })).toBeInTheDocument();
+        // UX-P3.4: a list item that is only a link is marked for its 24 px line; a link inside a sentence is not.
+        expect(within(content).getByRole('link', { name: 'Docs' }).parentElement).toHaveClass('nuiget-readme-link-item');
+        expect(within(content).getByRole('link', { name: 'the wiki' }).parentElement).not.toHaveClass('nuiget-readme-link-item');
         expect(content.querySelector('script')).toBeNull();
         await waitFor(() => expect(host.requests('readme/image').map(request => request.payload)).toEqual([{ url: 'https://img.shields.io/b.svg', sourceUrl: undefined }]));
         await hostSays(() => host.respond(host.requests('readme/image')[0], { url: 'https://img.shields.io/b.svg', dataUri: 'data:image/svg+xml;base64,AAAA' }));
@@ -489,6 +492,9 @@ describe('main panel: details', () => {
         await user.click(screen.getByTestId('details-tab-readme'));
         await hostSays(() => host.respond(host.requests('package/readme')[0], { readme: null }));
         expect(screen.getByTestId('readme-empty')).toHaveTextContent('No README available.');
+        // UX-P3.4 (P3.3a #D5): the EmptyState sits directly in the tab panel, so the details pane's carrier alone places it.
+        expect(screen.getByTestId('readme-empty').parentElement).toHaveAttribute('role', 'tabpanel');
+        expect(screen.getByTestId('readme-empty')).toHaveClass('nuiget-empty');
 
         await user.selectOptions(selector(), '3.1.0');
         await hostSays(() => host.fail(host.requests('package/readme')[1], 'failed', 'timeout'));

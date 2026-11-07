@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { addCopyButtons, clearCopied, copyButtonOf, copyCodeOf, IMAGE_CONCURRENCY, markCopied, renderMarkdownToHtml, rewriteImages, upgradeHttpToHttps } from './markdown';
+import { addCopyButtons, clearCopied, copyButtonOf, copyCodeOf, IMAGE_CONCURRENCY, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages, upgradeHttpToHttps } from './markdown';
 
 // Ported from 1.x `src/webview/app/markdownSetup.test.ts` (20 titles); the code-block and copy-button titles follow the
 // post-sanitize buttons of `addCopyButtons`.
@@ -83,6 +83,13 @@ describe('renderMarkdownToHtml', () => {
         addCopyButtons(container);
         expect(container.querySelectorAll('button')).toHaveLength(1);
         expect(copyCodeOf(container.querySelector('pre'))).toBeUndefined();
+    });
+
+    it('marks a list item whose only content is a link, nested or not, and leaves a link inside a sentence (UX-P3.4)', () => {
+        const container = containerOf(renderMarkdownToHtml('- [a](https://a.test)\n  - [b](https://b.test)\n- see [c](https://c.test)\n- [d](https://d.test) and [e](https://e.test)\n'));
+        markLinkItems(container);
+        const marked = [...container.querySelectorAll('li')].map(item => [item.querySelector('a')?.textContent, item.classList.contains('nuiget-readme-link-item')]);
+        expect(marked).toEqual([['a', true], ['b', true], ['c', false], ['d', false]]);
     });
 
     it('markCopied swaps the icon and the label and clearCopied restores them', () => {

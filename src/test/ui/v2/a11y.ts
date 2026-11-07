@@ -5,8 +5,9 @@
  * - the full axe ruleset over the whole page with the state's layers open: every rule axe enables by default,
  *   best-practice included, plus `target-size` and `label-content-name-mismatch`, which axe 4.12 leaves off. A violation
  *   fails the capture unless `AXE_PENDING` names the item that removes it or `AXE_ACCEPTED` the decision that declares it
- *   (scoped to a selector or a surface); an `incomplete` result fails unless it is `color-contrast` inside the details pane,
- *   tolerated until P3.4 (A5, the ruling of P5.12b), or `AXE_PENDING` names the item that removes it;
+ *   (scoped to a selector or a surface); an `incomplete` result fails unless the resolve pass decided it (`color-contrast`),
+ *   `AXE_PENDING` names the item that removes it or `AXE_ACCEPTED` declares it; the details pane is judged like any other
+ *   part of the page since UX-P3.4 (the A5 tolerance of P5.12b removed);
  * - a snapshot of the accessible tree, read from inside the webview with axe's own role and name functions (no CDP:
  *   whether ChromeDriver reaches the webview's out-of-process frame is unverified, H31), compared with
  *   `src/test/ui/v2/aria/<state>.json` and written beside the crops for adoption. It is read once the state's data has
@@ -38,15 +39,12 @@ export const AXE_NODES_PER_RULE = 8;
 export interface AxeNode {
     target: string;
     summary: string;
-    insideDetails: boolean;
 }
 
 export interface AxeRule {
     id: string;
     impact: string | null;
     count: number;
-    /** The nodes of all `count` outside `package-details-panel`, counted before the cap. */
-    outsideDetails: number;
     /** Axe's messages over all `count` nodes, most frequent first, at most three: why a node failed or stayed undecided. */
     reasons: Array<{ text: string; count: number }>;
     /** Per selector of `AXE_ACCEPTED`, the nodes of all `count` whose element matches it, counted before the cap. */
@@ -59,7 +57,7 @@ export interface FullAxe {
     incomplete: AxeRule[];
     passes: number;
     inapplicable: number;
-    /** Every `color-contrast` target axe left undecided outside the details pane, uncapped: the resolve pass's input (UX-P0.25). */
+    /** Every `color-contrast` target axe left undecided, uncapped: the resolve pass's input (UX-P0.25; the details pane too since UX-P3.4). */
     undecidedContrast?: string[];
     error?: string;
 }
@@ -92,23 +90,14 @@ const matching = (target, selector) => {
     }
 };
 ${REASONS_OF}
-const details = document.querySelector('[data-testid="package-details-panel"]');
-const inside = target => {
-    try {
-        const element = document.querySelector(target);
-        return details !== null && element !== null && details.contains(element);
-    } catch (error) {
-        return false;
-    }
-};
 const rules = list => list.map(result => {
     const nodes = result.nodes.map(node => {
         const target = node.target.map(String).join(' ');
-        return { target, summary: node.failureSummary || node.any.map(check => check.message).join('; '), insideDetails: inside(target) };
+        return { target, summary: node.failureSummary || node.any.map(check => check.message).join('; ') };
     });
     const reasons = reasonsOf(result.nodes);
     const accepted = Object.fromEntries(selectors.map(selector => [selector, nodes.filter(node => matching(node.target, selector)).length]));
-    return { id: result.id, impact: result.impact || null, count: nodes.length, outsideDetails: nodes.filter(node => !node.insideDetails).length, reasons, accepted, nodes: nodes.slice(0, cap) };
+    return { id: result.id, impact: result.impact || null, count: nodes.length, reasons, accepted, nodes: nodes.slice(0, cap) };
 });
 axe.run(document, {
     rules: Object.fromEntries(extra.map(id => [id, { enabled: true }])),
@@ -118,7 +107,7 @@ axe.run(document, {
     incomplete: rules(results.incomplete),
     passes: results.passes.length,
     inapplicable: results.inapplicable.length,
-    undecidedContrast: results.incomplete.filter(result => result.id === 'color-contrast').flatMap(result => result.nodes).map(node => node.target.map(String).join(' ')).filter(target => !inside(target)),
+    undecidedContrast: results.incomplete.filter(result => result.id === 'color-contrast').flatMap(result => result.nodes).map(node => node.target.map(String).join(' ')),
 })), error => done(JSON.stringify({ violations: [], incomplete: [], passes: 0, inapplicable: 0, error: String(error) })));
 `;
 
@@ -136,18 +125,10 @@ export interface AxePending {
  * scroller's fold, the empty messages under the quick-search popup, the Update-all dialog's bullets over the content beneath
  * it) are decided by the resolve pass (`RESOLVE_CONTRAST`), which decided every node of their 17 states in run 40152178889,
  * in both looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
- * Since UX-P3.3b it holds the two README results of `main-details-readme` until UX-P3.4.
+ * UX-P3.3b held the README results of `main-details-readme` here; UX-P3.4 removed them (underlined links, link-only list items
+ * on a 24 px line; design-advisor ruling of 2026-11-07).
  */
-export const AXE_PENDING: readonly AxePending[] = [
-    // The first-row scene of UX-P3.3b (design-advisor ruling of 2026-11-07): the README of
-    // Microsoft.Extensions.DependencyInjection.Abstractions has inline links at 1.54:1 against the body text and link-only
-    // list items under 24 px; README link styling and type are UX-P3.4's (A5, A8, DETAILS-CONTRAST).
-    { rule: 'link-in-text-block', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
-    // The runner's axe cannot determine the link's contrast over the rendered README (run 42375078619); macOS reads the
-    // violation: one defect, two readings, both P3.4's.
-    { rule: 'link-in-text-block', kind: 'incomplete', item: 'P3.4', states: ['main-details-readme'] },
-    { rule: 'target-size', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
-];
+export const AXE_PENDING: readonly AxePending[] = [];
 
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {
@@ -219,11 +200,13 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
     }
     const lines: string[] = [];
     const failures: string[] = [];
+    const declaredCount = { violation: 0, incomplete: 0 };
     const sample = (rule: AxeRule): string =>
         `${rule.nodes.slice(0, 2).map(node => node.target).join(', ')}${rule.reasons.length > 0 ? `; ${rule.reasons.map(reason => `"${reason.text}" ×${reason.count}`).join('; ')}` : ''}`;
     for (const rule of result.violations) {
         const declared = acceptedFor(rule, surface, accepted, 'violation');
         if (declared !== undefined) {
+            declaredCount.violation += 1;
             lines.push(`[axe] ${state}: violation ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.ruling})`);
             continue;
         }
@@ -234,18 +217,15 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
         }
     }
     for (const rule of result.incomplete) {
-        // A5: what axe cannot decide in the details pane is its content below the fold (P5.12b), until P3.4.
-        if (rule.id === 'color-contrast' && rule.outsideDetails === 0) {
-            lines.push(`[axe] ${state}: incomplete color-contrast ×${rule.count} in the details pane (tolerated until P3.4)`);
-            continue;
-        }
-        // UX-P0.25: the resolve pass decided or measured every undecided node outside the pane; its `[contrast]` lines judge them.
+        // UX-P0.25: the resolve pass decided or measured every undecided node (the details pane's too since UX-P3.4); its
+        // `[contrast]` lines judge them.
         if (rule.id === 'color-contrast' && resolvedContrast !== undefined && resolvedContrast.unresolved === 0) {
-            lines.push(`[axe] ${state}: color-contrast left ${rule.outsideDetails} undecided outside the details pane, all decided by the resolve pass ([contrast] lines)`);
+            lines.push(`[axe] ${state}: color-contrast left ${rule.count} undecided, all decided by the resolve pass ([contrast] lines)`);
             continue;
         }
         const declared = acceptedFor(rule, surface, accepted, 'incomplete');
         if (declared !== undefined) {
+            declaredCount.incomplete += 1;
             lines.push(`[axe] ${state}: incomplete ${rule.id} ×${rule.count} on ${declared.where} (accepted-as-design: ${declared.ruling})`);
             continue;
         }
@@ -255,7 +235,8 @@ export function axeLines(state: string, surface: 'main' | 'sidebar', result: Ful
             failures.push(`incomplete ${rule.id} ×${rule.count}`);
         }
     }
-    lines.unshift(`[axe] ${state}: ${result.violations.length} violations, ${result.incomplete.length} incomplete, ${result.passes} rules passed, ${result.inapplicable} inapplicable (${FULL_AXE_RULE}, ${statusText(status)})`);
+    // The accepted-as-design results are counted apart, so a green state never reads "1 violations" to a grep (P0 review, item 11).
+    lines.unshift(`[axe] ${state}: ${result.violations.length - declaredCount.violation} violations, ${result.incomplete.length - declaredCount.incomplete} incomplete, ${declaredCount.violation + declaredCount.incomplete} accepted-as-design, ${result.passes} rules passed, ${result.inapplicable} inapplicable (${FULL_AXE_RULE}, ${statusText(status)})`);
     return { lines, failures };
 }
 
@@ -727,17 +708,15 @@ export function pairContrast(pair: ContrastPair): { ratio: number; threshold: nu
 /**
  * Runs in the webview, asynchronously: the theme pass's two rules (`color-contrast`, `target-size`) over `arguments[0]` (a
  * selector, or the whole document when null), answering the violations, the number of `color-contrast` nodes that passed and
- * the targets it left undecided (those inside the details pane left out when `arguments[1]`, the A5 tolerance until P3.4).
- * A `target-size` node on a selector of `arguments[2]` (`acceptedTargetSelectors`) is counted in `acceptedTargets`, not a violation.
+ * the targets it left undecided (the details pane's included since UX-P3.4, which removed the A5 tolerance).
+ * A `target-size` node on a selector of `arguments[1]` (`acceptedTargetSelectors`) is counted in `acceptedTargets`, not a violation.
  */
 export const RUN_CONTRAST = `
 const done = arguments[arguments.length - 1];
 ${REASONS_OF}
-const [scope, outsideDetailsOnly, acceptedTargets = []] = arguments;
+const [scope, acceptedTargets = []] = arguments;
 const isAccepted = node => { try { const el = document.querySelector(String(node.target[0])); return el !== null && acceptedTargets.some(selector => el.matches(selector)); } catch (error) { return false; } };
 const keptNodes = rule => (rule.id === 'target-size' ? rule.nodes.filter(node => !isAccepted(node)) : rule.nodes);
-const details = document.querySelector('[data-testid="package-details-panel"]');
-const inDetails = target => { try { const el = document.querySelector(target); return details !== null && el !== null && details.contains(el); } catch (error) { return false; } };
 axe.run(scope ? { include: [scope] } : document, {
     runOnly: ['color-contrast', 'target-size'],
     rules: { 'target-size': { enabled: true } },
@@ -746,7 +725,7 @@ axe.run(scope ? { include: [scope] } : document, {
     acceptedTargets: results.violations.filter(rule => rule.id === 'target-size').reduce((sum, rule) => sum + rule.nodes.length - keptNodes(rule).length, 0),
     violations: results.violations.map(rule => ({ ...rule, nodes: keptNodes(rule) })).filter(rule => rule.nodes.length > 0).map(rule => ({ rule: rule.id, count: rule.nodes.length, sample: rule.nodes.slice(0, 2).map(node => node.target.map(String).join(' ')).join(', '), reasons: reasonsOf(rule.nodes) })),
     passes: results.passes.filter(rule => rule.id === 'color-contrast').reduce((sum, rule) => sum + rule.nodes.length, 0),
-    undecided: results.incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes).map(node => node.target.map(String).join(' ')).filter(target => !outsideDetailsOnly || !inDetails(target)),
+    undecided: results.incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes).map(node => node.target.map(String).join(' ')),
 })), error => done(JSON.stringify({ violations: [], passes: 0, undecided: [], error: String(error) })));
 `;
 
@@ -795,18 +774,9 @@ export interface ContrastPending {
 
 /**
  * The red lines of today's tree, run 40152178889's and no others (design-advisor ruling of 2026-10-25, UX-P0.25; Appendix B:
- * README → P3.4 (A8, and the README's link list under 2.5.8, DECISIONS), hover → P4.6 (A14)).
+ * README → P3.4 (A8, and the README's link list under 2.5.8, DECISIONS; removed by UX-P3.4), hover → P4.6 (A14)).
  */
 export const CONTRAST_PENDING: readonly ContrastPending[] = [
-    { where: 'readme', theme: 'light-modern', rule: 'color-contrast', item: 'P3.4' },
-    { where: 'readme', theme: 'light-high-contrast', rule: 'color-contrast', item: 'P3.4' },
-    { where: 'readme', theme: 'light-2026', rule: 'color-contrast', item: 'P3.4' },
-    { where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' },
-    { where: 'readme', theme: 'light-modern', rule: 'target-size', item: 'P3.4' },
-    { where: 'readme', theme: 'dark-high-contrast', rule: 'target-size', item: 'P3.4' },
-    { where: 'readme', theme: 'light-high-contrast', rule: 'target-size', item: 'P3.4' },
-    { where: 'readme', theme: 'dark-2026', rule: 'target-size', item: 'P3.4' },
-    { where: 'readme', theme: 'light-2026', rule: 'target-size', item: 'P3.4' },
     { where: 'hover-main', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
     { where: 'hover-sidebar', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
 ];

@@ -251,9 +251,17 @@ body {
     color: var(--nuiget-color-fg-muted);
 }
 
-.nuiget-details-info,
-.nuiget-readme {
+.nuiget-details-info {
     padding: var(--nuiget-inset-details);
+    overflow-wrap: anywhere;
+}
+
+/* The README is the tab's scroller: its box is the panel's, as artboard A draws it (UX-P3.4). */
+.nuiget-readme {
+    flex: 1;
+    min-height: 0;
+    padding: var(--nuiget-inset-details);
+    overflow: auto;
     overflow-wrap: anywhere;
 }
 
@@ -317,9 +325,20 @@ body {
     color: var(--nuiget-color-warning);
 }
 
-.nuiget-details a,
+.nuiget-details a {
+    color: var(--nuiget-color-link);
+}
+
+/* A README link is underlined: its colour alone is under 3:1 against the body in most themes (WCAG 1.4.1, UX-P3.4). */
 .nuiget-readme a {
     color: var(--nuiget-color-link);
+    text-decoration: underline;
+}
+
+/* A list item that is only a link holds it on a 24 px line (WCAG 2.5.8; marked by markLinkItems, UX-P3.4). */
+.nuiget-readme-link-item > a {
+    display: inline-block;
+    line-height: var(--nuiget-target-min);
 }
 
 /* ── README ── */
@@ -329,48 +348,35 @@ body {
     border-radius: var(--nuiget-radius-xs);
 }
 
-/* Typography of a README (1.x): headings marked on the left, inline code, tables, quotes, lists and rules on tokens. */
+/* Typography of a README: headings on the type ramp at 600 (DS-TYPE-2, UX-P3.4); inline code, tables, quotes, lists and rules on tokens. */
 .nuiget-readme h1,
 .nuiget-readme h2,
 .nuiget-readme h3,
 .nuiget-readme h4,
 .nuiget-readme h5,
 .nuiget-readme h6 {
-    margin: var(--nuiget-space-6) 0 var(--nuiget-space-4);
+    margin: var(--nuiget-space-6) 0 var(--nuiget-space-5);
     font-weight: 600;
     line-height: 1.25;
 }
 
 .nuiget-readme h1 {
-    padding-left: var(--nuiget-space-5);
-    border-left: 4px solid var(--nuiget-color-link);
-    font-size: 1.6em;
-}
-
-.nuiget-readme h1:first-child {
-    margin-top: 0;
+    font-size: var(--nuiget-font-size-xl);
 }
 
 .nuiget-readme h2 {
-    padding-left: var(--nuiget-space-5);
-    border-left: 3px solid var(--nuiget-color-link);
-    font-size: 1.4em;
+    font-size: var(--nuiget-font-size-lg);
 }
 
-.nuiget-readme h3 {
-    padding-left: var(--nuiget-space-5);
-    border-left: 3px solid var(--nuiget-color-border);
-    font-size: 1.2em;
-}
-
-.nuiget-readme h4 {
-    font-size: 1.05em;
-}
-
+.nuiget-readme h3,
+.nuiget-readme h4,
 .nuiget-readme h5,
 .nuiget-readme h6 {
-    color: var(--nuiget-color-fg-muted);
-    font-size: 1em;
+    font-size: var(--nuiget-font-size-md);
+}
+
+.nuiget-readme > :first-child {
+    margin-top: 0;
 }
 
 .nuiget-readme p,
@@ -390,6 +396,7 @@ body {
 
 .nuiget-readme code {
     padding: var(--nuiget-space-hairline) var(--nuiget-space-2);
+    color: var(--nuiget-color-code-fg);
     border: var(--nuiget-line-width) solid var(--nuiget-color-border);
     border-radius: var(--nuiget-radius-xs);
     background: var(--nuiget-color-code-bg);
@@ -422,26 +429,26 @@ body {
     font-weight: 600;
 }
 
-.nuiget-readme tbody tr:nth-child(even) {
+.nuiget-readme :where(tbody tr:nth-child(even)) {
     background: var(--nuiget-color-table-row-alt-bg);
 }
 
 .nuiget-readme blockquote {
     margin: 0 0 var(--nuiget-space-5);
     padding: var(--nuiget-space-4) var(--nuiget-space-5);
-    border-left: 4px solid var(--nuiget-color-blockquote-border);
+    border-left: var(--nuiget-line-width) solid var(--nuiget-color-blockquote-border);
     background: var(--nuiget-color-blockquote-bg);
     color: var(--nuiget-color-fg-muted);
 }
 
-.nuiget-readme blockquote p:last-child {
+.nuiget-readme blockquote > :where(:last-child) {
     margin-bottom: 0;
 }
 
 .nuiget-readme hr {
     margin: var(--nuiget-space-6) 0;
     border: 0;
-    border-top: 2px solid var(--nuiget-color-border);
+    border-top: var(--nuiget-line-width) solid var(--nuiget-color-border);
 }
 
 .nuiget-readme-code {
@@ -475,20 +482,26 @@ body {
     font: inherit;
     font-size: var(--nuiget-font-size-sm);
     cursor: pointer;
+    --nuiget-copy-icon-rest: inline-flex;
+    --nuiget-copy-icon-done: none;
+}
+
+/* The copy icon until the code is copied, then the check mark for two seconds: carriers, not a descendant state. */
+.nuiget-readme-copy[data-copied] {
+    --nuiget-copy-icon-rest: none;
+    --nuiget-copy-icon-done: inline-flex;
 }
 
 .nuiget-readme-copy:focus-visible {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
 }
 
-.nuiget-readme-copy-icon {
-    display: inline-flex;
+.nuiget-readme-copy-icon--copy {
+    display: var(--nuiget-copy-icon-rest);
 }
 
-/* The copy icon until the code is copied, then the check mark for two seconds. */
-.nuiget-readme-copy[data-copied] .nuiget-readme-copy-icon--copy,
-.nuiget-readme-copy:not([data-copied]) .nuiget-readme-copy-icon--check {
-    display: none;
+.nuiget-readme-copy-icon--check {
+    display: var(--nuiget-copy-icon-done);
 }
 
 .nuiget-readme .nuiget-hljs-keyword,

@@ -99,6 +99,7 @@
     --nuiget-font-size-label: var(--vscode-fontSize-label1, 12px);
     --nuiget-font-size-md: var(--vscode-fontSize-body1, 13px);
     --nuiget-font-size-lg: var(--vscode-fontSize-heading2, 18px);
+    --nuiget-font-size-xl: var(--vscode-fontSize-heading1, 26px);
     --nuiget-font-size-badge: var(--nuiget-font-size-sm);
     --nuiget-font-size-section-title: var(--nuiget-font-size-sm);
     --nuiget-font-weight-regular: var(--vscode-fontWeight-regular, 400);
@@ -174,12 +175,12 @@
     --nuiget-color-table-row-alt-bg: var(--vscode-keybindingTable-rowsBackground, var(--vscode-editor-inactiveSelectionBackground));
     --nuiget-color-blockquote-bg: var(--vscode-textBlockQuote-background, transparent);
     --nuiget-color-blockquote-border: var(--vscode-textBlockQuote-border, var(--vscode-textLink-foreground));
-    --nuiget-color-syntax-keyword: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
-    --nuiget-color-syntax-type: var(--vscode-symbolIcon-classForeground, var(--vscode-editor-foreground));
-    --nuiget-color-syntax-function: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
-    --nuiget-color-syntax-variable: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-keyword: var(--vscode-editor-foreground, var(--vscode-foreground));
+    --nuiget-color-syntax-type: var(--vscode-debugConsole-infoForeground, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-function: var(--vscode-editor-foreground, var(--vscode-foreground));
+    --nuiget-color-syntax-variable: var(--vscode-editor-foreground, var(--vscode-foreground));
     --nuiget-color-syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-editor-foreground));
-    --nuiget-color-syntax-number: var(--vscode-debugTokenExpression-number, var(--vscode-editor-foreground));
+    --nuiget-color-syntax-number: var(--vscode-debugTokenExpression-string, var(--vscode-editor-foreground));
     --nuiget-color-syntax-comment: var(--vscode-editorLineNumber-activeForeground, var(--vscode-descriptionForeground));
 
     /* Colours: list rows */

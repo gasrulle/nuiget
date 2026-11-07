@@ -31,7 +31,7 @@ const THEMES = [
 
 type Theme = (typeof THEMES)[number];
 
-interface AxeNode { target: string[]; summary: string; insideDetails: boolean; accepted?: string }
+interface AxeNode { target: string[]; summary: string; accepted?: string }
 interface AxeSummary {
     violations: Record<string, AxeNode[]>;
     passes: Record<string, number>;
@@ -45,12 +45,10 @@ const AXE_SOURCE = fs.readFileSync(path.resolve('node_modules/axe-core/axe.min.j
 const RUN_AXE = `
     const done = arguments[arguments.length - 1];
     const acceptedTargets = arguments[0];
-    const details = document.querySelector('[data-testid="package-details-panel"]');
     const nodes = list => list.map(node => ({
         accepted: acceptedTargets.find(selector => { const el = document.querySelector(String(node.target[0])); return el !== null && el.matches(selector); }),
         target: node.target.map(String),
         summary: node.failureSummary || node.any.map(check => check.message).join('; '),
-        insideDetails: details !== null && node.target.length === 1 && details.contains(document.querySelector(String(node.target[0]))),
     }));
     const byRule = (results, map) => Object.fromEntries(results.map(result => [result.id, map(result)]));
     axe.run(document, {
@@ -81,20 +79,20 @@ const MODIFIER = process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL;
  * The two rules over `scope` (or the document), then the pairs of what axe left undecided (`a11y.ts`); with `textsUnder`, also
  * the texts the layer `scope` covers, which an unscoped run leaves undecided.
  */
-async function contrastAt(scope: string | null, outsideDetailsOnly: boolean, textsUnder = false): Promise<MomentFacts> {
+async function contrastAt(scope: string | null, textsUnder = false): Promise<MomentFacts> {
     const driver = driverOf();
     if (!(await driver.executeScript<boolean>('return typeof window.axe !== "undefined";'))) {
         await driver.executeScript(AXE_SOURCE);
     }
     await waitForTransitions();
     await driver.manage().setTimeouts({ script: 120_000 });
-    const run = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, scope, outsideDetailsOnly, acceptedTargetSelectors())) as ContrastRun;
+    const run = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, scope, acceptedTargetSelectors())) as ContrastRun;
     if (run.error !== undefined) {
         return { violations: [], passes: 0, notMeasurable: `axe.run failed: ${run.error}` };
     }
     let undecided = run.undecided;
     if (textsUnder && scope !== null) {
-        const page = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, null, true, acceptedTargetSelectors())) as ContrastRun;
+        const page = JSON.parse(await driver.executeAsyncScript<string>(RUN_CONTRAST, null, acceptedTargetSelectors())) as ContrastRun;
         if (page.error !== undefined) {
             return { violations: [], passes: 0, notMeasurable: `axe.run over the page failed: ${page.error}` };
         }
@@ -145,9 +143,9 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     const other = rows.find(row => row.id !== current.id) ?? rows[0];
     // A hovered row that is not selected: the hover band under secondary text (A14).
     await hover(other.id);
-    report('hover-main', theme, await contrastAt(null, true), failures);
+    report('hover-main', theme, await contrastAt(null), failures);
     await hover(current.id);
-    // The README of a package with code blocks (A8); the details pane's incompletes stay tolerated until P3.4.
+    // The README of a package with code blocks (A8); the details pane is judged like the rest since UX-P3.4.
     await (await optionOf('package-row-newtonsoft.json')).click();
     await (await findByTestId('details-tab-readme', 30_000)).click();
     const readme = await poll(async () => (await driverOf().executeScript<string | null>(`
@@ -155,14 +153,14 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
         // ReadmeView mounts the container empty and fills it in an effect: decide once it holds the rendered README.
         if (content && content.childElementCount > 0) return content.querySelector('code, pre') ? 'content' : 'no code';
         return document.querySelector('[data-testid="readme-empty"]') ? 'empty' : null;`)) ?? undefined, 'the README or its empty state', 60_000);
-    report('readme', theme, readme === 'content' ? await contrastAt(null, true) : { violations: [], passes: 0, notMeasurable: readme === 'empty' ? 'the README did not load (readme-empty)' : 'the README has no code element' }, failures);
+    report('readme', theme, readme === 'content' ? await contrastAt(null) : { violations: [], passes: 0, notMeasurable: readme === 'empty' ? 'the README did not load (readme-empty)' : 'the README has no code element' }, failures);
     await (await findByTestId('details-tab-details', 30_000)).click();
     await (await optionOf(current.id)).click();
     // The open ConfirmDialog of a bulk uninstall of one row, cancelled; never confirmed.
     await toggle(other.id, true);
     await (await findByTestId('uninstall-selected-button', 10_000)).click();
     await findByTestId('confirm-dialog', 10_000);
-    report('dialog', theme, await contrastAt('[data-testid="confirm-dialog"]', false), failures);
+    report('dialog', theme, await contrastAt('[data-testid="confirm-dialog"]'), failures);
     await (await findByTestId('confirm-dialog-cancel', 10_000)).click();
     await waitForTestIdGone('confirm-dialog', 10_000);
     await toggle(other.id, false);
@@ -171,7 +169,7 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     await search.click();
     await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, 'Serilog');
     await poll(async () => ((await driverOf().findElements(By.css('[data-testid="search-suggestions"] [role="option"]:not([aria-disabled="true"])'))).length > 0 ? true : undefined), 'an enabled suggestion', 60_000);
-    report('popup', theme, await contrastAt('[data-testid="search-suggestions"]', false, true), failures);
+    report('popup', theme, await contrastAt('[data-testid="search-suggestions"]', true), failures);
     await poll(async () => {
         if ((await driverOf().findElements(By.css('[data-testid="search-suggestions"]'))).length === 0) {
             return true;
@@ -189,7 +187,7 @@ async function sidebarMoment(theme: Theme, failures: string[]): Promise<void> {
     const current = rows.find(row => row.current) ?? rows[0];
     const other = rows.find(row => row.id !== current.id) ?? rows[0];
     await hover(other.id);
-    report('hover-sidebar', theme, await contrastAt(null, false), failures);
+    report('hover-sidebar', theme, await contrastAt(null), failures);
     await hover(current.id);
 }
 
@@ -267,8 +265,8 @@ function expectNoViolations(surface: string, theme: Theme, summary: AxeSummary):
     const incomplete = Object.entries(summary.incomplete).flatMap(([rule, list]) => list.map(node => `${rule} ${node.target.join(' ')}: ${node.summary}`));
     console.warn(`[theme] ${where}: backgrounds body ${summary.backgrounds.body}, html ${summary.backgrounds.html}; ` +
         `passes ${JSON.stringify(summary.passes)}; incomplete ${incomplete.length}${incomplete.length > 0 ? `\n  ${incomplete.join('\n  ')}` : ''}`);
-    // What axe could not decide is the details pane's content below its visible part (ruling (9) of P5.12b): only the
-    // contrast rule, and only inside `package-details-panel`; anything else is a finding, whatever the count.
+    // Nothing may stay undecided: the details pane's tolerance (ruling (9) of P5.12b, A5) was removed by UX-P3.4; an accepted
+    // target-size result (a declared selector) is logged apart.
     const acceptedIncomplete = (summary.incomplete['target-size'] ?? []).filter(node => node.accepted !== undefined);
     if (acceptedIncomplete.length > 0) {
         console.warn(`[theme] ${where}: accepted target-size incomplete ${acceptedIncomplete.length} on ${acceptedIncomplete[0].accepted}`);
@@ -278,10 +276,7 @@ function expectNoViolations(surface: string, theme: Theme, summary: AxeSummary):
         if (list.length === 0) {
             continue;
         }
-        expect(rule, `incomplete rule in the ${where}`).to.equal('color-contrast');
-        for (const node of list) {
-            expect(node.insideDetails, `incomplete node outside the details pane in the ${where}: ${node.target.join(' ')}`).to.equal(true);
-        }
+        expect(list.map(node => `${rule} ${node.target.join(' ')}`), `incomplete results in the ${where}`).to.deep.equal([]);
     }
     expect(summary.violations['color-contrast'] ?? [], `color-contrast violations in the ${where}`).to.deep.equal([]);
     const targets = summary.violations['target-size'] ?? [];
