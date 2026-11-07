@@ -1,0 +1,657 @@
+{
+  "item": "P3.3a",
+  "runs": [
+    {
+      "runId": "42365759548",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "57ac3c4 (the proving commit)",
+      "look": "modern",
+      "workflow": "wf_b36956df-879",
+      "note": "main-browse-details and main-details-readme have no artboard of their own: judged against main-installed-details.dark-modern.1200.png and its spec (P3.1b/P3.2 precedent). No standing finding concerns the facts, captions, counts or lists this item built; every one is ordered to the item that owns its rule (design-advisor ruling of 2026-11-07).",
+      "captures": {
+        "main-installed-details": {
+          "png": "captures/42365759548/main-installed-details.dark-modern.1200.png",
+          "sha256": "31183fbbc521d84b75828397acd3b4e38352b2316473bf8d3f2317bca2a09394",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-transitive-details": {
+          "png": "captures/42365759548/main-transitive-details.dark-modern.1200.png",
+          "sha256": "1f461690a062b0573ba4cdc5b1599806c91a3f965b38d2d233a62970288c26e6",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png",
+          "artboardSha256": "669a2a619cdd54621be3ee62a45dc98f65ce20d311eb5839a81b6e3f523f324d"
+        },
+        "main-browse-details": {
+          "png": "captures/42365759548/main-browse-details.dark-modern.1200.png",
+          "sha256": "053838c62f84b224ba72ca9f90857a6a7d5372698d149f423809dca938bc2ae7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-details-readme": {
+          "png": "captures/42365759548/main-details-readme.dark-modern.1200.png",
+          "sha256": "9e8d9f8045df4ba674398d9b476d3d56bf8c3bcc95147f35a6bdafb19fd242ac",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 51,
+        "standing": 19,
+        "blocking": 0,
+        "refuted": 7,
+        "singleJudge": 4,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[geometry] Inside the details header both gaps are 6 px. The title ink ends at y 107 and the Uninstall button starts at 116 (artboard 119 to 130), and the button ends at 142 with the version selector at 148, against the spec's 4 px (uninstall 130.2+26 = 156.2, version 160.2). The spec has 8 then 4.",
+          "severity": "major",
+          "box": [
+            440,
+            85,
+            284,
+            89
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-installed-details#D5",
+          "state": "main-installed-details",
+          "finding": "[geometry] The split between the list pane and the details pane is painted as a solid 4 px grey band (x 420 to 423, rgb 49,49,49, y 77 to 802) where the artboard draws a 1 px separator at x 420 in the divider grey (43,43,43, the same grey as the capture's own tab-strip lines) with a transparent sash.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D4",
+          "state": "main-details-readme",
+          "finding": "[native] The Installed value '12.0.1' starts at x 506, 7 px left of the version select's text at x 513, while in the artboard the two values share one column (513/514).",
+          "severity": "major",
+          "box": [
+            503,
+            122,
+            140,
+            52
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D3",
+          "state": "main-details-readme",
+          "finding": "[geometry] The Installed row (Uninstall button y 116-141) and the Version row (select and Update y 148-173) are 6 px apart, where the spec and artboard place them 4 px apart (Uninstall 130.2+26 = 156.2, version-selector 160.2), so the two header rows of one group do not use the 4 px in-group gap.",
+          "severity": "major",
+          "box": [
+            440,
+            116,
+            283,
+            58
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The details header looks squeezed against the artboard: the title's text starts about 13 px below the pane top instead of the artboard's ~25 px (20 px header inset), and the Installed and Version rows sit 12 to 14 px higher than the spec's uninstall-button y 130.2 and version-selector y 160.2, so the header does not keep the editor's 20 px inset at the top and bottom. | [geometry] The details header's vertical padding is about 8 px above and below where the redline puts 20: the Uninstall button sits at y 116 (spec 130.2), the version selector at y 148 (spec 160.2) and the Details/README tab strip starts near y 182 (spec 206.2), so the title ink starts at y 90 against 102 in the artboard; the 20 px start inset holds.",
+          "severity": "major",
+          "box": [
+            421,
+            77,
+            779,
+            141
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[native] The Details/README tab strip and the description under it are pulled up and tight: the tab labels sit 24 px above the spec's details-tab-details y 206.2, and the description starts about 12 px under the tab underline where the artboard leaves about 24 px, so the pane looks cramped compared with the artboard. | [geometry] The details body starts too close under the Details/README tab strip. The strip's line is at y 217 and the description ink at y 229, a 12 px gap, where the artboard puts the line at 241 and the ink at 265 (24 px). The body's top inset is about 8 px where the artboard has 20.",
+          "severity": "major",
+          "box": [
+            421,
+            182,
+            779,
+            62
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-installed-details#D4",
+          "state": "main-installed-details",
+          "finding": "[native] The Dependencies framework group rows (.NETFramework2.0 through .NETStandard2.0) are spaced 24 px apart where the artboard spaces them 22 px apart (details group headers are 22 px for the details pane's density), so the list looks loose next to the artboard. | [geometry] The Dependencies group rows are 24 px apart (rows at y 512, 536, 560 and so on, with 20 px badges) where the artboard draws them 22 px apart (550, 572, 594 and so on, with 19 px badges). Over the nine rows the list grows by 18 px and looks loose next to the artboard.",
+          "severity": "major",
+          "box": [
+            440,
+            509,
+            250,
+            216
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-installed-details#D6",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case where the artboard and the copy rule want Title Case button labels: \"Select All\" and \"Uninstall Selected (0)\". | [states] The bulk-select button in the Installed toolbar reads \"Select all\" in sentence case; the artboard's select-all-button and the copy rule (which names this exact label) draw it as \"Select All\" in Title Case. | [states] The primary bulk button in the Installed toolbar reads \"Uninstall selected (0)\" in sentence case; the artboard's uninstall-selected-button and the copy rule (which names this exact label) draw it as \"Uninstall Selected (0)\" in Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1), the microcopy lint.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] The split between the Installed list and the details pane is painted as a roughly 4 px light band (x 420 to 424) at rest, where the artboard draws a 1 px separator at x 420 and the details pane starts at x 421. It reads as a sash stuck in its hover or drag state, not a native split view. | [geometry] The list/details split is drawn as a 4 px grey band (x 420-423, rgb 49,49,49, y 77-802) where the artboard draws a 1 px separator at x 420 with a transparent sash at rest.",
+          "severity": "major",
+          "box": [
+            418,
+            77,
+            8,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[native] The details title 'Microsoft.Extensions.Configuration' and its Transitive badge sit about 11 px higher than on the artboard (cap centre y≈98 against y≈109). The header's top inset is visibly smaller than its 20 px start inset (title x 440), where the artboard keeps 20 px on both sides. | [geometry] The details header's top inset is about 11 px: the Transitive badge starts at y 91, 14 px below the pane top (y 77), where the artboard puts it at y 100 (23 px below), so the title row sits 9-10 px higher than the 20 px top padding the redline and artboard give.",
+          "severity": "major",
+          "box": [
+            421,
+            77,
+            460,
+            40
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-transitive-details#D3",
+          "state": "main-transitive-details",
+          "finding": "[native] The details facts block has a different rhythm from the artboard. The gap from the title to 'Version' is about 8 px larger (≈38 against ≈29 px between line centres), and the gap from 'Authors' to 'Required by' is about 6 px smaller (≈34 against ≈40). The header looks loose under the title and squeezed above 'Required by'. | [geometry] The vertical rhythm of the details block differs from the artboard: from the title/badge bottom to the Version fact is 20 px in the capture against 15 px in the artboard (looser), and from the Authors fact to the 'Required by' caption is 25 px against 31 px (tighter), so the facts block is pulled away from the title and toward Required by.",
+          "severity": "major",
+          "box": [
+            440,
+            86,
+            440,
+            116
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-transitive-details#D4",
+          "state": "main-transitive-details",
+          "finding": "[native] The toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws the Title Case labels 'Select All' and 'Uninstall Selected (0)' that the copy rules require for button labels. | [states] The Select All button reads \"Select all\" in sentence case; the artboard draws \"Select All\", and DS-COPY-1 (with its example list in the design system) requires Title Case button labels. | [states] The bulk uninstall button reads \"Uninstall selected (0)\" in sentence case; the artboard draws \"Uninstall Selected (0)\", and DS-COPY-1 requires Title Case button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1), the microcopy lint.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-transitive-details#D5",
+          "state": "main-transitive-details",
+          "finding": "[native] The net8.0 group header reads 'Transitive packages' in sentence case, where the artboard draws 'Transitive Packages'. It also differs from the 'Transitive Packages' section header directly above it, so the two headers show mixed casing. | [states] The net8.0 group header reads \"Transitive packages\" in sentence case; the artboard's section-header-transitive-net8.0 draws \"Transitive Packages\", and DS-COPY-1 requires Title Case group headers. The section header above it already reads \"Transitive Packages\", so the two headers are now cased differently.",
+          "severity": "major",
+          "box": [
+            16,
+            706,
+            170,
+            22
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1), the microcopy lint.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-browse-details#D1",
+          "state": "main-browse-details",
+          "finding": "[native] The details header is vertically squeezed: about 8 px of padding above the title (pane top 77, title ink at 90) and 8 px between the Update button (bottom 173) and the Details/README strip (top about 181), where the artboard and spec draw 20 px (title ink at 102, buttons at y 130.2/160.2, tab strip at y 206.2). The whole header sits 12 to 24 px higher than the artboard. | [geometry] The details header has about 8 px top and bottom padding and a 16 px start inset: the title ink starts at y 90 (artboard 102), and the tab strip starts at y 182, 8 px below the version row (artboard 206, 20 px below). The title, labels and tab labels start 16-17 px from the pane edge at x 424 (artboard 20-21 from 421). The spec puts the uninstall button at y 130.2 and the Details tab at y 206.2, and the rule asks for 20 px on all four sides.",
+          "severity": "major",
+          "box": [
+            424,
+            77,
+            776,
+            105
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-browse-details#D2",
+          "state": "main-browse-details",
+          "finding": "[native] The pane split is a 4 px opaque grey band at rest (x 420-423, rgb 49) running the full height between the result list and the details pane, where the artboard draws a 1 px separator at x 420 with a transparent sash. The details pane therefore starts at x 424 instead of the spec's 421. | [geometry] The split between the list and the details pane is drawn as a 4 px solid band (x 420-423, colour #313131) over the full body height, where the artboard draws a 1 px #2b2b2b separator at x 420 with the details pane starting at x 421; the extra band also pushes the pane 3 px right (pane at 424 instead of 421).",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-browse-details#D4",
+          "state": "main-browse-details",
+          "finding": "[native] The description crowds the Details/README strip: its ink starts 12 px below the strip's bottom line (line 216-217, ink 229), where the artboard leaves 24 px (line 240-241, ink 265), so the facts block looks squeezed against the artboard. | [geometry] The details body starts about 8 px below the Details/README strip (strip line at y 217, description ink at y 229) and 16 px from the pane edge (x 439-440 against pane x 424). The artboard leaves about 20 px on both: line at 241, description ink at 265, text at x 440 against pane x 421.",
+          "severity": "major",
+          "box": [
+            424,
+            216,
+            776,
+            26
+          ],
+          "rule": "judge-only, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-browse-details#D3",
+          "state": "main-browse-details",
+          "finding": "[native] The Uninstall and Update buttons are 6 px apart vertically (Uninstall 116-141, Update 148-173). The spec's uninstall-button (y 130.2, h 26) and install-update-button (y 160.2) put them 4 px apart, the in-group gap. | [geometry] The gap between the Installed row's Uninstall button (y 116-141) and the Version row's select and Update button (from y 148) is 6 px. The spec has 4 px (uninstall-button y 130.2 h 26 and version-selector y 160.2), and the artboard draws 4 px (156 to 160).",
+          "severity": "major",
+          "box": [
+            440,
+            116,
+            283,
+            58
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-browse-details#D5",
+          "state": "main-browse-details",
+          "finding": "[native] The dependency target-framework rows (.NETFramework2.0 to .NETStandard2.0) are on a 24 px pitch (ink at 474, 498, 522 …), where the artboard draws them on the 22 px tree-row pitch (550, 572, 594 …). The group reads looser than a native tree. | [geometry] The Dependencies group rows are spaced 24 px apart, with 20 px count badges (chevrons at y 479, 503, 527 and so on). The artboard spaces the same rows 22 px apart with 19 px badges (chevrons at y 554, 576, 598 and so on), so the dependency tree looks looser than the approved drawing.",
+          "severity": "minor",
+          "box": [
+            440,
+            472,
+            186,
+            192
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D1",
+          "state": "main-details-readme",
+          "finding": "[native] The split between the list and the details pane is painted as a solid 4 px band (x 420-423, the dropdown-background grey) from the tab strip to the bottom, where the artboard draws a 1 px divider at x 420 and the rule wants a 1 px separator under a transparent sash at rest. | [geometry] The pane split is drawn as a 4 px grey band (x 420-423, full height from y 77) instead of the artboard's 1 px separator at x 420, and the details panel begins at x 424 rather than the spec's 421.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D2",
+          "state": "main-details-readme",
+          "finding": "[native] The details header looks squeezed against the artboard: the title's glyph top is at y 90 against 102, the Installed/Version rows sit about 14 px higher, and the Details/README tab strip starts at y 182 against 206, so the header has about 8 px of padding above the title and below the Update button where the artboard and the rule have 20. | [geometry] The details header is compressed: the title's ink starts at y 90 (artboard 102) and the Version row ends at y 173 with the Details/README tab strip starting at y 182, so the header has about 8 px above and 8 px below its content, where the spec puts the Uninstall button at y 130.2, the version row at y 160.2 and the tabs at y 206.2 (20 px top and bottom padding).",
+          "severity": "major",
+          "box": [
+            424,
+            77,
+            300,
+            141
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.3b",
+          "evidence": "Ordered to UX-P3.3b: the details-header and body inset (DS-INSET-4, DS-INSET-1 details, SPEC details pending P3.3b); untouched here (Fork 7).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D6",
+          "state": "main-details-readme",
+          "finding": "[native] The toolbar button reads 'Select all' in sentence case, where the artboard has the Title Case command label 'Select All'. | [states] The bulk button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1), the microcopy lint.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D7",
+          "state": "main-details-readme",
+          "finding": "[native] The bulk button reads 'Uninstall selected (0)' in sentence case, where the artboard has the Title Case command label 'Uninstall Selected (0)'. | [states] The bulk uninstall button reads \"Uninstall selected (0)\", where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1), the microcopy lint.",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-details-readme#D5",
+          "state": "main-details-readme",
+          "finding": "[native] The 'No README available.' message starts at x 444, about 3 px right of the details title and the DETAILS tab label (x 441-442), so it is not on the details pane's single start inset. | [geometry] The README body message 'No README available.' starts at x 444, about 4 px right of the details inset that the title, labels and DETAILS tab label share (x 440-441), and sits about 8 px under the tab strip line (y 217) where the artboard's details body starts about 20 px under it (line 241, text 265).",
+          "severity": "major",
+          "box": [
+            440,
+            184,
+            150,
+            58
+          ],
+          "rule": "judge-only, DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.4",
+          "evidence": "Ordered to UX-P3.4: the readme-empty cell (readme-* cells).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
+        },
+        {
+          "id": "main-installed-details#native-5",
+          "state": "main-installed-details",
+          "finding": "[native] The source-settings icon button in the header draws a gear glyph where the artboard draws a different (sun-like settings) codicon at the same 22 px spot.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "lenses": [
+            "native"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The capture draws the pinned settings-gear codicon (listed in docs/design/icons.json), while the artboard's source-settings is a hand-drawn stroke SVG, not a codicon; this is a glyph-outline difference between renders, which rubric §6 excludes, and the product does follow DS-ICON-1."
+        },
+        {
+          "id": "main-installed-details#states-3",
+          "state": "main-installed-details",
+          "finding": "[states] The source-settings action in the header draws the gear codicon (settings-gear). The artboard's source-settings element at the same rect draws the rayed settings codicon, so the header's icon differs from the approved artboard.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The capture's gear is the settings-gear codicon that icons.json pins for the product, while the artboard's icon is a hand-drawn stroke SVG approximation, not a codicon; rubric §6 excludes glyph outlines that differ between the artboard render and the capture."
+        },
+        {
+          "id": "main-installed-details#states-4",
+          "state": "main-installed-details",
+          "finding": "[states] The refresh action in the header draws the two-arrow sync codicon. The artboard's refresh-button at the same rect draws the single-arrow refresh codicon, so the glyph differs from the approved artboard.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The capture draws the sync codicon pinned in icons.json, while the artboard's refresh-button is a hand-drawn single-arrow stroke path ('M13 8a5 5 0 1 1-1.46-3.54M13 2.5v3h-3'), not a codicon; this is a glyph-outline difference that rubric §6 excludes."
+        },
+        {
+          "id": "main-browse-details#states-1",
+          "state": "main-browse-details",
+          "finding": "[states] Nine of the ten Browse rows (Newtonsoft.Json.Bson down to MassTransit.Newtonsoft) show a saturated orange raster cube as their package icon, where the artboard's package-icon element is a neutral tile (icon-tile background) holding a package glyph in the icon colour; the fallback reads as decoration rather than the artboard's icon role, and no progress bar shows that icons are still arriving.",
+          "severity": "major",
+          "box": [
+            46,
+            165,
+            37,
+            617
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The crop shows orange package-box images in the 36 px icon slot. That image is package content or its stand-in, not a codicon colour role, and the artboard's neutral tile is a placeholder for the slot that it also draws where the product shows Newtonsoft.Json's real rocket icon. The slot geometry holds by hard measurement ('DS-ICON-3: 36×36 ×16', 'DS-RADIUS-2 … icon 2px ×16'), and nothing in the crop shows that icons are still loading."
+        },
+        {
+          "id": "main-browse-details#states-2",
+          "state": "main-browse-details",
+          "finding": "[states] The row facts line formats billion-scale download counts as \"9744.8M downloads\" (and \"1465.8M\" on the next row), which is correct but longer and harder to read than a scaled unit such as 9.7B. DS-ROW-1 names the downloads on line 3 but says nothing about their format.",
+          "severity": "minor",
+          "box": [
+            146,
+            125,
+            116,
+            14
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The crop reads '9744.8M downloads'. The download count is live content under rubric §6, no rule or artboard element sets its format, and VS Code's Extensions view also abbreviates install counts in M without a B step, so this is taste with nothing to cite."
+        },
+        {
+          "id": "main-details-readme#native-3",
+          "state": "main-details-readme",
+          "finding": "[native] The current row (Newtonsoft.Json) shows no uninstall action at its end, while the artboard draws the trash icon button at x 384, y 632 on the current row.",
+          "severity": "major",
+          "box": [
+            384,
+            632,
+            22,
+            22
+          ],
+          "rule": "DS-ROW-4",
+          "lenses": [
+            "native"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "No trash icon shows on the current row, but DS-ROW-4 shows actions on hover, on :focus-within and on the focused row; here the list is unfocused (DS-COLOR-2 measured 'current rgb(55, 55, 61) … list not focused') and focus is on the README tab, while the artboard draws a focused-list scene."
+        },
+        {
+          "id": "main-details-readme#states-3",
+          "state": "main-details-readme",
+          "finding": "[states] The current row (Newtonsoft.Json) shows no uninstall (trash) action in its end slot. The artboard draws the row-action-uninstall icon on the current row, and the spec's composition says a row's actions show once it is hovered or current.",
+          "severity": "major",
+          "box": [
+            384,
+            632,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The current row has no trash icon, but focus is on the README tab and the list is unfocused (DS-COLOR-2: 'list not focused'). DS-ROW-4 shows actions only on hover, on :focus-within or on the focused row, so a hidden action is the rule's behaviour; the artboard draws the list focused."
+        }
+      ]
+    }
+  ]
+}

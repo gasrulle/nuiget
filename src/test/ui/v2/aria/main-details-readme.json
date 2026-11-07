@@ -62,7 +62,7 @@
     "  region \"Package details\" {package-details-panel}",
     "    heading \"Newtonsoft.Json\"",
     "    button \"Uninstall\" {uninstall-button}",
-    "    combobox \"Version:\" {version-selector}",
+    "    combobox \"Version\" {version-selector}",
     "      option \"#\"",
     "      option \"#\"",
     "      option \"#\"",

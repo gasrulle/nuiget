@@ -285,10 +285,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7b' } }, tolerance: TOLERANCES.containment }),
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
-    rule('DS-COPY-2', { helper: 6, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
+    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P2.7 (design trigger 6).
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
-    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3a' }, dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
@@ -309,7 +309,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
-    rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
+    rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
@@ -344,9 +344,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
-    // README; the details pane's headings set their weight at P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
+    // README; the details pane's headings set their weight since UX-P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
-    rule('DS-TYPE-3', { helper: 3, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'dialogs', 'sources', 'sidebar'), details: { pending: 'P3.3a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-3', { helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'), tolerance: TOLERANCES.containment }),
     // UX-P1.4b: the Verified mark in the states whose readiness holds it; a row list of another state may still be provisional.
     rule('DS-ICON-4', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-transitive-details'] }),
     rule('DS-LOOK-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),

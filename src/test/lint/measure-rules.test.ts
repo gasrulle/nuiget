@@ -153,10 +153,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: { pending: 'P3.3b' } });
-        expect(scopes('DS-ALIGN-1')).toEqual({ details: { pending: 'P3.3a' } });
+        expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme']);
-        expect(scopes('DS-COPY-2')).toEqual({ details: { pending: 'P3.3a' } });
+        expect(scopes('DS-COPY-2')).toEqual({ details: 'hard' });
+        // UX-P3.3a: the details pane's weights and headings, hard with the facts.
+        expect(scopes('DS-TYPE-3')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, 'hard'])));
+        expect((scopes('DS-TYPE-9') as Record<string, unknown>).details).toBe('hard');
         // UX-P0.18 (design-advisor ruling of 2026-10-24): hard where the unchanged tree read green in every capture of the
         // group; the red groups and the groups no state measures yet to the items that make them hold.
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
@@ -683,12 +686,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: true, status: { pending: 'P3.3b' } });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 16, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
-        expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
+        expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700], [640, 640]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: true });
         expect(value('main-details-readme', facts({}), 'DS-ALIGN-1@main-details-readme')).toBeUndefined();
         // DS-COPY-2 (UX-P3.3a): no details label ends in ':', and "Author(s)" is never one.
         expect(value('main-installed-details', facts({ detailsLabels: ['Installed', 'Version', 'Version', 'Authors'] }), 'DS-COPY-2@main-installed-details'))
-            .toMatchObject({ pass: true, value: 'labels 4: ok', status: { pending: 'P3.3a' } });
+            .toMatchObject({ pass: true, value: 'labels 4: ok', status: 'hard' });
         expect(value('main-installed-details', facts({ detailsLabels: ['Installed:', 'Version'] }), 'DS-COPY-2@main-installed-details'))
             .toMatchObject({ pass: false, value: 'labels 2; off: "Installed:"' });
         expect(value('main-installed-details', facts({ detailsLabels: ['Version', 'Author(s)'] }), 'DS-COPY-2@main-installed-details'))
@@ -702,7 +705,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ textStyles: [text(11, 700, true)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-installed-single', facts({ textStyles: [text(11, 700, true)], dataLook: 'modern' }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
         expect(value('main-installed-single', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
-        expect(value('main-installed-details', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3a' } });
+        expect(value('main-installed-details', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-details')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ lookTokens: { '--nuiget-scrollbar-size': '10px' } }), 'DS-LOOK-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
         // UX-P1.4b: the Verified mark, 12 or 16 px in its role's colour; never a pass without one.
         const mark = (overrides: Record<string, unknown> = {}) => ({ w: 12, h: 12, colour: 'rgb(77, 170, 252)', ...overrides });
