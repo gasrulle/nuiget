@@ -55,7 +55,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
@@ -71,7 +71,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         for (const id of ['DS-HEIGHT-3', 'DS-ROW-1', 'DS-ROW-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1']) {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        // UX-P3.5: the two main dialog states read pending for one run (design-advisor ruling, DO 6 (i)).
+        expect(definition('DS-FOCUS-1')?.pendingStates).toEqual({ 'main-installed-bulk-dialog': 'P3.5', 'main-browse-multi-install-dialog': 'P3.5' });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-bulk-dialog', 'main-browse-multi-install-dialog'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
+        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog'];
+        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'] });
+        expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
+        expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
+        expect(definition('DS-DIVIDER-2')?.states).toEqual(dialogStates);
+        expect(definition('DS-DIVIDER-5')?.states).toEqual(dialogStates);
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
@@ -80,11 +89,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
-        // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling).
-        const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse'));
+        // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling); UX-P3.5: nor dialogs.
+        const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
         expect(scopes('PF-3b')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
@@ -94,7 +103,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
         expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' }, popup: { pending: 'P3.7a' } });
-        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard' });
+        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard', layers: { pending: 'P3.5' } });
+        // UX-P3.5 (design-advisor ruling of 2026-11-07): the dialog layer's elevation and backdrop, hard in the three dialog states.
+        expect(scopes('DS-DIVIDER-2')).toEqual({ layers: { pending: 'P3.5' } });
+        expect(scopes('DS-DIVIDER-5')).toEqual({ dialogs: { pending: 'P3.5' } });
         expect(scopes('DS-DIVIDER-3')).toEqual({ browse: 'hard' });
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
@@ -198,7 +210,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
@@ -830,6 +842,31 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-quicksearch-grouped', popup({ groups: [{ width: 0, style: 'none', colour: 'rgb(0, 0, 0)' }, { width: 0, style: 'none', colour: 'rgb(0, 0, 0)' }] }), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });
         expect(lineOf('main-quicksearch-grouped', layout(), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });
         expect(lineOf('main-quicksearch-open', popup(), 'DS-DIVIDER-3@main-quicksearch-open')).toBeUndefined();
+    });
+
+    it('reads the open dialog: its layer radius, its shadow alone on the page, the black scrim and its footer\'s symmetry (UX-P3.5)', () => {
+        const layers = {
+            radius: '8px', radiusTarget: '8px', boxShadow: 'rgba(0, 0, 0, 0.36) 0px 2px 8px 0px', shadowColour: 'rgba(0, 0, 0, 0.36)', shadowed: [],
+            scrim: 'rgba(0, 0, 0, 0.5)', surface: 'rgb(31, 31, 31)', footer: { left: 0, right: 0, top: 0, bottom: 0 },
+        };
+        const dialog = (overrides: Record<string, unknown> = {}) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, layers: { ...layers, ...overrides } } as Layout['endOfP0'] });
+        const state = 'main-installed-bulk-dialog';
+        expect(lineOf(state, dialog(), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: true, status: { pending: 'P3.5' }, value: 'layer 8 (target 8)' });
+        expect(lineOf(state, dialog({ radius: '4px' }), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: false, value: 'layer 4 (target 8)' });
+        expect(lineOf(state, dialog(), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true, value: 'layer 0px 2px 8px 0px rgba(0, 0, 0, 0.36); page 0 shadowed' });
+        expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0.36) 0px 0px 8px 0px' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false });
+        expect(lineOf(state, dialog({ shadowed: ['.nuiget-row'] }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false, value: expect.stringContaining('page 1 shadowed: .nuiget-row') });
+        // High contrast: the shadow token is transparent.
+        expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0) 0px 2px 8px 0px', shadowColour: 'rgba(0, 0, 0, 0)' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true });
+        expect(lineOf(state, dialog(), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true, status: { pending: 'P3.5' }, value: 'scrim rgba(0, 0, 0, 0.5) over #1f1f1f → #101010 (not lighter)' });
+        // Black at 50 % over black is equal: not lighter (dark high contrast).
+        expect(lineOf(state, dialog({ surface: 'rgb(0, 0, 0)' }), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true });
+        expect(lineOf(state, dialog({ scrim: 'rgba(31, 31, 31, 0.6)' }), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: false });
+        expect(lineOf(state, dialog(), `DS-INSET-2@${state}`)).toMatchObject({ pass: true, value: 'footer 0/0 0/0' });
+        expect(lineOf(state, dialog({ footer: { left: 0, right: 8, top: 0, bottom: 0 } }), `DS-INSET-2@${state}`)).toMatchObject({ pass: false });
+        expect(lineOf(state, layout(), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: false, value: expect.stringContaining('no open dialog') });
+        // Outside the dialog states the rules print nothing.
+        expect(lineOf('main-installed-single', dialog(), 'DS-DIVIDER-2@main-installed-single/layers')).toBeUndefined();
     });
 
     it('reads the outer frame\'s offset: anything but 0,0 fails the state (UX-P2.8b)', () => {

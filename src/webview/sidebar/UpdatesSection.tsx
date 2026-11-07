@@ -242,20 +242,10 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 confirmLabel="Update"
                 onCancel={() => setConfirming(false)}
                 onConfirm={confirm}
-            >
-                {all.active ? groups.map(group => (
-                    <div key={group.projectPath}>
-                        <p className="nuiget-sidebar-bulk-lead">{`In ${group.projectName}:`}</p>
-                        <ul className="nuiget-sidebar-bulk-list">
-                            {group.updates.map(update => <li key={update.id}>{updateLine(update)}</li>)}
-                        </ul>
-                    </div>
-                )) : (
-                    <ul className="nuiget-sidebar-bulk-list">
-                        {candidates.map(update => <li key={update.id}>{updateLine(update)}</li>)}
-                    </ul>
-                )}
-            </ConfirmDialog>
+                groups={all.active
+                    ? groups.map(group => ({ label: `In ${group.projectName}:`, items: group.updates.map(updateLine) }))
+                    : [{ items: candidates.map(updateLine) }]}
+            />
         </section>
     );
 }

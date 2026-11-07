@@ -1,6 +1,6 @@
 /**
- * The open dialogs and popovers of a page, in the order they opened. Only the topmost one answers Escape, traps
- * focus or closes on an outside click, so that a confirmation opened from a dialog, or a popover opened inside
+ * The open dialogs of a page, in the order they opened. Only the topmost one answers Escape, traps
+ * focus or closes on an outside click, so that a confirmation opened from a dialog, or any layer opened inside
  * one, is dismissed first and alone. The stack is per page: each webview is its own document.
  */
 export interface Layer {
@@ -25,7 +25,7 @@ export function isTopLayer(layer: Layer): boolean {
     return stack[stack.length - 1] === layer;
 }
 
-/** Whether `node` is inside a layer that opened after `layer`, such as a popover over a dialog. */
+/** Whether `node` is inside a layer that opened after `layer`, such as a confirmation over a dialog. */
 export function isInLayerAbove(layer: Layer, node: Node): boolean {
     const index = stack.indexOf(layer);
     return stack.slice(index + 1).some(above => above.element()?.contains(node) ?? false);

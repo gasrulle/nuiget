@@ -112,8 +112,8 @@ describe('the named states (UX-P0.8)', () => {
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
-            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states.
-            const expected = theme.includes('high-contrast') ? 130 : 139;
+            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog.
+            const expected = theme.includes('high-contrast') ? 133 : 142;
             expect(files, theme).toHaveLength(expected);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
@@ -132,9 +132,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932.
-        expect(files).toHaveLength(66);
-        expect(new Set(files).size).toBe(66);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog.
+        expect(files).toHaveLength(67);
+        expect(new Set(files).size).toBe(67);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

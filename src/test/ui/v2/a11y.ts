@@ -398,7 +398,7 @@ try {
         focusVisible: el.matches(':focus-visible'),
         outline: style.outlineStyle === 'none' || width === 0 ? 'none' : style.outlineWidth + ' ' + style.outlineStyle + ' ' + style.outlineColor,
         boxShadow: style.boxShadow || 'none',
-        inRoot: Boolean((root && root.contains(el)) || el.closest('.nuiget-dialog, .nuiget-popover, [role="dialog"], [role="alertdialog"]')),
+        inRoot: Boolean((root && root.contains(el)) || el.closest('.nuiget-dialog, [role="dialog"], [role="alertdialog"]')),
     };
 } finally {
     axe.teardown();
@@ -591,7 +591,7 @@ export function motionLines(where: string, facts: MotionFacts, status: RuleStatu
 // ---- UX-P0.25: contrast axe could not decide, and the theme pass's moments ------------------------------------------
 
 /** The roots of a layer: text inside one is measured against the layer's own background. */
-export const LAYER_SELECTOR = '.nuiget-dialog, .nuiget-popover, [role="dialog"], [role="alertdialog"]';
+export const LAYER_SELECTOR = '.nuiget-dialog, [role="dialog"], [role="alertdialog"]';
 
 /** A text measured directly: its colour over the backgrounds from the element up to the first opaque one. */
 export interface ContrastPair {

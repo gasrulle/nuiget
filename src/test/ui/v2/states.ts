@@ -111,7 +111,8 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
 /** The main Updates list: the newest versions on nuget.org change between runs. */
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
-const LIVE_BULK_LIST: Mask = { selector: '.nuiget-sidebar-bulk-list', reason: 'the dialog lists the newest versions on nuget.org' };
+const LIVE_DIALOG_TITLE: Mask = { selector: '.nuiget-dialog-title', reason: 'the title names the newest version on nuget.org' };
+const LIVE_BULK_LIST: Mask = { selector: '.nuiget-dialog-list', reason: 'the dialog lists the newest versions on nuget.org' };
 /** The versions level's `‹ <id>` header above the suggestions (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_POPUP_HEADER: Mask = { selector: '.nuiget-search-popup-header', reason: 'the popup text renders with greyscale or subpixel anti-aliasing from run to run (H27, corrected); the options are under LIVE_SUGGESTIONS' };
 
@@ -176,6 +177,8 @@ export const STATES: readonly NamedState[] = [
         '"zz-no-such-package-nuiget" searched with Enter: the welcome-style "No results for" sentence (marker browse-empty, UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-browse-details', 'main', [primary('main')],
         'The Newtonsoft.Json Browse row made current; the details panel shows "Dependencies".', [LIVE_RESULTS, LIVE_DETAILS]), diffTolerance: 0 },
+    { ...ready('main-browse-multi-install-dialog', 'main', [primary('main')],
+        '"Newtonsoft.Json" searched with Enter, the Newtonsoft.Json.Bson row made current (installed in no project), Install in projects… pressed; the Multi Install dialog is open with its previews answered and is cancelled after the capture, never confirmed (UX-P3.5).', [LIVE_RESULTS, LIVE_DETAILS, LIVE_DIALOG_TITLE]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-quicksearch-open', 'main', [primary('main')],
         '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-quicksearch-versions', 'main', [primary('main')],

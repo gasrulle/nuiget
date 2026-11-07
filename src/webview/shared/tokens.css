@@ -6,7 +6,7 @@
  * 1.110.1, font sizes and weights from 1.129.0) with the classic px as fallback, so every host from the 1.90 floor renders the
  * classic numbers and a current host its own (DS-GRID-3). Row and header heights stay literal. Type is in px.
  * Colours alias the --vscode-* variables of their role (design-system.md "Colour roles"), so the light and dark themes need no rule of their own;
- * the scrim is the one derived colour (`color-mix()`, until P3.5). A control's high-contrast line is a `:root` token on a VS Code key that is unset
+ * the scrim is the one literal colour (black at 50 % in every theme, DS-DIVIDER-5, UX-P3.5). A control's high-contrast line is a `:root` token on a VS Code key that is unset
  * outside the high-contrast themes, with a `transparent` fallback, so the high-contrast block stays three keys.
  * The Modern UI look (DS-LOOK-1) switches the tokens of the `data-look` blocks on the attributes the host writes on `<html>`
  * (ADR-011 Decision 2). High contrast, forced colours and reduced motion have one block each; reduced motion has two signals (ADR-011 Decision 8).
@@ -43,6 +43,8 @@
     --nuiget-list-pane-min: 170px;
     /* The editor part's minimum, editor.ts:29 (DS-OVERFLOW-5, §8 details-pane minimum). */
     --nuiget-details-pane-min: 220px;
+    /* The dialog box's width, `min(32em, 100%)` (§8 overflow table, UX-P3.5). */
+    --nuiget-dialog-width: 32em;
 
     /* Radius: the workbench corner tiers (`--vscode-cornerRadius-*`, exported from 1.110.1) (DS-RADIUS-1, DS-RADIUS-2) */
     --nuiget-radius-xs: var(--vscode-cornerRadius-xSmall, 2px);
@@ -158,7 +160,7 @@
     --nuiget-color-contrast-border: var(--vscode-contrastBorder, transparent);
     --nuiget-color-shadow: var(--vscode-widget-shadow, transparent);
     /* The literal black at 50 % with the dialog item (P3.5, DS-DIVIDER-5). */
-    --nuiget-color-scrim: color-mix(in srgb, var(--vscode-editor-background) 60%, transparent);
+    --nuiget-color-scrim: rgba(0, 0, 0, 0.5);
     --nuiget-color-progress: var(--vscode-progressBar-background);
     --nuiget-color-picker-separator: var(--vscode-pickerGroup-border);
 

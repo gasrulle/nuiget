@@ -28,8 +28,8 @@ export interface DialogProps {
 /**
  * A modal dialog (`role="dialog"`, `aria-modal`) on a layer above the page. Focus moves into it when it opens,
  * Tab and Shift+Tab stay inside it, Escape closes it, and focus returns to where it was when it closes. A dialog
- * opened from a dialog stacks on top, and only the topmost one answers. The page behind it cannot be clicked;
- * it is not dimmed, because no theme colour exists for a scrim, and the dialog is set off by its border.
+ * opened from a dialog stacks on top, and only the topmost one answers. The page behind it cannot be clicked and is
+ * dimmed by the scrim, black at 50 % as the workbench's modal block (DS-DIVIDER-5).
  */
 export function Dialog(props: DialogProps): React.JSX.Element | null {
     return props.open ? <OpenDialog {...props} /> : null;

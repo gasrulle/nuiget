@@ -381,13 +381,18 @@ describe('main panel: details', () => {
         await user.click(screen.getByTestId('multi-install-button'));
 
         expect(host.requests('allProjects/installed')).toHaveLength(1);
+        // UX-P3.5 (design-advisor follow-up 2): busy until every list arrived and every preview answered, derived in render.
+        const projectsList = (): HTMLElement => within(screen.getByTestId('multi-install-dialog')).getByRole('list', { name: 'Projects' });
+        expect(projectsList()).toHaveAttribute('aria-busy', 'true');
         const stream = host.requests('allProjects/installed')[0];
         await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [] } } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
         await waitFor(() => expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Polly', version: '8.4.2' }]));
+        expect(projectsList()).toHaveAttribute('aria-busy', 'true');
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
+        await waitFor(() => expect(projectsList()).toHaveAttribute('aria-busy', 'false'));
 
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();

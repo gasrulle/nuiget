@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Package details list their facts in aligned columns and count dependencies with badges**
 - **The package details pane has the editor's margins, keeps its title on one line and stays usable however narrow the split**
 - **README headings use VS Code's text sizes, README links are underlined and code stays readable in light themes**
+- **Dialogs dim the page behind them in every theme and match VS Code's dialogs**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

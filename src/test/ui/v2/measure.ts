@@ -18,6 +18,7 @@
  * `src/test/lint` can import its registry.
  */
 
+import { composite, luminance, parseCssColor } from './contrast';
 import type { Lane } from './states';
 
 export type RuleStatus = 'hard' | { pending: string };
@@ -26,7 +27,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -156,9 +157,15 @@ export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefin
     return { id, ...options };
 }
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
-/** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2). */
-const { browse: _noGroupHeader, ...grid2b } = asGrid1;
+/** UX-P3.5: the dialog scopes read for one proving run, then flipped in the closing commit (RUN-ux §4.2). */
+const DIALOGS_READING = { pending: 'P3.5' } as const;
+
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
+/** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2), and no dialogs (UX-P3.5). */
+const { browse: _noGroupHeader, dialogs: _noDialogHeader, ...grid2b } = asGrid1;
+
+/** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
+export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog'];
 
 /** One pending item for the state groups where a rule's elements are rendered. */
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
@@ -225,7 +232,7 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-bulk-dialog', 'main-browse-multi-install-dialog'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
@@ -237,7 +244,8 @@ export const RULES: readonly RuleDefinition[] = [
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details'] }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
-    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
+    // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
+    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: DIALOGS_READING, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
@@ -252,7 +260,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: DIALOGS_READING, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
@@ -288,8 +296,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
     rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P2.7 (design trigger 6).
-    rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
-    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING }, tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
@@ -300,7 +308,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused', 'main-installed-hover-current'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P3.2: the popup layer at the layer radius and its rows at the popup row radius, read in the popup states only.
-    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
+    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard', layers: DIALOGS_READING }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES, layers: DIALOG_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
+    // UX-P3.5 (design-advisor ruling of 2026-11-07): only layers are elevated, and the modal backdrop is black at 50 %.
+    rule('DS-DIVIDER-2', { helper: 6, scopes: { layers: DIALOGS_READING }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
+    rule('DS-DIVIDER-5', { helper: 6, scopes: { dialogs: DIALOGS_READING }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -330,7 +341,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
-    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
+    // UX-P3.5 (design-advisor ruling, DO 6 (i)): the two main dialog states are read for one proving run before they join.
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES }, pendingStates: { 'main-installed-bulk-dialog': 'P3.5', 'main-browse-multi-install-dialog': 'P3.5' } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
@@ -400,6 +412,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':
             return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
+        case 'dialogs':
+            return ['chrome', 'layers', 'controls'];
         default:
             return ['chrome'];
     }
@@ -714,12 +728,29 @@ export interface EndOfP0 {
     stateCells: StateCells;
     /** The quick-search popup when it is open (UX-P3.2): its radii, rows, group separators and labels. */
     popup?: PopupFacts;
+    /** The open dialog's layer (UX-P3.5): DS-RADIUS-2 layers, DS-DIVIDER-2, DS-DIVIDER-5 and DS-INSET-2's footer. */
+    layers?: LayerFacts;
     /** UX-P0.14: the focused element (`document.activeElement`, the body excepted) and its outline (DS-FOCUS-1..3). */
     focus: FocusFacts | undefined;
     /** The theme's focus colours as VS Code put them on the root (hex, or empty when the theme leaves the key unset). */
     focusColours: { focusBorder: string; listFocusOutline: string; contrastActiveBorder: string };
     /** Every visible disabled affordance (`aria-disabled` or a disabled button) and its reason in text (DS-STATE-7). */
     disabled: Array<{ label: string; reason: string }>;
+}
+
+/** UX-P3.5: the open dialog, its backdrop and what else casts a shadow. */
+export interface LayerFacts {
+    radius: string;
+    radiusTarget: string;
+    boxShadow: string;
+    /** `--nuiget-color-shadow` as computed (transparent in high contrast). */
+    shadowColour: string;
+    /** Every other visible element with a box-shadow, the quick-search popup excepted. */
+    shadowed: string[];
+    scrim: string;
+    /** The surface the scrim covers: `--nuiget-color-bg` in the main panel, `--nuiget-color-bg-sidebar` in the sidebar. */
+    surface: string;
+    footer: { left: number; right: number; top: number; bottom: number } | undefined;
 }
 
 /** The quick-search popup's facts (DS-RADIUS-2 popup, DS-HEIGHT-2 popup, DS-DIVIDER-3; UX-P3.2). */
@@ -1269,8 +1300,8 @@ const documentOverflow = {
 // UX-P0.13: the facts of the rules registered at the end of P0 (design-advisor ruling of 2026-10-24).
 const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
 const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
-const titleFacts = selector => {
-    const el = root.querySelector(selector);
+const titleFacts = (selector, inDocument = false) => {
+    const el = (inDocument ? document : root).querySelector(selector);
     if (!visible(el)) return undefined;
     const style = getComputedStyle(el);
     return { fontSize: style.fontSize, fontWeight: style.fontWeight };
@@ -1469,6 +1500,24 @@ const popup = popupEl ? {
     pickerBorder: resolveKey('--vscode-pickerGroup-border', 'color'),
     description: resolveKey('--vscode-descriptionForeground', 'color'),
 } : undefined;
+// UX-P3.5: the open dialog's layer, its backdrop and the elements that cast a shadow (DS-DIVIDER-2, DS-DIVIDER-5).
+const layerEl = dialog && visible(dialog) ? dialog.closest('.nuiget-dialog-layer') : null;
+const layers = layerEl ? (() => {
+    const style = getComputedStyle(dialog);
+    const footerEl = dialog.querySelector('.nuiget-dialog-footer');
+    const footerStyle = footerEl ? getComputedStyle(footerEl) : null;
+    const isLayer = el => el === dialog || el.classList.contains('nuiget-search-popup');
+    return {
+        radius: style.borderTopLeftRadius,
+        radiusTarget: lookValue('--nuiget-radius-layer'),
+        boxShadow: style.boxShadow,
+        shadowColour: computedColour('--nuiget-color-shadow'),
+        shadowed: [...document.body.querySelectorAll('*')].filter(el => !isLayer(el) && getComputedStyle(el).boxShadow !== 'none' && visible(el)).map(label),
+        scrim: getComputedStyle(layerEl).backgroundColor,
+        surface: computedColour(root.dataset.testid === 'nuiget-sidebar' ? '--nuiget-color-bg-sidebar' : '--nuiget-color-bg'),
+        footer: footerStyle ? { left: px(footerStyle.paddingLeft), right: px(footerStyle.paddingRight), top: px(footerStyle.paddingTop), bottom: px(footerStyle.paddingBottom) } : undefined,
+    };
+})() : undefined;
 // UX-P0.14: the facts of the six rules registered with the theme dump (design-advisor ruling of 2026-10-24).
 const activeEl = document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement ? document.activeElement : null;
 const focusKind = el => {
@@ -1517,7 +1566,7 @@ const endOfP0 = {
     actionRadius: getComputedStyle(root).getPropertyValue('--nuiget-radius-action').trim(),
     contrastBorder: computedColour('--vscode-contrastBorder'),
     uppercaseHeaders: document.documentElement.hasAttribute('data-uppercase-headers'),
-    titles: { panel: titleFacts('.nuiget-main-title'), details: titleFacts('.nuiget-details-title'), dialog: titleFacts('.nuiget-dialog-title') },
+    titles: { panel: titleFacts('.nuiget-main-title'), details: titleFacts('.nuiget-details-title'), dialog: titleFacts('.nuiget-dialog-title', true) },
     headings: shown('h1, h2, h3, h4').filter(el => !el.closest('[data-testid="readme-content"]')).map(el => ({ tag: el.tagName.toLowerCase(), weight: getComputedStyle(el).fontWeight, sectionTitle: el.classList.contains('nuiget-section-heading') })),
     dividers: {
         key: computedColour('--vscode-settings-headerBorder'),
@@ -1549,6 +1598,7 @@ const endOfP0 = {
     detailsLabels,
     stateCells,
     popup,
+    layers,
     focus,
     focusColours: {
         focusBorder: rootVars.getPropertyValue('--vscode-focusBorder').trim(),
@@ -1577,7 +1627,7 @@ for (const el of root.querySelectorAll('[data-testid]')) {
     };
 }
 // UX-P0.22 (DS-SCROLL-1): every visible element with a vertical scrollbar, the root's scrollbar-color and the slider token.
-// The whole body: a Dialog or a Popover is portaled out of the root and scrolls itself.
+// The whole body: a Dialog is portaled out of the root and scrolls itself.
 const backdrop = el => { for (let at = el; at; at = at.parentElement) { const colour = getComputedStyle(at).backgroundColor; if (opaque(colour)) return colour; } return ''; };
 const scrollers = [];
 for (const el of document.body.querySelectorAll('*')) {
@@ -2892,6 +2942,63 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
     }
 }
 
+/** A colour as #rrggbb, for a printed line. */
+const hexOf = (colour: { r: number; g: number; b: number }): string => `#${[colour.r, colour.g, colour.b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`;
+
+/**
+ * The open dialog's rules (UX-P3.5, design-advisor ruling of 2026-11-07): DS-RADIUS-2 and DS-DIVIDER-2 in the `layers`
+ * scope, DS-DIVIDER-5, and DS-INSET-2's footer in the `dialogs` scope (its own padding's symmetry).
+ */
+function evaluateLayers(definition: RuleDefinition, scope: Scope, layout: Layout): { value: string; pass: boolean } | undefined {
+    const applies = (scope === 'layers' && (definition.id === 'DS-RADIUS-2' || definition.id === 'DS-DIVIDER-2'))
+        || (scope === 'dialogs' && (definition.id === 'DS-DIVIDER-5' || definition.id === 'DS-INSET-2'));
+    if (!applies) {
+        return undefined;
+    }
+    const layers = layout.endOfP0.layers;
+    if (layers === undefined) {
+        return { value: `${NOT_MEASURABLE} (no open dialog)`, pass: false };
+    }
+    if (definition.id === 'DS-RADIUS-2') {
+        const radius = Number.parseFloat(layers.radius);
+        const target = Number.parseFloat(layers.radiusTarget);
+        return { value: `layer ${radius} (target ${target})`, pass: Number.isFinite(radius) && radius === target };
+    }
+    if (definition.id === 'DS-DIVIDER-2') {
+        // Chromium writes the colour first: "rgba(0, 0, 0, 0.36) 0px 2px 8px 0px". A transparent shadow passes (high contrast).
+        const shadowColour = parseCssColor(layers.shadowColour);
+        const geometry = layers.boxShadow.replace(/^rgba?\([^)]*\)\s*/, '');
+        const colour = layers.boxShadow.slice(0, layers.boxShadow.length - geometry.length).trim();
+        const transparent = shadowColour !== null && shadowColour.a === 0;
+        const layerOk = layers.boxShadow === 'none' ? transparent : geometry === '0px 2px 8px 0px' && (colour === layers.shadowColour || transparent);
+        return {
+            value: `layer ${layers.boxShadow === 'none' ? 'none' : `${geometry} ${colour}`}; page ${layers.shadowed.length} shadowed${layers.shadowed.length === 0 ? '' : `: ${layers.shadowed.slice(0, 4).join(', ')}`}`,
+            pass: layerOk && layers.shadowed.length === 0,
+        };
+    }
+    if (definition.id === 'DS-DIVIDER-5') {
+        const scrim = parseCssColor(layers.scrim);
+        const surface = parseCssColor(layers.surface);
+        if (scrim === null || surface === null) {
+            return { value: `${NOT_MEASURABLE} (scrim ${layers.scrim}, surface ${layers.surface})`, pass: false };
+        }
+        const under = composite(scrim, { ...surface, a: 1 });
+        const notLighter = luminance(under) <= luminance(surface) + 1e-9;
+        return {
+            value: `scrim ${layers.scrim} over ${hexOf(surface)} → ${hexOf(under)} (${notLighter ? 'not lighter' : 'lighter'})`,
+            pass: layers.scrim === 'rgba(0, 0, 0, 0.5)' && notLighter,
+        };
+    }
+    const footer = layers.footer;
+    if (footer === undefined) {
+        return { value: `${NOT_MEASURABLE} (no footer)`, pass: false };
+    }
+    return {
+        value: `footer ${footer.left}/${footer.right} ${footer.top}/${footer.bottom}`,
+        pass: near(footer.left, footer.right, definition.tolerance) && near(footer.top, footer.bottom, definition.tolerance),
+    };
+}
+
 /** The quick-search popup's rules (UX-P3.2): DS-RADIUS-2 and DS-HEIGHT-2 in the `popup` scope, DS-DIVIDER-3. */
 function evaluatePopup(definition: RuleDefinition, scope: Scope, layout: Layout): { value: string; pass: boolean } | undefined {
     const isPopupScope = scope === 'popup' && (definition.id === 'DS-RADIUS-2' || definition.id === 'DS-HEIGHT-2');
@@ -3059,7 +3166,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, definition, scope, state);
     }
-    const popupVerdict = evaluatePopup(definition, scope, layout);
+    const popupVerdict = evaluatePopup(definition, scope, layout) ?? evaluateLayers(definition, scope, layout);
     if (popupVerdict !== undefined) {
         return popupVerdict;
     }

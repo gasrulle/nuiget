@@ -80,6 +80,8 @@ describe('main panel: Install in All Projects', () => {
 
         // Only the CPM projects are asked, one after the other; the Install button waits for the answers.
         expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Polly', version: '8.4.2' }]);
+        // UX-P3.5: the list is busy while a preview is unanswered, which a capture reach waits on.
+        expect(within(dialog).getByRole('list', { name: 'Projects' })).toHaveAttribute('aria-busy', 'true');
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
         expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeDisabled();
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
@@ -89,6 +91,7 @@ describe('main panel: Install in All Projects', () => {
 
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Lib' })).toBeDisabled());
         expect(dialog).toHaveTextContent('centrally managed: install it from the project to see the preview');
+        expect(within(dialog).getByRole('list', { name: 'Projects' })).toHaveAttribute('aria-busy', 'false');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled();
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));

@@ -28,15 +28,7 @@ export function BulkUninstallDialog({ open, removals, onConfirm, onCancel }: Bul
             confirmLabel="Uninstall"
             onConfirm={onConfirm}
             onCancel={onCancel}
-        >
-            {removals.map(removal => (
-                <div key={removal.projectPath} className="nuiget-bulk-project">
-                    <p className="nuiget-bulk-lead">{`From ${removal.projectName}:`}</p>
-                    <ul className="nuiget-bulk-list">
-                        {removal.packages.map(id => <li key={id}>{id}</li>)}
-                    </ul>
-                </div>
-            ))}
-        </ConfirmDialog>
+            groups={removals.map(removal => ({ label: `From ${removal.projectName}:`, items: removal.packages }))}
+        />
     );
 }

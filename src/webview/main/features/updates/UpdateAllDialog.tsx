@@ -21,19 +21,9 @@ export function UpdateAllDialog({ open, updates, groups, onConfirm, onCancel }: 
             confirmLabel="Update"
             onConfirm={onConfirm}
             onCancel={onCancel}
-        >
-            {groups === undefined ? (
-                <ul className="nuiget-bulk-list">
-                    {updates.map(update => <li key={update.id}>{line(update)}</li>)}
-                </ul>
-            ) : groups.map(group => (
-                <div key={group.projectName}>
-                    <p className="nuiget-bulk-lead">{`In ${group.projectName}:`}</p>
-                    <ul className="nuiget-bulk-list">
-                        {group.updates.map(update => <li key={update.id}>{line(update)}</li>)}
-                    </ul>
-                </div>
-            ))}
-        </ConfirmDialog>
+            groups={groups === undefined
+                ? [{ items: updates.map(line) }]
+                : groups.map(group => ({ label: `In ${group.projectName}:`, items: group.updates.map(line) }))}
+        />
     );
 }

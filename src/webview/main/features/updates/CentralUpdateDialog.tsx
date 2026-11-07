@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import type { CpmImpactPreview } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { Button, Dialog } from '../../../shared/primitives';
+import { Button, Dialog, DialogGroups } from '../../../shared/primitives';
 import { useProjects } from '../../../shared/store/projects';
 
 /** The central change the user asked for; the owner of the dialog runs it on confirm. */
@@ -75,25 +75,18 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
 
     let body: React.ReactNode;
     if (state.status === 'loading') {
-        body = <p className="nuiget-bulk-lead">Looking up the projects that use the central version…</p>;
+        body = 'Looking up the projects that use the central version…';
     } else if (state.status === 'error') {
         body = (
-            <div role="alert">
-                <p className="nuiget-bulk-lead">{`The projects this change reaches could not be listed: ${state.message}`}</p>
+            <div role="alert" className="nuiget-central-preview-error">
+                {`The projects this change reaches could not be listed: ${state.message}`}
                 <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>
             </div>
         );
     } else if (state.preview === null) {
-        body = <p className="nuiget-bulk-lead">The central entry was not found; the change reaches this project only.</p>;
+        body = 'The central entry was not found; the change reaches this project only.';
     } else {
-        body = (
-            <>
-                <p className="nuiget-bulk-lead">{`Changes the central version ${state.preview.fromVersion ?? '(none)'} → ${state.preview.toVersion} in Directory.Packages.props for:`}</p>
-                <ul className="nuiget-bulk-list">
-                    {state.preview.affectedProjects.map(path => <li key={path}>{nameOf(path)}</li>)}
-                </ul>
-            </>
-        );
+        body = <DialogGroups groups={[{ label: `Changes the central version ${state.preview.fromVersion ?? '(none)'} → ${state.preview.toVersion} in Directory.Packages.props for:`, items: state.preview.affectedProjects.map(nameOf) }]} />;
     }
 
     return (

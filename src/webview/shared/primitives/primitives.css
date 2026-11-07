@@ -518,8 +518,7 @@
 .nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,
 .nuiget-tab:focus,
-.nuiget-dialog:focus-visible,
-.nuiget-popover:focus-visible {
+.nuiget-dialog:focus-visible {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * -1);
 }
@@ -1162,7 +1161,8 @@
 
 /*
  * The layer covers the viewport, takes the pointer, so the page behind cannot be clicked, and dims the page with the
- * scrim token (the editor background at 60 %); the dialog is set off by it, its border and the widget shadow.
+ * scrim token (black at 50 % in every theme, DS-DIVIDER-5); the dialog is set off by it, its border and the native hover's
+ * shadow (DS-DIVIDER-2). One anatomy: the layer radius, an 8 px block rhythm (UX-P3.5).
  */
 .nuiget-dialog-layer {
     position: fixed;
@@ -1179,16 +1179,16 @@
     --nuiget-text-field-radius: var(--nuiget-radius-layer-input);
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-5);
-    width: min(32em, 100%);
+    gap: var(--nuiget-block-gap-outer);
+    width: min(var(--nuiget-dialog-width), 100%);
     max-height: 100%;
     overflow: auto;
     padding: var(--nuiget-space-5) var(--nuiget-space-6);
     border: var(--nuiget-line-width) solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
+    border-radius: var(--nuiget-radius-layer);
     background: var(--nuiget-color-widget-bg);
     color: var(--nuiget-color-widget-fg);
-    box-shadow: 0 0 var(--nuiget-space-4) var(--nuiget-color-shadow);
+    box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
 }
 
 .nuiget-dialog-header {
@@ -1211,42 +1211,34 @@
     overflow-wrap: anywhere;
 }
 
+/* A confirmation's message (its words, then its lists) and DialogGroups' lists: 8 apart, a lead 4 above its list (UX-P3.5). */
+.nuiget-dialog-message,
+.nuiget-dialog-groups {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-block-gap-outer);
+}
+
+.nuiget-dialog-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-block-gap-inner);
+}
+
+.nuiget-dialog-lead,
+.nuiget-dialog-list {
+    margin: 0;
+}
+
+.nuiget-dialog-list {
+    padding-inline-start: var(--nuiget-space-6);
+}
+
 .nuiget-dialog-footer {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--nuiget-space-4);
-}
-
-/* ── Popover ── */
-
-/*
- * Fixed in the viewport at the place the script computed, so that no parent with `overflow: hidden` clips it.
- * Hidden until placed: it is measured at the origin first.
- */
-.nuiget-popover {
-    position: fixed;
-    left: var(--nuiget-popover-x, 0);
-    top: var(--nuiget-popover-y, 0);
-    z-index: var(--nuiget-z-popover);
-    max-width: calc(100vw - 2 * var(--nuiget-space-2));
-    max-height: calc(100vh - 2 * var(--nuiget-space-2));
-    overflow: auto;
-    padding: var(--nuiget-space-2);
-    border: var(--nuiget-line-width) solid var(--nuiget-color-border);
-    border-radius: var(--nuiget-radius-sm);
-    background: var(--nuiget-color-widget-bg);
-    color: var(--nuiget-color-widget-fg);
-    box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
-}
-
-.nuiget-popover:not([data-placed]) {
-    visibility: hidden;
-}
-
-/* A popover opened from a dialog comes after it in the body; at the dialog's level, the later one is on top. */
-.nuiget-dialog-layer ~ .nuiget-popover {
-    z-index: var(--nuiget-z-dialog);
 }
 
 /* ── Tabs ── */

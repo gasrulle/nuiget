@@ -55,11 +55,11 @@ describe('2.0 webview tokens', () => {
         const referenced = [...code.matchAll(/var\(\s*([^,)\s]+)/g)].map(match => match[1]);
         expect(referenced.length).toBeGreaterThan(0);
         expect(referenced.filter(name => !name.startsWith('--vscode-') && !name.startsWith('--nuiget-'))).toEqual([]);
-        // In `:root` a colour token is nothing but such an alias, and the one derived colour: a VS Code background mixed
-        // with transparent (the scrim; Chromium 111).
-        const SCRIM = /^color-mix\(in srgb, var\(--vscode-[a-zA-Z-]+\) \d{1,3}%, transparent\)$/;
+        // In `:root` a colour token is nothing but such an alias, and the one literal: the scrim, black at 50 % in every
+        // theme (DS-DIVIDER-5, UX-P3.5).
+        const isScrim = (name: string, value: string): boolean => name === '--nuiget-color-scrim' && value === 'rgba(0, 0, 0, 0.5)';
         const colours = [...blockAfter(':root'), ...blockAfter(LOOK)].filter(([name]) => name.startsWith('--nuiget-color-'));
-        expect(colours.filter(([, value]) => !value.startsWith('var(--vscode-') && !SCRIM.test(value))).toEqual([]);
+        expect(colours.filter(([name, value]) => !value.startsWith('var(--vscode-') && !isScrim(name, value))).toEqual([]);
     });
 
     it('declares in :root exactly the tokens of the reference', () => {

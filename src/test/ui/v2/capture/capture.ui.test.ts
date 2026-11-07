@@ -682,6 +682,21 @@ const REACH: Record<string, Reach> = {
             await currentDetails('package-row-newtonsoft.json');
         },
     },
+    // UX-P3.5 (design-advisor ruling of 2026-11-07, DO 5): a package installed in no project offers Install in projects…;
+    // the dialog's list is aria-busy while a project is unlisted or a cpm/preview (read-only) is unanswered, and no project
+    // may read "not listed yet" (design-advisor follow-up 2). Cancelled with Escape, never confirmed.
+    'main-browse-multi-install-dialog': {
+        reach: async () => {
+            await REACH['main-browse-results'].reach();
+            await currentDetails('package-row-newtonsoft.json.bson');
+            await (await findByTestId('multi-install-button', 30_000)).click();
+            await until('(() => { const list = document.querySelector(\'[data-testid="multi-install-dialog"] ul[aria-label="Projects"]\'); return list !== null && list.getAttribute("aria-busy") !== "true" && ![...list.querySelectorAll(".nuiget-multi-install-note")].some(note => note.textContent === "not listed yet"); })()', 'the Multi Install dialog with every project listed and its previews answered', 60_000);
+        },
+        leave: async () => {
+            await driverOf().switchTo().activeElement().sendKeys(Key.ESCAPE);
+            await waitForTestIdGone('multi-install-dialog', 10_000);
+        },
+    },
     'main-quicksearch-open': {
         reach: async () => {
             await chooseFixtureProject('Gateway.csproj');

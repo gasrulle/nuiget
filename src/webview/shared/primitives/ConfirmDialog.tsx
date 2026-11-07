@@ -1,14 +1,17 @@
 import React, { useRef } from 'react';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
+import { DialogGroups, type DialogGroup } from './DialogGroups';
 import './primitives.css';
 
 export interface ConfirmDialogProps {
     open: boolean;
     /** The question as a heading, for example "Uninstall 3 packages?". */
     title: string;
-    /** What will happen: the packages and projects affected, and whether it can be undone. */
-    children: React.ReactNode;
+    /** What will happen in words, before the lists; whether it can be undone. */
+    children?: React.ReactNode;
+    /** The packages and projects affected, one list per group, rendered by the dialog (UX-P3.5). */
+    groups?: ReadonlyArray<DialogGroup>;
     /** The verb of the action, for example "Uninstall". */
     confirmLabel: string;
     cancelLabel?: string;
@@ -24,14 +27,21 @@ export interface ConfirmDialogProps {
  * uninstall, removing a source. It is an `alertdialog` whose message is its description, and it opens with focus
  * on Cancel, the choice that changes nothing.
  */
-export function ConfirmDialog({ open, title, children, confirmLabel, cancelLabel = 'Cancel', onConfirm, onCancel, busy }: ConfirmDialogProps): React.JSX.Element | null {
+export function ConfirmDialog({ open, title, children, groups, confirmLabel, cancelLabel = 'Cancel', onConfirm, onCancel, busy }: ConfirmDialogProps): React.JSX.Element | null {
     const cancelRef = useRef<HTMLButtonElement>(null);
+    // Every rhythm is a gap, never a margin: 8 between the words and the lists (DS-GRID-2a).
+    const message = (
+        <div className="nuiget-dialog-message">
+            {children}
+            {groups === undefined ? null : <DialogGroups groups={groups} />}
+        </div>
+    );
     return (
         <Dialog
             open={open}
             onClose={onCancel}
             title={title}
-            description={children}
+            description={message}
             role="alertdialog"
             initialFocus={cancelRef}
             data-testid="confirm-dialog"

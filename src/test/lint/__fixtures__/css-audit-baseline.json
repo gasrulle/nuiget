@@ -16,14 +16,6 @@
     "item": "P3.7a"
   },
   {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-dialog",
-    "property": "width",
-    "value": "min(32em, 100%)",
-    "item": "P3.5"
-  },
-  {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
     "selector": ".nuiget-add-source",

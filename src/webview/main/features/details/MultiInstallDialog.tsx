@@ -37,7 +37,8 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
     const source = all.active ? all : own;
     const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
     const [central, setCentral] = useState<ReadonlyMap<string, CentralBlock>>(new Map());
-    const [checking, setChecking] = useState(false);
+    /** The CPM targets whose previews have all answered; the dialog is busy until it equals `cpmKey` (UX-P3.5). */
+    const [answeredKey, setAnsweredKey] = useState('');
     const baseId = useId();
 
     // Outside All Projects the slice is idle: the dialog lists the projects itself while it is open.
@@ -79,6 +80,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
     useEffect(() => {
         if (open) {
             setPicked(new Set());
+            setAnsweredKey('');
         }
     }, [open]);
 
@@ -86,11 +88,10 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
     useEffect(() => {
         setCentral(new Map());
         if (cpmKey === '') {
-            setChecking(false);
+            setAnsweredKey('');
             return undefined;
         }
         const controller = new AbortController();
-        setChecking(true);
         void (async () => {
             const blocked = new Map<string, CentralBlock>();
             for (const projectPath of cpmKey.split('\n')) {
@@ -109,11 +110,16 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
             if (!controller.signal.aborted) {
                 setCentral(blocked);
                 setPicked(previous => new Set([...previous].filter(projectPath => !blocked.has(projectPath))));
-                setChecking(false);
+                setAnsweredKey(cpmKey);
             }
         })();
         return () => controller.abort();
     }, [bus, cpmKey, packageId, version]);
+    // Busy, derived in render so no committed frame reads settled early: a project still unlisted (no list and no error),
+    // or previews not yet answered for the CPM targets this render computes (UX-P3.5, design-advisor follow-up 2).
+    // Install waits for the previews only: a listed project that is not CPM waits for nobody (P7 phase review).
+    const previewing = cpmKey !== answeredKey;
+    const busy = previewing || projects.some(project => !listed(project.path) && source.chunks.get(project.path)?.error === undefined);
     const toggle = (projectPath: string): void => setPicked(previous => {
         const next = new Set(previous);
         if (!next.delete(projectPath)) {
@@ -132,11 +138,11 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
             footer={(
                 <>
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button disabled={picked.size === 0 || checking} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'project' : 'projects'}`}</Button>
+                    <Button disabled={picked.size === 0 || previewing} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'project' : 'projects'}`}</Button>
                 </>
             )}
         >
-            <ul className="nuiget-multi-install" aria-label="Projects">
+            <ul className="nuiget-multi-install" aria-label="Projects" aria-busy={busy}>
                 {projects.map(project => {
                     const current = installedIn(project.path);
                     const centralBlock = central.get(project.path);

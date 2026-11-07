@@ -60,6 +60,21 @@ describe('ConfirmDialog', () => {
         expect(consoleError).not.toHaveBeenCalled();
     });
 
+    it('renders its groups as lists under their leads, in the description, with every rhythm a gap (UX-P3.5)', () => {
+        render(
+            <ConfirmDialog open title="Uninstall 3 packages?" confirmLabel="Uninstall" onConfirm={() => undefined} onCancel={() => undefined}
+                groups={[{ label: 'From Api:', items: ['Serilog', 'Polly'] }, { label: 'From Web:', items: ['xunit'] }]} />,
+        );
+        const dialog = screen.getByRole('alertdialog');
+        expect(dialog).toHaveAccessibleDescription('From Api: Serilog Polly From Web: xunit');
+        expect(screen.getAllByRole('list')).toHaveLength(2);
+        expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['Serilog', 'Polly', 'xunit']);
+        expect(dialog.querySelectorAll('.nuiget-dialog-group > .nuiget-dialog-lead + .nuiget-dialog-list')).toHaveLength(2);
+        // A group without a lead is its list alone.
+        render(<ConfirmDialog open title="Update 1 package?" confirmLabel="Update" onConfirm={() => undefined} onCancel={() => undefined} groups={[{ items: ['Serilog: 3.0.0 → 3.1.0'] }]} />);
+        expect(screen.getAllByRole('alertdialog')[1].querySelector('.nuiget-dialog-lead')).toBeNull();
+    });
+
     it('Confirm and Cancel report, and Escape cancels', async () => {
         const user = userEvent.setup();
         const onConfirm = vi.fn();
