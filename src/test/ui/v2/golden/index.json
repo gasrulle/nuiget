@@ -29,6 +29,12 @@
     "sha256": "7125a01af95c7010008383f9ae70f5ab597e2edae193a08b74cc7ca416750594",
     "sidecarSha256": "5945fae42cfc7d65b5735d53ed0185c477def704ea1aeac30ae92d1124f875c8"
   },
+  "main-browse-multi-install-dialog.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "42405225840",
+    "sha256": "c38e0299b6eef2942363d99b99fd191f3b716b00e6d3c9015bc6609e55e4482a",
+    "sidecarSha256": "6ff08b144b5d469f5c08834d39aa77d7d835d7bd5fbb07429b0b79be4812bb72"
+  },
   "main-browse-results.dark-modern.1200.png": {
     "status": "approved",
     "run": "42376865313",
