@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
 import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
@@ -62,6 +62,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
     const { asking } = install;
     // The cancel of the preview this pane asked; a Browse row's or the search box's ask is not the pane's to stop.
     const ownAsk = useRef(NOTHING_TO_CANCEL);
+    const noteId = useId();
 
     // Another package or version starts on the Details tab; the same one made current again, or confirmed for another
     // project, keeps the tab.
@@ -86,7 +87,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
 
     const { selection, version, versions, stale } = details;
     if (selection === null) {
-        return <EmptyState message="Select a package to see its details." />;
+        return <EmptyState data-testid="details-empty" message="Select a package to see its details." />;
     }
     if (selection.origin === 'transitive') {
         return <TransitiveDetails selection={selection} />;
@@ -124,6 +125,11 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
         primaryWhy = 'This version is installed';
     }
 
+    // A disabled button says why: the visible note when it shows, the tooltip when it does not (DS-STATE-7). The busy
+    // sentence is the placeholder P3.11's microcopy reviews.
+    const noteShown = primaryWhy !== undefined && primaryWhy !== 'This version is installed';
+    const busyWhy = busy ? 'An operation on this package is running.' : undefined;
+
     const fail = (what: string) => (error: unknown): void => announce(`${what} of ${selection.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
     const changeVersion = (): void => {
         if (pickProjects) {
@@ -158,20 +164,20 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
 
     return (
         <div className="nuiget-details">
-            <div className="nuiget-details-header">
-                <h2 className="nuiget-details-title">{selection.packageId}</h2>
+            <div className="nuiget-details-header" data-testid="details-header">
+                <h2 className="nuiget-details-title"><span className="nuiget-details-name" title={selection.packageId}>{selection.packageId}</span></h2>
                 {stale ? <Banner severity="info">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
                 {/* One grid for the installed and the version rows: label, value, action (P9.fix-5). */}
                 <div className="nuiget-details-actions">
                     {entry !== undefined ? (
                         <>
                             <span className="nuiget-details-label">Installed</span>
-                            <span>{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
+                            <span className="nuiget-details-value">{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
                             <Button
                                 variant="secondary"
                                 data-testid="uninstall-button"
                                 disabled={busy || removalBlocked !== undefined}
-                                title={removalBlocked}
+                                title={busyWhy ?? removalBlocked}
                                 onClick={uninstall}
                             >
                                 Uninstall
@@ -192,7 +198,8 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                     <Button
                         data-testid="install-update-button"
                         disabled={busy || asking || primaryWhy !== undefined}
-                        title={primaryWhy}
+                        title={busyWhy ?? (noteShown ? undefined : primaryWhy)}
+                        aria-describedby={noteShown ? noteId : undefined}
                         onClick={changeVersion}
                     >
                         {busy ? 'Working…' : pickProjects ? 'Install…' : action}
@@ -209,7 +216,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         </Button>
                     ) : null}
                 </div>
-                {primaryWhy !== undefined && primaryWhy !== 'This version is installed' ? <p className="nuiget-details-note">{`${primaryWhy}.`}</p> : null}
+                {noteShown ? <p className="nuiget-details-note" id={noteId}>{`${primaryWhy}.`}</p> : null}
                 {entry !== undefined && isCentral(entry) ? (
                     <p className="nuiget-details-note">Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only.</p>
                 ) : null}
@@ -222,7 +229,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                 ) : null}
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{`Versions could not be listed: ${versions.error.message}`}</Banner> : null}
             </div>
-            <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections">
+            <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections" data-testid="details-tab-bar">
                 {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView announce={announce} />}
             </Tabs>
             <MultiInstallDialog

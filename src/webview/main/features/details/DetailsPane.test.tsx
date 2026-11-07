@@ -73,6 +73,7 @@ describe('main panel: details', () => {
     it('says how to get details until a row is made current, then shows the package and its versions', async () => {
         const host = await mountReady();
         expect(pane()).toHaveTextContent('Select a package to see its details.');
+        expect(screen.getByTestId('details-empty')).toHaveTextContent('Select a package to see its details.');
 
         await selectInstalled(host);
 
@@ -82,7 +83,14 @@ describe('main panel: details', () => {
         expect(selector()).toHaveValue('3.0.0');
         expect(primary()).toHaveTextContent('Update');
         expect(primary()).toBeDisabled();
+        // The installed version says why in the tooltip; no note shows for it (DS-STATE-7, UX-P3.3b).
+        expect(primary()).toHaveAttribute('title', 'This version is installed');
+        expect(primary()).not.toHaveAttribute('aria-describedby');
         expect(screen.getByTestId('uninstall-button')).toBeEnabled();
+        // The header and the tab strip carry their hooks; the title's name is one line with the full id as its tooltip.
+        expect(screen.getByTestId('details-header')).toContainElement(within(pane()).getByRole('heading', { name: 'Serilog' }));
+        expect(within(screen.getByTestId('details-header')).getByText('Serilog')).toHaveAttribute('title', 'Serilog');
+        expect(screen.getByTestId('details-tab-bar')).toHaveAttribute('role', 'tablist');
         // One grid for both rows, so Uninstall and Update share a column (P9.fix-5).
         expect(screen.getByTestId('uninstall-button').parentElement).toHaveClass('nuiget-details-actions');
         expect(primary().parentElement).toBe(screen.getByTestId('uninstall-button').parentElement);
@@ -228,6 +236,19 @@ describe('main panel: details', () => {
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
         expectFocusAfterClose('details-cpm-update-confirm');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
+    });
+
+    it('while an operation on the package runs, both buttons are disabled and say why (DS-STATE-7, UX-P3.3b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        await user.click(screen.getByTestId('uninstall-button'));
+        expect(host.requests('ops/remove')).toHaveLength(1);
+        for (const button of [screen.getByTestId('uninstall-button'), primary()]) {
+            expect(button).toBeDisabled();
+            expect(button).toHaveAttribute('title', 'An operation on this package is running.');
+        }
+        expect(primary()).not.toHaveAttribute('aria-describedby');
     });
 
     it('a centrally managed package uninstalls from its project without a dialog', async () => {
@@ -482,6 +503,9 @@ describe('main panel: details', () => {
         await hostSays(() => host.event('session/changed', snapshot(2, B)));
         expect(pane()).toHaveTextContent('Showing Serilog of App until the packages of the selected project are listed.');
         expect(primary()).toBeDisabled();
+        // The reason shows as a note, and the disabled button is described by it (DS-STATE-7, UX-P3.3b).
+        expect(primary()).toHaveAccessibleDescription('Checking the selected project.');
+        expect(primary()).not.toHaveAttribute('title');
         await hostSays(() => host.respond(host.requests('installed/get')[1], { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '2.12.0')] }, 1));
         expect(pane()).not.toHaveTextContent('Showing Serilog of App');
         expect([...selector().options].map(element => element.textContent)).toContain('2.12.0 (installed)');

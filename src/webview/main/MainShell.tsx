@@ -18,6 +18,7 @@ import { useCentralChange, type CentralChange } from './features/updates/useCent
 import { SourcesControl } from './features/sources/SourcesControl';
 import { MainTabs } from './MainTabs';
 import { RefreshBar } from './RefreshBar';
+import { clampTo, useSplitBounds } from './useSplitBounds';
 
 export type MainTab = 'installed' | 'updates';
 
@@ -94,6 +95,8 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     const [query, setQuery] = useState('');
     const [chosenTab, setChosenTab] = useState<MainTab>(() => readMainTab(viewState));
     const [split, setSplit] = useState(SPLIT.initial);
+    const splitRef = useRef<HTMLDivElement>(null);
+    const bounds = useSplitBounds(splitRef, SPLIT);
     // The user moved the sash before the kept position arrived: the kept one no longer applies.
     const moved = useRef(false);
     const { announce, live, searchRef } = useShellChrome();
@@ -110,11 +113,14 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
             bus.request('layout/get', {}).then(({ result }) => {
                 const kept = result.splitPosition;
                 if (typeof kept === 'number' && Number.isFinite(kept) && !moved.current) {
-                    setSplit(Math.min(SPLIT.max, Math.max(SPLIT.min, kept)));
+                    // A share the measured px bounds clamp when shown (`shownSplit`); only a share outside the split is refused.
+                    setSplit(Math.min(100, Math.max(0, kept)));
                 }
             }, () => undefined);
         }
     }, [bus]);
+
+    const shownSplit = clampTo(split, bounds);
 
     const keepTab = useCallback((next: MainTab): void => {
         if (viewState === undefined) {
@@ -237,7 +243,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                 <RefreshBar refreshing={refreshing} browsing={browsing} />
             </header>
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
-            <div className="nuiget-main-split" style={cssVars({ '--nuiget-split': `${split}%` })}>
+            <div className="nuiget-main-split" ref={splitRef} style={cssVars({ '--nuiget-split': `${shownSplit}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
                     {browsing ? browse?.({ text: query, announce, install: installAction }) : (
                         <MainTabs selected={tab} onSelect={selectTab}>
@@ -245,18 +251,18 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         </MainTabs>
                     )}
                 </div>
-                <Sash orientation="vertical" label="Resize the package list" value={split} min={SPLIT.min} max={SPLIT.max} defaultValue={SPLIT.initial}
+                <Sash orientation="vertical" label="Resize the package list" value={shownSplit} min={bounds.min} max={bounds.max} defaultValue={clampTo(SPLIT.initial, bounds)}
                     controls={listPaneId}
                     onChange={value => {
                         moved.current = true;
                         setSplit(value);
                     }}
                     onChangeEnd={value => {
-                        bus.request('layout/set', { splitPosition: value }).catch(() => undefined);
+                        bus.request('layout/set', { splitPosition: clampTo(value, bounds) }).catch(() => undefined);
                     }}
                 />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">
-                    {details?.({ announce, install: installAction, central }) ?? <EmptyState message="Select a package to see its details." />}
+                    {details?.({ announce, install: installAction, central }) ?? <EmptyState data-testid="details-empty" message="Select a package to see its details." />}
                 </section>
             </div>
             <CentralUpdateDialog request={central.request} onClose={central.close} onConfirm={central.confirm} />

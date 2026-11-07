@@ -42,14 +42,11 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
 
     return (
         <div className="nuiget-details" data-testid="transitive-details">
-            <div className="nuiget-details-header">
+            <div className="nuiget-details-header" data-testid="details-header">
                 <h2 className="nuiget-details-title">
-                    {selection.packageId}
-                    {' '}
+                    <span className="nuiget-details-name" title={selection.packageId}>{selection.packageId}</span>
                     <Badge label="Transitive" title="Installed through another package's dependencies" />
                 </h2>
-            </div>
-            <div className="nuiget-details-info">
                 <PropertyList items={[
                     { term: 'Version', value: selection.version },
                     ...(lite?.authors || lite?.verified ? [{
@@ -60,6 +57,8 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
                         </>,
                     }] : []),
                 ]} />
+            </div>
+            <div className="nuiget-details-info nuiget-details-info--continued">
                 {blocks === undefined ? <p className="nuiget-details-note">No longer listed as a transitive package.</p> : (
                     <section aria-label="Required by" className="nuiget-details-section">
                         <GroupCaption title="Required by" />

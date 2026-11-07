@@ -284,6 +284,23 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('reads the details empty state\'s top inset and the split\'s sash bounds with the two pane minimums (UX-P3.3b)', () => {
+        const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
+        panel.insertAdjacentHTML('beforeend', '<div id="empty" class="nuiget-empty" data-testid="details-empty" style="padding-top: 20px" data-rect="620,77,880,140"><p class="nuiget-empty-text" data-rect="640,97,860,115" data-text="640,97,800,115">Select a package</p></div>');
+        const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        app.insertAdjacentHTML('beforeend', '<div id="split" class="nuiget-main-split" style="--nuiget-list-pane-min: 170px; --nuiget-details-pane-min: 220px" data-rect="0,77,1200,803"><div role="separator" aria-valuemin="15" aria-valuemax="81" data-rect="420,77,424,803"></div></div>');
+        const split = document.getElementById('split') as HTMLElement;
+        Object.defineProperty(split, 'clientWidth', { value: 1200, configurable: true });
+        try {
+            const facts = collect().endOfP0;
+            expect(facts.detailsEmpty).toEqual({ top: 20 });
+            expect(facts.split).toEqual({ width: 1200, sash: 4, min: 15, max: 81, listMin: 170, detailsMin: 220 });
+        } finally {
+            document.getElementById('empty')?.remove();
+            split.remove();
+        }
+    });
+
     it('measures header proximity on border boxes and the content the header controls (UX-P2.6b)', () => {
         const layout = collect();
         // Above: the box's top minus the toolbar's bottom; below: the content's top minus the box's bottom.
@@ -527,7 +544,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             (document.querySelector('.nuiget-list') as HTMLElement).classList.add('nuiget-main-list');
             const tabBar = document.querySelector('[data-testid="tab-bar"]') as HTMLElement;
             tabBar.insertAdjacentHTML('beforeend', '<button aria-haspopup="menu" data-rect="560,45,580,65"></button><button style="display: none"></button>');
-            panel.insertAdjacentHTML('afterbegin', '<div class="nuiget-details-header" data-rect="600,100,900,180"><h2 class="nuiget-details-title" data-rect="620,120,800,140" data-text="620,120,760,140">Serilog</h2></div><div role="tab" data-rect="616,75,680,95" data-text="620,77,670,93">Readme</div>');
+            panel.insertAdjacentHTML('afterbegin', '<div class="nuiget-details-header" style="padding: 20px" data-rect="600,100,900,180"><h2 class="nuiget-details-title" data-rect="620,120,800,140" data-text="620,120,760,140">Serilog</h2></div><div role="tab" data-rect="616,75,680,95" data-text="620,77,670,93">Readme</div>');
             panel.insertAdjacentHTML('beforeend', '<span class="odd" style="font-family: serif" data-rect="620,400,700,420" data-text="620,400,690,420">Odd</span>');
             document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,300,300,322"><div class="nuiget-row-option" role="option" data-rect="0,300,300,322"><span class="nuiget-row-name" data-rect="20,303,100,319" data-text="20,303,90,319">Polly</span></div></div>');
             const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;

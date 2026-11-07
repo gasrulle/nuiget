@@ -132,9 +132,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states.
-        expect(files).toHaveLength(65);
-        expect(new Set(files).size).toBe(65);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932.
+        expect(files).toHaveLength(66);
+        expect(new Set(files).size).toBe(66);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

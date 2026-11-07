@@ -9,6 +9,7 @@ import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel,
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureExemplar, measureWorkbench } from '../workbench';
+import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
@@ -738,7 +739,9 @@ const REACH: Record<string, Reach> = {
     'main-details-readme': {
         reach: async () => {
             await gatewayInstalled();
-            await currentDetails('package-row-newtonsoft.json');
+            // Artboard A's scene: the first direct row current (UX-P3.3b); SPEC reads the select's width, so its versions are listed.
+            await currentDetails('package-row-microsoft.extensions.dependencyinjection.abstractions');
+            await until('(() => { const select = document.querySelector(\'[data-testid="version-selector"]\'); return select !== null && !select.disabled && (select.selectedOptions[0]?.textContent ?? "").endsWith("(installed)"); })()', 'the version selector listing the installed version', 60_000);
             await clickVisible('details-tab-readme');
             await until('document.querySelector(\'[data-testid="readme-content"], [data-testid="readme-empty"]\') !== null', 'the README or its empty state', 60_000);
         },
@@ -1456,7 +1459,7 @@ const chromeReferences = new Map<string, ChromeReference>();
  * capture has the spec's theme and width, else undefined: helper 8's input (UX-P0.13).
  */
 function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
-    const file = path.resolve('docs/design/artboards', `${state.name}.spec.json`);
+    const file = path.resolve('docs/design/artboards', `${artboardOf(state.name)}.spec.json`);
     if (!fs.existsSync(file)) {
         return undefined;
     }

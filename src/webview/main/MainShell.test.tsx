@@ -8,6 +8,7 @@ import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import type { ViewStateStore } from '../shared/viewState';
 import { MainShell, type BrowseView, type DetailsView, type ListView } from './MainShell';
+import { splitBounds } from './useSplitBounds';
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
@@ -295,6 +296,61 @@ describe('main panel shell', () => {
         expect(split.getAttribute('style')).toBe('--nuiget-split: 37%;');
         await user.keyboard('{End}');
         expect(split.getAttribute('style')).toBe('--nuiget-split: 75%;');
+    });
+
+    it('clamps the split to the list pane\'s 170 px and the details pane\'s 220 px as percentages of the split\'s width', () => {
+        // 1200 px with a 4 px sash: the list from 15 % (170 / 1200, rounded up), the details from 81 % down ((1200 - 4 - 220) / 1200).
+        expect(splitBounds(1200, 4, 170, 220)).toEqual({ min: 15, max: 81 });
+        expect(splitBounds(800, 4, 170, 220)).toEqual({ min: 22, max: 72 });
+        // Not laid out yet: the default 25–75 %.
+        expect(splitBounds(0, 4, 170, 220)).toEqual({ min: 25, max: 75 });
+        expect(splitBounds(800, 4, Number.NaN, 220)).toEqual({ min: 25, max: 75 });
+    });
+
+    it('shows a kept share within the measured px bounds and writes the clamped share', async () => {
+        const user = userEvent.setup();
+        let resized: (() => void) | undefined;
+        vi.stubGlobal('ResizeObserver', class {
+            constructor(callback: () => void) {
+                resized = callback;
+            }
+            observe(): void {}
+            disconnect(): void {}
+        });
+        const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+            return this.classList.contains('nuiget-main-split') ? 1200 : 0;
+        });
+        const style = vi.spyOn(CSSStyleDeclaration.prototype, 'getPropertyValue').mockImplementation(function (this: CSSStyleDeclaration, name: string) {
+            return name === '--nuiget-list-pane-min' ? '170px' : name === '--nuiget-details-pane-min' ? '220px' : '';
+        });
+        try {
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell /></StoreProvider>);
+            await act(async () => {
+                resized?.();
+                await Promise.resolve();
+            });
+            const sash = screen.getByTestId('sash');
+            // 1200 px, no sash width in jsdom: the list from 15 %, the details from 81 % down.
+            expect(sash).toHaveAttribute('aria-valuemin', '15');
+            expect(sash).toHaveAttribute('aria-valuemax', '81');
+            // A kept 15 % is restored as it was, not raised to the old 25 %.
+            await hostSays(() => host.respond(host.requests('layout/get')[0], { splitPosition: 15 }));
+            expect((sash.parentElement as HTMLElement).getAttribute('style')).toBe('--nuiget-split: 15%;');
+            sash.focus();
+            await user.keyboard('{End}');
+            expect((sash.parentElement as HTMLElement).getAttribute('style')).toBe('--nuiget-split: 81%;');
+            expect(host.requests('layout/set').map(request => request.payload)).toEqual([{ splitPosition: 81 }]);
+        } finally {
+            width.mockRestore();
+            style.mockRestore();
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it('keeps the list at its minimum when the split is narrower than both minimums', () => {
+        // 300 px cannot hold 170 + 4 + 220: the list keeps its 170 (57 %), the details take what is left.
+        expect(splitBounds(300, 4, 170, 220)).toEqual({ min: 57, max: 57 });
     });
 
     it('split position persists', async () => {

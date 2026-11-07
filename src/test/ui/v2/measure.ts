@@ -235,7 +235,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     // UX-P3.2 (design-advisor ruling): a flat Browse list or the popup has no group header, so DS-GRID-2b is registered apart
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
-    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: NO_LIST_STATES }),
+    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details'] }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -248,7 +248,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-5', { helper: 3, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details'] }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
@@ -271,7 +271,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
-    rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.coincide }),
+    // UX-P3.3b: the header's computed padding, or the empty state's top inset where the pane shows no package.
+    rule('DS-INSET-4', { helper: 2, scopes: on('P3.3b', 'details', 'main-installed', 'main-updates', 'browse'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] } }),
@@ -307,7 +308,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'] }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
@@ -325,7 +326,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'section-header-transitive-net8.0': 'P3.7a' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'section-header-transitive-net8.0': 'P3.7a', 'package-details-panel': 'P3.9', 'transitive-details': 'P3.9' }, pendingStates: { 'main-details-readme': 'P3.3b' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -682,6 +683,10 @@ export interface EndOfP0 {
     controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number }>;
     /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
     minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
+    /** UX-P3.3b: the details pane's empty state's computed top padding (DS-INSET-4's empty clause). */
+    detailsEmpty: { top: number } | undefined;
+    /** UX-P3.3b: the split's width, its sash's percent bounds and width, and the two pane minimums (DS-OVERFLOW-5's bounds). */
+    split: { width: number; sash: number; min: number; max: number; listMin: number; detailsMin: number } | undefined;
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
     fonts: { root: string; others: string[] };
@@ -793,7 +798,7 @@ const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0, cellList = 'installed'] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, detailsEmpty: undefined, split: undefined, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -1335,6 +1340,13 @@ const detailsTitleEl = scope.querySelector('.nuiget-details-title');
 const detailsTab = scope.querySelector('[data-testid="package-details-panel"] [role="tab"]');
 const detailsTabLabel = detailsTab ? union(leafRects(detailsTab)) : undefined;
 const detailsTitleText = visible(detailsTitleEl) ? union(leafRects(detailsTitleEl)) : undefined;
+// UX-P3.3b: DS-INSET-4 reads the header's computed padding, as its measurement column says (a leaf union carries the
+// title's half-leading and the free space after it).
+const paddingInsets = box => { const style = getComputedStyle(box); return { start: round(px(style.paddingLeft)), end: round(px(style.paddingRight)), top: round(px(style.paddingTop)), bottom: round(px(style.paddingBottom)) }; };
+const detailsEmptyEl = scope.querySelector('[data-testid="package-details-panel"] [data-testid="details-empty"]');
+const splitEl = scope.querySelector('.nuiget-main-split');
+const sashEl = splitEl ? splitEl.querySelector(':scope > [role="separator"]') : null;
+const splitFacts = splitEl && sashEl && visible(splitEl) ? (() => { const style = getComputedStyle(splitEl); return { width: round(splitEl.clientWidth), sash: round(sashEl.getBoundingClientRect().width), min: Number(sashEl.getAttribute('aria-valuemin')), max: Number(sashEl.getAttribute('aria-valuemax')), listMin: px(style.getPropertyValue('--nuiget-list-pane-min')), detailsMin: px(style.getPropertyValue('--nuiget-details-pane-min')) }; })() : undefined;
 // The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
 const sideways = [document.documentElement, ...scope.querySelectorAll('*')]
     .filter(el => el === document.documentElement || (/auto|scroll/.test(getComputedStyle(el).overflowX) && !el.closest('.nuiget-listbox')))
@@ -1512,11 +1524,13 @@ const endOfP0 = {
         groupLines: shown('.nuiget-row-group--divided').map(el => getComputedStyle(el, '::before').borderTopColor),
     },
     listPaneWidth: pane && visible(pane) ? round(rectOf(pane).width) : undefined,
-    detailsHeader: visible(detailsHeaderEl) ? { insets: contentInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
+    detailsHeader: visible(detailsHeaderEl) ? { insets: paddingInsets(detailsHeaderEl), titleLeft: detailsTitleText ? round(detailsTitleText.left) : undefined, tabLabelLeft: detailsTabLabel ? round(detailsTabLabel.left) : undefined } : undefined,
     sideways,
     controlsOut,
     // Both integers, so a fractional pane width cannot read as an overflow (DS-OVERFLOW-5).
     minContent: { toolbar: visible(toolbarEl) ? { scroll: toolbarEl.scrollWidth, client: toolbarEl.clientWidth } : undefined, header: visible(detailsHeaderEl) ? { scroll: detailsHeaderEl.scrollWidth, client: detailsHeaderEl.clientWidth } : undefined },
+    detailsEmpty: visible(detailsEmptyEl) ? { top: round(px(getComputedStyle(detailsEmptyEl).paddingTop)) } : undefined,
+    split: splitFacts,
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
@@ -2173,12 +2187,18 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         case 'DS-INSET-4': {
             const header = facts.detailsHeader;
             if (header === undefined || header.insets === undefined) {
-                return notMeasurable('no details header');
+                // UX-P3.3b: a pane without a package shows the empty state at the same top inset.
+                if (facts.detailsEmpty !== undefined) {
+                    return { value: `empty top ${facts.detailsEmpty.top} (target ${DETAILS_INSET})`, pass: near(facts.detailsEmpty.top, DETAILS_INSET, tolerance) };
+                }
+                return notMeasurable('no details header or empty state');
             }
             const { start, end, top, bottom } = header.insets;
-            const aligned = header.titleLeft !== undefined && header.tabLabelLeft !== undefined ? near(header.titleLeft, header.tabLabelLeft, tolerance) : false;
+            // The transitive view has no tabs by design (interaction model §7): the title alone sets the x.
+            const noTabs = header.tabLabelLeft === undefined;
+            const aligned = header.titleLeft !== undefined && (noTabs || near(header.titleLeft, header.tabLabelLeft as number, tolerance));
             return {
-                value: `header ${start}/${end} ${top}/${bottom} (target ${DETAILS_INSET}); title ${header.titleLeft ?? 'absent'}, tab label ${header.tabLabelLeft ?? 'absent'}`,
+                value: `header ${start}/${end} ${top}/${bottom} (target ${DETAILS_INSET}); title ${header.titleLeft ?? 'absent'}, tab label ${noTabs ? 'absent (no tabs)' : header.tabLabelLeft}`,
                 pass: [start, end, top, bottom].every(inset => near(inset, DETAILS_INSET, tolerance)) && aligned,
             };
         }
@@ -2467,13 +2487,27 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-OVERFLOW-5': {
             const { toolbar, header } = facts.minContent;
-            if (toolbar === undefined || header === undefined) {
+            const split = facts.split;
+            if (toolbar === undefined && header === undefined) {
                 return notMeasurable('no list toolbar or details header');
             }
-            return {
-                value: `toolbar min-content ${toolbar.scroll} in ${toolbar.client}; header min-content ${header.scroll} in ${header.client}`,
-                pass: toolbar.scroll <= toolbar.client + tolerance && header.scroll <= header.client + tolerance,
-            };
+            const fits = (part: { scroll: number; client: number } | undefined) => part === undefined || part.scroll <= part.client + tolerance;
+            const parts = [
+                toolbar === undefined ? 'toolbar absent' : `toolbar min-content ${toolbar.scroll} in ${toolbar.client}`,
+                header === undefined ? 'header absent' : `header min-content ${header.scroll} in ${header.client}`,
+            ];
+            // UX-P3.3b: the sash's percent bounds keep the panes at their px minimums (the list's wins when both cannot fit).
+            let boundsHold = true;
+            if (split !== undefined && split.width > 0) {
+                const listAtMin = tenth(split.min / 100 * split.width);
+                const detailsAtMax = tenth(split.width - split.sash - split.max / 100 * split.width);
+                const crossed = split.width < split.listMin + split.sash + split.detailsMin;
+                boundsHold = crossed ? listAtMin >= split.listMin - TOLERANCES.coincide : listAtMin >= split.listMin - TOLERANCES.coincide && detailsAtMax >= split.detailsMin - TOLERANCES.coincide;
+                parts.push(crossed
+                    ? `bounds ${split.min}%..${split.max}% crossed, list at ${listAtMin} (≥ ${split.listMin})`
+                    : `bounds ${split.min}%..${split.max}% (list ${listAtMin} ≥ ${split.listMin}, details ${detailsAtMax} ≥ ${split.detailsMin})`);
+            }
+            return { value: parts.join('; '), pass: fits(toolbar) && fits(header) && boundsHold };
         }
         case 'DS-ALIGN-1': {
             if (facts.factLefts.length === 0) {
@@ -2559,7 +2593,7 @@ function evaluateType(definition: RuleDefinition, layout: Layout, look: 'modern'
             if (facts.verifiedMarks.length === 0) {
                 return notMeasurable('no Verified mark');
             }
-            const offSize = facts.verifiedMarks.filter(mark => mark.w !== mark.h || ![12, 16].includes(mark.w));
+            const offSize = facts.verifiedMarks.filter(mark => mark.w !== mark.h || mark.w !== 12);
             const offColour = facts.verifiedMarks.filter(mark => !sameColour(mark.colour, facts.verifiedForeground));
             return { value: `${facts.verifiedMarks.length} marks, ${tally(facts.verifiedMarks.map(mark => `${mark.w}×${mark.h}`))}; ${offColour.length} off ${facts.verifiedForeground}`, pass: offSize.length === 0 && offColour.length === 0 };
         }
@@ -2916,7 +2950,7 @@ function sameLength(actual: string, expected: string, tolerance: number): boolea
 /** SPEC's scopes by test id; `list` is every other id (UX-P2.8a). */
 const SPEC_SCOPE_IDS: Readonly<Partial<Record<Scope, readonly string[]>>> = {
     header: ['project-selector', 'source-selector', 'source-settings', 'refresh-button', 'search-input'],
-    details: ['package-details-panel', 'uninstall-button', 'version-selector', 'install-update-button', 'details-tab-details', 'details-tab-readme', 'transitive-details'],
+    details: ['package-details-panel', 'uninstall-button', 'version-selector', 'install-update-button', 'details-tab-details', 'details-tab-readme', 'transitive-details', 'details-empty'],
     readme: ['readme-content'],
 };
 const SPEC_NAMED = Object.values(SPEC_SCOPE_IDS).flat();
@@ -2935,15 +2969,35 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
     const later: string[] = [];
     const styleOff: string[] = [];
     let pendingCount = 0;
+    // UX-P3.3b: while a later item moves the details panel itself (the sash's 4 px band, P3.9), a child's x and inset are
+    // read relative to the panel, and its width too when the spec draws it as wide as the panel; y, h and every other
+    // width stay absolute. Leaves with the panel's pending entry.
+    const PANEL = 'package-details-panel';
+    const panelPending = definition.pendingIds?.[PANEL] !== undefined && spec[PANEL] !== undefined && layout.testIds[PANEL] !== undefined;
+    const panelDx = panelPending ? (layout.testIds[PANEL] as { rect: { x: number } }).rect.x - spec[PANEL].rect.x : 0;
+    const panelDw = panelPending ? (layout.testIds[PANEL] as { rect: { w: number } }).rect.w - spec[PANEL].rect.w : 0;
+    const insidePanel = (id: string): boolean => {
+        if (!panelPending || id === PANEL) {
+            return false;
+        }
+        const outer = spec[PANEL].rect;
+        const inner = spec[id].rect;
+        return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5;
+    };
+    let relative = false;
     for (const id of required) {
         const actual = layout.testIds[id];
         if (actual === undefined) {
             continue;
         }
         const expected = spec[id];
+        const inside = insidePanel(id);
+        relative = relative || inside;
+        const dx = inside ? panelDx : 0;
+        const dw = inside && Math.abs(expected.rect.w - spec[PANEL].rect.w) <= 0.5 ? panelDw : 0;
         const deltas = {
-            x: tenth(actual.rect.x - expected.rect.x), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w),
-            h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset),
+            x: tenth(actual.rect.x - expected.rect.x - dx), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w - dw),
+            h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset - dx),
         };
         const named = Object.entries(deltas).filter(([, delta]) => Math.abs(delta) > tolerance);
         const owner = definition.pendingIds?.[id];
@@ -2968,7 +3022,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         }
     }
     const within = required.length - missing.length - off.length - pendingCount;
-    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}`] : [];
+    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}${relative ? ` (x and inset relative to ${PANEL}, pending ${definition.pendingIds?.[PANEL]})` : ''}`] : [];
     if (composed.length > 0) {
         parts.push(`composed (${spec[composed[0]].composed}): ${composed.join(', ')}`);
     }

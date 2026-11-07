@@ -111,9 +111,9 @@ body {
     display: flex;
     flex: none;
     flex-direction: column;
-    width: var(--nuiget-split, 50%);
+    /* The sash's share, clamped in px: the list keeps 170, the details 220 (UX-P3.3b); when both cannot fit, the list keeps its 170. */
+    width: clamp(var(--nuiget-list-pane-min), var(--nuiget-split, 50%), calc(100% - var(--nuiget-details-pane-min) - var(--nuiget-sash-size)));
     min-width: 0;
-    /* The px floor under the sash's 25–75 %; the sash's px bounds are P3.3b's. */
     min-inline-size: var(--nuiget-list-pane-min);
     background: var(--nuiget-color-bg-sidebar);
 }
@@ -124,6 +124,7 @@ body {
  * the details pane at the editor's narrowest (UX-P2.fix-4).
  */
 .nuiget-main-details {
+    --nuiget-empty-inset-block: var(--nuiget-inset-details);
     container: nuiget-pane / inline-size;
     display: flex;
     flex: 1;
@@ -177,6 +178,7 @@ body {
 
 .nuiget-details {
     --nuiget-message-inset: var(--nuiget-inset-details);
+    --nuiget-tab-strip-inset: var(--nuiget-inset-details);
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -192,15 +194,27 @@ body {
     flex: none;
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-3);
-    padding: var(--nuiget-space-4) var(--nuiget-inset);
+    gap: var(--nuiget-space-4);
+    padding: var(--nuiget-inset-details);
+    /* The header's banners start at the title's x. */
+    --nuiget-message-inset: 0;
 }
 
+/* One line: the name ellipsizes, a badge beside it keeps its width (the round-3 transitive page). */
 .nuiget-details-title {
+    display: flex;
+    align-items: center;
+    gap: var(--nuiget-space-4);
     margin: 0;
     font-size: var(--nuiget-font-size-lg);
     font-weight: var(--nuiget-font-weight-semibold);
-    overflow-wrap: anywhere;
+}
+
+.nuiget-details-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /*
@@ -211,8 +225,20 @@ body {
 .nuiget-details-actions {
     display: grid;
     grid-template-columns: max-content minmax(0, max-content) max-content max-content;
-    gap: var(--nuiget-space-3) var(--nuiget-space-4);
+    gap: var(--nuiget-space-2) var(--nuiget-space-4);
     align-items: center;
+}
+
+/* The installed version starts where the select's text does. */
+.nuiget-details-value {
+    padding-inline-start: var(--nuiget-space-3);
+}
+
+/* Below 250 px of the pane the header is one column: label, value and each button on its own row (design-system §8). */
+@container nuiget-pane (max-width: 250px) {
+    .nuiget-details-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .nuiget-details-label {
@@ -227,7 +253,7 @@ body {
 
 .nuiget-details-info,
 .nuiget-readme {
-    padding: var(--nuiget-space-4) var(--nuiget-inset);
+    padding: var(--nuiget-inset-details);
     overflow-wrap: anywhere;
 }
 
@@ -240,7 +266,13 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-space-4);
-    margin-top: var(--nuiget-space-6);
+    margin-top: var(--nuiget-details-section-gap, var(--nuiget-space-6));
+}
+
+/* The transitive body continues the header block: no top padding, its first section flush. */
+.nuiget-details-info--continued {
+    --nuiget-details-section-gap: 0;
+    padding-block-start: 0;
 }
 
 /* The dependency groups stack at the compact row height. */

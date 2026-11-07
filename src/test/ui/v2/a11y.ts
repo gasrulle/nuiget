@@ -132,12 +132,19 @@ export interface AxePending {
 
 /**
  * The axe results of today's tree that later items remove, each with its item; the state lists are exact, never widened,
- * never a wildcard. Empty since UX-P0.25: the three undecided `color-contrast` cases of UX-P0.23 (rows beyond a scroller's
- * fold, the empty messages under the quick-search popup, the Update-all dialog's bullets over the content beneath it) are
- * decided by the resolve pass (`RESOLVE_CONTRAST`), which decided every node of their 17 states in run 40152178889, in both
- * looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
+ * never a wildcard. Empty from UX-P0.25 to UX-P3.3b: the three undecided `color-contrast` cases of UX-P0.23 (rows beyond a
+ * scroller's fold, the empty messages under the quick-search popup, the Update-all dialog's bullets over the content beneath
+ * it) are decided by the resolve pass (`RESOLVE_CONTRAST`), which decided every node of their 17 states in run 40152178889,
+ * in both looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
+ * Since UX-P3.3b it holds the two README results of `main-details-readme` until UX-P3.4.
  */
-export const AXE_PENDING: readonly AxePending[] = [];
+export const AXE_PENDING: readonly AxePending[] = [
+    // The first-row scene of UX-P3.3b (design-advisor ruling of 2026-11-07): the README of
+    // Microsoft.Extensions.DependencyInjection.Abstractions has inline links at 1.54:1 against the body text and link-only
+    // list items under 24 px; README link styling and type are UX-P3.4's (A5, A8, DETAILS-CONTRAST).
+    { rule: 'link-in-text-block', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+    { rule: 'target-size', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+];
 
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {

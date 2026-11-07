@@ -186,8 +186,8 @@ export const STATES: readonly NamedState[] = [
         '"Serilog" typed with its suggestions failed, one fixed sentence: the error row "Press → to retry" (marker search-suggestions-error, UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-quicksearch-grouped', 'main', [primary('main')],
         '"Serilog" typed with its one live nuget.org answer split in two groups, the second under an unreachable source by design: the quick-pick separator and the two labels (UX-P3.2).', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
-    { ...ready('main-details-readme', 'main', [primary('main')],
-        'Gateway selected, Newtonsoft.Json made current, the README tab; the README or its empty state is shown.', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-details-readme', 'main', [primary('main'), { theme: 'dark-modern', look: 'modern', width: 932 }, { theme: 'dark-modern', look: 'classic', width: 932 }],
+        'Gateway selected, the first direct row (Microsoft.Extensions.DependencyInjection.Abstractions) made current, the README tab; the README or its empty state is shown (artboard A\'s scene, UX-P3.3b).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('sidebar-sections', 'sidebar', [
         ...themeSensitive('sidebar'),
         { theme: 'dark-modern', look: 'modern', width: 250 },

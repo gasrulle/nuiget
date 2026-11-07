@@ -37,8 +37,12 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(FULL_AXE_STATUS).toBe('hard');
         expect(AXE_EXTRA_RULES).toEqual(['target-size', 'label-content-name-mismatch']);
         // The design-advisor ruling of 2026-10-25 (UX-P0.25): the resolve pass decided the three undecided contrast cases of
-        // UX-P0.23 in every state (run 40152178889), so no result is pending.
-        expect(AXE_PENDING).toEqual([]);
+        // UX-P0.23 in every state (run 40152178889). Since UX-P3.3b (design-advisor ruling of 2026-11-07) two README results of
+        // the first-row scene wait for UX-P3.4, on that one state.
+        expect(AXE_PENDING).toEqual([
+            { rule: 'link-in-text-block', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+            { rule: 'target-size', kind: 'violation', item: 'P3.4', states: ['main-details-readme'] },
+        ]);
         expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group', 'target-size .nuiget-row-message', 'target-size .nuiget-row-message']);
         expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-message']);
         expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-message']);

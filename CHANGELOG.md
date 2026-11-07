@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search results line up with the installed packages, show their description in the regular size and show where they are loading or failed in place**
 - **Quick-search suggestions from several sources are separated as in VS Code's quick open, and a failed quick search says so and can be retried with the Right arrow**
 - **Package details list their facts in aligned columns and count dependencies with badges**
+- **The package details pane has the editor's margins, keeps its title on one line and stays usable however narrow the split**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

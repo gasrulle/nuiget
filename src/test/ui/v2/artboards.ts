@@ -234,3 +234,12 @@ export function pixelAt(png: string, x: number, y: number): number[] {
     const decoder = pathToFileURL(path.resolve('scripts/crop-png.mjs')).href;
     return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', PIXEL_AT, decoder, png, String(Math.round(x)), String(Math.round(y))], { encoding: 'utf8' })) as number[];
 }
+
+/**
+ * The artboard whose spec a state is compared with: `main-details-readme` is artboard A's declared scene (its first row
+ * current, the README tab; `round1/A-Extensions.dc.html`'s composition), so it reads `main-installed-single`'s spec
+ * (UX-P3.3b); every other state reads its own.
+ */
+export function artboardOf(state: string): string {
+    return state === 'main-details-readme' ? 'main-installed-single' : state;
+}

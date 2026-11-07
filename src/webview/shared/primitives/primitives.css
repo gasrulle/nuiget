@@ -975,7 +975,8 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-4) var(--nuiget-space-7);
+    /* The block inset is a carrier a pane sets (the details pane's 20, UX-P3.3b); 8 by default. */
+    padding: var(--nuiget-empty-inset-block, var(--nuiget-space-4)) var(--nuiget-space-7);
     color: var(--nuiget-color-fg-muted);
     text-align: start;
 }

@@ -220,7 +220,10 @@ same rules; the Installed list has no Ctrl+Enter action.
 The pane is laid out like an editor: its content starts at a 20 px inset, the package title is 18 px semibold, and
 the header stays in view while the Details and README content scrolls under it. The header holds the title, the
 installed version with Uninstall, and the version selector with the primary button; when it does not fit, it wraps,
-labels with their values first and the buttons on their own line.
+labels with their values first and the buttons on their own line. The title stays on one line: a long package id
+ellipsizes, with the full id in its tooltip. Below 250 px of the pane the header is one column: label, value and each
+button on its own row. A disabled primary button says why: in the note under the buttons when one shows, in its tooltip
+otherwise. The split keeps the list at least 170 px and the details pane at least 220 px wide.
 
 Tabs (`role="tablist"`) sit in a 36 px strip whose labels start at the title's x: **Details** (the description, then a
 property list: Version, Authors with the Verified mark, License, Downloads, Package size, Date published, Project URL
@@ -261,6 +264,8 @@ project has several and one block per project in All Projects; no version select
 | `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, the sidebar's two until their lists become trees); in a group row, the title inside the treeitem, with no button, named by the group's id |
 | `section-header-transitive-<tfm>` | The title inside one target framework's group row under Transitive (a project with several) |
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
+| `details-header`, `details-tab-bar` | The details pane's header (its 20 px inset is measured on it, in the package and the transitive views) and its 36 px tab strip |
+| `details-empty` | The details pane's empty state, "Select a package to see its details." |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
@@ -329,8 +334,7 @@ is a project or section name lower-cased, as above.
 | Added by | Test id or attribute | Element |
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
-| Browse and details | `details-header`, `details-tab-bar` | The details pane's header (its 20 px inset is measured on it) and its 36 px tab strip |
-| Browse and details | `details-progress`, `details-empty`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, empty state ("Select a package to see its details."), inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
+| Browse and details | `details-progress`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
 | Sources | `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The source settings dialog's progress bar, empty state and inline error |
 | Sidebar | `sidebar-installed-progress`, `sidebar-updates-progress`, `sidebar-browse-progress` | The 2 px progress bar of each sidebar list (loading and revalidating) |
 | Sidebar | `sidebar-updates-error`, `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's missing state markers: the Updates error and the Browse empty and error states |

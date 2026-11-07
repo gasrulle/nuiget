@@ -583,6 +583,11 @@ describe('main panel: Installed tab', () => {
         }
         // The facts are a property list with no colons (DS-COPY-2), the caption a heading of its own (DS-TYPE-9).
         expect([...details.querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Authors']);
+        // The facts sit in the header under the one-line title, whose name carries the full id as its tooltip (UX-P3.3b).
+        const detailsHeader = within(details).getByTestId('details-header');
+        expect([...detailsHeader.querySelectorAll('dt')]).toHaveLength(2);
+        expect(detailsHeader).toHaveTextContent('Transitive');
+        expect(detailsHeader.querySelector('.nuiget-details-name')).toHaveAttribute('title', detailsHeader.querySelector('.nuiget-details-name')?.textContent ?? '');
         expect(within(details).getByRole('heading', { level: 3, name: 'Required by' })).toHaveClass('nuiget-group-caption');
         expect(host.requests('package/versions')).toHaveLength(0);
         expect(host.requests('package/metadata')).toHaveLength(0);

@@ -19,7 +19,7 @@ const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {})
     browsing: false, flatList: false, documentOverflow: undefined,
     endOfP0: {
         rows: [], listSelection: { active: 'rgb(4, 57, 94)', inactive: 'rgb(55, 55, 61)' }, focusCoincides: [], buttonSecondary: { hover: '', rest: '' }, iconColours: { icon: 'rgb(204, 204, 204)', active: 'rgb(255, 255, 255)', disabled: 'rgb(90, 90, 90)', warning: 'rgb(204, 167, 0)', hoverBg: 'rgba(90, 93, 94, 0.31)' }, tabColours: { active: 'rgb(231, 231, 231)', inactive: 'rgb(157, 157, 157)', indicator: 'rgb(0, 120, 212)' }, actionRadius: '4px', contrastBorder: '', uppercaseHeaders: false, titles: { panel: undefined, details: undefined, dialog: undefined }, headings: [], dividers: { key: '', header: undefined, tabStrips: [], groupLines: [] }, listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined },
-        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [],
+        factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], detailsEmpty: undefined, split: undefined,
         focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [], unselectable: [],
         stateCells: { testIds: [], rows: 0, disabledVersions: [], skeletonRows: 0, listBusy: false, progressTop: undefined, contentTop: undefined, empties: [], banners: [], roles: [] },
     },
@@ -139,7 +139,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
-        expect(scopes('DS-INSET-4')).toEqual({ details: { pending: 'P3.3b' } });
+        // UX-P3.3b: the empty state's top inset in the three main groups too.
+        expect(scopes('DS-INSET-4')).toEqual(Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, { pending: 'P3.3b' }])));
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -686,6 +687,22 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: true, status: { pending: 'P3.3b' } });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 16, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
+        // UX-P3.3b: the transitive view has no tabs by design; a pane without a package reads its empty state's top inset.
+        expect(value('main-transitive-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 444, tabLabelLeft: undefined } }), 'DS-INSET-4@main-transitive-details'))
+            .toMatchObject({ pass: true, value: 'header 20/20 20/20 (target 20); title 444, tab label absent (no tabs)' });
+        expect(value('main-updates', facts({ detailsEmpty: { top: 20 } }), 'DS-INSET-4@main-updates')).toMatchObject({ pass: true, value: 'empty top 20 (target 20)', status: { pending: 'P3.3b' } });
+        expect(value('main-updates', facts({ detailsEmpty: { top: 8 } }), 'DS-INSET-4@main-updates')).toMatchObject({ pass: false, value: 'empty top 8 (target 20)' });
+        expect(value('main-updates', facts({}), 'DS-INSET-4@main-updates')).toMatchObject({ pass: false, value: expect.stringContaining('not measurable (no details header or empty state)') });
+        // UX-P3.3b: DS-OVERFLOW-5 reads the toolbar and the header apart, and the sash's bounds against the two px minimums.
+        const split = (width: number, min: number, max: number) => ({ width, sash: 4, min, max, listMin: 170, detailsMin: 220 });
+        expect(value('main-browse-details', facts({ minContent: { toolbar: undefined, header: { scroll: 776, client: 776 } }, split: split(1200, 15, 81) }), 'DS-OVERFLOW-5@main-browse-details'))
+            .toMatchObject({ pass: true, value: 'toolbar absent; header min-content 776 in 776; bounds 15%..81% (list 180 ≥ 170, details 224 ≥ 220)' });
+        expect(value('main-installed-details', facts({ minContent: { toolbar: undefined, header: { scroll: 226, client: 226 } }, split: split(1200, 25, 75) }), 'DS-OVERFLOW-5@main-installed-details'))
+            .toMatchObject({ pass: true });
+        expect(value('main-installed-details', facts({ minContent: { toolbar: undefined, header: { scroll: 226, client: 226 } }, split: split(1200, 10, 90) }), 'DS-OVERFLOW-5@main-installed-details'))
+            .toMatchObject({ pass: false, value: expect.stringContaining('bounds 10%..90% (list 120 ≥ 170, details 116 ≥ 220)') });
+        expect(value('main-installed-details', facts({ minContent: { toolbar: undefined, header: { scroll: 100, client: 100 } }, split: split(300, 57, 57) }), 'DS-OVERFLOW-5@main-installed-details'))
+            .toMatchObject({ pass: true, value: expect.stringContaining('bounds 57%..57% crossed, list at 171 (≥ 170)') });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700, 712]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-details', facts({ factLefts: [[700, 700], [640, 640]] }), 'DS-ALIGN-1@main-installed-details')).toMatchObject({ pass: true });
         expect(value('main-details-readme', facts({}), 'DS-ALIGN-1@main-details-readme')).toBeUndefined();
@@ -707,9 +724,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(value('main-installed-single', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-single')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ textStyles: [text(13, 700)] }), 'DS-TYPE-3@main-installed-details')).toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-single', facts({ lookTokens: { '--nuiget-scrollbar-size': '10px' } }), 'DS-LOOK-1@main-installed-single')).toMatchObject({ pass: false, status: 'hard' });
-        // UX-P1.4b: the Verified mark, 12 or 16 px in its role's colour; never a pass without one.
+        // UX-P1.4b: the Verified mark, 12 px in its role's colour (the 16 px clause dropped at UX-P3.3b); never a pass without one.
         const mark = (overrides: Record<string, unknown> = {}) => ({ w: 12, h: 12, colour: 'rgb(77, 170, 252)', ...overrides });
-        expect(value('main-installed-details', facts({ verifiedMarks: [mark(), mark({ w: 16, h: 16 })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: true, status: 'hard' });
+        expect(value('main-installed-details', facts({ verifiedMarks: [mark(), mark()], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: true, status: 'hard' });
+        expect(value('main-installed-details', facts({ verifiedMarks: [mark({ w: 16, h: 16 })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ verifiedMarks: [mark({ w: 14, h: 14 })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ verifiedMarks: [mark({ colour: 'rgb(0, 0, 0)' })], verifiedForeground: '#4daafc' }), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({}), 'DS-ICON-4@main-installed-details')).toMatchObject({ pass: false, value: expect.stringContaining('not measurable') });
@@ -761,9 +779,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
-        for (const id of ['DS-GRID-2b', 'DS-OVERFLOW-2']) {
-            expect(RULES.find(rule => rule.id === id)?.exceptStates, id).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList]);
-        }
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList]);
+        // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
+        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, 'main-browse-details']);
         // A list with no row and only its empty sentence has no group header either (the Updates tab of one project, UX-P3.1b).
         const empties = [{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 }];
         expect(lineOf('main-updates-empty', cells({ empties }), 'DS-INSET-3@main-updates-empty/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
@@ -949,7 +967,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // An id a later item owns prints and leaves the verdict.
         expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
         // The later scopes print on their owners.
-        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: false, status: { pending: 'P3.3b' }, value: '0/1 within 1; composed (main-details-readme): uninstall-button; off: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
+        // UX-P3.3b: the panel's own offset is the sash's (P3.9); a child inside it is read relative to it.
+        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: true, status: { pending: 'P3.3b' }, value: '0/0 within 1; composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
+        const withEmpty: SpecLook = { ...spec, 'details-empty': element(328, 77, 604, 60) };
+        expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 77, 601, 60) }, withEmpty))
+            .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
+        expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 85, 601, 60) }, withEmpty))
+            .toMatchObject({ pass: false, value: expect.stringContaining('off: details-empty Δy 8') });
         expect(at('readme', {})).toMatchObject({ status: { pending: 'P3.4' }, value: 'composed (main-details-readme): readme-content' });
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
         expect(measureLines('main-installed-single', layout({ testIds: {} }), 'modern', {}, undefined, 932, undefined).find(line => line.name === 'SPEC@main-installed-single/header')).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });

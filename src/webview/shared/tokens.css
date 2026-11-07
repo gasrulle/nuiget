@@ -41,6 +41,8 @@
     --nuiget-row-inset-x: 0px;
     /* The side-bar part's minimum, sidebarPart.ts:48 (DS-OVERFLOW-1, §8). */
     --nuiget-list-pane-min: 170px;
+    /* The editor part's minimum, editor.ts:29 (DS-OVERFLOW-5, §8 details-pane minimum). */
+    --nuiget-details-pane-min: 220px;
 
     /* Radius: the workbench corner tiers (`--vscode-cornerRadius-*`, exported from 1.110.1) (DS-RADIUS-1, DS-RADIUS-2) */
     --nuiget-radius-xs: var(--vscode-cornerRadius-xSmall, 2px);
