@@ -132,7 +132,7 @@ in "..."; each surface writes counts one way.
 | Uninstall (single) | Details button, row action, the Delete key on an Installed or Updates row, the actions menu | The Delete key asks first, as the Explorer's Delete does: "Uninstall <id> from <project>?" with Uninstall, Cancel and "Do not ask me again". The button, the row action and the menu item name the action and do not ask. |
 | Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update all) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. Whether the sidebar keeps the in-panel dialog or uses VS Code's modal, as its central updates do, is ruled in the sidebar phase (X9). |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project | Main panel details button and Ctrl+Enter: the pane asks `cpm/preview` first and opens the **Dialog** (`cpm-preview-dialog`) only when an entry exists, listing the projects the central version applies to; choice: *Update Central Version* / Cancel. The actions menu, on either surface: VS Code's modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no CPM confirmation (the central entry stays). |
-| Remove source | Source settings | In-dialog confirm row (existing pattern). |
+| Remove source | Source settings | **ConfirmDialog** (`alertdialog`) over the sources dialog: 'Remove <name>?', "Removes <name> from <file>. This cannot be undone."; Remove / Cancel, focus on Cancel. |
 | Restore project(s) | Transitive banner | None. Whether Restore becomes a command, a menu item or a header button is a feature-phase decision (X39). |
 
 Terminology: UI says **Install / Update / Uninstall / Restore**. Protocol uses `remove`.
@@ -269,7 +269,8 @@ project has several and one block per project in All Projects; no version select
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
-| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the indicator shows while a source is unreachable) |
+| `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |
+| `source-settings-list`, `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The sources dialog's list (`aria-busy` while it refreshes), its progress bar over the top, its empty state and its inline error with Retry above the kept list (UX-P3.6) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |
@@ -335,7 +336,6 @@ is a project or section name lower-cased, as above.
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Browse and details | `details-progress`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
-| Sources | `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The source settings dialog's progress bar, empty state and inline error |
 | Sidebar | `sidebar-installed-progress`, `sidebar-updates-progress`, `sidebar-browse-progress` | The 2 px progress bar of each sidebar list (loading and revalidating) |
 | Sidebar | `sidebar-updates-error`, `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's missing state markers: the Updates error and the Browse empty and error states |
 

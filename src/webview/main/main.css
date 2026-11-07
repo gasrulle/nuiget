@@ -540,14 +540,28 @@ body {
 
 /* ── NuGet sources dialog ── */
 
+/* The list mode's cells (UX-P3.6): the bar overlays the top and moves nothing; a banner or an empty sentence sits on the
+   dialog's own inset. The dialog is the scroller. */
+.nuiget-sources {
+    --nuiget-message-inset: 0;
+    --nuiget-empty-inset-inline: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-block-gap-outer);
+}
+
+.nuiget-sources-progress {
+    position: absolute;
+    inset: 0 0 auto 0;
+}
+
 .nuiget-source-list {
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-space-2);
-    max-height: 50vh;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
     list-style: none;
 }
 
@@ -576,12 +590,6 @@ body {
     color: var(--nuiget-color-fg-muted);
     font-size: var(--nuiget-font-size-sm);
     overflow-wrap: anywhere;
-}
-
-.nuiget-source-confirm {
-    display: flex;
-    align-items: center;
-    gap: var(--nuiget-space-3);
 }
 
 .nuiget-add-source {

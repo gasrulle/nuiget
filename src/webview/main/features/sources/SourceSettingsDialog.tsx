@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import type { NuGetSource, RequestPayload } from '../../../../protocol';
-import { Banner, Button, Checkbox, Dialog, EmptyState, IconButton, Select, TextField, TrashIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, Button, Checkbox, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon, WarningIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
 
@@ -14,14 +14,18 @@ export interface SourceSettingsDialogProps {
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
+/** A message as one sentence: one full stop at its end. */
+const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
+
 /** The test id of a source's row: its name lower-cased. */
 export const sourceRowId = (name: string): string => `source-row-${name.toLowerCase()}`;
 
-function SourceRow({ source, announce }: { source: NuGetSource; announce: (message: string) => void }): React.JSX.Element {
-    const { pending, setEnabled, remove } = useSources();
-    const [confirming, setConfirming] = useState(false);
+function SourceRow({ source, fileLabel, announce, onRemove }: { source: NuGetSource; fileLabel: string | undefined; announce: (message: string) => void; onRemove: (source: NuGetSource) => void }): React.JSX.Element {
+    const { pending, setEnabled } = useSources();
     const busy = pending.has(source.name);
     const toggleId = useId();
+    const urlId = useId();
+    const fileId = useId();
 
     const toggle = (): void => {
         setEnabled(source.name, !source.enabled).then(
@@ -29,31 +33,17 @@ function SourceRow({ source, announce }: { source: NuGetSource; announce: (messa
             (error: unknown) => announce(`${source.name} could not be ${source.enabled ? 'disabled' : 'enabled'}: ${messageOf(error)}`),
         );
     };
-    const confirmRemove = (): void => {
-        setConfirming(false);
-        remove(source.name, source.configFile).then(
-            () => announce(`${source.name} removed`),
-            (error: unknown) => announce(`${source.name} could not be removed: ${messageOf(error)}`),
-        );
-    };
 
+    // The check box is named by the source alone; its URL and the file that declares it describe it (UX-P3.6).
     return (
         <li className="nuiget-source-row" data-testid={sourceRowId(source.name)} aria-busy={busy || undefined}>
-            <Checkbox id={toggleId} checked={source.enabled} disabled={busy} onChange={toggle} />
-            <label htmlFor={toggleId} className="nuiget-source-text">
-                <span className={source.enabled ? 'nuiget-source-name' : 'nuiget-source-name nuiget-source-name--off'}>{source.name}</span>
-                <span className="nuiget-source-url">{source.url}</span>
-                {source.configFile ? <span className="nuiget-source-config">{source.configFile}</span> : null}
-            </label>
-            {confirming ? (
-                <span className="nuiget-source-confirm" role="group" aria-label={`Remove ${source.name}?`}>
-                    <span>{`Remove ${source.name} from ${source.configFile ?? 'the nearest config file'}?`}</span>
-                    <Button onClick={confirmRemove}>Remove</Button>
-                    <Button variant="secondary" onClick={() => setConfirming(false)}>Cancel</Button>
-                </span>
-            ) : (
-                <IconButton label={`Remove ${source.name}`} disabled={busy} onClick={() => setConfirming(true)}><TrashIcon /></IconButton>
-            )}
+            <Checkbox id={toggleId} checked={source.enabled} disabled={busy} onChange={toggle} aria-describedby={source.configFile ? `${urlId} ${fileId}` : urlId} />
+            <span className="nuiget-source-text">
+                <label htmlFor={toggleId} className={source.enabled ? 'nuiget-source-name' : 'nuiget-source-name nuiget-source-name--off'}>{source.name}</label>
+                <span id={urlId} className="nuiget-source-url">{source.url}</span>
+                {source.configFile ? <span id={fileId} className="nuiget-source-config">{fileLabel ?? source.configFile}</span> : null}
+            </span>
+            <IconButton label={`Remove ${source.name}`} data-testid={`source-row-remove-${source.name.toLowerCase()}`} disabled={busy} onClick={() => onRemove(source)}><TrashIcon /></IconButton>
         </li>
     );
 }
@@ -186,18 +176,22 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
  * SDK 10 requires). The list follows the sources slice, which asks it again when the host says it changed.
  */
 export function SourceSettingsDialog({ open, onClose, announce }: SourceSettingsDialogProps): React.JSX.Element | null {
-    const { sources, status, error, refresh, enable } = useSources();
+    const { sources, status, error, refresh, enable, revalidating, remove, configFiles, loadConfigFiles } = useSources();
     const [adding, setAdding] = useState(false);
+    /** The source whose removal is being confirmed: one confirmation per dialog (UX-P3.6). */
+    const [removing, setRemoving] = useState<NuGetSource | null>(null);
+    const listRef = useRef<HTMLUListElement>(null);
     const addButton = useRef<HTMLButtonElement>(null);
     const wasAdding = useRef(false);
 
     useEffect(() => {
         if (open) {
             enable();
+            loadConfigFiles();
         } else {
             setAdding(false);
         }
-    }, [open, enable]);
+    }, [open, enable, loadConfigFiles]);
     // Back from the form: focus returns to the button that opened it, inside the dialog.
     useEffect(() => {
         if (wasAdding.current && !adding) {
@@ -206,17 +200,46 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
         wasAdding.current = adding;
     }, [adding]);
 
+    const labelOf = (path: string | undefined): string | undefined => (path === undefined ? undefined : configFiles?.find(file => file.path === path)?.label);
+    const confirmRemove = (): void => {
+        const source = removing;
+        setRemoving(null);
+        if (source === null) {
+            return;
+        }
+        // The row goes: focus moves to the next row's Remove, else to Add source (UX-P3.6).
+        const rows = [...(listRef.current?.querySelectorAll<HTMLButtonElement>('.nuiget-source-row .nuiget-icon-button') ?? [])];
+        const index = rows.findIndex(button => button.dataset.testid === `source-row-remove-${source.name.toLowerCase()}`);
+        const next = rows[index + 1] ?? rows[index - 1];
+        queueMicrotask(() => (next ?? addButton.current)?.focus());
+        remove(source.name, source.configFile).then(
+            () => announce(`${source.name} removed`),
+            (removeError: unknown) => announce(`${source.name} could not be removed: ${messageOf(removeError)}`),
+        );
+    };
+
     let body: React.ReactNode;
     if (adding) {
         body = <AddSourcePanel announce={announce} onDone={() => setAdding(false)} />;
-    } else if (status === 'error' && sources === undefined) {
-        body = <Banner severity="error" action={{ label: 'Retry', onClick: refresh }}>{`The sources could not be listed: ${error?.message ?? 'unknown error'}`}</Banner>;
-    } else if (sources === undefined) {
-        body = <p role="status">Loading sources…</p>;
-    } else if (sources.length === 0) {
-        body = <EmptyState message="No NuGet sources are configured." />;
     } else {
-        body = <ul className="nuiget-source-list" aria-label="NuGet sources">{sources.map(source => <SourceRow key={source.name} source={source} announce={announce} />)}</ul>;
+        // The cells of the list (DS-STATE-1..4): a bar over the top while it loads or refreshes, the error above the kept
+        // rows, the welcome-style empty sentence; every rhythm is a gap.
+        const loading = status === 'loading' || revalidating;
+        body = (
+            <div className="nuiget-sources">
+                {loading ? <div className="nuiget-sources-progress"><ProgressBar label="Loading sources" data-testid="source-settings-progress" /></div> : null}
+                {error !== undefined && !revalidating
+                    ? <Banner severity="error" data-testid="source-settings-error" action={{ label: 'Retry', onClick: refresh }}>{`The sources could not be listed: ${sentence(error.message)}`}</Banner>
+                    : null}
+                {sources === undefined && error === undefined ? <div role="status">Loading sources…</div> : null}
+                {sources?.length === 0 ? <EmptyState message="No package sources." data-testid="source-settings-empty" /> : null}
+                {sources !== undefined && sources.length > 0 ? (
+                    <ul ref={listRef} className="nuiget-source-list" data-testid="source-settings-list" aria-label="NuGet sources" aria-busy={revalidating || undefined}>
+                        {sources.map(source => <SourceRow key={source.name} source={source} fileLabel={labelOf(source.configFile)} announce={announce} onRemove={setRemoving} />)}
+                    </ul>
+                ) : null}
+            </div>
+        );
     }
 
     return (
@@ -230,6 +253,15 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             footer={adding ? undefined : <Button ref={addButton} onClick={() => setAdding(true)}>Add source</Button>}
         >
             {body}
+            <ConfirmDialog
+                open={removing !== null}
+                title={`Remove ${removing?.name ?? ''}?`}
+                confirmLabel="Remove"
+                onConfirm={confirmRemove}
+                onCancel={() => setRemoving(null)}
+            >
+                {removing === null ? null : `Removes ${removing.name} from ${removing.configFile ?? 'the nearest config file'}. This cannot be undone.`}
+            </ConfirmDialog>
         </Dialog>
     );
 }

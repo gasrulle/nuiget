@@ -38,4 +38,11 @@ describe('Checkbox', () => {
         const mark = /(?:^|\n)\.nuiget-checkbox-mark \{([^}]*)\}/.exec(stylesheet)?.[1] ?? '';
         expect(mark).toContain('color: var(--nuiget-color-checkbox-fg);');
     });
+
+    it('carries an accessible description', async () => {
+        const { container } = render(<div><Checkbox checked={false} onChange={() => undefined} aria-label="nuget.org" aria-describedby="u f" /><span id="u">https://api.nuget.org/v3/index.json</span><span id="f">Workspace: dense-workspace</span></div>);
+        expect(screen.getByRole('checkbox', { name: 'nuget.org' })).toHaveAccessibleDescription('https://api.nuget.org/v3/index.json Workspace: dense-workspace');
+        const results = await axe(container);
+        expect(axeRuleOutcome(results, 'aria-valid-attr-value')).toBe('passes');
+    });
 });

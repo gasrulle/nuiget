@@ -8,6 +8,8 @@ export interface CheckboxProps {
     disabled?: boolean;
     id?: string;
     'aria-label'?: string;
+    /** The ids of the text that describes the box, such as a source's URL and file (UX-P3.6). */
+    'aria-describedby'?: string;
     'data-testid'?: string;
 }
 

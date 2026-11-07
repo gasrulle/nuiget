@@ -99,7 +99,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable'];
 
@@ -123,6 +123,8 @@ hold.literals = {
     unavailable: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [], sourcesUnavailable: true }) },
     uptodate: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [] }) },
     'browse-unavailable': { type: 'search/query', of: result => ({ ...result, sourcesUnavailable: true }) },
+    // The host's answer for a config chain with no source (UX-P3.6).
+    'sources-empty': { type: 'sources/list', of: result => ({ ...result, sources: [] }) },
     // The one live nuget.org answer split in two, no id twice (design-advisor follow-up, UX-P3.2): the first half stays under
     // nuget.org, the rest under a second source unreachable by construction (architecture-advisor, UX-P3.2).
     'quicksearch-grouped': { type: 'search/autocomplete', of: result => {
@@ -150,9 +152,9 @@ window.postMessage = function (data, ...rest) {
     return undefined;
 };`;
 
-type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete';
+type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
-type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped';
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty';
 
 async function holdRequest(type: HeldType): Promise<void> {
     await script<void>(HOLD_SOURCE, type);
@@ -330,6 +332,18 @@ const TRANSITIVE_GROUP_SETTLED = '(() => { const row = document.querySelector(\'
 
 /** No CSS transition runs in the webview: a measurement reads a still subject (the chevron rotates for 100 ms; UX-P0.fix-4). */
 const NO_RUNNING_TRANSITION = 'document.getAnimations().every(animation => !(animation instanceof CSSTransition) || animation.playState !== "running")';
+
+/** Opens the sources dialog from the header's gear and waits for its listed, settled rows (UX-P3.6). */
+const openSources = async (): Promise<void> => {
+    await clickVisible('source-settings');
+    await until('document.querySelector(\'[data-testid="source-row-nuget.org"]\') !== null && document.querySelector(\'[data-testid="source-settings-list"]\')?.getAttribute("aria-busy") !== "true"', 'the sources dialog with its rows', 60_000);
+};
+
+/** Closes the sources dialog with Escape on the focused element. */
+const closeSources = async (): Promise<void> => {
+    await driverOf().switchTo().activeElement().sendKeys(Key.ESCAPE);
+    await waitForTestIdGone('source-settings-modal', 10_000);
+};
 
 const cancelDialog = async (): Promise<void> => {
     await (await findByTestId('confirm-dialog-cancel', 10_000)).click();
@@ -586,6 +600,71 @@ const REACH: Record<string, Reach> = {
             await until('document.querySelector(\'[data-testid="updates-error"] button\') !== null', 'the inline error with Retry');
         },
         leave: endHold,
+    },
+    // UX-P3.6 (design-advisor ruling of 2026-11-07, DO 7): the sources dialog over Gateway; Escape closes it, nothing is
+    // removed or added. The cells hold `sources/list` across Refresh (the slice keeps its list on a re-ask).
+    'main-sources': {
+        reach: async () => {
+            await gatewayInstalled();
+            await openSources();
+        },
+        leave: closeSources,
+    },
+    'main-sources-remove-dialog': {
+        reach: async () => {
+            await gatewayInstalled();
+            await openSources();
+            await clickVisible('source-row-remove-nuget.org');
+            await findByTestId('confirm-dialog', 10_000);
+        },
+        leave: async () => {
+            await cancelDialog();
+            await closeSources();
+        },
+    },
+    'main-sources-revalidating': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('sources/list');
+            await clickVisible('refresh-button');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held sources answer');
+            await clickVisible('source-settings');
+            await until('document.querySelector(\'[data-testid="source-settings-progress"]\') !== null && document.querySelector(\'[data-testid="source-settings-list"]\')?.getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="source-row-nuget.org"]\') !== null', 'the rows under the bar, the list busy');
+        },
+        leave: async () => {
+            await closeSources();
+            await releaseHeld('main-sources-revalidating');
+        },
+    },
+    'main-sources-empty': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('sources/list');
+            await clickVisible('refresh-button');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held sources answer');
+            await rewriteHeld('main-sources-empty', 'sources-empty');
+            await clickVisible('source-settings');
+            await until('document.querySelector(\'[data-testid="source-settings-empty"]\')?.textContent === "No package sources."', 'the empty sentence');
+        },
+        leave: async () => {
+            await closeSources();
+            await endHold();
+        },
+    },
+    'main-sources-error': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('sources/list');
+            await clickVisible('refresh-button');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held sources answer');
+            await failHeld('main-sources-error', 'The NuGet configuration could not be read.');
+            await clickVisible('source-settings');
+            await until('document.querySelector(\'[data-testid="source-settings-error"] button\') !== null && document.querySelector(\'[data-testid="source-row-nuget.org"]\') !== null', 'the inline error with Retry above the kept list');
+        },
+        leave: async () => {
+            await closeSources();
+            await endHold();
+        },
     },
     'main-updates-unavailable': {
         reach: async () => {

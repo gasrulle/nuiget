@@ -974,8 +974,9 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--nuiget-space-4);
-    /* The block inset is a carrier a pane sets (the details pane's 20, UX-P3.3b); 8 by default. */
-    padding: var(--nuiget-empty-inset-block, var(--nuiget-space-4)) var(--nuiget-space-7);
+    /* Two carriers a pane sets: the block inset (the details pane's 20, UX-P3.3b; 8 by default) and the inline inset (0
+       inside a dialog, whose own inset carries it, UX-P3.6; 20 by default). */
+    padding: var(--nuiget-empty-inset-block, var(--nuiget-space-4)) var(--nuiget-empty-inset-inline, var(--nuiget-space-7));
     color: var(--nuiget-color-fg-muted);
     text-align: start;
 }

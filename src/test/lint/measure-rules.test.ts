@@ -75,7 +75,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
-        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog'];
+        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
@@ -180,7 +180,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' } });
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
@@ -876,9 +876,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('holds the Installed and Updates cells hard, with their later owners (UX-P2.8b, UX-P3.1b)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard' });
+        // UX-P3.6: the sources dialog's cells read pending for its reading run.
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: { pending: 'P3.6' } });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
-            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } });
+            expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } });
         }
     });
 

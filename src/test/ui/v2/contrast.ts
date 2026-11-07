@@ -97,7 +97,7 @@ const DROPDOWN_BORDER_PARITY = { reason: 'workbench parity (D22, H49): dropdown.
  */
 export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...text('fg', 'bg', 'bg-sidebar', 'widget-bg', 'dropdown-bg'),
-    ...text('fg-muted', 'bg', 'bg-sidebar'),
+    ...text('fg-muted', 'bg', 'bg-sidebar', 'widget-bg'),
     { fg: 'fg', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
     { fg: 'fg-muted', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
     { fg: 'version-new', bg: 'list-hover-bg', over: 'bg', kind: 'text' },

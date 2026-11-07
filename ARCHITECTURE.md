@@ -834,8 +834,10 @@ host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `C
 and every enabled source by name, the session's URL kept as an option when it is not listed, disabled until the list
 is known; a choice is `session/set { selectedSource }`) and the gear (`source-settings`) that opens
 `SourceSettingsDialog` (`source-settings-modal`), which `ui/openSourceSettings` opens too. The dialog lists every
-source (`source-row-<name>`) with an enable checkbox, its URL and the config file that declares it, and Remove with
-an in-dialog confirmation (interaction model §5). Add source switches the dialog to a form (`add-source-panel`): the
+source (`source-row-<name>`) with an enable checkbox named by the source and described by its URL and the config file
+that declares it (by its label), and Remove (`source-row-remove-<name>`), which asks in one `ConfirmDialog` stacked over
+the dialog (interaction model §5). The list's cells are a progress bar over the top while it loads or refreshes (the rows
+kept, the list `aria-busy`), "No package sources." and an inline error with Retry above the kept list (UX-P3.6). Add source switches the dialog to a form (`add-source-panel`): the
 config file (`sources/configFiles`, nearest first), URL, name, and credentials (password encryption on Windows only);
 an `http:` URL needs the insecure option, which SDK 10 requires. Focus moves to the URL field when the form opens and
 back to Add source when it closes.

@@ -162,7 +162,7 @@ const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialo
 const { browse: _noGroupHeader, dialogs: _noDialogHeader, ...grid2b } = asGrid1;
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
-export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog'];
+export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
 
 /** One pending item for the state groups where a rule's elements are rendered. */
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
@@ -194,6 +194,10 @@ const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-insta
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
 /** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
+    // UX-P3.6: the sources dialog's cells (design-advisor ruling of 2026-11-07, DO 8).
+    'main-sources-revalidating': ['source-settings-progress'],
+    'main-sources-empty': ['source-settings-empty'],
+    'main-sources-error': ['source-settings-error'],
     'main-installed-loading': ['installed-progress'],
     'main-installed-revalidating': ['installed-progress'],
     'main-installed-empty': ['installed-empty'],
@@ -329,7 +333,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' } },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } },
         tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
@@ -347,11 +351,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -391,8 +395,11 @@ export function stateGroup(state: string): StateGroup {
  * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
  * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
  */
-export function cellList(state: string): 'installed' | 'updates' | 'browse' {
+export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' {
     const group = stateGroup(state);
+    if (group === 'sources') {
+        return 'source-settings';
+    }
     return group === 'main-updates' ? 'updates' : group === 'browse' ? 'browse' : 'installed';
 }
 
@@ -412,6 +419,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
         case 'dialogs':
             return ['chrome', 'layers'];
+        case 'sources':
+            return ['chrome', 'controls', 'text-buttons', 'icon-buttons'];
         default:
             return ['chrome'];
     }
@@ -830,7 +839,6 @@ export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0, cellList = 'installed'] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
 if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, detailsEmpty: undefined, split: undefined, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
-const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
     const style = getComputedStyle(el);
@@ -838,6 +846,8 @@ const visible = el => {
     const rect = el.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
 };
+// UX-P3.6: the topmost open dialog (a confirmation stacks over the sources dialog and opens after it).
+const dialog = [...document.querySelectorAll('.nuiget-dialog')].filter(visible).at(-1) ?? null;
 /** Not clipped away: the element's box meets the box of every clipping ancestor up to top (a collapsed wrapper hides a badge). */
 const unclipped = (el, top) => {
     const rect = el.getBoundingClientRect();
@@ -1299,7 +1309,7 @@ const documentOverflow = {
 const opaque = colour => colour !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(colour);
 const edgesOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom) }; };
 const titleFacts = (selector, inDocument = false) => {
-    const el = (inDocument ? document : root).querySelector(selector);
+    const el = (inDocument ? (dialog ?? document) : root).querySelector(selector);
     if (!visible(el)) return undefined;
     const style = getComputedStyle(el);
     return { fontSize: style.fontSize, fontWeight: style.fontWeight };
@@ -1504,7 +1514,7 @@ const layers = layerEl ? (() => {
     const style = getComputedStyle(dialog);
     const footerEl = dialog.querySelector('.nuiget-dialog-footer');
     const footerStyle = footerEl ? getComputedStyle(footerEl) : null;
-    const isLayer = el => el === dialog || el.classList.contains('nuiget-search-popup');
+    const isLayer = el => el.classList.contains('nuiget-dialog') || el.classList.contains('nuiget-search-popup');
     return {
         radius: style.borderTopLeftRadius,
         radiusTarget: lookValue('--nuiget-radius-layer'),

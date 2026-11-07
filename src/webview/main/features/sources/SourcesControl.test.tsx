@@ -72,6 +72,8 @@ describe('main panel: sources', () => {
 
         expect(dialog()).toHaveAccessibleName('NuGet sources');
         expect(row('nuget.org')).toHaveTextContent('/home/me/.nuget/NuGet/NuGet.Config');
+        // UX-P3.6: the box is named by the source alone and described by its URL and file.
+        expect(within(row('nuget.org')).getByRole('checkbox', { name: 'nuget.org' })).toHaveAccessibleDescription(`${NUGET} /home/me/.nuget/NuGet/NuGet.Config`);
         expect(within(row('Old')).getByRole('checkbox')).not.toBeChecked();
         await user.click(within(row('Contoso')).getByRole('checkbox', { name: /Contoso/ }));
         expect(host.requests('sources/disable').map(request => request.payload)).toEqual([{ sourceName: 'Contoso' }]);
@@ -87,22 +89,65 @@ describe('main panel: sources', () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await openDialog();
+        // UX-P3.6: one ConfirmDialog over the sources dialog, focus on Cancel; Cancel returns to the row's Remove.
         await user.click(within(row('Contoso')).getByRole('button', { name: 'Remove Contoso' }));
-        expect(within(row('Contoso')).getByRole('group', { name: 'Remove Contoso?' })).toHaveTextContent('Remove Contoso from /w/nuget.config?');
-        await user.click(within(row('Contoso')).getByRole('button', { name: 'Cancel' }));
+        const confirm = screen.getByRole('alertdialog', { name: 'Remove Contoso?' });
+        expect(confirm).toHaveAccessibleDescription('Removes Contoso from /w/nuget.config. This cannot be undone.');
+        expect(screen.getByTestId('confirm-dialog-cancel')).toHaveFocus();
+        await user.click(screen.getByTestId('confirm-dialog-cancel'));
+        expectFocusAfterClose('sources-remove-cancel');
+        expect(within(row('Contoso')).getByRole('button', { name: 'Remove Contoso' })).toHaveFocus();
         expect(host.requests('sources/remove')).toHaveLength(0);
 
         await user.click(within(row('Contoso')).getByRole('button', { name: 'Remove Contoso' }));
-        await user.click(within(row('Contoso')).getByRole('button', { name: 'Remove' }));
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(host.requests('sources/remove').map(request => request.payload)).toEqual([{ sourceName: 'Contoso', configFile: '/w/nuget.config' }]);
         await hostSays(() => host.respond(host.requests('sources/remove')[0], { sources: SOURCES.filter(source => source.name !== 'Contoso'), removedUrl: CONTOSO }, 2));
         expect(screen.queryByTestId('source-row-contoso')).toBeNull();
+        // The row is gone: focus is on the next row's Remove.
+        expectFocusAfterClose('sources-remove-confirm');
+        expect(within(row('Old')).getByRole('button', { name: 'Remove Old' })).toHaveFocus();
 
         // A source whose file is not known goes from the nearest config file: no configFile is sent.
         await user.click(within(row('Old')).getByRole('button', { name: 'Remove Old' }));
-        expect(within(row('Old')).getByRole('group', { name: 'Remove Old?' })).toHaveTextContent('Remove Old from the nearest config file?');
-        await user.click(within(row('Old')).getByRole('button', { name: 'Remove' }));
+        expect(screen.getByRole('alertdialog', { name: 'Remove Old?' })).toHaveAccessibleDescription('Removes Old from the nearest config file. This cannot be undone.');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(host.requests('sources/remove')[1].payload).toEqual({ sourceName: 'Old' });
+    });
+
+    it('a failed refresh shows the inline error above the kept list and Retry asks again (UX-P3.6)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await openDialog();
+        await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'sources' }, reason: 'manual-refresh', generation: 5, keys: [] }));
+        // Refreshing: the bar over the top, the rows kept and the list busy.
+        expect(screen.getByTestId('source-settings-progress')).toBeInTheDocument();
+        expect(screen.getByTestId('source-settings-list')).toHaveAttribute('aria-busy', 'true');
+        expect(row('Contoso')).toBeInTheDocument();
+        await hostSays(() => host.fail(host.requests('sources/list')[1], 'failed', 'The NuGet configuration could not be read'));
+        const error = screen.getByTestId('source-settings-error');
+        expect(error).toHaveTextContent('The sources could not be listed: The NuGet configuration could not be read.');
+        expect(screen.queryByTestId('source-settings-progress')).toBeNull();
+        expect(error.compareDocumentPosition(screen.getByTestId('source-settings-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        await user.click(within(error).getByRole('button', { name: 'Retry' }));
+        expect(host.requests('sources/list')).toHaveLength(3);
+    });
+
+    it('an empty list says "No package sources." (UX-P3.6)', async () => {
+        await mountReady([]);
+        await openDialog();
+        expect(screen.getByTestId('source-settings-empty')).toHaveTextContent('No package sources.');
+        expect(screen.queryByTestId('source-settings-list')).toBeNull();
+    });
+
+    it('has no axe violations with the confirmation open (UX-P3.6)', async () => {
+        const user = userEvent.setup();
+        await mountReady();
+        await openDialog();
+        await user.click(within(row('Contoso')).getByRole('button', { name: 'Remove Contoso' }));
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
     });
 
     it('Add source: a form in the dialog with the config file, URL, name and credentials', async () => {
