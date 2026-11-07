@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42183339362",
+  "run": "42379746314",
   "composition": "The state's own scene, nothing composed: Newtonsoft.Json 12.0.1 is the current row (its band is the render's colour sample) and the Details tab shows its description, properties, vulnerability and dependency groups. The other rows' actions are drawn hidden, as the product renders them until a row is hovered or current.",
   "looks": {
     "modern": {
@@ -559,10 +559,11 @@
           "h": 26
         },
         "inset": 662.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -600,10 +601,11 @@
           "h": 26
         },
         "inset": 662.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -623,8 +625,9 @@
         },
         "inset": 441,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-active-border",
           "--nuiget-color-tab-active-fg",
@@ -641,8 +644,9 @@
         },
         "inset": 506.2,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",
@@ -1200,10 +1204,11 @@
           "h": 26
         },
         "inset": 662.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -1241,10 +1246,11 @@
           "h": 26
         },
         "inset": 662.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -1264,8 +1270,9 @@
         },
         "inset": 441,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-active-border",
           "--nuiget-color-tab-active-fg",
@@ -1282,8 +1289,9 @@
         },
         "inset": 506.2,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",

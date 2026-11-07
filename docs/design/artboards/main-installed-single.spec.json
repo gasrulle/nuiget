@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "41306445646",
+  "run": "42379746314",
   "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
@@ -325,10 +325,11 @@
           "h": 26
         },
         "inset": 561.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -368,10 +369,11 @@
           "h": 26
         },
         "inset": 561.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -392,8 +394,9 @@
         },
         "inset": 348,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",
@@ -410,8 +413,9 @@
         },
         "inset": 413.2,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-active-border",
           "--nuiget-color-tab-active-fg",
@@ -752,10 +756,11 @@
           "h": 26
         },
         "inset": 561.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-secondary-border",
           "--nuiget-radius-control",
@@ -795,10 +800,11 @@
           "h": 26
         },
         "inset": 561.4,
-        "padding": "0px 8px 0px 8px",
+        "padding": "4px 8px 4px 8px",
         "gap": "normal normal",
         "tokens": [
           "--nuiget-control-height",
+          "--nuiget-space-2",
           "--nuiget-space-4",
           "--nuiget-color-button-border",
           "--nuiget-radius-control",
@@ -819,8 +825,9 @@
         },
         "inset": 348,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-fg",
           "--nuiget-tab-font-size",
@@ -837,8 +844,9 @@
         },
         "inset": 413.2,
         "padding": "0px 10px 0px 10px",
-        "gap": "normal normal",
+        "gap": "6px 6px",
         "tokens": [
+          "--nuiget-space-3",
           "--nuiget-tab-padding",
           "--nuiget-color-tab-active-border",
           "--nuiget-color-tab-active-fg",
