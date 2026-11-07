@@ -180,7 +180,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(noRow.map(state => appliesTo(definition, state)), id).toEqual(noRow.map(() => false));
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
-        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: 'hard', readme: { pending: 'P3.4' } });
+        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
         // UX-P3.3b closing 1: main-details-readme's header and list are hard; its details scope waits with SPEC's own.
         expect(RULES.find(rule => rule.id === 'SPEC')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
@@ -970,7 +970,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
         // The later scopes print on their owners.
         // UX-P3.3b: the panel's own offset is the sash's (P3.9); a child inside it is read relative to it.
-        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: true, status: 'hard', value: '0/0 within 1; composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
+        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: true, status: { pending: 'P3.3b' }, value: '0/0 within 1; composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
         const withEmpty: SpecLook = { ...spec, 'details-empty': element(328, 77, 604, 60) };
         expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 77, 601, 60) }, withEmpty))
             .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
