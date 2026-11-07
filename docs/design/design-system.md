@@ -9,7 +9,7 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
 | Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 12 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72)) |
-| Tokens | 178 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 30 of them switched by the look |
+| Tokens | 179 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 30 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
 | Owner rounds | Round 1: composition A, the Extensions view. Round 2: D51 disabled text buttons, D52 row check mark, D54 floor, D56 Browse loading. Applied throughout; §14 lists what each changed |
@@ -230,7 +230,7 @@ The exemplar fails three rule premises in the classic look; the closest-to-the-w
 
 ## 3. Tokens
 
-`tokens.json` is the reference (178 tokens: space 23, radius 17, size 25, type 13, weight 4, motion 7, opacity 1, z 2,
+`tokens.json` is the reference (179 tokens: space 23, radius 17, size 26, type 13, weight 4, motion 7, opacity 1, z 2,
 colour 86; 30 switched by the look). `src/webview/shared/tokens.css` was copied from the generator's CSS at UX-P1.1 and differs in the five values `docs/plans/STATUS-ux.md` names for P1.5. `tokens.json` is written
 by the committed generator, `docs/design/tools/build.mjs` from the spec `docs/design/tools/spec.mjs`, and resolve every
 colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir holding probe/out and probe/out-modern> <timestamp>`).
@@ -242,7 +242,7 @@ colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir ho
 | `--nuiget-space-1..6` | 2, 4, 6, 8, 12, 16 px literals | `var(--vscode-spacing-size20..160, <px>)` | DS-GRID-3 (same px on every host) |
 | `--nuiget-space-7` | — | `var(--vscode-spacing-size200, 20px)` | details inset, empty-state padding, classic sidebar inset |
 | `--nuiget-radius-sm` | 2px | `var(--vscode-cornerRadius-small, 4px)` | DS-RADIUS-1; the names now follow the workbench tiers xs 2, sm 4, md 6, lg 8, xl 12 (T-7). Every current use moves to a semantic token: controls (`.nuiget-button`, `.nuiget-main-select`, `.nuiget-main-search-input`, `.nuiget-sidebar-search`, `.nuiget-input`, `.nuiget-readme-copy`) → `radius-control` (4); `.nuiget-row-check`, `.nuiget-dialog input[type=checkbox]` → `radius-checkbox` (3); `.nuiget-search-popup` → `radius-layer`; `.nuiget-skeleton-row`, `.nuiget-readme img/code/pre` → `radius-xs` (2, unchanged) |
-| `--nuiget-radius-md` | 4px | `var(--vscode-cornerRadius-medium, 6px)` | same; current uses: `.nuiget-icon-button` → `radius-action`; `.nuiget-badge` → `radius-badge` / `radius-label-badge`; `.nuiget-dialog`, `.nuiget-popover` → `radius-layer`; `.nuiget-row-icon svg` → `radius-xs` |
+| `--nuiget-radius-md` | 4px | `var(--vscode-cornerRadius-medium, 6px)` | same; current uses: `.nuiget-icon-button` → `radius-action`; `.nuiget-badge` → `radius-badge` / `radius-label-badge`; `.nuiget-dialog` → `radius-layer`; `.nuiget-row-icon svg` → `radius-xs` |
 | `--nuiget-row-height-compact` | 24px | 22px | DS-HEIGHT-2; `Listbox.tsx` `ROW_HEIGHT` changes with it (the tokens lint pins equality) |
 | `--nuiget-row-height-comfortable` | 78px | 72px | DS-HEIGHT-3 (owner round 1, composition A: D15's card retired); `Listbox.tsx` `ROW_HEIGHT` too |
 | `--nuiget-icon-size-sm`, `-md` | 12px, 16px | `var(--vscode-codiconFontSize-compact, 12px)`, `var(--vscode-codiconFontSize, 16px)` | DS-GRID-3 |
@@ -626,7 +626,7 @@ T-27..T-29 follow from them.
 | T-15 | Scrim | literal black 50 % in all themes; forced colours keep `Canvas` | `dialog.css:19-20` |
 | T-16 | First load | Changed by owner round 2 (D56): the 2 px bar at the list top in every view; Browse shows its rows first under it and fills in icons, authors and downloads; Installed, Updates, Transitive and the details pane add three skeleton rows and the "Loading …" status line; a revalidation keeps rows under the bar | DS-STATE-2; DECISIONS.md round 2 F3a; performance.md finding 6; a11y-first-load-announced |
 | T-17 | Quick-search popup | quick-input metrics: layer radius M 8 / C 12, rows 22 with radius M 4 / C 3 and padding M 4 / C 6, separators per DS-DIVIDER-3 | `quickinput.json quickinput[0..16]` |
-| T-18 | Layer shadow | `0 2px 8px widget.shadow` (the native hover) for dialogs and popovers; the quick input's `0 0 20px` uses a token webviews do not receive | `quickinput[0] .boxShadow`; `vars` has no `--vscode-shadow-*` |
+| T-18 | Layer shadow | `0 2px 8px widget.shadow` (the native hover) for dialogs; the quick input's `0 0 20px` uses a token webviews do not receive | `quickinput[0] .boxShadow`; `vars` has no `--vscode-shadow-*` |
 | T-19 | Empty-state block gap | 8 px (the welcome view's 1em mapped onto P-1's between-group gap) | `views.css:92-130`; DS-GRID-1/2 |
 | T-20 | Terms | Title Case group headers; "Authors"; "Pre-Release" in labels and "pre-release" in sentences; "transitive packages" in headers and empty states | DS-COPY-1/2; `extensionsActions.ts` "Switch to Pre-Release Version"; ux-inventory §5.3 M2, M7 |
 | T-21 | Explicit fallbacks | aliases a high-contrast theme leaves unset get `transparent` (backgrounds) or `foreground` (text) fallbacks; no rendering change | `vars`: `list.activeSelectionBackground`, `button.secondaryBackground`, `textBlockQuote.background` unset in Dark High Contrast; `list.activeSelectionForeground` in both HC themes |
