@@ -81,7 +81,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 | Id | Rule | Measurement | Tolerance | Status | Catches | Workbench reference (M / C, probe field) |
 |---|---|---|---|---|---|---|
 | DS-TYPE-1 | UI text uses the workbench font (`--vscode-font-family`); only code uses the editor font. | Computed font-family of every text node = the root's, except `code`, `pre` and README code. | exact | measurable | — | M = C: `extensions.json ext_rows[0] .fontFamily` = the webview body font (`vars` bodyFont) |
-| DS-TYPE-2 | Every font size is a step of the ramp {10, 11, 12, 13, 18, 26} px; README body text follows the Markdown preview and is exempt. | Computed font-size of every text element outside `.nuiget-readme`. | 0.1 | measurable | V17, V25, V49 | M = C: `--vscode-fontSize-*` heading1 26, heading2 18, body1 13, label1 12, body2 11, label3 10 (`vars`) |
+| DS-TYPE-2 | Every font size is a step of the ramp {10, 11, 12, 13, 18, 26} px; README headings are on it (h1 26, h2 18, h3–h6 13, weight 600); README body text and code follow the Markdown preview and are exempt. | Computed font-size of every text element outside `.nuiget-readme`, + computed font-size of `.nuiget-readme h1–h6` ∈ ramp. | 0.1 | measurable | V17, V25, V49 | M = C: `--vscode-fontSize-*` heading1 26, heading2 18, body1 13, label1 12, body2 11, label3 10 (`vars`) |
 | DS-TYPE-3 | Two weights, 400 and 600; 700 only on classic section titles and main-list group headers. | Computed font-weight outside `.nuiget-readme` ∈ {400, 600}; 700 only on `.nuiget-section-title` and main-list group headers without the Modern UI attribute. | exact | measurable | V49, V61 | M 600 / C 700 on pane-header titles (`extensions.json pane_headers[3] .fontWeight`); `--vscode-fontWeight-*` 400/600 (`vars`) |
 | DS-TYPE-4 | Body line height is 1.4 (18.2 px at 13 px); a single-line row, header or control sets a fixed line box equal to its content height (row 22, pane header M 28 / C 22, text button 16). | Computed line-height of the roots = 18.2; of compact rows = 22. | 0.5 | measurable | — | M = C 18.2 (`extensions.json ext_rows[0] .lineHeight`); rows 22 (`explorer.json list_rows[0] .lineHeight`); pane header M 28 / C 22 (`pane_headers[3] .lineHeight`) |
 | DS-TYPE-5 | Casing follows the host. Sidebar section titles and main-list group headers (Direct Packages, Transitive Packages, a project; one grouped list per view, owner round 1) take the pane-header type: M 12 px, 600, capitalize in a 28 px header (uppercase when the host mirrors `modernUIUppercaseViewHeaders`) / C 11 px, 700, uppercase in 22 px. Details group headers: 13 px, 600, no transform. | Computed text-transform, font-size and font-weight of `.nuiget-section-title` and of every main-list group header = the probe's `.pane-header .title` of the same look; details group headers 13/600/none. | exact | measurable | V49 | M 12px/600/capitalize / C 11px/700/uppercase (`extensions.json pane_headers[3]`) |
@@ -253,6 +253,7 @@ colour per theme from the probe dumps (`node docs/design/tools/build.mjs <dir ho
 | `--nuiget-font-size-sm` | 0.85em | `var(--vscode-fontSize-body2, 11px)` | DS-TYPE-2/8 (em compounded to 9.39 px, V17); ADR-008 amendment (em → px) |
 | `--nuiget-font-size-md` | 1em | `var(--vscode-fontSize-body1, 13px)` | same |
 | `--nuiget-font-size-lg` | 1.15em (14.95 px) | `var(--vscode-fontSize-heading2, 18px)` | DS-TYPE-2/7 |
+| `--nuiget-font-size-xl` | — (README h1 1.6em) | `var(--vscode-fontSize-heading1, 26px)` | DS-TYPE-2 (README h1, UX-P3.4) |
 | `--nuiget-color-scrim` | `color-mix(in srgb, editor.background 60%, transparent)` | `rgba(0, 0, 0, 0.5)` | DS-DIVIDER-5 (V19) |
 | `--nuiget-color-section-header-bg` | `var(--vscode-sideBarSectionHeader-background)` | adds `sideBar.background` as fallback; Modern UI `sideBar.background` | DS-LOOK-1 (`paneHeaders.css`) |
 | `--nuiget-color-list-active-bg`, `-inactive-bg`, `-button-secondary-bg`, `-blockquote-bg` | no fallback | `…, transparent` | T-21: explicit fallbacks where a high-contrast theme leaves the key unset; no rendering change |
@@ -306,7 +307,7 @@ Resolved hex per theme: `tokens.json` (`resolved`), and the artifact's colour li
 | Severity glyph | `problemsErrorIcon.foreground`, `problemsWarningIcon.foreground`, `problemsInfoIcon.foreground` **new** (then `editorError/Warning/Info.foreground`) | — | — | — | — | — | an unreachable source: warning glyph | `color-icon-error`, `-icon-warning`, `-icon-info` |
 | Verified mark | `extensionIcon.verifiedForeground` **new** | — | — | — | — | — | — | `color-verified` |
 | New version | `gitDecoration.addedResourceForeground` (then `charts.green`) | — | — | — | — | — | — | `color-version-new` |
-| README code and syntax | `textCodeBlock.background`, `editor.foreground`; `symbolIcon.*`, `debugTokenExpression.*`, `editorLineNumber.activeForeground`; tables `keybindingTable.*`; quotes `textBlockQuote.*` | — | — | — | — | — | — | `color-code-*`, `-syntax-*`, `-table-*`, `-blockquote-*` |
+| README code and syntax | `textCodeBlock.background`, `editor.foreground`; syntax: `debugTokenExpression.string` (strings, numbers), `debugConsole.infoForeground` (types), `editorLineNumber.activeForeground` (comments), `editor.foreground` (keywords, functions, variables); tables `keybindingTable.*`; quotes `textBlockQuote.*` | — | — | — | — | — | — | `color-code-*`, `-syntax-*`, `-table-*`, `-blockquote-*` |
 | Scrim | `rgba(0, 0, 0, 0.5)` literal | — | — | — | — | — | forced colours: `Canvas` | `color-scrim` |
 
 ## 5. Type scale, iconography, spacing and density
@@ -328,7 +329,7 @@ Resolved hex per theme: `tokens.json` (`resolved`), and the artifact's colour li
 | Version, authors, metadata | 11 (Body2) | 400 muted (publisher 600) | 1.4 | none | `font-size-sm` |
 | Popup separator label | 11 | 400 muted | 22 | none | `font-size-sm` |
 | Count and label badge | M 10 / C 11 | 400 | 11 | none | `font-size-badge` |
-| README | Markdown preview scale (exempt) | — | — | — | — |
+| README | headings 26/18/13 (`font-size-xl`, `-lg`, `-md`); body and code: Markdown preview scale (exempt) | headings 600 | headings 1.25 | none | `font-size-xl`, `font-size-lg`, `font-size-md` |
 
 ### Iconography
 
