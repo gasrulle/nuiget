@@ -92,6 +92,9 @@ describe('main panel: Install in All Projects', () => {
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Lib' })).toBeDisabled());
         expect(dialog).toHaveTextContent('centrally managed: install it from the project to see the preview');
         expect(within(dialog).getByRole('list', { name: 'Projects' })).toHaveAttribute('aria-busy', 'false');
+        // UX-P3.5 (design-advisor follow-up 3): a project that cannot be picked reads disabled, a pickable one does not.
+        expect(within(dialog).getByRole('checkbox', { name: 'Lib' }).closest('li')).toHaveClass('nuiget-multi-install-row--blocked');
+        expect(within(dialog).getByRole('checkbox', { name: 'Web' }).closest('li')).not.toHaveClass('nuiget-multi-install-row--blocked');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled();
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));

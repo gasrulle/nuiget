@@ -91,9 +91,9 @@
   },
   "main-installed-bulk-dialog.dark-modern.1200.png": {
     "status": "approved",
-    "run": "42376865313",
-    "sha256": "9749ba47d742d22ee5d2e6974c00679e3b78ba9796c2de321b362eccaaad0b2e",
-    "sidecarSha256": "ac857e9a532cced621e26b7c166dc69907c17a7c7fac37fd3e94216df68c0b00"
+    "run": "42402701440",
+    "sha256": "ae363a817978bc535ed2febeca930517a5c1f57a52f1eaae40be65176554f485",
+    "sidecarSha256": "23ea995a2eb7974763b81d5310c2bda903950579ca7c7a525792757b11bdc296"
   },
   "main-installed-cpm.dark-modern.1200.png": {
     "status": "approved",
@@ -432,9 +432,9 @@
     "sidecarSha256": "1d3da3bd6702458603fd84e21e585cacdca59704319b8414ada2a29965f01910"
   },
   "sidebar-update-all-dialog.dark-modern.300.png": {
-    "status": "baseline",
-    "run": "42121277111",
-    "sha256": "bb6416ad4d8a7055b3ac090fc516c5e7f7912b778cca24d14839b0105c311e09",
-    "sidecarSha256": "5576ec884409d74e37f2b6a87cb5c97b09f40a7bd0f6a92635bf4d5408d9ef92"
+    "status": "approved",
+    "run": "42402701440",
+    "sha256": "a28014544cce0c251d7ceb12949fd40864ccd73dcde891fe4de037f028eaa277",
+    "sidecarSha256": "1aee7109f7a0da0dcbb151dcefcd052829aa645a7068063ce24bd8f7cf7db51d"
   }
 }

@@ -157,10 +157,7 @@ export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefin
     return { id, ...options };
 }
 
-/** UX-P3.5: the dialog scopes read for one proving run, then flipped in the closing commit (RUN-ux §4.2). */
-const DIALOGS_READING = { pending: 'P3.5' } as const;
-
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } } as const;
 /** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2), and no dialogs (UX-P3.5). */
 const { browse: _noGroupHeader, dialogs: _noDialogHeader, ...grid2b } = asGrid1;
 
@@ -232,7 +229,7 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-bulk-dialog', 'main-browse-multi-install-dialog'];
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
 
@@ -245,7 +242,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details'] }),
     rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
-    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: DIALOGS_READING, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
+    rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
@@ -260,7 +257,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: DIALOGS_READING, sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'] } }),
+    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
@@ -296,8 +293,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
     rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P2.7 (design trigger 6).
-    rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING }, tolerance: TOLERANCES.fontExact }),
-    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: DIALOGS_READING, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
+    rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
@@ -308,10 +305,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-details-readme', 'main-installed-unfocused', 'main-installed-hover-current'] }),
     rule('DS-DIVIDER-1', { helper: 6, scopes: { rows: 'hard', headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P3.2: the popup layer at the layer radius and its rows at the popup row radius, read in the popup states only.
-    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard', layers: DIALOGS_READING }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES, layers: DIALOG_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
+    rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard', layers: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES, layers: DIALOG_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
     // UX-P3.5 (design-advisor ruling of 2026-11-07): only layers are elevated, and the modal backdrop is black at 50 %.
-    rule('DS-DIVIDER-2', { helper: 6, scopes: { layers: DIALOGS_READING }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
-    rule('DS-DIVIDER-5', { helper: 6, scopes: { dialogs: DIALOGS_READING }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
+    rule('DS-DIVIDER-2', { helper: 6, scopes: { layers: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
+    rule('DS-DIVIDER-5', { helper: 6, scopes: { dialogs: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
@@ -341,8 +338,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
-    // UX-P3.5 (design-advisor ruling, DO 6 (i)): the two main dialog states are read for one proving run before they join.
-    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES }, pendingStates: { 'main-installed-bulk-dialog': 'P3.5', 'main-browse-multi-install-dialog': 'P3.5' } }),
+    // UX-P3.5 (design-advisor follow-up 2): a dialog opened by a pointer click shows no ring on Cancel under Modern UI, the
+    // DS-FOCUS-3 premise (run 42402701440: outline none); the dialog ring's form is read by the keyboard walk's bulk dialog.
+    rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
@@ -413,7 +411,7 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'details':
             return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
         case 'dialogs':
-            return ['chrome', 'layers', 'controls'];
+            return ['chrome', 'layers'];
         default:
             return ['chrome'];
     }

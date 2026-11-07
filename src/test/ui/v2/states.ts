@@ -178,7 +178,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-browse-details', 'main', [primary('main')],
         'The Newtonsoft.Json Browse row made current; the details panel shows "Dependencies".', [LIVE_RESULTS, LIVE_DETAILS]), diffTolerance: 0 },
     { ...ready('main-browse-multi-install-dialog', 'main', [primary('main')],
-        '"Newtonsoft.Json" searched with Enter, the Newtonsoft.Json.Bson row made current (installed in no project), Install in projects… pressed; the Multi Install dialog is open with its previews answered and is cancelled after the capture, never confirmed (UX-P3.5).', [LIVE_RESULTS, LIVE_DETAILS, LIVE_DIALOG_TITLE]), diffTolerance: DIFF_TOLERANCE_START },
+        '"Newtonsoft.Json" searched with Enter, the Newtonsoft.Json.Bson row made current (installed in no project), Install in projects… pressed; the Multi Install dialog is open with its previews answered and is cancelled after the capture, never confirmed (UX-P3.5).', [LIVE_RESULTS, LIVE_DETAILS, LIVE_DIALOG_TITLE]), diffTolerance: 0 },
     { ...ready('main-quicksearch-open', 'main', [primary('main')],
         '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-quicksearch-versions', 'main', [primary('main')],

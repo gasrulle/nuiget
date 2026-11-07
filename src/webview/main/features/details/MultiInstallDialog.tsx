@@ -161,7 +161,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                         note = current === version ? `${current} installed` : `installed: ${current}`;
                     }
                     return (
-                        <li key={project.path} className="nuiget-multi-install-row">
+                        <li key={project.path} className={blocked ? 'nuiget-multi-install-row nuiget-multi-install-row--blocked' : 'nuiget-multi-install-row'}>
                             <Checkbox id={id} checked={picked.has(project.path)} disabled={blocked} onChange={() => toggle(project.path)} />
                             <label htmlFor={id} title={project.path}>{project.name}</label>
                             {note ? <span className="nuiget-multi-install-note">{note}</span> : null}

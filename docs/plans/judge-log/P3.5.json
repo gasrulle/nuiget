@@ -1,0 +1,214 @@
+{
+  "item": "P3.5",
+  "runs": [
+    {
+      "runId": "42402701440",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "357a88d (the reading commit 6acc075)",
+      "look": "modern",
+      "workflow": "wf_8ded1254-391",
+      "note": "No dialog artboard exists: the two main dialog states are judged against main-installed-details.dark-modern.1200.png and its spec as the page beneath (design-advisor ruling UX-P3.5 DO 9, the P3.2 form); a finding outside `.nuiget-dialog` that compares the page beneath is accepted-as-design under DO 9. sidebar-update-all-dialog is pending artboard (the sidebar artboard is P3.7a's): its gate is the hard measurements (DS-GRID-1/2a, DS-RADIUS-2 layers, DS-DIVIDER-2, DS-DIVIDER-5, DS-INSET-2, DS-TYPE-7/9).",
+      "captures": {
+        "main-installed-bulk-dialog": {
+          "png": "captures/42402701440/main-installed-bulk-dialog.dark-modern.1200.png",
+          "sha256": "ae363a817978bc535ed2febeca930517a5c1f57a52f1eaae40be65176554f485",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        },
+        "main-browse-multi-install-dialog": {
+          "png": "captures/42402701440/main-browse-multi-install-dialog.dark-modern.1200.png",
+          "sha256": "d59b6c22c650dfec5ec1bb0966338f4f56cdf91faf6c7c43a155d8b039541ff5",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "9bca2d136251233bd89580e338055a488345cda20e4ea6f6a0a375dce86f4ac2"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 14,
+        "standing": 5,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-bulk-dialog#D4",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[geometry] The split between the list and details panes is drawn as a 4 px band at x 420-423, where the spec ends installed-list at 420 and starts package-details-panel at 421 and the artboard draws a 1 px line at x 420. The details content moves 3 px to the right as a result: the empty-state text starts at x 445, against x 442 for the artboard's details content.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational (design-advisor follow-up 3); ordered to UX-P3.9"
+        },
+        {
+          "id": "main-browse-multi-install-dialog#D4",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "[native] The status text 'unsupported' at the end of the Unsupported.csproj row is all lowercase; as a status or message text it should be sentence case ('Unsupported').",
+          "severity": "major",
+          "box": [
+            738,
+            445,
+            70,
+            14
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational (design-advisor follow-up 3); ordered to UX-P3.11"
+        },
+        {
+          "id": "main-browse-multi-install-dialog#D3",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "[states] The details pane's secondary button behind the scrim reads \"Install in projects...\" with \"projects\" in lower case; the design system's copy rules give this label as \"Install in Projects...\" (DS-COPY-1 Title Case on button labels).",
+          "severity": "major",
+          "box": [
+            634,
+            130,
+            133,
+            25
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "states"
+          ],
+          "informational": "singleJudge, informational (design-advisor follow-up 3); ordered to UX-P3.11"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-bulk-dialog#D3",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[native] The checked Serilog row is painted with the selection band (list.inactiveSelectionBackground under the scrim) but the details pane beside it reads \"Select a package to see its details.\" and the band shows no row action, whereas the artboard's current row (Newtonsoft.Json) carries the band, its uninstall action and its details; in a multi-select list only the current row may take the band, so band and details contradict each other. | [states] The checked Serilog row has the inactive-selection band, the colour DS-COLOR-2 gives the current row of a multi-select list. The details pane beside it still shows \"Select a package to see its details.\" instead of that row's details, as the artboard's package-details-panel draws for its current row. Either the band is painted for a row that is only in the bulk set, or the current row's details are missing.",
+          "severity": "major",
+          "box": [
+            0,
+            751,
+            412,
+            52
+          ],
+          "rule": "DS-COLOR-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "outside `.nuiget-dialog`; the page beneath is judged against a stand-in artboard (design-advisor ruling UX-P3.5 DO 9, DECISIONS 2026-11-07); the band of a bulk-checked row is UX-P2.1c's form and the Installed states' judge's, not this item's",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.5 follow-up 3 (docs/plans/handoff/P3.5.md)"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D2",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[native] The open confirm dialog shows no focus ring on any control: Cancel (where the dialog opens) keeps its plain 1 px secondary border and Uninstall its plain fill, unlike a workbench dialog whose focused button carries the 1 px focusBorder ring at offset +2. | [states] No control in the open confirm dialog shows a focus ring. The dialog's Cancel button, which §7 says receives focus when the dialog opens, has no 1 px focusBorder outline at offset +2. In the main panel DS-FOCUS-3 draws rings after a click as well, so focus cannot be seen anywhere in the modal.",
+          "severity": "major",
+          "box": [
+            671,
+            424,
+            60,
+            26
+          ],
+          "rule": "DS-FOCUS-1, DS-FOCUS-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "a dialog opened by a pointer click under Modern UI focuses Cancel programmatically without `:focus-visible`: no ring is the DS-FOCUS-3 premise P-3 (DECISIONS 2026-11-07, follow-up 2 case ii); run 42402701440 `DS-FOCUS-1@main-installed-bulk-dialog/controls: … outline 3 none` reads the same; the ring's form is read on the keyboard-opened bulk dialog of the `[keys]` walk",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.5 follow-up 3 (docs/plans/handoff/P3.5.md)"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D1",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[native] The bulk toolbar labels read \"Select all\" and \"Uninstall selected (1)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and button labels are Title Case. | [states] The bulk toolbar labels read \"Select all\" and \"Uninstall selected (1)\" in sentence case, where the artboard's select-all-button and uninstall-selected-button draw the Title Case labels \"Select All\" and \"Uninstall Selected (0)\" that DS-COPY-1 requires for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1: Title Case labels, as P2.8b's 25 rows",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.5 follow-up 3 (docs/plans/handoff/P3.5.md)"
+        },
+        {
+          "id": "main-browse-multi-install-dialog#D1",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "[native] In the project list, the Unsupported.csproj row cannot be picked, yet it reads as the most active row: its check box border is brighter (#7e7e7e against #3c3c3c on the five pickable boxes) and its name is full foreground #cccccc like the enabled names, where DS-COLOR-6 wants a disabled label in disabledForeground and the row toned down, not up. | [states] In the dialog's project list the Unsupported.csproj row is not pickable: it carries the \"unsupported\" status and its check box is drawn differently from the others, yet its label is at full foreground like the enabled rows, where DS-COLOR-6 requires disabled labels in disabledForeground.",
+          "severity": "major",
+          "box": [
+            392,
+            443,
+            417,
+            20
+          ],
+          "rule": "DS-COLOR-6",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.5",
+          "evidence": "the disabled label: `.nuiget-multi-install-row--blocked` in `disabledForeground` (DS-COLOR-6), the closing commit; the box border in `disabledForeground` is the Checkbox primitive's disabled form (DECISIONS 2026-10-31 Button and Checkbox, `primitives.css:953-955`), accepted as design",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.5 follow-up 3 (docs/plans/handoff/P3.5.md)"
+        },
+        {
+          "id": "main-browse-multi-install-dialog#D2",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "[native] The dialog's primary button label 'Install in 0 projects' is not in Title Case ('projects' is lowercase), against the button-label casing of the workbench exemplars ('Add Pattern', 'Open Repository'). | [states] The dialog's primary button reads \"Install in 0 projects\" with \"projects\" in lower case; DS-COPY-1 requires Title Case on button labels (\"Install in 0 Projects\"), the same casing the design system uses for this command (\"Install in Projects...\").",
+          "severity": "major",
+          "box": [
+            676,
+            501,
+            132,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1: \"Install in 0 Projects\"",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.5 follow-up 3 (docs/plans/handoff/P3.5.md)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "The two header actions under the scrim draw different codicons from the approved artboard: the capture shows a gear and a two-arrow sync glyph, while the artboard draws a sun-like glyph and a single-arrow refresh at the same positions.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            50,
+            22
+          ],
+          "rule": "DS-ICON-1",
+          "verdict": "refuted",
+          "reason": "The capture draws a gear and a two-arrow glyph, which match the icon plan's settings-gear and sync codicons (docs/design/icons.json), so DS-ICON-1 holds for the capture. Only the borrowed main-installed-details artboard draws them differently, and the spec names just the 'source-settings' and 'refresh-button' rects, not their glyphs. The box also had to be clamped at the 1200 px edge.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    }
+  ]
+}

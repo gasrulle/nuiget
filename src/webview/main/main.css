@@ -643,6 +643,11 @@ body {
     min-height: var(--nuiget-target-min);
 }
 
+/* A project that cannot be picked reads disabled; its note keeps the muted colour (DS-COLOR-6, UX-P3.5). */
+.nuiget-multi-install-row--blocked {
+    color: var(--nuiget-color-fg-disabled);
+}
+
 .nuiget-multi-install-note {
     margin-inline-start: auto;
     color: var(--nuiget-color-fg-muted);

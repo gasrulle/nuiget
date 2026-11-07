@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -71,9 +71,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         for (const id of ['DS-HEIGHT-3', 'DS-ROW-1', 'DS-ROW-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1']) {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
-        // UX-P3.5: the two main dialog states read pending for one run (design-advisor ruling, DO 6 (i)).
-        expect(definition('DS-FOCUS-1')?.pendingStates).toEqual({ 'main-installed-bulk-dialog': 'P3.5', 'main-browse-multi-install-dialog': 'P3.5' });
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-installed-bulk-dialog', 'main-browse-multi-install-dialog'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
+        expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'] });
@@ -93,7 +93,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
         expect(scopes('PF-3b')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
@@ -103,10 +103,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
         expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' }, popup: { pending: 'P3.7a' } });
-        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard', layers: { pending: 'P3.5' } });
+        expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard', layers: 'hard' });
         // UX-P3.5 (design-advisor ruling of 2026-11-07): the dialog layer's elevation and backdrop, hard in the three dialog states.
-        expect(scopes('DS-DIVIDER-2')).toEqual({ layers: { pending: 'P3.5' } });
-        expect(scopes('DS-DIVIDER-5')).toEqual({ dialogs: { pending: 'P3.5' } });
+        expect(scopes('DS-DIVIDER-2')).toEqual({ layers: 'hard' });
+        expect(scopes('DS-DIVIDER-5')).toEqual({ dialogs: 'hard' });
         expect(scopes('DS-DIVIDER-3')).toEqual({ browse: 'hard' });
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
@@ -114,7 +114,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: { pending: 'P3.6' } });
-        expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' } });
+        expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
@@ -851,14 +851,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         };
         const dialog = (overrides: Record<string, unknown> = {}) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, layers: { ...layers, ...overrides } } as Layout['endOfP0'] });
         const state = 'main-installed-bulk-dialog';
-        expect(lineOf(state, dialog(), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: true, status: { pending: 'P3.5' }, value: 'layer 8 (target 8)' });
+        expect(lineOf(state, dialog(), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: true, status: 'hard', value: 'layer 8 (target 8)' });
         expect(lineOf(state, dialog({ radius: '4px' }), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: false, value: 'layer 4 (target 8)' });
         expect(lineOf(state, dialog(), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true, value: 'layer 0px 2px 8px 0px rgba(0, 0, 0, 0.36); page 0 shadowed' });
         expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0.36) 0px 0px 8px 0px' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false });
         expect(lineOf(state, dialog({ shadowed: ['.nuiget-row'] }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false, value: expect.stringContaining('page 1 shadowed: .nuiget-row') });
         // High contrast: the shadow token is transparent.
         expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0) 0px 2px 8px 0px', shadowColour: 'rgba(0, 0, 0, 0)' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true });
-        expect(lineOf(state, dialog(), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true, status: { pending: 'P3.5' }, value: 'scrim rgba(0, 0, 0, 0.5) over #1f1f1f → #101010 (not lighter)' });
+        expect(lineOf(state, dialog(), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true, status: 'hard', value: 'scrim rgba(0, 0, 0, 0.5) over #1f1f1f → #101010 (not lighter)' });
         // Black at 50 % over black is equal: not lighter (dark high contrast).
         expect(lineOf(state, dialog({ surface: 'rgb(0, 0, 0)' }), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true });
         expect(lineOf(state, dialog({ scrim: 'rgba(31, 31, 31, 0.6)' }), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: false });
