@@ -201,7 +201,7 @@ describe('2.0 main panel: Installed tab', () => {
         this.timeout(120_000);
         const option = await serilogOption();
         await option.click();
-        expect(await option.getAttribute('aria-current')).to.equal('true');
+        await poll(async () => ((await option.getAttribute('aria-current')) === 'true' ? true : undefined), 'Serilog current', 10_000);
         await option.sendKeys(Key.SPACE);
         await poll(async () => ((await option.getAttribute('aria-selected')) === 'true' ? true : undefined), 'Serilog selected for a bulk action', 10_000);
         expect(await (await findByTestId('uninstall-selected-button')).isEnabled()).to.equal(true);
