@@ -329,6 +329,18 @@
     "sha256": "85c664970bbf3bcc64e3b8f19666bd0f23398fa7850f78ce255ecbba7bf1161d",
     "sidecarSha256": "f65a806620304a375c27d26d0a6a0bb565d0957a69a9949d8f030ae7c9d0e55b"
   },
+  "main-sources-add-invalid.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "42424449942",
+    "sha256": "4a4c1c5f054403e5ffcfdb7025023ffdc72ca65fb18ae9dfbfacf442440adde5",
+    "sidecarSha256": "b70798becea05e7a80ca6674d304c23a1eaa251765342d2690b50d07b845a70d"
+  },
+  "main-sources-add.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "42424449942",
+    "sha256": "b766a21a9835073c7f8b3f7f955d6d8ceee59a3914ff7928caf39e910ac8a58f",
+    "sidecarSha256": "407241405a766699b28e2aa0e0aded111e9ffc7d4ff11d06622b7459c9583a95"
+  },
   "main-sources-empty.dark-modern.1200.png": {
     "status": "approved",
     "run": "42416943579",

@@ -393,7 +393,84 @@
           "ruling": "design-advisor, 2026-11-07, UX-P3.6 follow-up 3 (docs/plans/handoff/P3.6.md)"
         }
       ],
-      "refuted": []
+      "refuted": [],
+      "closingRerun": {
+        "runId": "42424449942",
+        "tree": "ca57951 (series -b closing commit)",
+        "workflow": "wf_42c5f841-5b1",
+        "capture": {
+          "png": "captures/42424449942/main-sources-add.dark-modern.1200.png",
+          "sha256": "b766a21a9835073c7f8b3f7f955d6d8ceee59a3914ff7928caf39e910ac8a58f"
+        },
+        "panel": {
+          "states": 1,
+          "candidates": 7,
+          "standing": 3,
+          "blocking": 0,
+          "refuted": 1,
+          "singleJudge": 0,
+          "incomplete": 0
+        },
+        "note": "Follow-up 3 VERIFY: the re-run on the closing capture. #D4 (the Credentials disclosure) no longer stands; the three standing findings are the -b panel's #D1-#D3 (same boxes, DS-COPY-1) and carry their dispositions (fixed, owner P3.11); none is new.",
+        "standing": [
+          {
+            "id": "main-sources-add#D1",
+            "rule": "DS-COPY-1",
+            "severity": "major",
+            "box": [
+              16,
+              117,
+              74,
+              26
+            ],
+            "carries": "the -b panel's main-sources-add#D1 (fixed, owner P3.11, follow-up 3)"
+          },
+          {
+            "id": "main-sources-add#D2",
+            "rule": "DS-COPY-1",
+            "severity": "major",
+            "box": [
+              258,
+              117,
+              147,
+              26
+            ],
+            "carries": "the -b panel's main-sources-add#D2 (fixed, owner P3.11, follow-up 3)"
+          },
+          {
+            "id": "main-sources-add#D3",
+            "rule": "DS-COPY-1",
+            "severity": "major",
+            "box": [
+              723,
+              499,
+              85,
+              26
+            ],
+            "carries": "the -b panel's main-sources-add#D3 (fixed, owner P3.11, follow-up 3)"
+          }
+        ],
+        "refuted": [
+          {
+            "id": "geometry-1",
+            "lens": "geometry",
+            "state": "main-sources-add",
+            "finding": "The dialog's bottom inset is 12 px (Add source/Back buttons end at y 524, the dialog's inner bottom edge is at 537), while its side insets are 16 px (fields and the footer end at x 807, inner right edge at 824) and the title ink sits 16 px below the top edge. That breaks the one 16 px dialog inset that DS-STATE-3 names for the layer, so the footer looks slightly pinched against the bottom border.",
+            "severity": "minor",
+            "box": [
+              668,
+              499,
+              157,
+              39
+            ],
+            "rule": "judge-only",
+            "verdict": "refuted",
+            "reason": "Pixel reads put the button's last row at y 524 and the dialog border at y 537, a 12 px bottom inset. The right inset is 16 px (807 to 824). The CSS sets .nuiget-dialog padding to space-5/space-6 (12 block, 16 inline), so top and bottom are an equal 12/12 as DS-INSET-2 requires, and DS-STATE-3 names the 16 px dialog inset for the inline axis only. The title's 16 px is ink inside a 12 px padding plus its line box, so the defect is not visible as claimed.",
+            "method": "crop",
+            "refuterSeverity": "minor"
+          }
+        ]
+      }
     }
   ]
 }
