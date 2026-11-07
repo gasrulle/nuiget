@@ -274,6 +274,16 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(layout.sections.find(section => section.id === 'direct')?.insets).toEqual({ start: 16, end: 520, top: 3, bottom: 3 });
     });
 
+    it('reads a group caption as its own title: a Required by block heading is a level box (UX-P3.3a)', () => {
+        const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
+        panel.insertAdjacentHTML('beforeend', '<h4 id="caption" class="nuiget-group-caption" data-testid="section-box-required-by-net8.0" data-variant="level" data-rect="620,300,880,318" data-text="620,300,670,318">net8.0</h4>');
+        try {
+            expect(collect().sections.find(section => section.id === 'required-by-net8.0')).toMatchObject({ variant: 'level', hasTitle: true, titleText: 'net8.0', countBadges: 0 });
+        } finally {
+            document.getElementById('caption')?.remove();
+        }
+    });
+
     it('measures header proximity on border boxes and the content the header controls (UX-P2.6b)', () => {
         const layout = collect();
         // Above: the box's top minus the toolbar's bottom; below: the content's top minus the box's bottom.
@@ -500,11 +510,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
 
     it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
-        panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-details-facts" data-rect="620,200,880,260"><div class="nuiget-details-fact" data-rect="620,200,880,220"><dt data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd></div><div class="nuiget-details-fact" data-rect="620,230,880,250"><dt data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></div></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');
+        panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-property-list" data-rect="620,200,880,260"><dt class="nuiget-property-term" data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd class="nuiget-property-value" data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd><dt class="nuiget-property-term" data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd class="nuiget-property-value" data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');
         const facts = collect().endOfP0;
         expect(facts.rows.map(row => [row.list, row.compact, row.icon?.w, row.nameLeft, row.actions])).toEqual([['installed-list', false, 32, 80, 1], ['installed-list', false, 32, 80, 0]]);
         expect(facts.rows[0].band).toEqual({ left: 0, top: 136, right: 600, bottom: 214 });
         expect(facts.factLefts).toEqual([[700, 704]]);
+        // DS-COPY-2 (UX-P3.3a): the property terms of the details pane, in document order.
+        expect(facts.detailsLabels).toEqual(['Owner', 'License']);
         expect(facts.copyEnds).toEqual([{ kind: 'empty', text: 'Select a package' }]);
         expect(facts.controlsOut.map(entry => [entry.container, entry.out, entry.total])).toEqual([['main-header', 0, 0], ['toolbars', 0, 2], ['tabs', 0, 0]]);
 

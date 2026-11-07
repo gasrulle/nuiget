@@ -284,6 +284,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.6b (design trigger 6).
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7b' } }, tolerance: TOLERANCES.containment }),
+    // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
+    rule('DS-COPY-2', { helper: 6, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.7 (design trigger 6).
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' } }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3a' }, dialogs: { pending: 'P3.5' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
@@ -307,7 +309,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse'), details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: on('P3.3b', 'details'), tolerance: TOLERANCES.containment }),
-    rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment }),
+    rule('DS-ALIGN-1', { helper: 2, scopes: on('P3.3a', 'details'), tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: { pending: 'P3.6' } }, tolerance: TOLERANCES.containment }),
@@ -699,6 +701,8 @@ export interface EndOfP0 {
     unselectable: Array<{ label: string; status: string; transitive: boolean }>;
     descriptionForeground: string;
     copyEnds: Array<{ kind: 'empty' | 'banner' | 'leaf'; text: string }>;
+    /** DS-COPY-2: the trimmed text of every visible label of the details pane (property terms and the header's labels), UX-P3.3a. */
+    detailsLabels: string[];
     /** The Installed cells: DS-STATE-1, -2, -3, -4 and DS-COLOR-1 (UX-P2.8b). */
     stateCells: StateCells;
     /** The quick-search popup when it is open (UX-P3.2): its radii, rows, group separators and labels. */
@@ -789,7 +793,7 @@ const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0, cellList = 'installed'] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const dialog = document.querySelector('.nuiget-dialog');
 const visible = el => {
     if (!el || !el.isConnected) return false;
@@ -957,7 +961,7 @@ const blockBelow = box => {
 };
 const contentOffset = (scroller, block) => (scroller !== null && !scroller.contains(block.el) ? scroller.scrollTop : 0);
 const headerFacts = box => {
-    const titleEl = box.querySelector('.nuiget-section-title');
+    const titleEl = box.querySelector('.nuiget-section-title') ?? (box.classList.contains('nuiget-group-caption') ? box : null);
     const titleStyle = titleEl ? getComputedStyle(titleEl) : undefined;
     const row = box.closest('[data-row-kind="group"]');
     const group = row ? row.querySelector('.nuiget-row-group') : null;
@@ -1357,8 +1361,8 @@ const controlsOut = [
     ...shown('.nuiget-details-actions').map(el => controlsIn('details', el)),
 ];
 const toolbarEl = scope.querySelector('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]');
-const factLefts = shown('.nuiget-details-facts, .nuiget-details-info')
-    .map(block => [...block.querySelectorAll(':scope > .nuiget-details-fact > dd, :scope > .nuiget-details-row > :nth-child(2)')].filter(visible).map(el => round(rectOf(el).left)))
+const factLefts = shown('.nuiget-property-list')
+    .map(block => [...block.querySelectorAll(':scope > .nuiget-property-value')].filter(visible).map(el => round(rectOf(el).left)))
     .filter(lefts => lefts.length > 1);
 // The font families of the visible text other than the root's, code and README excepted (DS-TYPE-1).
 const rootFont = getComputedStyle(scope).fontFamily;
@@ -1402,6 +1406,9 @@ const copyEnds = [
     ...shown('.nuiget-banner-text').map(el => ({ kind: 'banner', text: el.textContent.trim() })),
     ...shown('.nuiget-row-message').map(el => ({ kind: 'leaf', text: el.textContent.trim() })),
 ];
+// DS-COPY-2 (UX-P3.3a): the labels of the details pane, the property terms and the header's labels.
+const detailsPanel = document.querySelector('[data-testid="package-details-panel"]');
+const detailsLabels = detailsPanel === null ? [] : [...detailsPanel.querySelectorAll('.nuiget-property-term, .nuiget-details-label')].filter(visible).map(el => el.textContent.trim());
 // UX-P2.8b: the Installed cells. A role's colour is compared with its --vscode-* key as this document resolves it.
 const resolveKey = (key, property) => {
     const probe = document.createElement('span');
@@ -1522,6 +1529,7 @@ const endOfP0 = {
     metaText,
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
+    detailsLabels,
     stateCells,
     popup,
     focus,
@@ -2509,6 +2517,13 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const counts = facts.rows.map(row => row.actions);
             return { value: `visible actions per row ${tally(counts)} (at most ${END_OF_P0.actionsAtMost})`, pass: counts.every(count => count <= END_OF_P0.actionsAtMost) };
         }
+        case 'DS-COPY-2': {
+            if (facts.detailsLabels.length === 0) {
+                return notMeasurable('no label');
+            }
+            const off = facts.detailsLabels.filter(text => text.endsWith(':') || text === 'Author(s)');
+            return { value: off.length === 0 ? `labels ${facts.detailsLabels.length}: ok` : `labels ${facts.detailsLabels.length}; off: ${off.map(text => `"${text}"`).join(', ')}`, pass: off.length === 0 };
+        }
         case 'DS-COPY-3': {
             if (facts.copyEnds.length === 0) {
                 return notMeasurable('no empty state or banner');
@@ -2625,7 +2640,7 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
             return { value: `${groups.join('; ')}${off.length === 0 ? '' : `; off: ${off.map(section => `${section.id} ${describe(section.title as NonNullable<SectionBox['title']>)} (target ${named(target(section))})`).join(', ')}`}`, pass: off.length === 0 };
         }
         case 'DS-COPY-5': {
-            const headers = layout.sections.filter(section => section.variant === 'pane' || section.variant === 'group' || section.inList === true);
+            const headers = layout.sections.filter(section => section.variant === 'pane' || section.variant === 'group' || section.variant === 'level' || section.inList === true);
             const tabs = layout.heights.tabs;
             if (headers.length === 0 && tabs.length === 0) {
                 return layout.browsing ? { value: 'no header; tab strip not shown (browsing)', pass: true } : notMeasurable('no header');

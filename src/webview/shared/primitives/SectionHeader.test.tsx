@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { IconButton } from './IconButton';
 import { SyncIcon } from './icons';
@@ -69,6 +70,14 @@ describe('SectionHeader', () => {
         // The count is part of what the toggle and the heading are called; it is not inside either.
         expect(screen.getByRole('button', { name: 'Installed 12' })).not.toContainElement(badge as HTMLElement);
         expect(screen.getByRole('heading', { name: 'Installed 12' })).not.toContainElement(badge as HTMLElement);
+        // The end place is the stylesheet's default: the primitive writes no carrier and no inline style, and a context
+        // that wants the count beside the title sets the two carriers (the details dependency groups, UX-P3.3a).
+        for (const element of [screen.getByTestId('section-box-installed'), screen.getByRole('heading'), container.querySelector('.nuiget-section-count')]) {
+            expect(element).not.toHaveAttribute('style');
+        }
+        const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');
+        expect(/(?:^|\n)\.nuiget-section-count \{([^}]*)\}/.exec(stylesheet)?.[1]).toContain('margin-inline-start: var(--nuiget-section-count-start, auto);');
+        expect(/(?:^|\n)\.nuiget-section-heading \{([^}]*)\}/.exec(stylesheet)?.[1]).toContain('flex: var(--nuiget-section-heading-flex, 1);');
         // Zero is a count; no count is no badge.
         rerender(<SectionHeader title="Updates" titleId="t" expanded={false} onToggle={() => undefined} contentId="c" testKey="updates" count={0} />);
         expect(screen.getByRole('button', { name: 'Updates 0' })).toBeInTheDocument();

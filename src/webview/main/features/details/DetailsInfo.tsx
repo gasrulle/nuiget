@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { PackageDependencyGroup as Group, PackageMetadata } from '../../../../protocol';
-import { Banner, EmptyState, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, EmptyState, GroupCaption, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
@@ -45,7 +45,7 @@ function Facts({ metadata, known, reportAbuse }: FactsProps): React.JSX.Element 
     const facts: Array<[string, React.ReactNode]> = [];
     facts.push(['Version', metadata.version]);
     if (metadata.authors) {
-        facts.push(['Author(s)', known?.verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}{metadata.authors}</> : metadata.authors]);
+        facts.push(['Authors', known?.verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}{metadata.authors}</> : metadata.authors]);
     }
     if (metadata.license || metadata.licenseUrl) {
         facts.push(['License', isWebLink(metadata.licenseUrl) ? <a href={metadata.licenseUrl}>{metadata.license ?? 'View license'}</a> : metadata.license]);
@@ -66,19 +66,10 @@ function Facts({ metadata, known, reportAbuse }: FactsProps): React.JSX.Element 
     if (reportAbuse !== undefined) {
         facts.push(['Report abuse', <a href={reportAbuse}>Report this package</a>]);
     }
-    return (
-        <dl className="nuiget-details-facts">
-            {facts.map(([term, value]) => (
-                <div key={term} className="nuiget-details-fact">
-                    <dt>{term}</dt>
-                    <dd>{value}</dd>
-                </div>
-            ))}
-        </dl>
-    );
+    return <PropertyList items={facts.map(([term, value]) => ({ term, value }))} />;
 }
 
-/** One target framework's dependencies under a toggle named with their count; nothing is rendered while it is closed. */
+/** One target framework's dependencies under a toggle with their count badge beside its name; nothing is rendered while it is closed. */
 function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded: boolean; onToggle: () => void }): React.JSX.Element {
     const titleId = useId();
     const contentId = useId();
@@ -87,14 +78,15 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
             <SectionHeader
                 level={4}
                 variant="level"
-                title={`${group.targetFramework || 'Any framework'} (${group.dependencies.length})`}
+                title={group.targetFramework || 'Any framework'}
+                count={group.dependencies.length}
                 titleId={titleId}
                 contentId={contentId}
                 testKey={`dependencies-${group.targetFramework.toLowerCase() || 'any'}`}
                 expanded={expanded}
                 onToggle={onToggle}
             />
-            {!expanded ? null : group.dependencies.length === 0 ? <p id={contentId}>No dependencies.</p> : (
+            {!expanded ? null : group.dependencies.length === 0 ? <p id={contentId} className="nuiget-details-note">No dependencies.</p> : (
                 <ul id={contentId} aria-labelledby={titleId} className="nuiget-details-list">
                     {group.dependencies.map(dependency => <li key={dependency.id}>{`${dependency.id} ${dependency.versionRange}`}</li>)}
                 </ul>
@@ -104,10 +96,10 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
 }
 
 /**
- * The Details tab (interaction model §7): description, then Version, Author(s) with the Verified mark the row knew,
- * License, Downloads (the registration's, else the row's), Package size, Date published, Project URL and Report abuse
- * for a nuget.org package; vulnerabilities with their severity in words and an icon; dependencies per target framework,
- * collapsed with their counts. Details read from the local package cache are marked offline, saying whether a source
+ * The Details tab (interaction model §7): description, then a property list of Version, Authors with the Verified mark
+ * the row knew, License, Downloads (the registration's, else the row's), Package size, Date published, Project URL and
+ * Report abuse for a nuget.org package; vulnerabilities with their severity in words and an icon; dependencies per target
+ * framework, collapsed, each with its count badge. Details read from the local package cache are marked offline, saying whether a source
  * is down or no source knows the version. The pane keys it by package and version, so another package starts collapsed.
  */
 export function DetailsInfo(): React.JSX.Element {
@@ -153,7 +145,7 @@ export function DetailsInfo(): React.JSX.Element {
             <Facts metadata={value} known={selection?.known} reportAbuse={reportAbuse} />
             {value.vulnerabilities !== undefined && value.vulnerabilities.length > 0 ? (
                 <section aria-label="Vulnerabilities" className="nuiget-details-section">
-                    <h3>Vulnerabilities</h3>
+                    <GroupCaption title="Vulnerabilities" />
                     <ul className="nuiget-details-list">
                         {value.vulnerabilities.map(vulnerability => (
                             <li key={vulnerability.advisoryUrl} className="nuiget-details-vulnerability">
@@ -166,10 +158,14 @@ export function DetailsInfo(): React.JSX.Element {
                 </section>
             ) : null}
             <section aria-label="Dependencies" className="nuiget-details-section">
-                <h3>Dependencies</h3>
-                {value.dependencies.length === 0 ? <p>No dependencies.</p> : value.dependencies.map(group => (
-                    <DependencyGroup key={group.targetFramework} group={group} expanded={expanded.has(group.targetFramework)} onToggle={() => toggle(group.targetFramework)} />
-                ))}
+                <GroupCaption title="Dependencies" />
+                {value.dependencies.length === 0 ? <p className="nuiget-details-note">No dependencies.</p> : (
+                    <div className="nuiget-details-groups">
+                        {value.dependencies.map(group => (
+                            <DependencyGroup key={group.targetFramework} group={group} expanded={expanded.has(group.targetFramework)} onToggle={() => toggle(group.targetFramework)} />
+                        ))}
+                    </div>
+                )}
             </section>
         </div>
     );

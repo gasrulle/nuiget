@@ -1,5 +1,6 @@
+import { useId } from 'react';
 import type React from 'react';
-import { Badge, VerifiedIcon } from '../../../shared/primitives';
+import { Badge, GroupCaption, PropertyList, VerifiedIcon } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import type { DetailsSelection } from '../../../shared/store/details';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
@@ -24,6 +25,7 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
     const aggregate = selection.projectPath === null;
     const lite = (aggregate ? all.metadata : transitive.metadata).get(key);
     const sameEntry = (entry: { id: string; version: string }): boolean => metadataKey(entry.id, entry.version) === key;
+    const captionId = useId();
 
     let blocks: Block[] | undefined;
     if (aggregate) {
@@ -48,32 +50,32 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
                 </h2>
             </div>
             <div className="nuiget-details-info">
-                <div className="nuiget-details-row">
-                    <span className="nuiget-details-label">Version:</span>
-                    <span>{selection.version}</span>
-                </div>
-                {lite?.authors || lite?.verified ? (
-                    <div className="nuiget-details-row">
-                        <span className="nuiget-details-label">Authors:</span>
-                        <span>
+                <PropertyList items={[
+                    { term: 'Version', value: selection.version },
+                    ...(lite?.authors || lite?.verified ? [{
+                        term: 'Authors',
+                        value: <>
                             {lite.verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
                             {lite.authors}
-                        </span>
-                    </div>
-                ) : null}
+                        </>,
+                    }] : []),
+                ]} />
                 {blocks === undefined ? <p className="nuiget-details-note">No longer listed as a transitive package.</p> : (
                     <section aria-label="Required by" className="nuiget-details-section">
-                        <h3>Required by</h3>
-                        {blocks.map((block, index) => (
-                            <div key={block.heading ?? index} className="nuiget-details-group">
-                                {block.heading === undefined ? null : <h4 data-testid={`section-box-required-by-${block.heading.toLowerCase()}`} data-variant="level">{block.heading}</h4>}
-                                {block.roots.length === 0 ? <p>No traceable top-level package</p> : (
-                                    <ul className="nuiget-details-list">
-                                        {block.roots.map(root => <li key={root}>{root}</li>)}
-                                    </ul>
-                                )}
-                            </div>
-                        ))}
+                        <GroupCaption title="Required by" />
+                        {blocks.map((block, index) => {
+                            const headingId = block.heading === undefined ? undefined : `${captionId}-${index}`;
+                            return (
+                                <div key={block.heading ?? index} className="nuiget-details-block">
+                                    {block.heading === undefined ? null : <GroupCaption level={4} title={block.heading} id={headingId} testKey={`required-by-${block.heading.toLowerCase()}`} />}
+                                    {block.roots.length === 0 ? <p className="nuiget-details-note">No traceable top-level package</p> : (
+                                        <ul className="nuiget-details-list" aria-labelledby={headingId}>
+                                            {block.roots.map(root => <li key={root}>{root}</li>)}
+                                        </ul>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </section>
                 )}
             </div>

@@ -260,10 +260,13 @@ describe('main panel: details', () => {
         expect(pane()).toHaveTextContent('2.0 MB');
         expect(within(pane()).getByRole('link', { name: 'https://serilog.net' })).toHaveAttribute('href', 'https://serilog.net');
         expect(within(pane()).getByRole('region', { name: 'Vulnerabilities' })).toHaveTextContent('High severity');
+        // The captions are headings, never the UA's bold alone (DS-TYPE-9): their weight is the stylesheet's.
+        expect(within(pane()).getByRole('heading', { level: 3, name: 'Vulnerabilities' })).toHaveClass('nuiget-group-caption');
+        expect(within(pane()).getByRole('heading', { level: 3, name: 'Dependencies' })).toHaveClass('nuiget-group-caption');
         // The groups start collapsed: their toggles name the framework and the count, and no dependency is shown.
         const dependencies = within(pane()).getByRole('region', { name: 'Dependencies' });
-        expect(within(dependencies).getByRole('button', { name: 'net8.0 (1)' })).toHaveAttribute('aria-expanded', 'false');
-        expect(within(dependencies).getByRole('button', { name: 'net6.0 (0)' })).toHaveAttribute('aria-expanded', 'false');
+        expect(within(dependencies).getByRole('button', { name: 'net8.0 1' })).toHaveAttribute('aria-expanded', 'false');
+        expect(within(dependencies).getByRole('button', { name: 'net6.0 0' })).toHaveAttribute('aria-expanded', 'false');
         expect(dependencies).not.toHaveTextContent('System.Diagnostics.DiagnosticSource');
     });
 
@@ -275,16 +278,19 @@ describe('main panel: details', () => {
         await user.click(option('browse-list', 'Polly'));
         await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Polly', '8.4.2', { authors: 'App vNext', packageSize: 2_097_152, sourceUrl: FEED }) }));
 
-        const fact = (term: string): HTMLElement => within(pane()).getByText(term, { selector: 'dt' }).parentElement as HTMLElement;
+        const fact = (term: string): HTMLElement => within(pane()).getByText(term, { selector: 'dt' }).nextElementSibling as HTMLElement;
         expect(fact('Version')).toHaveTextContent('8.4.2');
         expect(fact('Downloads')).toHaveTextContent('42,000');
         expect(fact('Package size')).toHaveTextContent('2.0 MB');
-        const mark = within(fact('Author(s)')).getByRole('img', { name: /Verified/ });
+        const mark = within(fact('Authors')).getByRole('img', { name: /Verified/ });
         // DS-ICON-4: the drawing, the compact size beside an author, the class that paints its role.
         expect(mark).toHaveAttribute('data-codicon', 'verified-filled');
         expect(mark).toHaveAttribute('width', '12');
         expect(mark).toHaveClass('nuiget-verified');
-        expect([...pane().querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Author(s)', 'Downloads', 'Package size']);
+        expect([...pane().querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Authors', 'Downloads', 'Package size']);
+        // DS-COPY-2: the header's labels carry no colon either.
+        expect([...pane().querySelectorAll('.nuiget-details-label')].map(label => label.textContent)).toEqual(['Version']);
+        expect(screen.getByTestId('version-selector')).toHaveAccessibleName('Version');
         expect(within(pane()).queryByText('Report abuse')).toBeNull();
     });
 
@@ -315,17 +321,20 @@ describe('main panel: details', () => {
         }) }));
         const dependencies = (): HTMLElement => within(pane()).getByRole('region', { name: 'Dependencies' });
         const toggle = (name: string): HTMLElement => within(dependencies()).getByRole('button', { name });
-        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'false');
-        expect(toggle('net6.0 (0)')).toHaveAttribute('aria-expanded', 'false');
+        expect(toggle('net8.0 1')).toHaveAttribute('aria-expanded', 'false');
+        expect(toggle('net6.0 0')).toHaveAttribute('aria-expanded', 'false');
+        // The count is the badge beside the name, never "(N)" in the title (DS-COPY-5).
+        expect(dependencies()).not.toHaveTextContent('(1)');
+        expect(within(dependencies()).getByTestId('section-box-dependencies-net8.0').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
         // Each framework's header is a level box of the measurements (UX-P0.10).
         expect(within(dependencies()).getByTestId('section-box-dependencies-net8.0')).toHaveAttribute('data-variant', 'level');
         expect(within(dependencies()).getByTestId('section-box-dependencies-net6.0')).toHaveAttribute('data-variant', 'level');
         expect(dependencies()).not.toHaveTextContent('System.Diagnostics.DiagnosticSource');
 
-        await user.click(toggle('net8.0 (1)'));
-        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'true');
+        await user.click(toggle('net8.0 1'));
+        expect(toggle('net8.0 1')).toHaveAttribute('aria-expanded', 'true');
         expect(dependencies()).toHaveTextContent('System.Diagnostics.DiagnosticSource >= 8.0.0');
-        await user.click(toggle('net6.0 (0)'));
+        await user.click(toggle('net6.0 0'));
         expect(dependencies()).toHaveTextContent('No dependencies.');
 
         // Another package starts collapsed, and so does this one made current again.
@@ -338,7 +347,7 @@ describe('main panel: details', () => {
         await hostSays(() => host.respond(asked[1], { metadata: metadata('Serilog', '3.0.0', {
             dependencies: [{ targetFramework: 'net8.0', dependencies: [{ id: 'System.Diagnostics.DiagnosticSource', versionRange: '>= 8.0.0' }] }, { targetFramework: 'net6.0', dependencies: [] }],
         }) }));
-        expect(toggle('net8.0 (1)')).toHaveAttribute('aria-expanded', 'false');
+        expect(toggle('net8.0 1')).toHaveAttribute('aria-expanded', 'false');
     });
 
     it('multi install offered in single project mode', async () => {

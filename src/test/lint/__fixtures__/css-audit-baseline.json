@@ -26,22 +26,6 @@
   {
     "file": "src/webview/main/main.css",
     "rule": "pxLength",
-    "selector": ".nuiget-details-row > .nuiget-details-label",
-    "property": "min-width",
-    "value": "5em",
-    "item": "P3.3a"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-details-fact dt",
-    "property": "min-width",
-    "value": "7em",
-    "item": "P3.3a"
-  },
-  {
-    "file": "src/webview/main/main.css",
-    "rule": "pxLength",
     "selector": ".nuiget-readme h1",
     "property": "border-left",
     "value": "4px solid var(--nuiget-color-link)",

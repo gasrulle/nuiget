@@ -581,6 +581,9 @@ describe('main panel: Installed tab', () => {
         for (const text of ['Transitive', '9.0.0', 'Microsoft', 'Required by', 'Serilog']) {
             expect(details).toHaveTextContent(text);
         }
+        // The facts are a property list with no colons (DS-COPY-2), the caption a heading of its own (DS-TYPE-9).
+        expect([...details.querySelectorAll('dt')].map(term => term.textContent)).toEqual(['Version', 'Authors']);
+        expect(within(details).getByRole('heading', { level: 3, name: 'Required by' })).toHaveClass('nuiget-group-caption');
         expect(host.requests('package/versions')).toHaveLength(0);
         expect(host.requests('package/metadata')).toHaveLength(0);
 

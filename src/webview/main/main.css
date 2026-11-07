@@ -199,6 +199,7 @@ body {
 .nuiget-details-title {
     margin: 0;
     font-size: var(--nuiget-font-size-lg);
+    font-weight: var(--nuiget-font-weight-semibold);
     overflow-wrap: anywhere;
 }
 
@@ -219,18 +220,6 @@ body {
     color: var(--nuiget-color-fg-muted);
 }
 
-/* The facts rows of the transitive details view (`TransitiveDetails.tsx`) stay flex rows. */
-.nuiget-details-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--nuiget-space-4);
-}
-
-.nuiget-details-row > .nuiget-details-label {
-    min-width: 5em;
-}
-
 .nuiget-details-note {
     margin: 0;
     color: var(--nuiget-color-fg-muted);
@@ -243,42 +232,50 @@ body {
 }
 
 .nuiget-details-description {
-    margin-top: 0;
+    margin: 0 0 var(--nuiget-space-5);
 }
 
-.nuiget-details-facts {
-    display: grid;
-    gap: var(--nuiget-space-2);
-    margin: 0;
-}
-
-.nuiget-details-fact {
+/* A caption, then its content 8 below; sections 16 apart. The container carries the space, so the caption owns no margin. */
+.nuiget-details-section {
     display: flex;
+    flex-direction: column;
     gap: var(--nuiget-space-4);
+    margin-top: var(--nuiget-space-6);
 }
 
-.nuiget-details-fact dt {
-    min-width: 7em;
-    color: var(--nuiget-color-fg-muted);
+/* The dependency groups stack at the compact row height. */
+.nuiget-details-groups {
+    display: flex;
+    flex-direction: column;
 }
 
-.nuiget-details-fact dd {
-    margin: 0;
-}
-
-.nuiget-details-section h3 {
-    margin: var(--nuiget-space-6) 0 var(--nuiget-space-2);
-    font-size: var(--nuiget-font-size-md);
-}
-
-/* A dependency group's header starts at today's 4 px; P3.3a moves it. */
+/* A dependency group's chevron starts at the facts' x, and its count badge sits 4 px after its name (artboard round 3, UX-P3.3a). */
 .nuiget-details-group {
-    --nuiget-section-header-inset: var(--nuiget-space-2);
+    --nuiget-section-header-inset: 0;
+    --nuiget-section-heading-flex: 0 1 auto;
+    --nuiget-section-count-start: 0;
+}
+
+/* An expanded group's items start at its title's x: the chevron and the gap after it. */
+.nuiget-details-group > .nuiget-details-list {
+    padding-inline-start: var(--nuiget-space-7);
+}
+
+/* A Required by block: its caption 12 below the section caption, its items 4 apart. */
+.nuiget-details-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
+    margin-top: var(--nuiget-space-2);
 }
 
 .nuiget-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
     margin: 0;
-    padding-inline-start: var(--nuiget-space-6);
+    padding: 0;
+    list-style: none;
 }
 
 .nuiget-details-vulnerability {

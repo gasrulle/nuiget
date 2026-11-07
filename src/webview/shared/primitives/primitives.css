@@ -694,10 +694,10 @@
     min-height: var(--nuiget-row-height-compact);
 }
 
-/* The heading is there for the outline of the page; it looks like the button it holds. It sets its own weight (DS-TYPE-9). The toggle is as high as its header, the artboard's `height:100%`; 28 is a target on its own, 22 in classic keeps the `::after` hit. */
+/* The heading is there for the outline of the page; it looks like the button it holds. It sets its own weight (DS-TYPE-9). The toggle is as high as its header, the artboard's `height:100%`; 28 is a target on its own, 22 in classic keeps the `::after` hit. The carriers `--nuiget-section-heading-flex` (`0 1 auto`: as wide as its title, shrinking with an ellipsis when the header is narrow) and `--nuiget-section-count-start` (`0`) are set by a context that wants the count beside the title rather than at the header's end (the details dependency groups, UX-P3.3a). */
 .nuiget-section-heading {
     display: flex;
-    flex: 1;
+    flex: var(--nuiget-section-heading-flex, 1);
     align-self: stretch;
     min-width: 0;
     margin: 0;
@@ -756,7 +756,7 @@
 .nuiget-section-count {
     display: inline-flex;
     flex: none;
-    margin-inline-start: auto;
+    margin-inline-start: var(--nuiget-section-count-start, auto);
 }
 
 .nuiget-section-count-text {
@@ -770,6 +770,38 @@
 .nuiget-section-header .nuiget-spinner {
     min-width: 0;
     min-height: 0;
+}
+
+/* ── PropertyList ── */
+
+/* Label–value pairs in two columns: the terms as wide as the widest, one value column (DS-ALIGN-1); a value wraps in its column, and its term stays on its first line. */
+.nuiget-property-list {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--nuiget-space-2) var(--nuiget-space-5);
+    align-items: baseline;
+    margin: 0;
+}
+
+.nuiget-property-term {
+    margin: 0;
+    color: var(--nuiget-color-fg-muted);
+}
+
+.nuiget-property-value {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ── GroupCaption ── */
+
+/* A caption that does not collapse: body size, semibold, normal case (T-13, DS-TYPE-9); its container owns the space around it. */
+.nuiget-group-caption {
+    margin: 0;
+    font-size: var(--nuiget-font-size-md);
+    font-weight: var(--nuiget-font-weight-semibold);
+    text-transform: none;
 }
 
 /* ── Button (the action of an empty state or a banner) ── */

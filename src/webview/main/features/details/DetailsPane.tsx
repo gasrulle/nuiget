@@ -165,7 +165,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                 <div className="nuiget-details-actions">
                     {entry !== undefined ? (
                         <>
-                            <span className="nuiget-details-label">Installed:</span>
+                            <span className="nuiget-details-label">Installed</span>
                             <span>{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
                             <Button
                                 variant="secondary"
@@ -178,7 +178,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                             </Button>
                         </>
                     ) : null}
-                    <label className="nuiget-details-label" htmlFor="nuiget-details-version">Version:</label>
+                    <label className="nuiget-details-label" htmlFor="nuiget-details-version">Version</label>
                     <Select
                         id="nuiget-details-version"
                         data-testid="version-selector"

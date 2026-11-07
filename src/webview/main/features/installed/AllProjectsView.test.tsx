@@ -136,6 +136,8 @@ describe('main panel: All Projects', () => {
         expect(within(details).getAllByRole('heading', { level: 4 }).map(heading => [heading.dataset.testid, heading.dataset.variant])).toEqual([
             ['section-box-required-by-app', 'level'], ['section-box-required-by-lib', 'level'], ['section-box-required-by-tool', 'level'],
         ]);
+        // Each block's list is named by its heading.
+        expect(within(details).getByRole('list', { name: 'Lib' })).toHaveTextContent('Serilog.Sinks.File');
         expect(details).toHaveTextContent('AppSerilog');
         expect(details).toHaveTextContent('LibSerilog.Sinks.File');
         expect(details).toHaveTextContent('ToolNo traceable top-level package');
