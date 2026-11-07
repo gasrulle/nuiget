@@ -85,11 +85,16 @@ describe('renderMarkdownToHtml', () => {
         expect(copyCodeOf(container.querySelector('pre'))).toBeUndefined();
     });
 
-    it('marks a list item whose only content is a link, nested or not, and leaves a link inside a sentence (UX-P3.4)', () => {
+    it('marks a list item whose only content is a link, nested, loose or not, and leaves a link inside a sentence (UX-P3.4)', () => {
         const container = containerOf(renderMarkdownToHtml('- [a](https://a.test)\n  - [b](https://b.test)\n- see [c](https://c.test)\n- [d](https://d.test) and [e](https://e.test)\n'));
         markLinkItems(container);
         const marked = [...container.querySelectorAll('li')].map(item => [item.querySelector('a')?.textContent, item.classList.contains('nuiget-readme-link-item')]);
         expect(marked).toEqual([['a', true], ['b', true], ['c', false], ['d', false]]);
+        // A loose list (blank lines between items) wraps each item in a paragraph: read through it.
+        const loose = containerOf(renderMarkdownToHtml('- [a](https://a.test)\n\n- [b](https://b.test)\n\n- see [c](https://c.test)\n'));
+        markLinkItems(loose);
+        expect(loose.querySelector('li > p > a')).not.toBeNull();
+        expect([...loose.querySelectorAll('li')].map(item => item.classList.contains('nuiget-readme-link-item'))).toEqual([true, true, false]);
     });
 
     it('markCopied swaps the icon and the label and clearCopied restores them', () => {

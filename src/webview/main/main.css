@@ -336,7 +336,8 @@ body {
 }
 
 /* A list item that is only a link holds it on a 24 px line (WCAG 2.5.8; marked by markLinkItems, UX-P3.4). */
-.nuiget-readme-link-item > a {
+.nuiget-readme-link-item > a,
+.nuiget-readme-link-item > p > a {
     display: inline-block;
     line-height: var(--nuiget-target-min);
 }

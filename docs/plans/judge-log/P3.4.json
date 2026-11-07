@@ -1,0 +1,166 @@
+{
+  "item": "P3.4",
+  "runs": [
+    {
+      "runId": "42393623938",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "2f638f1 (the reading commit 4a28e26 and the token-count commit)",
+      "look": "modern",
+      "workflow": "wf_cdec802d-c04",
+      "note": "main-details-readme at 932 against artboard A, whose declared scene it takes since UX-P3.3b. The README block is masked by LIVE_DETAILS in the pixel diff (0 px on all three cells), so the measurements are its gate of record: SPEC readme 1/1 within 1, DS-TYPE-2 readme headings 7 on the ramp, [axe] 0 violations, [contrast] readme 0 violations in six themes. Artboard hash is of the file committed when the panel ran.",
+      "captures": {
+        "main-details-readme": {
+          "png": "captures/42393623938/main-details-readme.dark-modern.932.png",
+          "sha256": "887962eb944af31cf20364740b5d90a14b9c58f95b612832e684be7392117263",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "e10c9d3b86018a06a233de87521ebae3ddb8ca0c9ef3ffd71fb4502ea9d8929e"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 11,
+        "standing": 3,
+        "blocking": 1,
+        "refuted": 1,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-details-readme#D5",
+          "state": "main-details-readme",
+          "finding": "[geometry] The details title 'Microsoft.Extensions.DependencyInjection.Abstracti…' is cut off with an ellipsis that ends at about x 900, inside the 20 px end inset (x 912). The artboard draws the full id ending at x 916, which overruns that end inset by 4 px. The artboard drawing and DS-INSET-4's 20 px end inset disagree, and the spec says nothing about whether the title may be truncated.",
+          "severity": "minor",
+          "box": [
+            350,
+            100,
+            562,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS 2026-11-07 (UX-P3.3b): the title is one line whose name ellipsizes inside the 20 px end inset (DS-INSET-4 header 20/20 hard)",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.4 follow-up 1 (docs/plans/handoff/P3.4.md)"
+        },
+        {
+          "id": "main-details-readme#D2",
+          "state": "main-details-readme",
+          "finding": "[states] The current row band is painted in list.inactiveSelectionBackground (#37373d sampled at 150,180) with no list.focusOutline ring. The spec's package-row tokens (--nuiget-color-list-active-bg, --nuiget-color-list-focus-outline) and the artboard (#04395e band, #0078d4 1 px ring at x 0) draw the active, focused band, so the selection scene is drawn unfocused. | [states] The README tab carries a 1 px focusBorder focus ring box (#0078d4 at x 405) that the artboard's details-tab-readme does not draw. The artboard shows only the active underline, with focus on the current row, so in the capture focus sits on the wrong element.",
+          "severity": "major",
+          "box": [
+            0,
+            175,
+            472,
+            72
+          ],
+          "rule": "DS-COLOR-2, judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "The disposition of its standing twin main-details-readme#D1: DS-COLOR-2 list not focused and DS-FOCUS-1 on details-tab-readme hard green (ui-output.txt:2045, :2064); a scene choice for UX-P3.9's re-capture",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.4 follow-up 1 (docs/plans/handoff/P3.4.md)"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-details-readme#D1",
+          "state": "main-details-readme",
+          "finding": "[native] The current row (Microsoft.Extensions.DependencyInjection.Abstractions) shows no row action in its end slot, where the artboard draws the uninstall (trash) action inside the selection band (spec element row-action-uninstall at 291,200 22x22, composed for main-details-readme); the capture shows only the band colour there. | [states] The current row (Microsoft.Extensions.DependencyInjection.Abstractions) shows no Uninstall action. The spec's row-action-uninstall (22x22 at 291,200, composed for main-details-readme) and the artboard's trash codicon in the band are both missing from the capture.",
+          "severity": "blocking",
+          "box": [
+            291,
+            200,
+            22,
+            22
+          ],
+          "rule": "DS-ROW-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "captures/42393623938/ui-log/ui-output.txt:2045, :2063, :2064: DS-ROW-4 hard green (0 visible actions, actions show on hover/focus-within/focused row), DS-COLOR-2 list not focused, DS-FOCUS-1 ring on details-tab-readme; artboard A composes a focused row with the README tab, which no product state shows at once (DECISIONS 2026-11-07, UX-P3.3b)",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.4 follow-up 1 (docs/plans/handoff/P3.4.md)"
+        },
+        {
+          "id": "main-details-readme#D4",
+          "state": "main-details-readme",
+          "finding": "[native] The split between the list pane and the details pane is drawn as a solid 4 px grey band (x 326-329, full height from y 77) at rest, where the artboard draws a 1 px divider at x 327 and the workbench draws a 1 px separator with a transparent sash; the band also pushes the details content 2 px right of the artboard (text starts at 352 vs 350). | [geometry] The split between the list and the details pane is a painted 4 px band (#313131, x 326-329, y 77 to the bottom), not the artboard's 1 px divider at x 327 (#2b2b2b) with a transparent sash. It pushes the details pane to start at x 330 instead of the spec's 328, so the title, labels, tabs and README all start at x 350 instead of 348. The version select is at 414 instead of 411.4, and Uninstall and Update are at 555 instead of 552.4.",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "DECISIONS 2026-11-07 (UX-P3.3b): the sash's 4 px band stays until UX-P3.9 (DS-DIVIDER-6); SPEC pendingIds package-details-panel P3.9",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.4 follow-up 1 (docs/plans/handoff/P3.4.md)"
+        },
+        {
+          "id": "main-details-readme#D3",
+          "state": "main-details-readme",
+          "finding": "[native] The list toolbar buttons read 'Select all' and 'Uninstall selected (0)' in sentence case, where the artboard draws 'Select All' and 'Uninstall Selected (0)' and button labels are Title Case like workbench commands. | [states] The bulk button reads \"Select all\" in sentence case. The artboard's select-all-button reads \"Select All\", and button labels must be Title Case. | [states] The bulk button reads \"Uninstall selected (0)\" in sentence case. The artboard's uninstall-selected-button reads \"Uninstall Selected (0)\", and button labels must be Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Title Case labels (DS-COPY-1), as P3.3b #D4/#D5",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.4 follow-up 1 (docs/plans/handoff/P3.4.md)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-details-readme",
+          "finding": "The details title is cut with an ellipsis ('...Abstracti…') at about x 900 although the artboard shows the full id 'Microsoft.Extensions.DependencyInjection.Abstractions' fitting to x 916 at the same 932 px width; the spec declares no truncation for the title.",
+          "severity": "major",
+          "box": [
+            350,
+            97,
+            560,
+            24
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The title is a live package id that ellipsizes inside the measured 20 px end inset (DS-INSET-4 header 20/20; capture ink ends at x 899). The artboard's unclipped id runs to x 915, past the 912 limit, so even at the spec's 328 panel start it would not fit; the layout holds, and §6 excludes live content.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        }
+      ],
+      "closedFromEarlierLogs": [
+        {
+          "id": "P3.3b main-details-readme#D3",
+          "disposition": "fixed",
+          "evidence": "captures/42393623938/main-details-readme.dark-modern.932.png sha256 887962eb…: no bar at 350,272/378/546/632; main.css README headings carry no border-left (4a28e26); check-css-baseline --item P3.4 → 0 entries"
+        },
+        {
+          "id": "P3.3a main-details-readme#D5",
+          "disposition": "fixed",
+          "evidence": "main.css:127, primitives.css:979, DetailsPane.test.tsx:488-497 (readme-empty's parent is the tabpanel, class nuiget-empty): the message starts at the pane's 20 px inset"
+        }
+      ]
+    }
+  ]
+}

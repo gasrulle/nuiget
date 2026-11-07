@@ -180,7 +180,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(noRow.map(state => appliesTo(definition, state)), id).toEqual(noRow.map(() => false));
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
-        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: 'hard', readme: { pending: 'P3.4' } });
+        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: 'hard', readme: 'hard' });
         // UX-P3.3b closing 1: main-details-readme's header and list are hard; its details scope waits with SPEC's own.
         expect(RULES.find(rule => rule.id === 'SPEC')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
@@ -985,7 +985,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const header = { ...withEmpty, 'project-selector': { ...element(862, 8, 157, 26), tokens: ['--nuiget-inset'] } };
         expect(at('header', { 'project-selector': element(862, 8, 157, 26), 'package-details-panel': element(331, 77, 601, 726) }, header))
             .toMatchObject({ pass: true, value: '1/1 within 1' });
-        expect(at('readme', {})).toMatchObject({ status: { pending: 'P3.4' }, value: 'composed (main-details-readme): readme-content' });
+        expect(at('readme', {})).toMatchObject({ status: 'hard', value: 'composed (main-details-readme): readme-content' });
         // A capture without a spec for its theme and width is never a pass; another width does not apply.
         expect(measureLines('main-installed-single', layout({ testIds: {} }), 'modern', {}, undefined, 932, undefined).find(line => line.name === 'SPEC@main-installed-single/header')).toMatchObject({ pass: false, value: "not measurable (no artboard spec for this capture's theme and width)" });
         expect(at('header', {}, spec, 800)).toBeUndefined();

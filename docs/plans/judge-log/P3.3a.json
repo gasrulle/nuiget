@@ -522,7 +522,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.4",
-          "evidence": "Ordered to UX-P3.4: the readme-empty cell (readme-* cells).",
+          "evidence": "Fixed by UX-P3.4 (judge-log P3.4.json closedFromEarlierLogs): main.css:127, primitives.css:979, DetailsPane.test.tsx:488-497 (readme-empty's parent is the tabpanel, class nuiget-empty): the message starts at the pane's 20 px inset",
           "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
         },
         {

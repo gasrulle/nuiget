@@ -341,7 +341,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.4",
-          "evidence": "Ordered to UX-P3.4 (README block of main.css, DS-COLOR-1).",
+          "evidence": "Fixed by UX-P3.4 (judge-log P3.4.json closedFromEarlierLogs): captures/42393623938/main-details-readme.dark-modern.932.png sha256 887962eb…: no bar at 350,272/378/546/632; main.css README headings carry no border-left (4a28e26); check-css-baseline --item P3.4 → 0 entries",
           "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3)"
         },
         {
