@@ -117,7 +117,7 @@
     "      option \"#\"",
     "      option \"#\"",
     "    button \"Update\" [disabled] {install-update-button}",
-    "    tablist \"Details sections\"",
+    "    tablist \"Details sections\" {details-tab-bar}",
     "      tab \"Details\" [selected] {details-tab-details}",
     "      tab \"README\" {details-tab-readme}",
     "    tabpanel \"Details\"",

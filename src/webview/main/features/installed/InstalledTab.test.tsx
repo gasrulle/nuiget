@@ -587,6 +587,10 @@ describe('main panel: Installed tab', () => {
         const detailsHeader = within(details).getByTestId('details-header');
         expect([...detailsHeader.querySelectorAll('dt')]).toHaveLength(2);
         expect(detailsHeader).toHaveTextContent('Transitive');
+        // The heading's name keeps a space between the id and the badge's description (never "…IdInstalled through …").
+        const heading = within(detailsHeader).getByRole('heading', { level: 2 });
+        const name = heading.querySelector('.nuiget-details-name')?.textContent ?? '';
+        expect(heading).toHaveAccessibleName(`${name} Installed through another package's dependencies`);
         expect(detailsHeader.querySelector('.nuiget-details-name')).toHaveAttribute('title', detailsHeader.querySelector('.nuiget-details-name')?.textContent ?? '');
         expect(within(details).getByRole('heading', { level: 3, name: 'Required by' })).toHaveClass('nuiget-group-caption');
         expect(host.requests('package/versions')).toHaveLength(0);

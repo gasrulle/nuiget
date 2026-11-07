@@ -45,6 +45,8 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
             <div className="nuiget-details-header" data-testid="details-header">
                 <h2 className="nuiget-details-title">
                     <span className="nuiget-details-name" title={selection.packageId}>{selection.packageId}</span>
+                    {/* The space is for the heading's name ("… Transitive", not "…Transitive"); a flex item of white space is not drawn. */}
+                    {' '}
                     <Badge label="Transitive" title="Installed through another package's dependencies" />
                 </h2>
                 <PropertyList items={[

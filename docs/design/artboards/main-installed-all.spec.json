@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42183339362",
+  "run": "42376865313",
   "composition": "The window is the product's at the Tools folder row (scrollTop 2100, classic 2082); the rows above it are a spacer of their height. Unresolved.csproj's Newtonsoft.Json row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed are compared in main-installed-details only. The Installed tab keeps the focus the state's setup leaves on it.",
   "looks": {
     "modern": {
@@ -491,6 +491,21 @@
         "padding": "0px 0px 0px 0px",
         "gap": "normal normal",
         "tokens": []
+      },
+      "details-empty": {
+        "rect": {
+          "x": 421,
+          "y": 77,
+          "w": 779,
+          "h": 58.2
+        },
+        "inset": 441,
+        "padding": "20px 20px 20px 20px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-inset-details",
+          "--nuiget-color-fg-muted"
+        ]
       }
     },
     "classic": {
@@ -975,6 +990,21 @@
         "padding": "0px 0px 0px 0px",
         "gap": "normal normal",
         "tokens": []
+      },
+      "details-empty": {
+        "rect": {
+          "x": 421,
+          "y": 77,
+          "w": 779,
+          "h": 58.2
+        },
+        "inset": 441,
+        "padding": "20px 20px 20px 20px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-inset-details",
+          "--nuiget-color-fg-muted"
+        ]
       }
     }
   }

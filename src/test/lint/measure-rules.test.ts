@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: { pending: 'P3.5' }, sources: { pending: 'P3.6' }, sidebar: { pending: 'P3.7a' } };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -83,7 +83,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling).
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
-        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -98,7 +98,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-DIVIDER-3')).toEqual({ browse: 'hard' });
         expect(scopes('DS-HEIGHT-3')).toEqual(mainHard());
         expect(scopes('DS-HEIGHT-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' });
-        expect(scopes('DS-HEIGHT-5')).toEqual({ details: { pending: 'P3.3b' } });
+        expect(scopes('DS-HEIGHT-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-HEIGHT-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-7')).toEqual({ ...mainHard(), sidebar: 'hard', dialogs: { pending: 'P3.6' }, sources: { pending: 'P3.6' } });
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: { pending: 'P3.6' } });
@@ -139,8 +139,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
-        // UX-P3.3b: the empty state's top inset in the three main groups too.
-        expect(scopes('DS-INSET-4')).toEqual(Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, { pending: 'P3.3b' }])));
+        // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
+        expect(scopes('DS-INSET-4')).toEqual(Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])));
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -151,9 +151,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
         expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' }, sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: { pending: 'P3.3b' } });
-        expect(scopes('DS-OVERFLOW-5')).toEqual({ details: { pending: 'P3.3b' } });
+        expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
+        expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme']);
@@ -181,6 +181,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
         expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: { pending: 'P3.3b' }, readme: { pending: 'P3.4' } });
+        // UX-P3.3b closing 1: main-details-readme's header and list are hard; its details scope waits with SPEC's own.
+        expect(RULES.find(rule => rule.id === 'SPEC')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
@@ -188,7 +190,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates']);
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
-        expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.3b' } });
+        expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
         // UX-P0.22 (V15): the token scrollbars in every group, pending on P3.9 (Modern UI's 8 px needs P1.1's look token).
         expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, { pending: 'P3.9' }])));
         // Each rule's tolerance is one of D34's.
@@ -684,13 +686,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: false, value: 'toolbar min-content 320 in 300; header min-content 500 in 600' });
         expect(value('main-installed-details', facts({ minContent: { toolbar: { scroll: 301, client: 301 }, header: { scroll: 600, client: 600 } } }), 'DS-OVERFLOW-5@main-installed-details')).toMatchObject({ pass: true });
         // DS-INSET-4 and DS-ALIGN-1 in the details pane.
-        expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: true, status: { pending: 'P3.3b' } });
+        expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: true, status: 'hard' });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 16, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 620 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         expect(value('main-installed-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 620, tabLabelLeft: 632 } }), 'DS-INSET-4@main-installed-details')).toMatchObject({ pass: false });
         // UX-P3.3b: the transitive view has no tabs by design; a pane without a package reads its empty state's top inset.
         expect(value('main-transitive-details', facts({ detailsHeader: { insets: { start: 20, end: 20, top: 20, bottom: 20 }, titleLeft: 444, tabLabelLeft: undefined } }), 'DS-INSET-4@main-transitive-details'))
             .toMatchObject({ pass: true, value: 'header 20/20 20/20 (target 20); title 444, tab label absent (no tabs)' });
-        expect(value('main-updates', facts({ detailsEmpty: { top: 20 } }), 'DS-INSET-4@main-updates')).toMatchObject({ pass: true, value: 'empty top 20 (target 20)', status: { pending: 'P3.3b' } });
+        expect(value('main-updates', facts({ detailsEmpty: { top: 20 } }), 'DS-INSET-4@main-updates')).toMatchObject({ pass: true, value: 'empty top 20 (target 20)', status: 'hard' });
         expect(value('main-updates', facts({ detailsEmpty: { top: 8 } }), 'DS-INSET-4@main-updates')).toMatchObject({ pass: false, value: 'empty top 8 (target 20)' });
         expect(value('main-updates', facts({}), 'DS-INSET-4@main-updates')).toMatchObject({ pass: false, value: expect.stringContaining('not measurable (no details header or empty state)') });
         // UX-P3.3b: DS-OVERFLOW-5 reads the toolbar and the header apart, and the sash's bounds against the two px minimums.
@@ -925,7 +927,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: false, value: '2 disabled, 0 unselectable (0 under Transitive), 1 without a reason: [uninstall-selected-button]' });
         // A page with nothing disabled is a pass of a universal rule (UX-P2.8a).
         expect(at('main-updates', facts({}), 'DS-STATE-7@main-updates')).toMatchObject({ pass: true, value: '0 disabled', status: 'hard' });
-        expect(at('main-installed-details', facts({}), 'DS-STATE-7@main-installed-details')).toMatchObject({ pass: true, value: '0 disabled', status: { pending: 'P3.3b' } });
+        expect(at('main-installed-details', facts({}), 'DS-STATE-7@main-installed-details')).toMatchObject({ pass: true, value: '0 disabled', status: 'hard' });
         // A muted check mark is a disabled affordance: the row says why in text, or its Transitive group does.
         const muted = (status: string, transitive = false) => ({ label: '.nuiget-row-option', status, transitive });
         expect(at('main-transitive-expanded', facts({ unselectable: [muted('Implicitly referenced by the SDK')] }), 'DS-STATE-7@main-transitive-expanded'))
@@ -1185,7 +1187,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const blank = { details: undefined, dialog: undefined };
         expect(lineOf('main-installed-single', shell({ titles: { panel: { fontSize: '13px', fontWeight: '600' }, ...blank } }), 'DS-TYPE-7@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'panel 13px/600 (target 13px/600)' });
         expect(lineOf('main-installed-single', shell({ titles: { panel: { fontSize: '13px', fontWeight: '700' }, ...blank } }), 'DS-TYPE-7@main-installed-single')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-details', shell({ titles: { panel: { fontSize: '13px', fontWeight: '600' }, details: { fontSize: '18px', fontWeight: '700' }, dialog: undefined } }), 'DS-TYPE-7@main-installed-details')).toMatchObject({ pass: false, status: { pending: 'P3.3b' } });
+        expect(lineOf('main-installed-details', shell({ titles: { panel: { fontSize: '13px', fontWeight: '600' }, details: { fontSize: '18px', fontWeight: '700' }, dialog: undefined } }), 'DS-TYPE-7@main-installed-details')).toMatchObject({ pass: false, status: 'hard' });
         expect(lineOf('main-installed-single', shell({ headings: [{ tag: 'h1', weight: '600', sectionTitle: false }] }), 'DS-TYPE-9@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'headings 1: h1 600' });
         expect(lineOf('main-installed-single', shell({ headings: [{ tag: 'h2', weight: '700', sectionTitle: false }] }), 'DS-TYPE-9@main-installed-single')).toMatchObject({ pass: false, value: expect.stringContaining('off: h2 700') });
         const line = 'rgb(43, 43, 43)';
