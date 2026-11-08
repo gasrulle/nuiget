@@ -603,9 +603,19 @@ const REACH: Record<string, Reach> = {
     'main-updates-empty': {
         reach: async () => {
             await chooseFixtureProject('Empty.csproj');
-            await clickVisible('updates-tab');
+            // The Updates tab is held for the whole wait: re-clicked whenever it is not selected, the first click included
+            // (UX-P3.7c red run 1, architecture-advisor ruling: the project switch can land after a click resolved on the old strip).
             // "No updates available." first means the installed result had not arrived: the wait goes on (MU10).
-            await until('document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No packages installed."', 'the empty state');
+            await poll(async () => {
+                const selected = await script<string | null>('return document.querySelector(\'[data-testid="updates-tab"]\')?.getAttribute("aria-selected") ?? null;');
+                if (selected !== 'true') {
+                    const evidence = await script<string>('return (document.querySelector(\'[role="tab"][aria-selected="true"]\')?.getAttribute("data-testid") ?? "none") + "; tab badges " + document.querySelectorAll(".nuiget-tab-count").length;');
+                    console.warn(`[reach] main-updates-empty: updates-tab re-clicked (selected: ${evidence})`);
+                    await clickVisible('updates-tab');
+                    return undefined;
+                }
+                return (await script<boolean>('return document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No packages installed.";')) ? true : undefined;
+            }, 'the empty state', 120_000);
         },
     },
     'main-updates-error': {
