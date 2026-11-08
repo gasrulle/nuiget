@@ -1,0 +1,98 @@
+{
+  "item": "P3.7c",
+  "runs": [
+    {
+      "runId": "42456790390",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "68b1217 (the reading commits 693d175, 1821501 and the red-run fix-forward)",
+      "look": "modern",
+      "workflow": "wf_41839ffc-7a8",
+      "note": "No sidebar artboard: sidebar-all-projects is judged against main-installed-all.dark-modern.1200.png and its spec (the ruling's DO 4, P3.7a precedent); one entry per state (the workflow takes unique state names), the Modern UI cell.",
+      "captures": {
+        "sidebar-all-projects": {
+          "png": "captures/42456790390/sidebar-all-projects.dark-modern.300.png",
+          "sha256": "652bed632b6c833bfed26f2dc4e78fd46a4e998585e97f4abf444e7c6554d27a",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 7,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 5,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "sidebar-all-projects#D3",
+          "state": "sidebar-all-projects",
+          "finding": "[native] The vertical scrollbar thumb at x 292-299 has square corners (solid scrollbarSlider pixels in the first and last rows at y 82 and 498, with no antialiased corners), but this is the Modern UI capture (28 px pane header, 8 px scrollbar), where DS-RADIUS-2 rounds the thumb to M 4 like the workbench's Modern UI scrollbars.",
+          "severity": "minor",
+          "box": [
+            292,
+            82,
+            8,
+            417
+          ],
+          "rule": "DS-RADIUS-2",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: the scrollbar thumb's radius is the scrollbar's (DS-SCROLL-1 pending P3.9; P3.9 owns the sidebar's scrollbar)"
+        },
+        {
+          "id": "sidebar-all-projects#D2",
+          "state": "sidebar-all-projects",
+          "finding": "[geometry] The CPM label badges of the Catalog.csproj package rows sit 1 px low in their 22 px rows. Each badge spans y 128-147 in the row at y 126-147: 2 px above it and 0 px below, so it touches the row's bottom edge and consecutive badges are only 2 px apart. In the same tree the group-row count badges are centred (Catalog.csproj's count spans y 105-124 in the row at y 104-125), and so is the row text (cap centre 136 against a row centre of 136.5).",
+          "severity": "minor",
+          "box": [
+            220,
+            126,
+            37,
+            286
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational: a label badge 1 px low in a 22 px compact row (optical centring; judge-only polish, named for P3.9's badge pass)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-all-projects",
+          "finding": "The CPM label badges on the package rows are about 15 px tall (y 130-145 at Mapster), while the count badge on the Catalog.csproj group row just above is about 19 px (y 105-124); DS-HEIGHT-10 gives a Modern UI label badge the count badge's font and its M 4/6 padding, so the two pills should be the same height. Here the label badge has the classic 2/4 padding instead, so two different pill heights sit on consecutive rows.",
+          "reason": "In the crop the Mapster CPM badge spans y 128-147 (20 px, pixel column x 238), the same height as the Catalog.csproj count badge at y 105-124 (20 px), so the 15 px claim is wrong; the hard DS-HEIGHT-10 line also reads 'label 14' with no off-style entry, meaning all 14 label badges compute the Modern 10px font and 4px 6px padding."
+        },
+        {
+          "id": "native-3",
+          "state": "sidebar-all-projects",
+          "finding": "The trailing CPM label badges of the package rows end at x 255, about 26 px left of the count badges on the Catalog.csproj and Gateway.csproj group rows (which end at x 281), so the tree has two trailing edges at rest. In the SCM tree exemplar, resource decorations and the group count end at the same edge, and actions overlay that edge only on hover.",
+          "reason": "The CPM badges end at x 255 and the group counts end at 281 (DS-OVERFLOW-2 measures 282, box right 288), but the 26 px difference is the declared compact-row action slot: DECISIONS 2026-11-08 (UX-P3.7a) says the one action overlays an end slot of 32 (6 + 22 + 4), and 288 - 32 = 256 is exactly where the badges stop, so the difference is intended."
+        },
+        {
+          "id": "geometry-2",
+          "state": "sidebar-all-projects",
+          "finding": "The package rows' trailing edge stops at x≈256, 26 px short of the group-row count edge at x 282 (6 px inside the band edge at 288) in the same tree. The CPM badges end at 256, and names in rows without a badge (Gateway.csproj) ellipsize at x≈248. That leaves an empty 32 px end slot on every row that is not hovered, so the tree's trailing decorations do not share one end edge.",
+          "reason": "The badge trailing edge is x 255/256 against the count edge at 282 (measured, box right 288). That empty 32 px end slot is the compact row's declared action slot (DECISIONS 2026-11-08: the one action overlays an end slot of 32 and sits 6 inside the band, the same edge the group counts use), so it is a difference made on purpose, not a misalignment."
+        },
+        {
+          "id": "states-1",
+          "state": "sidebar-all-projects",
+          "finding": "The folder group row of the sidebar tree reads \"app\" in lower case, while the approved artboard draws the same kind of folder group header in Title Case (\"Tools\", section-header-folder-tools, which carries --nuiget-header-transform) and DS-COPY-1 requires group-header labels in Title Case.",
+          "reason": "The crop shows 'app', the workspace folder's own name, which is live content rather than an authored label (rubric §6). The hard DS-TYPE-5 line reads 'level ×7: 13px/600/none' and DECISIONS 2026-11-08 gives the sidebar tree's group rows the level variant with no transform. The artboard is the 1200 px main panel, and at this box it shows unrelated main-panel pixels, not a sidebar folder row."
+        },
+        {
+          "id": "states-2",
+          "state": "sidebar-all-projects",
+          "finding": "The folder group row \"tools\" near the bottom of the sidebar tree is lower case, where the artboard's section-header-folder-tools draws \"Tools\" with the header transform and DS-COPY-1 requires Title Case on group headers; the same folder level is cased differently on the two surfaces.",
+          "reason": "The crop shows 'tools', the workspace folder's name, which is live content. The sidebar group rows are ruled to take the level variant without a transform (DECISIONS 2026-11-08), and the hard DS-TYPE-5 measures 'level ×7 … none' as on target. The artboard crop at the same box is main-panel content, not a counterpart row."
+        }
+      ]
+    }
+  ]
+}

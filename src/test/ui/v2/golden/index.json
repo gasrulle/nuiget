@@ -437,6 +437,18 @@
     "sha256": "43af8ec934f60e732efd72351561c4ae88eb471b3029ad7734b887d26bad28fe",
     "sidecarSha256": "c8572af90dae6eae35978efd98ec89823de811c644b23781f1bc09519a857416"
   },
+  "sidebar-all-projects.dark-modern-classic.300.png": {
+    "status": "baseline",
+    "run": "42456790390",
+    "sha256": "577542c66ab8f48dfb4d459a6ae40a577b9e430d3c9038da6ec4cf9aa2991aac",
+    "sidecarSha256": "9ab3adce16601dbd9557994ed880562171d04ffbdae5c3870f7990d6b3913cb9"
+  },
+  "sidebar-all-projects.dark-modern.300.png": {
+    "status": "baseline",
+    "run": "42456790390",
+    "sha256": "652bed632b6c833bfed26f2dc4e78fd46a4e998585e97f4abf444e7c6554d27a",
+    "sidecarSha256": "ad1f0871e171de9d88f2e9e9ec21a28fca9b138d71d64a6e6b35780dc401fe26"
+  },
   "sidebar-filter.dark-modern.300.png": {
     "status": "baseline",
     "run": "42445799846",
