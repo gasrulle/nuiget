@@ -39,7 +39,7 @@ const lineOf = (state: string, built: Layout, name: string, look: 'modern' | 'cl
 
 const at16 = { title: 16, search: 16, tab: 16, toolbar: 16, section: 16, row: 16 };
 
-const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: { pending: 'P3.7a' } };
+const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' };
 
 /** Every named state and a loading state of each group no item names yet (DS-HEIGHT-11's later scopes). */
 const CANDIDATES = [...STATES.map(state => state.name), 'main-sources-list', 'main-updates-loading', 'main-browse-loading', 'main-loading-details', 'sidebar-loading', 'main-updates-empty', 'main-browse-empty', 'main-empty-details', 'sidebar-empty', 'main-updates-error', 'main-browse-error', 'main-error-details', 'sidebar-error'];
@@ -93,8 +93,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling); UX-P3.5: nor dialogs.
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
-        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
+        expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
         expect(scopes('PF-3b')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard' });
@@ -102,7 +102,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('PF-5')).toEqual({ details: 'hard' });
         expect(RULES.find(rule => rule.id === 'PF-5')?.states).toEqual(['main-installed-details']);
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
-        expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: 'hard' });
         expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: 'hard', popup: 'hard' });
         expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard', layers: 'hard' });
         // UX-P3.5 (design-advisor ruling of 2026-11-07): the dialog layer's elevation and backdrop, hard in the three dialog states.
@@ -166,7 +166,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
         expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: 'hard' });
-        expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard' });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
@@ -285,7 +285,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(toolbar({ start: 6, end: 6, top: 4, bottom: 4 })).toMatchObject({ pass: false });
         const sidebar = (look: 'modern' | 'classic') => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 4, bottom: 4 } }), look)
             .find(line => line.name === 'DS-INSET-2@sidebar-sections');
-        expect(sidebar('modern')).toMatchObject({ pass: true, status: { pending: 'P3.7a' } });
+        expect(sidebar('modern')).toMatchObject({ pass: true, status: 'hard' });
         expect(sidebar('classic')).toMatchObject({ pass: false });
         // UX-P3.7a: a pane box is judged top/bottom only, its end read at its trailing element (start DS-INSET-1, end DS-INSET-3 b).
         const pane = (top: number, bottom: number) => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 4, bottom: 4 }, sections: [{ id: 'installed', variant: 'pane', insets: { start: 4, end: 20, top, bottom }, trailingEnd: 6, above: undefined, below: undefined }] }), 'modern')
@@ -330,7 +330,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const sidebar = { rootLeft: 0, titles: [28], names: [28], search: 8 };
         const modern = measureLines('sidebar-sections', layout({ sidebar }), 'modern').find(line => line.name === 'DS-INSET-1@sidebar-sections');
         const classic = measureLines('sidebar-sections', layout({ sidebar }), 'classic').find(line => line.name === 'DS-INSET-1@sidebar-sections');
-        expect(modern).toMatchObject({ pass: true, status: { pending: 'P3.7a' } });
+        expect(modern).toMatchObject({ pass: true, status: 'hard' });
         expect(classic).toMatchObject({ pass: false });
     });
 

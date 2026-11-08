@@ -416,6 +416,127 @@
           "reason": "The hard line 'DS-INSET-4@main-quicksearch-open: empty top 20 (target 20)' shows the details empty state is rendered, at y≈97 under the popup, so the pane has a defined state; Newtonsoft.Json's facts come from the main-installed-details artboard, a different state."
         }
       ]
+    },
+    {
+      "runId": "42437995239",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "37ba393 (series -b reading commit ecadc62 and the DS counts)",
+      "look": "modern",
+      "workflow": "wf_2bc95d90-c81",
+      "note": "Series -b, the re-run follow-up 1 names for the -b-owned findings: sidebar-sections and sidebar-hover against main-installed-single.dark-modern.932 (P2.9a precedent). The first header's line, the title x and the count end (-a panel sidebar-sections#D2/#D3/#D4, sidebar-hover#D1/#D3/#D4) no longer stand. The two standing findings are the -a panel's sash band (sidebar-sections#D1, sidebar-hover#D2), ruled to P3.9 by follow-up 1, and carry that disposition; none is new.",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/42437995239/sidebar-sections.dark-modern.300.png",
+          "sha256": "c2030ce6b27a5e79fd67db2bc92be6b5addc48cf8cc81f3c8ba3e697e226b8c2",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "sidebar-hover": {
+          "png": "captures/42437995239/sidebar-hover.dark-modern.300.png",
+          "sha256": "4c7dcd3f90d107126cc0efab46774aeaa029df3b902a94ba25635dc5086c8024",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 9,
+        "standing": 2,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "standing": [
+        {
+          "id": "sidebar-sections#D1",
+          "state": "sidebar-sections",
+          "finding": "[native] The line between the Installed and Updates sections is a 4 px full-width band, from the pane's left edge to its right edge, painted #313131 (widget.border in Dark Modern). DS-DIVIDER-1 asks for a Modern UI 1 px separator inset 4 px, and DS-DIVIDER-4 for the sidebar's sideBarSectionHeader.border role. A native side-bar pane boundary does not look like this band. | [geometry] The split between the Installed and Updates sections is drawn as a 4 px opaque band (y 415-418) across the full pane width, from x 0 to x 299, so it touches both pane edges. DS-DIVIDER-1 (Modern UI) asks for a 1 px separator inset 4 px above every section header but the first. DS-DIVIDER-6 asks for a 1 px separator under a transparent 4 px sash at rest. The band is the input-grey border colour, not the focusBorder hover colour, so this is the resting state and not a hovered sash. | [states] Between the Installed and Updates sections the capture paints a 4 px band (rgb 49,49,49 at y 415-418) across the full 300 px pane width. DS-DIVIDER-1 calls for a 1 px separator inset 4 px on each side above a Modern UI sidebar section header, and DS-DIVIDER-6 calls for a transparent sash at rest. No artboard element draws a sidebar divider.",
+          "severity": "major",
+          "box": [
+            0,
+            415,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "carries": "the -a panel's sash band (sidebar-sections#D1, sidebar-hover#D2): fixed, owner P3.9 (design-advisor follow-up 1)",
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash band between the sidebar sections (V15, V16), as the -a panel's sidebar-sections#D1 and sidebar-hover#D2",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-hover#D1",
+          "state": "sidebar-hover",
+          "finding": "[native] The separator between the Installed and Updates sections is a 4 px, full-width band (y 415-418, x 0-299) painted #313131 (widget.border), where a Modern UI pane boundary in the Explorer/Extensions exemplar is a 1 px separator inset 4 px in sideBarSectionHeader.border (#2b2b2b in this theme, DS-DIVIDER-4); it reads as a heavy bar rather than a native pane divider. | [geometry] The divider above the Updates section header is a solid 4 px bar (#313131, y 415-418) spanning the full pane width from x 0 to x 299, at rest in a row-hover state. Under Modern UI DS-DIVIDER-1 calls for a 1 px separator inset 4 px on each side, and DS-DIVIDER-6 calls for a transparent sash at rest around a 1 px line. The bar is four times too thick and touches both pane edges. The assigned artboard (main-installed-single, 932 px main panel) draws no sidebar, so this is measured against the rule alone. | [states] The split between the Installed and Updates panes is drawn as an opaque 4 px full-width grey bar at rest (y 415-418, x 0-299, colour of the generic border token). The rule asks for a 1 px separator in settings.sashBorder with a 4 px sash centred on it that stays transparent until hovered or dragged. So the row is hovered, not the sash, yet an extra heavy divider shows.",
+          "severity": "major",
+          "box": [
+            0,
+            415,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1, DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "carries": "the -a panel's sash band (sidebar-sections#D1, sidebar-hover#D2): fixed, owner P3.9 (design-advisor follow-up 1)",
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash band between the sidebar sections (V15, V16), as the -a panel's sidebar-sections#D1 and sidebar-hover#D2",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "sidebar-hover#D2",
+          "state": "sidebar-hover",
+          "finding": "[native] The Updates section header shows its up-arrow action glyph while the pointer rests on an Installed row; the workbench's pane headers (Explorer exemplar, alwaysShowHeaderActions off) show their actions only while that pane is hovered or focused.",
+          "severity": "minor",
+          "box": [
+            242,
+            424,
+            16,
+            16
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: the Updates header's action shown at rest (the header actions are P3.7b's: the view-title actions, DS-OVERFLOW-4); for the P3.7b brief"
+        },
+        {
+          "id": "sidebar-hover#D3",
+          "state": "sidebar-hover",
+          "finding": "[states] The sidebar search placeholder 'Search, or filter: @installed, @updates, @vulnerable' is too long for the 300 px pane. It is cut through the 's' of '@updates' just before the filter action, with no ellipsis, so the '@vulnerable' hint never shows. The copy is correct but longer than the field.",
+          "severity": "minor",
+          "box": [
+            14,
+            9,
+            252,
+            16
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "informational": "singleJudge, informational: the -a panel's sidebar-sections#D5, owner P3.7b (follow-up 1)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "state": "sidebar-sections",
+          "finding": "The Updates section header shows its Update All arrow action at rest, with no hover tint and no focus ring. The Installed header shows no action. In the Explorer exemplar, pane-header actions appear only when the pane is hovered or focused.",
+          "reason": "The crop shows the Update All arrow at about x 241 to 257 in the Updates header, at rest. The design system keeps it there on purpose: its sidebar section header overflow row says 'the count badge and the actions stay', and the interaction model puts Update all in the header with no hover gating. No DS rule hides pane-header actions until hover, so with no rule to cite it is a judge-only exemplar preference, which rubric §6 excludes."
+        }
+      ]
     }
   ]
 }
