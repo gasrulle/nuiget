@@ -1,0 +1,92 @@
+{
+  "item": "P3.7d",
+  "runs": [
+    {
+      "runId": "42474985049",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "9aca120 (the reading commit, after 6690821 and 50fd222)",
+      "look": "modern",
+      "workflow": "wf_557a800e-30e",
+      "note": "No sidebar artboard: sidebar-all-projects-updates is judged against main-installed-all.dark-modern.1200.png and its spec (design-advisor ruling of 2026-11-08, DO 7; the P3.7c precedent); the Modern UI cell.",
+      "captures": {
+        "sidebar-all-projects-updates": {
+          "png": "captures/42474985049/sidebar-all-projects-updates.dark-modern.300.png",
+          "sha256": "8624e886f5526f5e1b4719395b0583dcce652967577ea684ac542cd27e82c5bc",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 6,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 4,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "sidebar-all-projects-updates#D1",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[native] The Unsupported.csproj message wraps onto two lines spaced 23 px apart (cap tops at y 386 and 409), the 22 px row line box instead of the 1.4 body leading, so 'SDK 10 or newer.' reads as a separate tree row rather than the second line of one message.",
+          "severity": "major",
+          "box": [
+            44,
+            384,
+            229,
+            36
+          ],
+          "rule": "DS-TYPE-4",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: the compact message leaf's line box is P3.7c's primitive anatomy (the Installed tree's leaf the same); its wrap and leading belong to the state-cells sweep (UX-P3.10), named in its row"
+        },
+        {
+          "id": "sidebar-all-projects-updates#D2",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[native] Under the Updates section header the scrolled tree cuts the Microsoft.Extensions.Http row in half flush against the header's bottom edge with no scrollbar.shadow (DS-SCROLL-2).",
+          "severity": "minor",
+          "box": [
+            0,
+            78,
+            290,
+            16
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: the scroll shadow is the shared chrome's (UX-P3.9, scrollbars and dividers), named in its row"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "state": "sidebar-all-projects-updates",
+          "finding": "Ellipsized compact rows stop at x 243-254 and leave about 35-40 px empty before the row end at rest, so two different packages both read 'Microsoft.Extensions.Configu…'. Native Explorer and SCM tree labels use the full row width and give up space to actions only on hover.",
+          "reason": "The empty space after the ellipsized names (ink ends at x 241-253, band ends at 288) is the compact row's declared end slot. primitives.css:142 sets the end padding to action end inset + action size + space-2, so the hover action overlays the slot (DS-INSET-3 a). The hard DS-ROW-5 measurement reads '30 rows, 8 names cut' and passes, and identical truncated ids are live content."
+        },
+        {
+          "id": "geometry-1",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The group-row count badges in the tree end at x≈282, 8 px left of the Updates pane-header count, which ends at x≈290, because the list's classic 8 px scrollbar track reserves layout width over the whole list.",
+          "reason": "The offset is visible, but the rules declare it: DS-INSET-3 measures a sidebar group row's count 6 inside its band ('group rows 6 ×4 (target 6)'), and DS-SCROLL-1 declares the reserved 8 px scrollbar. The box also covers only two of the badges it names."
+        },
+        {
+          "id": "states-1",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The folder group row reads \"tools\" in lowercase, where the artboard's folder header draws \"Tools\" (DS-COPY-1).",
+          "reason": "The hard DS-TYPE-5 line reads 'level ×6: 13px/600/none (target 13px/600/none)', folder rows included: the sidebar declares no transform; the folder name is live content (rubric §6); the artboard's capitalize transform is the main panel's at 1200, another surface."
+        },
+        {
+          "id": "states-2",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The Unsupported.csproj group row shows only its count badge; the artboard draws an \"Unsupported\" badge before the count.",
+          "reason": "The box does not name where the artboard draws the element (it crops another row), the comparison crosses surfaces, and the hard DS-STATE-1 line reports the unsupported marker present; the sidebar group row carries no badge by the design-advisor ruling of 2026-11-08 (DO NOT: no Unsupported badge)."
+        }
+      ]
+    }
+  ]
+}
