@@ -51,6 +51,11 @@ body {
     min-height: 0;
 }
 
+/* The lists paint the side bar's surface, so their text keeps its subpixel antialiasing on a composited scroller (UX-P3.7c). */
+.nuiget-sidebar-section-content {
+    --nuiget-listbox-bg: var(--nuiget-color-bg-sidebar);
+}
+
 .nuiget-sidebar-fidelity {
     display: inline-flex;
 }

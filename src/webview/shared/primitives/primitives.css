@@ -66,6 +66,8 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
+    /* The carrier a context sets to its surface: Chromium keeps subpixel text on a composited scroller only when it is opaque (UX-P3.7c). */
+    background-color: var(--nuiget-listbox-bg, transparent);
 }
 
 /* As high as all rows together; the rows in view are placed inside it. */
