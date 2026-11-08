@@ -427,7 +427,7 @@ Every container that holds a row of controls, its minimum width and its behaviou
 | Container | Min width | Behaviour below it, in order | Today |
 |---|---|---|---|
 | Sidebar view title (VS Code draws it) | 170 (side-bar minimum) | at most 4 navigation actions; the rest in `...` | 4 actions since UX-P3.7b (Refresh and Open Full Manager in `...`) |
-| Sidebar header (search box) | 170 | the box shrinks; its Filter and Clear buttons stay inside it; the placeholder and the source line above the box ellipsize (UX-P3.7b) | holds |
+| Sidebar header (search box) | 170 | the box shrinks; its Filter and Clear buttons stay inside it; the source line above the box ellipsizes (UX-P3.7b); the placeholder fits by its copy (P3.11; `text-overflow` on `::placeholder` draws no ellipsis on Chromium 150, run 42445799846) | holds |
 | Sidebar section header | 170 | title ellipsis; the count badge and the actions stay | title ellipsis holds; Update all touches the edge (V3) |
 | Sidebar compact row | 170 | version ellipsis first, then the name (DS-ROW-5); actions stay | holds |
 | Main header (title, check boxes, selects, gear, refresh) | 220 (editor minimum) | wraps; every control line ends at the inset | wraps (UX-P2.7a) |
