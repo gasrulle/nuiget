@@ -462,6 +462,8 @@ const REACH: Record<string, Reach> = {
     'main-installed-details': {
         reach: async () => {
             await gatewayInstalled();
+            // Newtonsoft.Json sorts past the fold: the list is scrolled to its end, the row current there (UX-P3.fix-1).
+            await scrollListTo('installed-list', 'package-row-newtonsoft.json');
             await currentDetails('package-row-newtonsoft.json');
         },
     },
@@ -482,6 +484,8 @@ const REACH: Record<string, Reach> = {
     'main-installed-hover': {
         reach: async () => {
             await gatewayInstalled();
+            // Serilog sorts past the fold: the list is scrolled to it, never by the pointer (UX-P3.fix-1).
+            await scrollListTo('installed-list', 'package-row-serilog');
             const option = await optionOf('package-row-serilog');
             await driverOf().actions().move({ origin: option }).perform();
             await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
@@ -490,6 +494,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-hover-current': {
         reach: async () => {
             await gatewayInstalled();
+            await scrollListTo('installed-list', 'package-row-newtonsoft.json');
             await currentDetails('package-row-newtonsoft.json');
             const option = await optionOf('package-row-newtonsoft.json');
             await driverOf().actions().move({ origin: option }).perform();
@@ -531,6 +536,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-unfocused': {
         reach: async () => {
             await gatewayInstalled();
+            await scrollListTo('installed-list', 'package-row-serilog');
             await toggleIntoSelection('package-row-serilog');
             await (await findByTestId('search-input', 30_000)).click();
             await until('!document.querySelector(\'[data-testid="installed-list"]\').contains(document.activeElement) && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option[aria-selected="true"]\') !== null', 'a selected row in an unfocused list', 10_000);
@@ -539,6 +545,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-bulk-dialog': {
         reach: async () => {
             await gatewayInstalled();
+            await scrollListTo('installed-list', 'package-row-serilog');
             await toggleIntoSelection('package-row-serilog');
             await (await findByTestId('uninstall-selected-button', 10_000)).click();
             await findByTestId('confirm-dialog', 10_000);
@@ -1378,6 +1385,7 @@ const FOCUS_IN_DIALOG = 'const el = document.activeElement; return Boolean(el &&
  */
 async function dialogKeys(): Promise<KeyOutcome[]> {
     const outcomes: KeyOutcome[] = [];
+    await scrollListTo('installed-list', 'package-row-serilog');
     await toggleIntoSelection('package-row-serilog');
     await script('document.querySelector(\'[data-testid="uninstall-selected-button"]\').focus();');
     await press(Key.ENTER);
@@ -1396,6 +1404,7 @@ async function dialogKeys(): Promise<KeyOutcome[]> {
         await cancelDialog();
     }
     outcomes.push({ path: 'dialog restore', observed: await focusedTestId(), expected: 'uninstall-selected-button' });
+    await scrollListTo('installed-list', 'package-row-serilog');
     const option = await optionOf('package-row-serilog');
     await driverOf().actions().keyDown(MODIFIER).click(option).keyUp(MODIFIER).perform();
     await poll(async () => ((await option.getAttribute('aria-selected')) !== 'true' ? true : undefined), 'package-row-serilog out of the selection', 10_000);
@@ -1990,6 +1999,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             });
             await perfStep(SELECT.label, async () => {
                 await enterMainWebview();
+                await scrollListTo('installed-list', `package-row-${DETAILS_ID}`);
                 await timeChain(SELECT, async () => (await optionOf(`package-row-${DETAILS_ID}`, 30_000)).click());
             });
             for (const label of ['search', 'search again'] as const) {

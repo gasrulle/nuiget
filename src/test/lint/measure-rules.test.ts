@@ -201,7 +201,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(noRow.map(state => appliesTo(definition, state)), id).toEqual(noRow.map(() => false));
             expect(appliesTo(definition, 'main-installed-single'), id).toBe(true);
         }
-        expect(scopes('SPEC')).toEqual({ header: 'hard', list: 'hard', details: 'hard', readme: 'hard' });
+        // UX-P3.fix-1 push 1: the list scope reads the sorted product against the old specs; hard again at its push 2.
+        expect(scopes('SPEC')).toEqual({ header: 'hard', list: { pending: 'P3.fix-1' }, details: 'hard', readme: 'hard' });
         // UX-P3.3b closing 1: main-details-readme's header and list are hard; its details scope waits with SPEC's own.
         expect(RULES.find(rule => rule.id === 'SPEC')?.pendingStates).toBeUndefined();
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
@@ -1043,7 +1044,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // A padding off is named on a control; a row's strings are not compared, its rect is.
         expect(at('header', { 'project-selector': element(600, 8, 150, 26, '2px 0px 0px 0px') })).toMatchObject({ pass: false, value: '1/1 within 1; style: project-selector padding 2px 0px 0px 0px (spec 0px 0px 0px 0px)' });
         // A composed id outside its state and a below-the-fold id are not required; the row's padding differs and passes.
-        expect(at('list', list)).toMatchObject({ pass: true, status: 'hard', value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
+        // UX-P3.fix-1 push 1: the list scope is pending until its push 2 commits the re-rendered specs.
+        expect(at('list', list)).toMatchObject({ pass: true, status: { pending: 'P3.fix-1' }, value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
         expect(at('list', { ...list, 'package-row-first': element(0, 247, 327, 72) })).toMatchObject({ pass: false, value: expect.stringContaining('off: package-row-first Δy 72') });
         // An id a later item owns prints and leaves the verdict.
         expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
@@ -1071,12 +1073,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(specOf('main-installed-single', 1200)).toEqual([]);
         for (const state of ['main-transitive-expanded', 'main-transitive-details']) {
             expect(specOf(state, 1200).map(line => line.name)).toEqual(['header', 'list', 'details', 'readme'].map(scope => `SPEC@${state}/${scope}`));
-            expect(specOf(state, 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', 'hard']);
+            expect(specOf(state, 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', { pending: 'P3.fix-1' }]);
             expect(specOf(state, 932)).toEqual([]);
         }
         // UX-P3.1a: main-updates at 1200 against its round-3 page, header and list hard since the item's closing commit.
         expect(specOf('main-updates', 1200).map(line => line.name)).toEqual(['header', 'list', 'details', 'readme'].map(scope => `SPEC@main-updates/${scope}`));
-        expect(specOf('main-updates', 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', 'hard']);
+        expect(specOf('main-updates', 1200).filter(line => /\/(header|list)$/.test(line.name)).map(line => line.status)).toEqual(['hard', { pending: 'P3.fix-1' }]);
         expect(specOf('main-updates', 932)).toEqual([]);
         const transitiveSpec: SpecLook = { 'transitive-details': element(420, 77, 780, 726) };
         const lines = measureLines('main-transitive-details', layout({ testIds: { 'transitive-details': element(420, 77, 780, 726) } }), 'modern', {}, undefined, 1200, transitiveSpec);

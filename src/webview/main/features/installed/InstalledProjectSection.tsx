@@ -14,10 +14,10 @@ export interface Item {
 const isVulnerable = (metadata: ReadonlyMap<string, PackageMetadataLite>, id: string): boolean =>
     (metadata.get(id.toLowerCase())?.vulnerabilities?.length ?? 0) > 0;
 
-/** The rows a filter leaves, and what to say when it leaves none. */
+/** The rows a filter leaves, sorted by id as the sidebar's `visiblePackages` (P9.10, UX-P3.fix-1), and what to say when it leaves none. */
 export function visibleRows(result: InstalledResult, metadata: ReadonlyMap<string, PackageMetadataLite>, filter: string, vulnerableOnly: boolean): { items: Item[]; empty: string } {
     const needle = filter.trim().toLowerCase();
-    let entries = result.packages.filter(entry => entry.id.toLowerCase().includes(needle));
+    let entries = result.packages.filter(entry => entry.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
     if (vulnerableOnly) {
         // Empty is not unknown: without any metadata nothing can be said about vulnerabilities.
         if (metadata.size === 0) {

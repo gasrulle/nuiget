@@ -676,7 +676,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   (UX-P2.1e); a group row past the rendered window is not in the document until the list scrolls to it. A list as high as its rows
   (All Projects Updates) cannot scroll itself, so `Listbox` scrolls the active row into view with
   `scrollIntoView({ block: 'nearest' })` (N88).
-- **Rows (P9.3).** A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
+- **Rows (P9.3).** Sorted by id (`visibleRows`, `localeCompare`, as the sidebar's; UX-P3.fix-1), transitive rows in the host's order. A comfortable `Row` per package: the icon from the lite map (`packageIconSrc`: the `data:` URI
   or the bundled default), authors and the Verified mark from the same map, no description (D14); the version
   cell of `versionCell` (`10.* (10.2.0)`, `(run restore)`, `* (always latest: …)`); badges `SDK`, `props`, `CPM`,
   `floating` or `range`, `Vulnerable`. A row `whyNotRemovable` refuses keeps a muted, empty check mark

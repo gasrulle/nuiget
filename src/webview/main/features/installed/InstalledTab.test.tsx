@@ -72,7 +72,9 @@ describe('main panel: Installed tab', () => {
         expect(within(list).getByTestId('group-row-direct').querySelector('[role="treeitem"]')).toHaveAttribute('aria-expanded', 'true');
         expect(list).toHaveAttribute('aria-multiselectable', 'true');
         expect(list).toHaveAccessibleName('Installed packages');
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        // The fixture lists Serilog, Moq, Newtonsoft.Json; the rows read in id order, as the sidebar's (UX-P3.fix-1).
+        expect(THREE.map(entry => entry.id)).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         expect(optionOf('Newtonsoft.Json')).toHaveAccessibleDescription(/Centrally managed/);
         await user.type(screen.getByTestId('search-input'), '@installed ser');
         expect(names()).toEqual(['Serilog']);
@@ -158,7 +160,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), fidelity: 'provisional' }, 1));
         expect(within(screen.getByTestId('group-row-direct')).getByTestId('installed-provisional')).toHaveTextContent('provisional');
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
 
         // The evaluation finishes: the host invalidates the key and the authoritative list replaces the provisional one.
         await hostSays(() => host.event('resources/invalidated', { scope: { kind: 'project', projectPaths: [A] }, reason: 'file-watcher', generation: 2, keys: [{ key: resourceKeys.installed(A), generation: 2 }] }));
@@ -203,7 +205,7 @@ describe('main panel: Installed tab', () => {
         expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
         await user.keyboard('{ArrowRight}');
         expect(group()).toHaveAttribute('aria-expanded', 'true');
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         await user.keyboard('{ArrowLeft}');
         expect(group()).toHaveAttribute('aria-expanded', 'false');
         await user.keyboard('{ArrowRight}');
@@ -233,7 +235,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('select-all-button'));
         await user.click(uninstallSelected());
         const dialog = screen.getByRole('alertdialog', { name: 'Uninstall 3 packages?' });
-        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         expect(dialog).toHaveTextContent('From App:');
         await user.keyboard('{Escape}');
         expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -254,7 +256,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
         expectFocusAfterClose('installed-bulk-uninstall-confirm');
-        expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Serilog', 'Moq', 'Newtonsoft.Json'] }]);
+        expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Moq', 'Newtonsoft.Json', 'Serilog'] }]);
         // Busy from the request on, before the host reports anything (N61), and nothing left the list.
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
@@ -265,7 +267,7 @@ describe('main panel: Installed tab', () => {
         for (const id of ['Serilog', 'Moq', 'Newtonsoft.Json']) {
             expect(optionOf(id)).not.toHaveAttribute('aria-busy');
         }
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
     });
 
     it("a partial outcome leaves the failed row where the host's list has it and is announced", async () => {
@@ -280,7 +282,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('ops/bulkRemove')[0], partial));
         await waitFor(() => expect(said()).toBe('1 of 2 operations completed'));
         // Rows leave only with the host's next list: then Moq is still there.
-        expect(names()).toEqual(['Serilog', 'Moq', 'Newtonsoft.Json']);
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
         await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, [THREE[1], THREE[2]]), 2));
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json']);
