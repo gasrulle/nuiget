@@ -217,6 +217,8 @@ export const STATES: readonly NamedState[] = [
         '"@installed Seri" typed in the sidebar search box: the Installed section alone, open, its header reading "k of N" in the badge\'s place (DS-COPY-5), the Serilog rows; the box is cleared after the capture (UX-P3.7b).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
     { ...ready('sidebar-all-projects', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
         'All Projects selected in the main panel and "@installed" typed in the sidebar box: the Installed pane alone with its tree, the two folder rows, the project rows, their rows and the message leaves of Empty and Unsupported; the box is cleared and Gateway chosen again after the capture (UX-P3.7c).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
+    { ...ready('sidebar-all-projects-updates', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
+        'All Projects selected in the main panel and "@updates" typed in the sidebar box: the Updates pane alone with its tree, scrolled to the Tools folder, whose Empty project says nothing is installed and whose Unsupported project says why it is read-only, as message leaves, above its read-only rows; the box is cleared and Gateway chosen again after the capture (UX-P3.7d).', [LIVE_SIDEBAR_UPDATES, LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
     { ...ready('sidebar-narrow-200px', 'sidebar', [{ theme: 'dark-modern', look: 'modern', width: 200 }],
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],

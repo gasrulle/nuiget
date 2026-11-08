@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { IN_PROGRESS, isCentral, updateRowContext, whyNotUpdatable } from '../shared/installed/rules';
-import { ArrowUpIcon, Badge, EmptyState, IconButton, Listbox, openRowMenu, Row } from '../shared/primitives';
-import { useOps, useOpsActions } from '../shared/store/ops';
-import { useRowRequests } from './rowRequests';
+import { EmptyState, Listbox } from '../shared/primitives';
+import { useUpdateRows, visibleUpdates } from './updateRows';
 
 interface Item {
     id: string;
@@ -37,51 +35,8 @@ export interface ProjectUpdatesProps {
  */
 export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
     const { projectPath, rows, installed, filter, announce, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
-    const { isPackageBusy, active } = useOps();
-    const { run } = useOpsActions();
-    const { viewDetails } = useRowRequests(announce);
-    const needle = filter.trim().toLowerCase();
-    // Sorted by id, as the main panel's lists are (MU9, P9.10).
-    const items = useMemo<Item[]>(() => rows.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)).map(update => ({ id: update.id, update })), [rows, needle]);
-    const centralIds = useMemo(() => new Set((installed?.packages ?? [])
-        .filter(entry => entry.declaration === 'central' || entry.declaration === 'central-override')
-        .map(entry => entry.id.toLowerCase())), [installed]);
-    const unsupported = installed?.unsupported;
-    const isBusy = (id: string): boolean => isPackageBusy(projectPath, id);
-
-    const busyStatus = (packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
-
-    const updateOne = ({ update }: Item): void => {
-        if (isBusy(update.id)) {
-            return;
-        }
-        if (unsupported) {
-            announce(`${update.id} cannot be updated: ${unsupported.message}`);
-            return;
-        }
-        const entry = installed?.packages.find(other => other.id.toLowerCase() === update.id.toLowerCase());
-        const obstacle = entry === undefined || installed === undefined ? undefined : whyNotUpdatable(entry, installed);
-        if (obstacle !== undefined) {
-            announce(obstacle);
-            return;
-        }
-        if (entry !== undefined && isCentral(entry)) {
-            // The host confirms the central change in a modal; the menu is the row's, under the keyboard's focus.
-            openRowMenu(document.activeElement);
-            return;
-        }
-        run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
-            announce(`Update of ${update.id} failed: ${error instanceof Error ? error.message : String(error)}`);
-        });
-    };
+    const { updateOne, viewDetails, renderUpdateRow } = useUpdateRows(announce);
+    const items = useMemo<Item[]>(() => visibleUpdates(rows, filter).map(update => ({ id: update.id, update })), [rows, filter]);
 
     return (
         <Listbox
@@ -93,30 +48,10 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             selectedId={selectedId}
             busy={revalidating}
             onSelect={item => onSelectedChange(item.id)}
-            onActivate={updateOne}
+            onActivate={({ update }) => updateOne(projectPath, installed, update)}
             onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
             empty={<EmptyState data-testid="sidebar-updates-empty" message={empty} />}
-            renderRow={(item, placement) => {
-                const { update } = item;
-                const busy = isBusy(update.id);
-                const central = centralIds.has(update.id.toLowerCase());
-                return (
-                    <Row
-                        {...placement}
-                        vscodeContext={updateRowContext(update, projectPath, installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase()), installed)}
-                        itemId={update.id}
-                        name={update.id}
-                        version={update.installedVersion}
-                        nextVersion={update.latestVersion}
-                        busy={busy}
-                        status={busy ? busyStatus(update.id) : undefined}
-                        badges={central ? <Badge label="CPM" title={installed?.packages.find(entry => entry.id.toLowerCase() === update.id.toLowerCase())?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
-                        actions={unsupported ? undefined : (
-                            <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(item)}><ArrowUpIcon /></IconButton>
-                        )}
-                    />
-                );
-            }}
+            renderRow={({ update }, placement) => renderUpdateRow(projectPath, installed, update, placement)}
         />
     );
 }

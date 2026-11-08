@@ -73,20 +73,6 @@ body {
     flex: var(--nuiget-sidebar-share, 1) 1 0;
 }
 
-/* Updates pane under All Projects until UX-P3.7d: a caption per workspace folder (the Installed pane is one tree since UX-P3.7c). */
-.nuiget-sidebar-folder-caption {
-    margin: var(--nuiget-space-3) var(--nuiget-space-4) var(--nuiget-space-1);
-    color: var(--nuiget-color-fg-muted);
-    font-size: var(--nuiget-font-size-sm);
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-/* Updates pane under All Projects until UX-P3.7d: the stacked lists scroll inside their section. */
-.nuiget-sidebar-section-content:has(.nuiget-sidebar-project) {
-    overflow-y: auto;
-}
-
 /*
  * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with alwaysShowHeaderActions
  * off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in the accessibility tree and the Tab order.
@@ -109,12 +95,5 @@ body {
 /* The sash is the line while it stands above the pane: no second one under it. */
 .nuiget-sash--horizontal + .nuiget-sidebar-section {
     --nuiget-pane-header-line: transparent;
-}
-
-/* Updates pane under All Projects until UX-P3.7d: a project header in normal case, its rows indented by workbench.tree.indent. */
-.nuiget-sidebar-project {
-    --nuiget-section-header-inset: 0;
-    --nuiget-group-title-transform: none;
-    --nuiget-row-indent: var(--nuiget-tree-indent);
 }
 

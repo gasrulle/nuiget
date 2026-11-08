@@ -1,17 +1,19 @@
-import { useId, useState } from 'react';
+import { Fragment, useCallback, useId, useMemo, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../protocol';
-import { groupByFolder } from '../shared/allProjects/folderGroups';
+import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
 import { updateCandidates } from '../shared/installed/rules';
-import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, SectionHeader, Skeleton } from '../shared/primitives';
+import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, Listbox, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import { sentence } from '../shared/updates/sentence';
 import { UpdateAllDialog } from '../shared/updates/UpdateAllDialog';
 import { ProjectUpdates } from './ProjectUpdates';
+import { useUpdateRows, visibleUpdates } from './updateRows';
 
 export interface UpdatesSectionProps {
     /** Something to say to a screen reader that no outcome of an operation says. */
@@ -32,62 +34,132 @@ function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string
     return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
 }
 
-/** The updates of a list shown under the `@updates` text, sorted by id as the main panel's lists are (MU9, P9.10). */
-function visibleUpdates(updates: readonly PackageUpdate[], filter: string): PackageUpdate[] {
-    const needle = filter.trim().toLowerCase();
-    return updates.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
-}
+type TreeItem =
+    | { kind: 'group'; id: string; level: number; title: string; chunk?: ProjectUpdatesChunk }
+    | { kind: 'message'; id: string; cell: 'empty' | 'unsupported'; marker: string; text: string }
+    | { kind: 'package'; id: string; chunk: ProjectUpdatesChunk; installed: InstalledResult | undefined; update: PackageUpdate };
 
-interface ProjectSectionProps {
-    chunk: ProjectUpdatesChunk;
-    installed: InstalledResult | undefined;
+/** The Updates tree's group ids carry a prefix: under All Projects the Installed tree's are in the same document (UX-P3.7d). */
+const UPDATES_PROJECT = `updates-${PROJECT_GROUP}`;
+
+interface AllProjectsUpdatesTreeProps {
+    chunks: ProjectUpdatesChunk[];
+    installedOf: (projectPath: string) => InstalledResult | undefined;
     filter: string;
     sourcesUnavailable: boolean;
     announce: (message: string) => void;
     revalidating: boolean;
-    onRetry: () => void;
+    labelledBy: string;
 }
 
-/** One project of All Projects: its heading and its updates, or its error with Retry. */
-function ProjectSection({ chunk, installed, filter, sourcesUnavailable, announce, revalidating, onRetry }: ProjectSectionProps): React.JSX.Element {
-    const [expanded, setExpanded] = useState(true);
+/**
+ * All Projects as one compact tree (D48, UX-P3.7d), the twin of the Installed pane's: a folder row per workspace folder when there
+ * are several, a project row under it with its count, the project's updates under that; a project without an update to list says
+ * why in a message leaf, with the main panel's words. A row updates its own project.
+ */
+function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailable, announce, revalidating, labelledBy }: AllProjectsUpdatesTreeProps): React.JSX.Element {
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const baseId = useId();
-    const titleId = `${baseId}-title`;
-    const contentId = `${baseId}-content`;
-    const name = chunk.projectName.toLowerCase();
-    const content = chunk.error !== undefined
-        ? <Banner severity="error" action={{ label: 'Retry', onClick: onRetry }}>{`Updates of ${chunk.projectName} could not be checked: ${chunk.error}`}</Banner>
-        : (
-            <ProjectUpdates
-                projectPath={chunk.projectPath}
-                rows={chunk.updates}
-                installed={installed}
-                filter={filter}
-                announce={announce}
-                labelledBy={titleId}
-                testId={`sidebar-updates-list-${name}`}
-                busy={revalidating}
-                empty={emptyMessage(sourcesUnavailable, chunk.updates.length, filter.trim())}
-                selectedId={selectedId}
-                onSelectedChange={setSelectedId}
-            />
-        );
+    const { updateOne, viewDetails, renderUpdateRow } = useUpdateRows(announce);
+
+    const groupIds = useMemo(() => projectGroupIds(chunks), [chunks]);
+    const items = useMemo((): TreeItem[] => {
+        const list: TreeItem[] = [];
+        const project = (chunk: ProjectUpdatesChunk, level: number): void => {
+            const id = `updates-${groupIds.get(chunk.projectPath) ?? `${PROJECT_GROUP}${chunk.projectPath.toLowerCase()}`}`;
+            const marker = id.slice(UPDATES_PROJECT.length);
+            list.push({ kind: 'group', id, level, title: chunk.projectName, chunk });
+            // A project whose check failed has its banner above the tree and no leaf.
+            if (chunk.error !== undefined || collapsed.has(id)) {
+                return;
+            }
+            const installed = installedOf(chunk.projectPath);
+            if (installed?.unsupported !== undefined) {
+                list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'unsupported', marker, text: `Unsupported project: ${sentence(installed.unsupported.message)}` });
+            } else if (chunk.updates.length === 0 && filter.trim() === '') {
+                const text = sourcesUnavailable
+                    ? 'Updates could not be checked.'
+                    : installed !== undefined && installed.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
+                list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'empty', marker, text });
+            }
+            for (const update of visibleUpdates(chunk.updates, filter)) {
+                list.push({ kind: 'package', id: `${chunk.projectPath}\n${update.id}`, chunk, installed, update });
+            }
+        };
+        const folders = groupByFolder(chunks);
+        if (folders.length < 2) {
+            chunks.forEach(chunk => project(chunk, 1));
+            return list;
+        }
+        for (const [folder, members] of folders) {
+            const id = `updates-folder-${folder.toLowerCase()}`;
+            list.push({ kind: 'group', id, level: 1, title: folder });
+            if (!collapsed.has(id)) {
+                members.forEach(chunk => project(chunk, 2));
+            }
+        }
+        return list;
+    }, [chunks, collapsed, filter, groupIds, installedOf, sourcesUnavailable]);
+
+    const groups = useMemo((): ListboxGroups<TreeItem> => ({
+        is: item => item.kind === 'group',
+        isMessage: item => item.kind === 'message',
+        level: item => (item.kind === 'group' ? item.level : 1),
+        isExpanded: item => !collapsed.has(item.id),
+        onToggle: (item, expanded) => setCollapsed(previous => {
+            const next = new Set(previous);
+            if (expanded) {
+                next.delete(item.id);
+            } else {
+                next.add(item.id);
+            }
+            return next;
+        }),
+        render: (item, placement) => {
+            if (item.kind === 'message') {
+                return <span data-testid={item.cell === 'empty' ? `sidebar-updates-empty-${item.marker}` : `sidebar-updates-unsupported-${item.marker}`}>{item.text}</span>;
+            }
+            if (item.kind !== 'group') {
+                return null;
+            }
+            const { chunk } = item;
+            return (
+                <SectionHeader
+                    presentation="content"
+                    title={item.title}
+                    // `section-header-updates-project-<name>`, §8 (the group row's id, spelled out for the hook lint).
+                    testKey={chunk !== undefined ? `updates-project-${item.id.slice(UPDATES_PROJECT.length)}` : item.id}
+                    expanded={placement.expanded}
+                    variant="level"
+                    count={chunk !== undefined && chunk.error === undefined && !sourcesUnavailable ? chunk.updates.length : undefined}
+                />
+            );
+        },
+    }), [collapsed, sourcesUnavailable]);
+
     return (
-        <div className="nuiget-sidebar-project">
-            <SectionHeader
-                title={chunk.projectName}
-                titleId={titleId}
-                contentId={contentId}
-                testKey={`updates-${name}`}
-                tooltip={chunk.projectPath}
-                level={3}
-                expanded={expanded}
-                onToggle={() => setExpanded(previous => !previous)}
-                count={chunk.error === undefined && !sourcesUnavailable ? chunk.updates.length : undefined}
-            />
-            {expanded ? <div id={contentId}>{content}</div> : null}
-        </div>
+        <Listbox
+            items={items}
+            groups={groups}
+            labelledBy={labelledBy}
+            hint="Enter updates to the latest version in the row's project (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
+            testId="sidebar-updates-list"
+            density="compact"
+            selectedId={selectedId}
+            busy={revalidating}
+            onSelect={item => setSelectedId(item.id)}
+            onActivate={item => {
+                if (item.kind === 'package') {
+                    updateOne(item.chunk.projectPath, item.installed, item.update);
+                }
+            }}
+            onSecondaryActivate={item => {
+                if (item.kind === 'package') {
+                    viewDetails(item.update.id, item.update.latestVersion);
+                }
+            }}
+            renderRow={(item, placement) => (item.kind === 'package' ? renderUpdateRow(item.chunk.projectPath, item.installed, item.update, placement) : null)}
+        />
     );
 }
 
@@ -112,6 +184,8 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     const { isPackageBusy } = useOps();
     const { run } = useOpsActions();
     const [confirming, setConfirming] = useState(false);
+    const installedChunks = all.chunks;
+    const installedOf = useCallback((path: string) => installedChunks.get(path)?.result, [installedChunks]);
 
     // The total once the list is settled; the header shows no badge at 0 and `k of N` while a filter is on (DS-COPY-5, SB13; UX-P3.7b).
     let count: number | undefined;
@@ -126,33 +200,29 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
         const stream = all.updates;
         busy = stream.status === 'loading' || stream.revalidating;
         const chunks = (stream.projects ?? []).map(project => stream.chunks.get(project.path)).filter((chunk): chunk is ProjectUpdatesChunk => chunk !== undefined);
+        const projectGroups = projectGroupIds(chunks);
         groups = chunks
             .filter(chunk => chunk.error === undefined)
-            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(visibleUpdates(chunk.updates, filter), all.chunks.get(chunk.projectPath)?.result, id => isPackageBusy(chunk.projectPath, id)) }))
+            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(visibleUpdates(chunk.updates, filter), installedOf(chunk.projectPath), id => isPackageBusy(chunk.projectPath, id)) }))
             .filter(group => group.updates.length > 0);
         if (stream.status === 'ready' && !stream.sourcesUnavailable && chunks.every(chunk => chunk.error === undefined)) {
             count = chunks.reduce((sum, chunk) => sum + chunk.updates.length, 0);
             shown = chunks.reduce((sum, chunk) => sum + shownOf(chunk.updates), 0);
         }
-        const render = (chunk: ProjectUpdatesChunk) => (
-            <ProjectSection key={chunk.projectPath} chunk={chunk} installed={all.chunks.get(chunk.projectPath)?.result} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} revalidating={stream.revalidating} onRetry={stream.refreshUpdates} />
-        );
-        const folders = groupByFolder(chunks);
         content = (
             <>
                 {stream.sourcesUnavailable
                     ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>Some package sources could not be checked.</Banner>
                     : null}
                 {stream.error ? <Banner severity="error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates could not be checked: ${stream.error.message}`}</Banner> : null}
-                {chunks.length === 0 && stream.status !== 'error' ? <Skeleton density="compact" /> : null}
-                {folders.length > 1
-                    ? folders.map(([folder, members]) => (
-                        <div key={folder} className="nuiget-sidebar-folder">
-                            <p className="nuiget-sidebar-folder-caption">{folder}</p>
-                            {members.map(render)}
-                        </div>
-                    ))
-                    : chunks.map(render)}
+                {chunks.filter(chunk => chunk.error !== undefined).map(chunk => (
+                    <Fragment key={chunk.projectPath}>
+                        <Banner severity="error" data-testid={`sidebar-updates-error-${(projectGroups.get(chunk.projectPath) ?? `${PROJECT_GROUP}${chunk.projectPath.toLowerCase()}`).slice(PROJECT_GROUP.length)}`} action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates of ${chunk.projectName} could not be checked: ${sentence(chunk.error ?? 'unknown error')}`}</Banner>
+                    </Fragment>
+                ))}
+                {chunks.length === 0
+                    ? (stream.status !== 'error' ? <Skeleton density="compact" /> : null)
+                    : <AllProjectsUpdatesTree chunks={chunks} installedOf={installedOf} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} revalidating={stream.revalidating} labelledBy={titleId} />}
             </>
         );
     } else if (projectPath === null) {

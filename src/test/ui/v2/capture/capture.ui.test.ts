@@ -913,6 +913,33 @@ const REACH: Record<string, Reach> = {
             await chooseFixtureProject('Gateway.csproj');
         },
     },
+    'sidebar-all-projects-updates': {
+        reach: async () => {
+            // The Updates tree of All Projects (UX-P3.7d), reached as `sidebar-all-projects` is, with "@updates" typed.
+            await freshMainPanel();
+            await chooseFixtureProject(ALL_PROJECTS);
+            await leaveWebview();
+            await openSidebarView();
+            await enterSidebarWebview();
+            const search = await findByTestId('sidebar-search-input', 60_000);
+            await search.click();
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@updates ');
+            // Settled: the pane's count shown once every project answered, and the two folder rows at level 1 of the one tree.
+            await until('/\\d/.test(document.querySelector(\'[data-testid="section-box-updates"] .nuiget-badge--count\')?.textContent ?? "") && Number(document.querySelector(\'[data-testid="sidebar-updates-list"] [role="treeitem"][aria-level="1"]\')?.getAttribute("aria-setsize")) === 2 && document.querySelector(\'[data-testid="sidebar-updates-list"] .nuiget-spinner\') === null', 'the sidebar\'s All Projects Updates tree settled', 120_000);
+            // Pinned at the Tools folder, its two leaves rendered (design-advisor ruling of 2026-11-08, DO 7).
+            await settleOrReport('sidebar-all-projects-updates', SIDEBAR_UPDATES_ALL_SETTLED(), SIDEBAR_UPDATES_FACTS);
+            await parkSidebarPointer();
+        },
+        settled: () => SIDEBAR_UPDATES_ALL_SETTLED(),
+        leave: async () => {
+            await enterSidebarWebview();
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
+        },
+    },
     'sidebar-filter': {
         reach: async () => {
             await sidebarSections();
@@ -1102,13 +1129,16 @@ return clauses.join('; ');
  * evaluation (UX-P3.1b, architecture-advisor ruling on run 42263438578; the P2.fix-6 pin). A probe that has to move the pin
  * answers false: the virtualizer renders the new window after it, and the next probe reads it.
  */
-const allProjectsSettled = (listTestId: string, markers: readonly string[]): string => `
+const allProjectsSettled = (listTestId: string, markers: readonly string[], pinRow = 'group-row-folder-tools', pin: 'top' | 'top-or-end' = 'top'): string => `
 const list = document.querySelector('[data-testid="${listTestId}"]');
 if (list === null) return false;
-const row = list.querySelector('[data-testid="group-row-folder-tools"]');
+const row = list.querySelector('[data-testid="${pinRow}"]');
 if (row === null) { list.scrollTop += 300; return false; }
 const delta = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
-if (Math.abs(delta) >= 1) { list.scrollTop += delta; return false; }
+${pin === 'top-or-end'
+        // The sidebar's tree ends before the Tools row can reach the list's top: pinned at its end (UX-P3.7d).
+        ? 'const atEnd = list.scrollTop >= list.scrollHeight - list.clientHeight - 1;\nif (Math.abs(delta) >= 1 && !(delta > 0 && atEnd)) { list.scrollTop += delta; return false; }'
+        : 'if (Math.abs(delta) >= 1) { list.scrollTop += delta; return false; }'}
 if (!${JSON.stringify(markers)}.every(id => document.querySelector('[data-testid="' + id + '"]') !== null)) return false;
 const unsettled = (() => { ${UNSETTLED} })();
 return unsettled === '';`;
@@ -1117,13 +1147,26 @@ return unsettled === '';`;
 const INSTALLED_ALL_SETTLED = (): string => allProjectsSettled('installed-list', ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj']);
 /** `STATE_MARKERS['main-updates-all']` of `measure.ts`. */
 const UPDATES_ALL_SETTLED = (): string => allProjectsSettled('updates-list', ['updates-unsupported-unsupported.csproj', 'updates-empty-empty.csproj']);
+/** What the sidebar's Updates tree shows when its settle times out: the scroll box, the pin row, the markers and what is unsettled (UX-P3.7d). */
+const SIDEBAR_UPDATES_FACTS = `
+const list = document.querySelector('[data-testid="sidebar-updates-list"]');
+if (list === null) return 'no sidebar-updates-list';
+const row = list.querySelector('[data-testid="group-row-updates-folder-tools"]');
+const unsettled = (() => { ${UNSETTLED} })();
+return 'scrollTop ' + Math.round(list.scrollTop) + ' of ' + list.scrollHeight + ', client ' + list.clientHeight + ', rendered ' + list.querySelectorAll('[data-index]').length
+    + ', tools row ' + (row === null ? 'absent' : 'at ' + Math.round(row.getBoundingClientRect().top - list.getBoundingClientRect().top))
+    + ', markers ' + [...document.querySelectorAll('[data-testid^="sidebar-updates-empty-"], [data-testid^="sidebar-updates-unsupported-"]')].map(el => el.dataset.testid).join(' ')
+    + ', unsettled "' + unsettled + '"';
+`;
+/** `STATE_MARKERS['sidebar-all-projects-updates']` of `measure.ts`, pinned at the Updates tree's Tools folder (UX-P3.7d). */
+const SIDEBAR_UPDATES_ALL_SETTLED = (): string => allProjectsSettled('sidebar-updates-list', ['sidebar-updates-unsupported-unsupported.csproj', 'sidebar-updates-empty-empty.csproj'], 'group-row-updates-folder-tools', 'top-or-end');
 
 /** Polls a state's settle predicate; on a timeout prints the list's facts as a `[reach]` line, then fails. */
-async function settleOrReport(state: string, predicate: string): Promise<void> {
+async function settleOrReport(state: string, predicate: string, facts = LEAF_FACTS): Promise<void> {
     try {
         await poll(async () => ((await script<boolean>(predicate)) ? true : undefined), `${state} settled (the pin, its markers, nothing unsettled)`, 120_000);
     } catch (error) {
-        console.warn(`[reach] ${state}: ${await script<string>(LEAF_FACTS)}`);
+        console.warn(`[reach] ${state}: ${await script<string>(facts)}`);
         throw error;
     }
 }

@@ -470,6 +470,16 @@ describe('sidebar: Installed section', () => {
         expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq' }]);
         await user.keyboard('{Shift>}{F10}{/Shift}');
         expect(menus.contexts[0]).toMatchObject({ packageId: 'Moq', webviewSection: 'installedRow', projectPath: B });
+        // Both panes are trees in one document (UX-P3.7d): the Updates tree's group ids are prefixed, so each hook is there once.
+        const updates = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(updates, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(updates, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', updates: [] } }));
+        await hostSays(() => host.chunk(updates, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', updates: [] } }));
+        await hostSays(() => host.respond(updates, { projectPaths: [A, B] }));
+        expect(screen.getAllByTestId('group-row-folder-w1')).toHaveLength(1);
+        expect(screen.getAllByTestId('group-row-updates-folder-w1')).toHaveLength(1);
+        expect(screen.getAllByTestId('group-row-project-app')).toHaveLength(1);
+        expect(screen.getAllByTestId('group-row-updates-project-app')).toHaveLength(1);
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');

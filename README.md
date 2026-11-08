@@ -29,7 +29,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   box names the active package source. The title bar holds the restore and prerelease switches and the project and
   source pickers; Refresh and Open Full Manager are in its `...` menu, and the Updates header has Update all.
 - **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
-  Updates show one section per project, grouped by workspace folder when the workspace has several. Each row acts on
+  Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several. Each row acts on
   its own project, Update all covers every project, and a search result can be installed into several projects at
   once. From a single project, the details pane of a search result also offers Install in projects….
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
@@ -128,7 +128,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
 | `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
-| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct packages, Transitive packages and a target framework inside it, a project under All Projects) |
+| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct packages, Transitive packages and a target framework inside it, a project under All Projects); sidebar under All Projects: expand or collapse a workspace folder or a project |
 | `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
 | `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists) |
 | `Space` | Main panel: select the row for a bulk action, or clear it |

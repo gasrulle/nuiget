@@ -125,26 +125,78 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('updates/get')).toHaveLength(2);
     });
 
-    it('All Projects: sections over allProjects/updates; Enter sends ops/update with the row\'s project', async () => {
+    it('All Projects: one tree with a folder row per workspace folder, a project row under it and its updates; Enter sends ops/update with the row\'s project', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
-        const B = '/w/Lib/Lib.csproj';
+        const B = '/w2/Lib/Lib.csproj';
         await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
         const installedStream = host.requests('allProjects/installed')[0];
-        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
         const stream = host.requests('allProjects/updates')[0];
-        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
-        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
-        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w2' }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
 
         expect(header()).toHaveAccessibleName('Updates 2');
-        const lib = screen.getByTestId('sidebar-updates-list-lib');
-        expect(lib).toHaveAccessibleName('Lib');
-        await user.click(within(within(lib).getByTestId('package-row-moq')).getByRole('option'));
+        // D48 (UX-P3.7d): one tree, its group ids prefixed (the Installed tree is in the same document).
+        const tree = updatesList();
+        expect(tree).toHaveAttribute('role', 'tree');
+        for (const [testId, level] of [['group-row-updates-folder-w1', '1'], ['group-row-updates-folder-w2', '1'], ['group-row-updates-project-app', '2'], ['group-row-updates-project-lib', '2']] as const) {
+            expect(within(screen.getByTestId(testId)).getByRole('treeitem')).toHaveAttribute('aria-level', level);
+        }
+        expect(within(screen.getByTestId('group-row-updates-project-lib')).getByTestId('section-header-updates-project-lib')).toHaveTextContent('Lib');
+        expect(screen.queryByTestId('sidebar-updates-list-lib')).toBeNull();
+        const moq = within(within(tree).getByTestId('package-row-moq')).getByRole('treeitem');
+        expect(moq).toHaveAttribute('aria-level', '3');
+        await user.click(moq);
         await user.keyboard('{Enter}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
-        expect(await axe(document.body)).toHaveNoViolations();
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
+    });
+
+    it('All Projects tree: an empty project and an unsupported one say so in a leaf, a failed one in a banner with Retry; Left and Right fold a project row (UX-P3.7d)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const B = '/w/Lib/Lib.csproj';
+        const C = '/w/Old/Old.csproj';
+        const D = '/w/Bad/Bad.csproj';
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: C, projectName: 'Old', result: { projectPath: C, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')], unsupported: { reason: 'sdk-too-old', message: 'needs SDK 10.' } } } }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }, { name: 'Old', path: C }, { name: 'Bad', path: D }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Old', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: D, projectName: 'Bad', updates: [], error: 'boom' } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C, D] }));
+
+        expect(screen.getByTestId('sidebar-updates-empty-lib')).toHaveTextContent('No packages installed.');
+        // The host's reason ends with exactly one full stop (DS-COPY-3).
+        expect(screen.getByTestId('sidebar-updates-unsupported-old').textContent).toBe('Unsupported project: needs SDK 10.');
+        // An unsupported project's rows are read-only: no update button.
+        expect(within(screen.getByTestId('package-row-moq')).queryByTestId('row-action-update')).toBeNull();
+        // A failed project is a banner above the tree, never inside a treeitem, and its group row has no count.
+        const banner = screen.getByTestId('sidebar-updates-error-bad');
+        expect(banner).toHaveTextContent('Updates of Bad could not be checked: boom.');
+        expect(updatesList()).not.toContainElement(banner);
+        expect(within(screen.getByTestId('group-row-updates-project-bad')).queryByText(/\d/)).toBeNull();
+        await user.click(within(banner).getByRole('button', { name: 'Retry' }));
+        expect(host.requests('allProjects/updates').length).toBeGreaterThan(1);
+        // Left folds a project row, Right unfolds it.
+        const app = within(screen.getByTestId('group-row-updates-project-app')).getByRole('treeitem');
+        await user.click(app);
+        await user.keyboard('{ArrowLeft}');
+        expect(app).toHaveAttribute('aria-expanded', 'false');
+        expect(within(updatesList()).queryByTestId('package-row-serilog')).toBeNull();
+        await user.keyboard('{ArrowRight}');
+        expect(app).toHaveAttribute('aria-expanded', 'true');
+        expect(within(updatesList()).getByTestId('package-row-serilog')).toBeInTheDocument();
     });
 
     it('the actions menu and Ctrl+Enter carry the update\'s versions and source', async () => {
@@ -237,6 +289,65 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{ projectUpdates: [
             { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
             { projectPath: B, projectName: 'Lib', packages: [{ id: 'Moq', version: '4.20.72', sourceUrl: FEED }] },
+        ] }]);
+    });
+
+    it('All Projects tree: a project with packages and no update says so, a filter hides the leaves, and a source that could not be checked makes the leaf say so with no count (UX-P3.7d)', async () => {
+        const user = userEvent.setup();
+        const B = '/w/Lib/Lib.csproj';
+        const allProjects = async (sourcesUnavailable: boolean): Promise<FakeHost> => {
+            const host = await mountWith();
+            await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+            const installedStream = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: sourcesUnavailable ? [] : [update('Serilog', '3.0.0', '3.1.0')] } }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [] } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], sourcesUnavailable }));
+            return host;
+        };
+
+        await allProjects(false);
+        expect(screen.getByTestId('sidebar-updates-empty-lib')).toHaveTextContent('No updates available.');
+        expect(within(screen.getByTestId('group-row-updates-project-lib')).getByText('0')).toBeInTheDocument();
+        // A filter lists the matches only: no leaf says a project has nothing.
+        await user.type(screen.getByTestId('sidebar-search-input'), '@updates Ser');
+        expect(screen.queryByTestId('sidebar-updates-empty-lib')).toBeNull();
+        expect(within(updatesList()).getByTestId('package-row-serilog')).toBeInTheDocument();
+
+        cleanup();
+        await allProjects(true);
+        expect(screen.getByTestId('sidebar-updates-unavailable')).toBeInTheDocument();
+        expect(screen.getByTestId('sidebar-updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
+        expect(screen.queryByText('No updates available.')).toBeNull();
+        expect(within(screen.getByTestId('group-row-updates-project-lib')).queryByText(/\d/)).toBeNull();
+    });
+
+    it('update all under All Projects lists In <project>: groups and leaves out a central row and a project whose installed list has not arrived (UX-P3.7d)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const B = '/w/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: true, packages: PACKAGES } } }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: UPDATES } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+
+        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update all (1)');
+        await user.click(screen.getByTestId('sidebar-update-all-button'));
+        const dialog = screen.getByTestId('confirm-dialog');
+        expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0');
+        expect(dialog).not.toHaveTextContent('Newtonsoft.Json');
+        expect(dialog).not.toHaveTextContent('Lib');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-all-projects-update-all-confirm');
+        expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{ projectUpdates: [
+            { projectPath: A, projectName: 'App', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] },
         ] }]);
     });
 
