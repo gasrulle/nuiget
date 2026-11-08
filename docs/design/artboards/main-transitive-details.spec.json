@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42376865313",
+  "run": "42483294360",
   "composition": "The window is the product's at scrollTop 580: Microsoft.Extensions.Configuration 8.0.0 under net8.0 is the last full row and current (its band is the render's colour sample), and its read-only details fill the pane (interaction model §7): the id with the Transitive badge, Version and Authors, Required by per target framework; no tabs, no actions, no README.",
   "looks": {
     "modern": {
@@ -213,7 +213,7 @@
         "gap": "normal normal",
         "tokens": []
       },
-      "package-row-polly": {
+      "package-row-microsoft.extensions.logging.abstractions": {
         "rect": {
           "x": 0,
           "y": 99,
@@ -233,7 +233,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-serilog": {
+      "package-row-microsoft.extensions.options.configurationextensions": {
         "rect": {
           "x": 0,
           "y": 171,
@@ -253,7 +253,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-serilog.sinks.console": {
+      "package-row-netstandard.library": {
         "rect": {
           "x": 0,
           "y": 243,
@@ -273,7 +273,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-system.text.json": {
+      "package-row-newtonsoft.json": {
         "rect": {
           "x": 0,
           "y": 315,
@@ -293,7 +293,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-fluentvalidation": {
+      "package-row-polly": {
         "rect": {
           "x": 0,
           "y": 387,
@@ -313,7 +313,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-dapper": {
+      "package-row-serilog": {
         "rect": {
           "x": 0,
           "y": 459,
@@ -333,7 +333,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-humanizer.core": {
+      "package-row-serilog.sinks.console": {
         "rect": {
           "x": 0,
           "y": 531,
@@ -353,7 +353,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-netstandard.library": {
+      "package-row-system.text.json": {
         "rect": {
           "x": 0,
           "y": 603,

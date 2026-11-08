@@ -6,8 +6,8 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42379746314",
-  "composition": "The state's own scene, nothing composed: Newtonsoft.Json 12.0.1 is the current row (its band is the render's colour sample) and the Details tab shows its description, properties, vulnerability and dependency groups. The other rows' actions are drawn hidden, as the product renders them until a row is hovered or current.",
+  "run": "42483294360",
+  "composition": "The state's own scene, nothing composed: the window is the product's at the list's end (scrollTop 480, classic 458; UX-P3.fix-1): the direct rows in id order, Microsoft.Extensions.Http cut at the top, the collapsed Transitive Packages group row at the bottom. Newtonsoft.Json 12.0.1, the eleventh row, is the current row (its band is the render's colour sample) and the Details tab shows its description, properties, vulnerability and dependency groups. The other rows' actions are drawn hidden, as the product renders them until a row is hovered or current.",
   "looks": {
     "modern": {
       "project-selector": {
@@ -216,7 +216,7 @@
       "section-header-direct": {
         "rect": {
           "x": 16,
-          "y": 147,
+          "y": -333,
           "w": 349.3,
           "h": 28
         },
@@ -230,28 +230,10 @@
           "--nuiget-header-transform"
         ]
       },
-      "package-row-microsoft.extensions.dependencyinjection.abstractions": {
-        "rect": {
-          "x": 0,
-          "y": 175,
-          "w": 412,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
-        ]
-      },
       "row-action-uninstall": {
         "rect": {
           "x": 384,
-          "y": 200,
+          "y": -64,
           "w": 22,
           "h": 22
         },
@@ -262,30 +244,12 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
-        ]
-      },
-      "package-row-microsoft.extensions.configuration.environmentvariables": {
-        "rect": {
-          "x": 0,
-          "y": 247,
-          "w": 412,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
         ]
       },
       "row-action-uninstall#2": {
         "rect": {
           "x": 384,
-          "y": 272,
+          "y": 8,
           "w": 22,
           "h": 22
         },
@@ -296,30 +260,12 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
-        ]
-      },
-      "package-row-microsoft.extensions.options.configurationextensions": {
-        "rect": {
-          "x": 0,
-          "y": 319,
-          "w": 412,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
         ]
       },
       "row-action-uninstall#3": {
         "rect": {
           "x": 384,
-          "y": 344,
+          "y": 80,
           "w": 22,
           "h": 22
         },
@@ -332,10 +278,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.logging.abstractions": {
+      "package-row-microsoft.extensions.http": {
         "rect": {
           "x": 0,
-          "y": 391,
+          "y": 127,
           "w": 412,
           "h": 72
         },
@@ -353,7 +299,7 @@
       "row-action-uninstall#4": {
         "rect": {
           "x": 384,
-          "y": 416,
+          "y": 152,
           "w": 22,
           "h": 22
         },
@@ -366,10 +312,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.http": {
+      "package-row-microsoft.extensions.logging.abstractions": {
         "rect": {
           "x": 0,
-          "y": 463,
+          "y": 199,
           "w": 412,
           "h": 72
         },
@@ -387,7 +333,7 @@
       "row-action-uninstall#5": {
         "rect": {
           "x": 384,
-          "y": 488,
+          "y": 224,
           "w": 22,
           "h": 22
         },
@@ -400,10 +346,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.ai.abstractions": {
+      "package-row-microsoft.extensions.options.configurationextensions": {
         "rect": {
           "x": 0,
-          "y": 535,
+          "y": 271,
           "w": 412,
           "h": 72
         },
@@ -421,7 +367,7 @@
       "row-action-uninstall#6": {
         "rect": {
           "x": 384,
-          "y": 560,
+          "y": 296,
           "w": 22,
           "h": 22
         },
@@ -434,10 +380,30 @@
           "--nuiget-color-icon"
         ]
       },
+      "package-row-netstandard.library": {
+        "rect": {
+          "x": 0,
+          "y": 343,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
       "package-row-newtonsoft.json": {
         "rect": {
           "x": 0,
-          "y": 607,
+          "y": 415,
           "w": 412,
           "h": 72
         },
@@ -458,7 +424,7 @@
       "row-action-uninstall#7": {
         "rect": {
           "x": 384,
-          "y": 632,
+          "y": 440,
           "w": 22,
           "h": 22
         },
@@ -474,7 +440,7 @@
       "package-row-polly": {
         "rect": {
           "x": 0,
-          "y": 679,
+          "y": 487,
           "w": 412,
           "h": 72
         },
@@ -492,7 +458,7 @@
       "row-action-uninstall#8": {
         "rect": {
           "x": 384,
-          "y": 704,
+          "y": 512,
           "w": 22,
           "h": 22
         },
@@ -508,7 +474,7 @@
       "package-row-serilog": {
         "rect": {
           "x": 0,
-          "y": 751,
+          "y": 559,
           "w": 412,
           "h": 72
         },
@@ -526,7 +492,7 @@
       "row-action-uninstall#9": {
         "rect": {
           "x": 384,
-          "y": 776,
+          "y": 584,
           "w": 22,
           "h": 22
         },
@@ -537,6 +503,46 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
+        ]
+      },
+      "package-row-serilog.sinks.console": {
+        "rect": {
+          "x": 0,
+          "y": 631,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-system.text.json": {
+        "rect": {
+          "x": 0,
+          "y": 703,
+          "w": 412,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
         ]
       },
       "package-details-panel": {
@@ -861,7 +867,7 @@
       "section-header-direct": {
         "rect": {
           "x": 16,
-          "y": 147,
+          "y": -311,
           "w": 348,
           "h": 22
         },
@@ -875,28 +881,10 @@
           "--nuiget-header-transform"
         ]
       },
-      "package-row-microsoft.extensions.dependencyinjection.abstractions": {
-        "rect": {
-          "x": 0,
-          "y": 169,
-          "w": 410,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
-        ]
-      },
       "row-action-uninstall": {
         "rect": {
           "x": 382,
-          "y": 194,
+          "y": -48,
           "w": 22,
           "h": 22
         },
@@ -907,30 +895,12 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
-        ]
-      },
-      "package-row-microsoft.extensions.configuration.environmentvariables": {
-        "rect": {
-          "x": 0,
-          "y": 241,
-          "w": 410,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
         ]
       },
       "row-action-uninstall#2": {
         "rect": {
           "x": 382,
-          "y": 266,
+          "y": 24,
           "w": 22,
           "h": 22
         },
@@ -941,30 +911,12 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
-        ]
-      },
-      "package-row-microsoft.extensions.options.configurationextensions": {
-        "rect": {
-          "x": 0,
-          "y": 313,
-          "w": 410,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 6px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
         ]
       },
       "row-action-uninstall#3": {
         "rect": {
           "x": 382,
-          "y": 338,
+          "y": 96,
           "w": 22,
           "h": 22
         },
@@ -977,10 +929,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.logging.abstractions": {
+      "package-row-microsoft.extensions.http": {
         "rect": {
           "x": 0,
-          "y": 385,
+          "y": 143,
           "w": 410,
           "h": 72
         },
@@ -998,7 +950,7 @@
       "row-action-uninstall#4": {
         "rect": {
           "x": 382,
-          "y": 410,
+          "y": 168,
           "w": 22,
           "h": 22
         },
@@ -1011,10 +963,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.http": {
+      "package-row-microsoft.extensions.logging.abstractions": {
         "rect": {
           "x": 0,
-          "y": 457,
+          "y": 215,
           "w": 410,
           "h": 72
         },
@@ -1032,7 +984,7 @@
       "row-action-uninstall#5": {
         "rect": {
           "x": 382,
-          "y": 482,
+          "y": 240,
           "w": 22,
           "h": 22
         },
@@ -1045,10 +997,10 @@
           "--nuiget-color-icon"
         ]
       },
-      "package-row-microsoft.extensions.ai.abstractions": {
+      "package-row-microsoft.extensions.options.configurationextensions": {
         "rect": {
           "x": 0,
-          "y": 529,
+          "y": 287,
           "w": 410,
           "h": 72
         },
@@ -1066,7 +1018,7 @@
       "row-action-uninstall#6": {
         "rect": {
           "x": 382,
-          "y": 554,
+          "y": 312,
           "w": 22,
           "h": 22
         },
@@ -1079,10 +1031,30 @@
           "--nuiget-color-icon"
         ]
       },
+      "package-row-netstandard.library": {
+        "rect": {
+          "x": 0,
+          "y": 359,
+          "w": 410,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
       "package-row-newtonsoft.json": {
         "rect": {
           "x": 0,
-          "y": 601,
+          "y": 431,
           "w": 410,
           "h": 72
         },
@@ -1103,7 +1075,7 @@
       "row-action-uninstall#7": {
         "rect": {
           "x": 382,
-          "y": 626,
+          "y": 456,
           "w": 22,
           "h": 22
         },
@@ -1119,7 +1091,7 @@
       "package-row-polly": {
         "rect": {
           "x": 0,
-          "y": 673,
+          "y": 503,
           "w": 410,
           "h": 72
         },
@@ -1137,7 +1109,7 @@
       "row-action-uninstall#8": {
         "rect": {
           "x": 382,
-          "y": 698,
+          "y": 528,
           "w": 22,
           "h": 22
         },
@@ -1153,7 +1125,7 @@
       "package-row-serilog": {
         "rect": {
           "x": 0,
-          "y": 745,
+          "y": 575,
           "w": 410,
           "h": 72
         },
@@ -1171,7 +1143,7 @@
       "row-action-uninstall#9": {
         "rect": {
           "x": 382,
-          "y": 770,
+          "y": 600,
           "w": 22,
           "h": 22
         },
@@ -1182,6 +1154,46 @@
           "--nuiget-action-size",
           "--nuiget-radius-action",
           "--nuiget-color-icon"
+        ]
+      },
+      "package-row-serilog.sinks.console": {
+        "rect": {
+          "x": 0,
+          "y": 647,
+          "w": 410,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
+      "package-row-system.text.json": {
+        "rect": {
+          "x": 0,
+          "y": 719,
+          "w": 410,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
         ]
       },
       "package-details-panel": {

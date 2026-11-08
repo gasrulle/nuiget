@@ -6,7 +6,7 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42386689847",
+  "run": "42483294360",
   "composition": "The window is the product's at the Tools folder row (scrollTop 2100, classic 2082); the rows above it are a spacer of their height. Unresolved.csproj's Newtonsoft.Json row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed are compared in main-installed-details only. The Installed tab keeps the focus the state's setup leaves on it.",
   "looks": {
     "modern": {
@@ -383,7 +383,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-serilog#2": {
+      "package-row-polly": {
         "rect": {
           "x": 0,
           "y": 531,
@@ -403,7 +403,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-polly": {
+      "package-row-serilog#2": {
         "rect": {
           "x": 0,
           "y": 603,
@@ -440,7 +440,7 @@
           "--nuiget-font-weight-strong"
         ]
       },
-      "package-row-microsoft.extensions.configuration.commandline": {
+      "package-row-csvhelper": {
         "rect": {
           "x": 0,
           "y": 703,
@@ -460,7 +460,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-microsoft.extensions.configuration.usersecrets": {
+      "package-row-dapper": {
         "rect": {
           "x": 0,
           "y": 775,
@@ -883,7 +883,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-serilog#2": {
+      "package-row-polly": {
         "rect": {
           "x": 0,
           "y": 495,
@@ -903,7 +903,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-polly": {
+      "package-row-serilog#2": {
         "rect": {
           "x": 0,
           "y": 567,
@@ -940,7 +940,7 @@
           "--nuiget-font-weight-strong"
         ]
       },
-      "package-row-microsoft.extensions.configuration.commandline": {
+      "package-row-csvhelper": {
         "rect": {
           "x": 0,
           "y": 661,
@@ -960,7 +960,7 @@
           "--nuiget-radius-row"
         ]
       },
-      "package-row-microsoft.extensions.configuration.usersecrets": {
+      "package-row-dapper": {
         "rect": {
           "x": 0,
           "y": 733,

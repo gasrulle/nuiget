@@ -1,0 +1,559 @@
+{
+  "item": "P3.fix-1",
+  "runs": [
+    {
+      "runId": "42483294360",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "409dfdb (push 1b: the sort, the pages, the scrolled reaches, the header-rule fix-forward)",
+      "look": "modern",
+      "workflow": "wf_a2714c02-323",
+      "note": "The six artboarded states against the artboards re-rendered on this run (copied in the closing commit); main-details-readme reads artboard A (main-installed-single), as artboardOf says. D37's hardness date is not recorded: every standing finding carries a disposition with the ruling that pre-rules its class.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/42483294360/main-installed-single.dark-modern.932.png",
+          "sha256": "afade32cfacb458a80bc45b0e388721a54afb70043ed44434592a7e9a7812e89",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-details-readme": {
+          "png": "captures/42483294360/main-details-readme.dark-modern.932.png",
+          "sha256": "7b7e2b1dbbd10f3d4bdde10ff3a3c33f21c69f6307b57e901fa95d3a8022fa6b",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-details": {
+          "png": "captures/42483294360/main-installed-details.dark-modern.1200.png",
+          "sha256": "e51c9dbe9266f417612bc0ad9e4483a5d2fabfc97b34fb22ce2fc2908f8265a7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+        },
+        "main-installed-all": {
+          "png": "captures/42483294360/main-installed-all.dark-modern.1200.png",
+          "sha256": "9261cac2c618a1f8f5e21f323667ef7745e0f3685eccfcaa4036ae2ded5204a5",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/42483294360/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "d8a28f461a7fe021a3aa86c2046a1e2414cff68ef4b8e5db677c4f4af19d827f",
+          "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png"
+        },
+        "main-transitive-details": {
+          "png": "captures/42483294360/main-transitive-details.dark-modern.1200.png",
+          "sha256": "a12b5448037509a2086ba444a6c95340c5507d0c888b46f026e3ca08a3663b5b",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 53,
+        "standing": 16,
+        "blocking": 0,
+        "refuted": 13,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The split between the Installed list and the details pane is a 4 px band in a lighter grey (x 326-329, #313131) running the full height from y 77. The artboard draws a 1 px separator in the header-border colour (#2b2b2b at x 327), and a workbench sash is transparent at rest. At rest the split reads as a painted sash, not as a native splitview line. | [geometry] The split between the list column and the details pane is a 4 px grey band painted at rest (x 326-329, rgb 49, not the hover accent) from y 77 to the bottom, where the artboard draws a 1 px separator at x 327 and DS-DIVIDER-6 a 1 px line with a transparent sash; it narrows the list column to 326 px (spec tab-bar/installed-list w 327, scrollbar at 318-325 instead of 319-326) and pushes the details pane to x 330 (spec package-details-panel x 328).",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The bulk-action buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case. The artboard's select-all-button and uninstall-selected-button read \"Select All\" and \"Uninstall Selected (0)\" in Title Case, as workbench button labels do. | [states] The bulk toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and DS-COPY-1 names these two labels as Title Case.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-details-readme#D1",
+          "state": "main-details-readme",
+          "finding": "[native] The split between the Installed list and the details pane is a 4 px painted band (#313131, x 326-329) for the full pane height. The artboard draws a 1 px separator (x 327) with a transparent sash, and the band pushes the details pane start from x 328 to x 330. | [geometry] The list/details split is drawn as a 4 px band painted #313131 at rest (x 326-329, full height y 77-802) instead of the artboard's 1 px separator at x 327 with a transparent sash, which pushes the details pane to x 330 / w 602 (spec package-details-panel x 328 / w 604) and shifts every details element 2 px right (title 350 vs 348, README tab 405 vs 403.2, Uninstall 555 vs 552.4), and narrows the list column by 1 px (selected band ends at 317, spec row w 319).",
+          "severity": "major",
+          "box": [
+            326,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-details-readme#D2",
+          "state": "main-details-readme",
+          "finding": "[native] The toolbar button labels are in sentence case, \"Select all\" and \"Uninstall selected (0)\". The artboard draws the Title Case labels \"Select All\" and \"Uninstall Selected (0)\" required for button labels. | [states] The 'Select all' button label is not Title Case; the artboard's select-all-button reads 'Select All'. | [states] The 'Uninstall selected (0)' button label is not Title Case; the artboard's uninstall-selected-button reads 'Uninstall Selected (0)'.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The split between the Installed list and the details pane is painted as a 4 px solid grey band (x 420-423) at rest, where the artboard draws a 1 px separator at x 420 with a transparent sash; a built-in split view shows only the hairline until the sash is hovered. | [geometry] The split between the list and the details pane is a 4 px opaque band (x 420-423, y 77-802, filled #313131), where the artboard draws a 1 px separator at x 420 and the spec puts package-details-panel at x 421; the band pushes every details element 3 px right of its spec rect (title ink 445 vs 442 on the artboard, version-selector about 507 vs spec 504.4, Uninstall/Update about 656 vs spec 653.4, Details tab 434 vs spec 431).",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar button reads \"Select all\" in sentence case where the artboard and the copy rule draw the Title Case label \"Select All\". | [states] The toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar button reads \"Uninstall selected (0)\" in sentence case where the artboard and the copy rule draw the Title Case label \"Uninstall Selected (0)\". | [states] The toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard draws \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-all#D1",
+          "state": "main-installed-all",
+          "finding": "[native] The split between the Installed list and the details pane is a 4 px light-grey band at rest (x 420-423, rgb 49) where the artboard draws a 1 px separator at x 420 with a transparent sash. This reads as a painted sash rather than VS Code's split line, and it moves the details pane's content 3 px right: the empty sentence starts at x 445 against the artboard's 442 and the spec's inset 441. | [geometry] The split between the Installed list and the details pane is a 4 px opaque band (x 420-423, #313131, full height from y 77 to the bottom) where the artboard draws a 1 px separator at x 420 with the details pane starting at x 421. This pushes the details pane's content edge 3 px right: the 'Select a package to see its details.' text starts at x 444 instead of the spec's details-empty inset of 441.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-installed-all#D2",
+          "state": "main-installed-all",
+          "finding": "[native] The toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" in Title Case as the workbench's button labels are. | [states] The secondary toolbar button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and the copy rules require Title Case for button labels (the design system names \"Select All\" as the example). | [states] The primary toolbar button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels (the design system names \"Uninstall Selected (0)\" as the example).",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-expanded#D1",
+          "state": "main-transitive-expanded",
+          "finding": "[native] The split between the Installed list and the details pane is painted at rest as a 4 px grey band (x 420–423, a lighter neutral than the divider) instead of the artboard's 1 px separator at x 420 with a transparent sash. This also pushes the details pane's empty sentence 3 px right (x 444 against 441). A built-in split view shows only the hairline. | [geometry] The split between the list and the details pane is a 4 px opaque neutral band (x 420-423, rgb 49,49,49, y 77-802) where the artboard draws a 1 px separator at x 420 with the details surface from x 421 (spec package-details-panel x 421); the details pane therefore starts at 424 and its empty sentence at x 444 instead of the spec's inset 441.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-expanded#D2",
+          "state": "main-transitive-expanded",
+          "finding": "[native] The secondary button reads 'Select all' in sentence case, while the artboard's select-all-button reads 'Select All' in Title Case, as workbench button labels do. | [states] The secondary bulk button reads \"Select all\" in sentence case, where the artboard element select-all-button and DS-COPY-1's own example draw the Title Case label \"Select All\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-expanded#D3",
+          "state": "main-transitive-expanded",
+          "finding": "[native] The disabled primary button reads 'Uninstall selected (0)' in sentence case, while the artboard's uninstall-selected-button reads 'Uninstall Selected (0)' in Title Case. | [states] The primary bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard element uninstall-selected-button and DS-COPY-1's own example draw the Title Case label \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] The split between the list and the details pane is drawn as a 4 px painted grey band at rest (x 420-423, rgb 49,49,49 in every sampled row) where the artboard draws a 1 px separator at x 420 and the spec starts package-details-panel at x 421; the visible bar reads as a non-native splitter and pushes the details content 3 px right (title at x 444 vs 441 in the artboard). | [geometry] The split between the list and the details pane is a 4 px opaque grey band (x 420-423, y 77-802) instead of the artboard's 1 px separator at x 420 with a transparent sash, which pushes the details pane's start edge from the spec's x 421 to x 424, so every details line (id, Transitive badge, Version, Authors, Required by and its entries) starts 3 px right of the artboard (x 444 vs 441).",
+          "severity": "major",
+          "box": [
+            418,
+            77,
+            27,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "Ordered to UX-P3.9: the sash as a 1 px separator with a transparent hit area (DS-DIVIDER-6; DECISIONS 2026-11-07 keeps the 4 px band until then).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[native] The secondary toolbar button reads \"Select all\" in sentence case where the artboard's select-all-button reads \"Select All\" (Title Case for button labels). | [states] The bulk toolbar's secondary button reads \"Select all\" (sentence case), while the artboard's select-all-button reads \"Select All\" and DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-details#D3",
+          "state": "main-transitive-details",
+          "finding": "[native] The primary toolbar button reads \"Uninstall selected (0)\" in sentence case where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\". | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" (sentence case), while the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        },
+        {
+          "id": "main-transitive-details#D4",
+          "state": "main-transitive-details",
+          "finding": "[native] The net8.0 group header reads \"Transitive packages\" in sentence case, unlike the artboard's section-header-transitive-net8.0 (\"Transitive Packages\") and unlike the \"Transitive Packages\" header directly above it in the same capture. | [states] The net8.0 group header reads \"Transitive packages\". The artboard's section-header-transitive-net8.0 reads \"Transitive Packages\", and so does the section header directly above it in the same capture. DS-COPY-1 requires Title Case on group-header labels.",
+          "severity": "major",
+          "box": [
+            16,
+            706,
+            299,
+            22
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "Ordered to UX-P3.11: Title Case labels (DS-COPY-1); the same class as P3.3b's #D6/#D7 (judge-log/P3.3b.json).",
+          "ruling": "design-advisor, 2026-11-07, UX-P3.3b step 4 (docs/plans/handoff/P3.3b.md, Advisor decisions, follow-up 3: \"Judge dispositions pre-ruled for P3.3b's panel: the 4 px sash band … is `fixed`, ordered to P3.9 (DS-DIVIDER-6); the Title Case findings … `fixed`, ordered to P3.11 (DS-COPY-1)\"); unchanged by UX-P3.fix-1, which draws neither the sash nor the labels"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[native] The header's refresh-button draws the two-arrow sync codicon. The artboard draws a single circular refresh arrow there, the glyph that workbench view-title Refresh actions use.",
+          "severity": "minor",
+          "box": [
+            894,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational"
+        },
+        {
+          "id": "main-details-readme#D3",
+          "state": "main-details-readme",
+          "finding": "[geometry] The details title ellipsizes ('...Abstracti...' ending at x 899) while the artboard draws the full id ending at x 915, 3 px past the details header's 20 px end inset (912); the id needs about 568 px and even the spec's 604 px panel leaves 564, so the artboard drawing conflicts with DS-INSET-4 and the capture's truncation is the consistent outcome.",
+          "severity": "minor",
+          "box": [
+            349,
+            100,
+            567,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational"
+        },
+        {
+          "id": "main-installed-all#D3",
+          "state": "main-installed-all",
+          "finding": "[native] The header's refresh button draws the codicon `sync` (two circular arrows), where the artboard draws the single-arrow `refresh` codicon that VS Code's own view Refresh actions use.",
+          "severity": "minor",
+          "box": [
+            1162,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational"
+        },
+        {
+          "id": "main-installed-all#D4",
+          "state": "main-installed-all",
+          "finding": "[states] Empty.csproj's message leaf \"No packages installed.\" is drawn in the secondary-text colour (descriptionForeground, about #9d9d9d), where the artboard's installed-empty-empty.csproj draws it in the primary foreground (about #cccccc), so the per-project empty state reads dimmer than the approved one. | [states] Unsupported.csproj's message leaf \"Unsupported project: requires .NET SDK 10 or newer.\" is drawn in the secondary-text colour (about #9d9d9d), where the artboard's installed-unsupported-unsupported.csproj draws it in the primary foreground (about #cccccc), so the unsupported state's reason reads dimmer than the approved one.",
+          "severity": "major",
+          "box": [
+            36,
+            208,
+            345,
+            246
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "informational": "singleJudge, informational"
+        },
+        {
+          "id": "main-transitive-expanded#D4",
+          "state": "main-transitive-expanded",
+          "finding": "[geometry] Line-1 badge spacing is tighter than the artboard: in the NETStandard.Library row the name-to-SDK gap is 6 px and the SDK-to-props gap 4 px (artboard 8 and 8, badges at 259 and 302 vs 257 and 296), and the Newtonsoft.Json name-to-Vulnerable gap is 6 px (artboard 8), so two same-role inline gaps differ.",
+          "severity": "minor",
+          "box": [
+            250,
+            360,
+            94,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-3",
+          "state": "main-installed-single",
+          "finding": "The Installed tab carries a 1 px focusBorder ring around its whole box (x 6-144, y 77-111) in this rest state. The artboard's installed-tab shows only the 1 px active underline, with no focus ring.",
+          "reason": "The 1 px focusBorder ring around the Installed tab is visible, but the gatewayInstalled reach clicks installed-tab, and DS-FOCUS-3 says the main panel draws rings after a click in both looks, so the ring is the rule's own click-focus behaviour, not a violation of it."
+        },
+        {
+          "id": "states-2",
+          "state": "main-installed-single",
+          "finding": "The INSTALLED tab carries a 1 px blue focus ring around its whole box in this rest state. The artboard's installed-tab element draws only the active-tab underline and no focus outline, so the rest capture shows a focus state its name does not promise.",
+          "reason": "The blue ring on the INSTALLED tab is visible, but the state's reach clicks installed-tab, and DS-FOCUS-3 requires main-panel rings after a click in both looks; the state description promises only Gateway's direct rows, not that nothing has focus."
+        },
+        {
+          "id": "native-1",
+          "state": "main-details-readme",
+          "finding": "The current row (Microsoft.Extensions.DependencyInjection.Abstractions) has the inactive selection band (#37373d role), no list.focusOutline ring and no uninstall action at its end. The spec composes this row for main-details-readme with --nuiget-color-list-active-bg, --nuiget-color-list-focus-outline and row-action-uninstall at x 291 y 560 (marked composed: main-details-readme), and the artboard draws the blue band, the ring and the trash glyph. Keyboard focus sits on the README tab instead of the list.",
+          "reason": "The crop shows the current row in the grey band with no ring and no action. The hard measurement \"DS-COLOR-2@main-details-readme/rows: current rgb(55, 55, 61) (target rgb(55, 55, 61), list not focused)\" shows the colour is correct for an unfocused list. DS-FOCUS-1 puts focus on the README tab by design, and DS-ROW-4 (\"visible actions per row 0 ×14\") shows actions only on a focused, hovered or focus-within row."
+        },
+        {
+          "id": "native-4",
+          "state": "main-details-readme",
+          "finding": "The two header action glyphs (source settings at x 868, refresh at x 894) are a cog and a two-arrow sync circle. The artboard draws different codicons there: a rayed settings glyph and a single-arrow refresh.",
+          "reason": "The crop shows the settings-gear and sync codicons that icons.json maps. sync-codicons --check reports \"17 icons match @vscode/codicons\", so the capture meets DS-ICON-1. The spec names no glyph for source-settings or refresh-button, so only the artboard drew different codicons."
+        },
+        {
+          "id": "geometry-2",
+          "state": "main-details-readme",
+          "finding": "The current row's Uninstall action, which the spec lists as composed for this state (row-action-uninstall at x 291, y 560, 22x22) and the artboard draws as a trash glyph at x 296-307, y 565-576 inside the selected band, is absent: the band (x 0-317, y 535-606) is plain #37373d at that spot.",
+          "reason": "The crop shows the band with no trash glyph at x 291 y 560. DS-ROW-4 shows actions only on hover, on focus-within or on the focused row, and the hard measurements read \"visible actions per row 0 ×14\" and DS-COLOR-2 \"list not focused\". With focus on the README tab, the missing action is correct by the rule."
+        },
+        {
+          "id": "states-1",
+          "state": "main-details-readme",
+          "finding": "The current row Microsoft.Extensions.DependencyInjection.Abstractions shows no uninstall (trash) action, which the artboard draws at the row's end and the spec composes for this state (row-action-uninstall, composed: main-details-readme).",
+          "reason": "The crop shows no trash glyph, but that matches DS-ROW-4 (\"visible actions per row 0 ×14\", hard) with the list unfocused (DS-COLOR-2 \"list not focused\"). Actions show only on hover, on focus-within or on the focused row."
+        },
+        {
+          "id": "states-2",
+          "state": "main-details-readme",
+          "finding": "The current row's band is drawn in the grey inactive-selection colour with no focus outline, while the spec composition and the artboard draw it with list.activeSelectionBackground and a 1 px list.focusOutline ring (tokens --nuiget-color-list-active-bg, --nuiget-color-list-focus-outline).",
+          "reason": "The crop shows the grey inactive band. The hard measurement \"DS-COLOR-2@main-details-readme/rows: current rgb(55, 55, 61) (target rgb(55, 55, 61), list not focused)\" equals its target, because focus is on the README tab (DS-FOCUS-1, hard)."
+        },
+        {
+          "id": "states-5",
+          "state": "main-details-readme",
+          "finding": "The details title is ellipsized ('…Abstracti...') while the artboard shows the whole id 'Microsoft.Extensions.DependencyInjection.Abstractions' and the spec declares no truncation for the details title.",
+          "reason": "The title ellipsizes inside the hard \"DS-INSET-4@main-details-readme: header 20/20 20/20 (target 20)\". The id needs about 567 px and the content box is 564 px even at the spec's 604 px panel, so the full id cannot fit. A package id is live content (rubric §6), and the layout around it holds."
+        },
+        {
+          "id": "states-6",
+          "state": "main-details-readme",
+          "finding": "The README tab carries a 1 px focusBorder ring around the whole tab that the artboard does not draw (it shows only the underline), so focus sits on the tab instead of on the current row the spec composes.",
+          "reason": "The crop shows a 1 px blue ring on the README tab, which matches the hard \"DS-FOCUS-1@main-details-readme/tabs: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)\". DS-FOCUS-3 says the main panel draws rings after a click in both looks, so the artboard leaving it out is the artboard's omission."
+        },
+        {
+          "id": "states-7",
+          "state": "main-details-readme",
+          "finding": "The header's source-settings and refresh actions draw different codicons (a gear and a two-arrow sync glyph) from the artboard's (a rayed settings glyph and a single circular refresh arrow).",
+          "reason": "The crop shows the settings-gear and sync codicons of the pinned release (sync-codicons --check: \"17 icons match @vscode/codicons\"), which meets DS-ICON-1. The spec declares no glyph, so the difference is in the artboard's drawing."
+        },
+        {
+          "id": "native-2",
+          "state": "main-installed-details",
+          "finding": "Because the painted sash is 3 px wider, the details content starts 3 px further right than the artboard and spec: the title, labels and Uninstall button begin at x 444/656 against the artboard's 441/653 (20 px from the pane at 421), so the details header inset reads 23 instead of 20.",
+          "reason": "The hard measurement 'DS-INSET-4@main-installed-details: header 20/20 20/20 (target 20); title 444, tab label 444' shows the details inset is 20 from its own pane, not 23. The 3 px shift is the sash band already keyed as D1, not a separate inset defect."
+        },
+        {
+          "id": "native-5",
+          "state": "main-installed-details",
+          "finding": "The header's refresh action draws the two-arrow sync glyph, while the artboard (and the workbench's own Refresh view actions) draw the single circular refresh codicon.",
+          "reason": "The crop shows a two-arrow sync glyph and the artboard a single circular arrow, but the spec's refresh-button entry names no icon and docs/design/icons.json registers only 'sync' for it. No rule, spec field or exemplar cites a different codicon, so this is a judge-only taste call under rubric §6."
+        },
+        {
+          "id": "native-5",
+          "state": "main-transitive-details",
+          "finding": "In the details pane's Authors line the Verified mark sits about 2 px above the optical centre of the \"Microsoft\" text, where the artboard centres the mark on the author text.",
+          "reason": "Pixel scan puts the Verified mark at y 154-164 (centre 159) against the Microsoft text at y 155-164 (centre 159.5), so it is centred within 0.5 px; the artboard mark is at y 155-165, a 1 px difference, not 2 px above centre, and within glyph-rendering differences rubric §6 excludes."
+        }
+      ]
+    }
+  ]
+}

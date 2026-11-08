@@ -6,8 +6,8 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42379746314",
-  "composition": "The first row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
+  "run": "42483294360",
+  "composition": "The Microsoft.Extensions.DependencyInjection.Abstractions row, the sixth in id order, is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
       "project-selector": {
@@ -230,10 +230,30 @@
           "--nuiget-header-transform"
         ]
       },
+      "package-row-microsoft.extensions.configuration.environmentvariables": {
+        "rect": {
+          "x": 0,
+          "y": 463,
+          "w": 319,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
       "package-row-microsoft.extensions.dependencyinjection.abstractions": {
         "rect": {
           "x": 0,
-          "y": 175,
+          "y": 535,
           "w": 319,
           "h": 72
         },
@@ -254,7 +274,7 @@
       "row-action-uninstall": {
         "rect": {
           "x": 291,
-          "y": 200,
+          "y": 560,
           "w": 22,
           "h": 22
         },
@@ -267,26 +287,6 @@
           "--nuiget-color-list-active-icon"
         ],
         "composed": "main-details-readme"
-      },
-      "package-row-microsoft.extensions.configuration.environmentvariables": {
-        "rect": {
-          "x": 0,
-          "y": 247,
-          "w": 319,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 36px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-action-size",
-          "--nuiget-space-4",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
-        ]
       },
       "section-header-transitive": {
         "rect": {
@@ -661,10 +661,30 @@
           "--nuiget-header-transform"
         ]
       },
+      "package-row-microsoft.extensions.configuration.environmentvariables": {
+        "rect": {
+          "x": 0,
+          "y": 457,
+          "w": 317,
+          "h": 72
+        },
+        "inset": 16,
+        "padding": "0px 36px 0px 16px",
+        "gap": "8px 8px",
+        "tokens": [
+          "--nuiget-row-height-comfortable",
+          "--nuiget-gap-between",
+          "--nuiget-row-action-end-inset",
+          "--nuiget-action-size",
+          "--nuiget-space-4",
+          "--nuiget-inset",
+          "--nuiget-radius-row"
+        ]
+      },
       "package-row-microsoft.extensions.dependencyinjection.abstractions": {
         "rect": {
           "x": 0,
-          "y": 169,
+          "y": 529,
           "w": 317,
           "h": 72
         },
@@ -685,7 +705,7 @@
       "row-action-uninstall": {
         "rect": {
           "x": 289,
-          "y": 194,
+          "y": 554,
           "w": 22,
           "h": 22
         },
@@ -698,26 +718,6 @@
           "--nuiget-color-list-active-icon"
         ],
         "composed": "main-details-readme"
-      },
-      "package-row-microsoft.extensions.configuration.environmentvariables": {
-        "rect": {
-          "x": 0,
-          "y": 241,
-          "w": 317,
-          "h": 72
-        },
-        "inset": 16,
-        "padding": "0px 36px 0px 16px",
-        "gap": "8px 8px",
-        "tokens": [
-          "--nuiget-row-height-comfortable",
-          "--nuiget-gap-between",
-          "--nuiget-row-action-end-inset",
-          "--nuiget-action-size",
-          "--nuiget-space-4",
-          "--nuiget-inset",
-          "--nuiget-radius-row"
-        ]
       },
       "section-header-transitive": {
         "rect": {
