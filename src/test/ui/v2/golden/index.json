@@ -444,10 +444,10 @@
     "sidecarSha256": "9ab3adce16601dbd9557994ed880562171d04ffbdae5c3870f7990d6b3913cb9"
   },
   "sidebar-all-projects.dark-modern.300.png": {
-    "status": "baseline",
-    "run": "42456790390",
-    "sha256": "652bed632b6c833bfed26f2dc4e78fd46a4e998585e97f4abf444e7c6554d27a",
-    "sidecarSha256": "ad1f0871e171de9d88f2e9e9ec21a28fca9b138d71d64a6e6b35780dc401fe26"
+    "status": "approved",
+    "run": "42462064572",
+    "sha256": "157c6299264d5579601e963cc8db19ef20fd28db1076e67e879712371e755921",
+    "sidecarSha256": "83e72e211faf6179532e982d30ae78d8b725bf148718f9137a62bbd6e17a0d3a"
   },
   "sidebar-filter.dark-modern.300.png": {
     "status": "baseline",
