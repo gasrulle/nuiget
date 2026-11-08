@@ -578,8 +578,10 @@ ContextMenu key and a right-click open VS Code's `webview/context` menu from the
 eight hidden row commands run through `src/host/rowMenu.ts`, which guards the context object (`isRowMenuContext`)
 and reaches the operations route. `ui/contextMenu` stays registered, delegating to the same runner, and unsent until P4.1.
 Ctrl+Enter (Cmd+Enter) sends `ui/viewPackage`; Enter keeps the row's primary action, except on a centrally managed update row, where Enter and the row button open that menu so the host previews and confirms the central change (P6.4). A browse row in a CPM project asks `cpm/preview` before it installs; a package with a central entry (or an ask that fails) opens the row's menu (`openRowMenu`) instead, and a second Enter while the ask runs sends nothing (N77). In All Projects both sections
-show one heading and list per project over the `allProjects` slice (`ProjectPackages`, `ProjectUpdates`), under a
-caption per workspace folder when there are several; each row acts on its own project. A search result under All
+show the projects over the `allProjects` slice: the Installed section as one compact tree (`AllProjectsTree`: a folder row per
+workspace folder when there are several, a project row of the `level` variant, the packages, message leaves for an empty or
+unsupported project, an error banner above the tree; UX-P3.7c), the Updates section one heading and list per project
+(`ProjectUpdates`) under a caption per workspace folder until UX-P3.7d; each row acts on its own project. A search result under All
 Projects carries `projectPath: ALL_PROJECTS` and `installedProjects` in its context, so the host's
 project picker installs it. The host's version picker says "No package source could be reached for this package"
 when no source answered, instead of an empty list.
@@ -597,7 +599,8 @@ links.
   (`status-live`). It announces a first load and, through `describeOutcome` (`outcomes.ts`), how every
   operation ended, on whichever surface it started.
 - `InstalledSection.tsx` is the Installed section (`section-header-installed`, `sidebar-installed-list`):
-  `SectionHeader`, `Listbox` and one `Row` per package of the committed project.
+  `SectionHeader`, then the committed project's flat `Listbox` (`ProjectPackages`), or under All Projects one compact tree
+  (`AllProjectsTree`, `Listbox` with `groups`); both render their rows through `usePackageRows` (`packageRows.tsx`).
 
 | State (interaction model §4) | What the section shows |
 |---|---|
@@ -782,11 +785,13 @@ is why it is not a dialog.
   Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
   `ConfirmDialog` that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
   `ops/bulkUpdateAllProjects`; centrally managed (`central`) rows, busy rows and an unsupported project's rows stay
-  out (N76). A project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`).
+  out (N76). An Updates project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`); the
+  Installed tree's project rows carry none (UX-P3.7c).
   The Installed and Updates headers take VS Code's side-bar section colours (`--nuiget-color-section-header-*`), rows
-  start where the section title does, and an All Projects project header is a tree level in normal case: `SidebarView`
-  writes `ExtensionConfig.treeIndent` (`workbench.tree.indent`) as `--nuiget-tree-indent` on its root, which indents
-  the project headers and their rows (`sidebar.css`).
+  start where the section title does, and an All Projects project is a tree level in normal case: `SidebarView`
+  writes `ExtensionConfig.treeIndent` (`workbench.tree.indent`) as `--nuiget-tree-indent` on its root; in the Installed
+  tree a compact row's wrapper `data-level` sets `--nuiget-row-indent` (the primitive's compact modifiers, UX-P3.7c), in the
+  Updates section `.nuiget-sidebar-project` does until UX-P3.7d (`sidebar.css`).
 
 ### Details feature (main)
 

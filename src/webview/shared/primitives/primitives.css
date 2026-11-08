@@ -91,6 +91,8 @@
 
 /* Fixed at the token, the workbench's 22 px tree row: a 12 px version on the 13 px name's baseline would grow the line to 23 (DS-TYPE-4, DS-HEIGHT-2). */
 .nuiget-row--compact {
+    /* A compact tree's group rows and leaves are compact rows too (UX-P3.7c). */
+    --nuiget-group-row-height: var(--nuiget-row-height-compact);
     box-sizing: border-box;
     min-height: var(--nuiget-row-height-compact);
     block-size: var(--nuiget-row-height-compact);
@@ -163,18 +165,48 @@
     content: '';
     position: absolute;
     inset: 0 var(--nuiget-pane-header-margin-x) auto;
-    border-block-start: var(--nuiget-line-width) solid var(--nuiget-color-divider);
+    border-block-start: var(--nuiget-line-width) solid var(--nuiget-group-divider, var(--nuiget-color-divider));
 }
 
-/* Fixed at the pane-header height so the estimate equals the row (UX-P2.2). */
+/* Fixed at the pane-header height so the estimate equals the row (UX-P2.2); a compact tree's at the compact row's (UX-P3.7c). */
 .nuiget-row[data-row-kind="group"] {
-    block-size: var(--nuiget-pane-header-height);
+    block-size: var(--nuiget-group-row-height, var(--nuiget-pane-header-height));
 }
 
 /* A one-line leaf equals its estimate; a sentence wrapped in a narrow pane is measured, never over the next row. */
 .nuiget-row[data-row-kind="message"] {
     block-size: auto;
-    min-block-size: var(--nuiget-pane-header-height);
+    min-block-size: var(--nuiget-group-row-height, var(--nuiget-pane-header-height));
+}
+
+/*
+ * A compact tree (the sidebar's, UX-P3.7c): group rows and leaves at the compact row's 22 px, the group band inset as a row's,
+ * no divider between group rows, and each level indented by workbench.tree.indent through the wrapper's data-level.
+ */
+.nuiget-row-group--compact {
+    --nuiget-group-divider: transparent;
+    margin-inline: var(--nuiget-row-inset-x);
+}
+
+.nuiget-row-group--compact > .nuiget-section-header {
+    --nuiget-section-header-inset-start: calc(var(--nuiget-pane-header-padding-start) + var(--nuiget-row-indent));
+    --nuiget-section-header-inset-end: var(--nuiget-row-action-end-inset);
+}
+
+.nuiget-row-message--compact {
+    --nuiget-message-inset: calc(var(--nuiget-row-inset-x) + var(--nuiget-pane-header-padding-start));
+}
+
+.nuiget-row--compact[data-level="2"] {
+    --nuiget-row-indent: var(--nuiget-tree-indent);
+}
+
+.nuiget-row--compact[data-level="3"] {
+    --nuiget-row-indent: calc(2 * var(--nuiget-tree-indent));
+}
+
+.nuiget-row--compact[data-level="4"] {
+    --nuiget-row-indent: calc(3 * var(--nuiget-tree-indent));
 }
 
 .nuiget-row-group > .nuiget-section-header {
@@ -188,8 +220,8 @@
     flex: 1;
     align-items: center;
     min-width: 0;
-    min-height: var(--nuiget-pane-header-height);
-    padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-md) + var(--nuiget-space-2)) var(--nuiget-message-inset, var(--nuiget-inset));
+    min-height: var(--nuiget-group-row-height, var(--nuiget-pane-header-height));
+    padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-row-indent)) var(--nuiget-message-inset, var(--nuiget-inset));
     outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
     outline-offset: calc(var(--nuiget-line-width) * -1);
     color: var(--nuiget-color-fg-muted);
@@ -662,7 +694,7 @@
     align-items: center;
     gap: var(--nuiget-space-2);
     box-sizing: border-box;
-    padding-inline: var(--nuiget-section-header-inset, var(--nuiget-inset));
+    padding-inline: var(--nuiget-section-header-inset-start, var(--nuiget-section-header-inset, var(--nuiget-inset))) var(--nuiget-section-header-inset-end, var(--nuiget-section-header-inset, var(--nuiget-inset)));
     border-radius: var(--nuiget-radius-section-header);
 }
 

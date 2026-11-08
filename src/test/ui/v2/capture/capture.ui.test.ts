@@ -301,6 +301,11 @@ async function sidebarSections(): Promise<void> {
     await leaveWebview();
     await openSidebarView();
     await enterSidebarWebview();
+    // A box left filled by a state that could not leave (a reach that timed out) would hide a pane: start from an empty box.
+    const box = await findByTestId('sidebar-search-input', 60_000);
+    if ((await box.getAttribute('value')) !== '') {
+        await box.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+    }
     await findByTestId('sidebar-installed-list', 120_000);
     await findByTestId('package-row-serilog', 120_000);
     await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row in the sidebar', 120_000);
@@ -874,6 +879,30 @@ const REACH: Record<string, Reach> = {
     },
     'sidebar-sections': { reach: sidebarSections },
     'sidebar-narrow-200px': { reach: sidebarSections },
+    'sidebar-all-projects': {
+        reach: async () => {
+            // The side bar follows the session: All Projects is chosen in the main panel (UX-P3.7c).
+            await freshMainPanel();
+            await chooseFixtureProject(ALL_PROJECTS);
+            await leaveWebview();
+            await openSidebarView();
+            await enterSidebarWebview();
+            const search = await findByTestId('sidebar-search-input', 60_000);
+            await search.click();
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@installed ');
+            // Settled: the pane's count shown once every project answered, and the two folder rows at level 1 of the one tree.
+            await until('/\\d/.test(document.querySelector(\'[data-testid="section-box-installed"] .nuiget-badge--count\')?.textContent ?? "") && Number(document.querySelector(\'[data-testid="sidebar-installed-list"] [role="treeitem"][aria-level="1"]\')?.getAttribute("aria-setsize")) === 2 && document.querySelector(\'[data-testid="sidebar-installed-list"] .nuiget-spinner\') === null', 'the sidebar\'s All Projects tree settled', 120_000);
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
+        },
+    },
     'sidebar-filter': {
         reach: async () => {
             await sidebarSections();

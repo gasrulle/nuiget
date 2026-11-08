@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sidebar title bar keeps four buttons, with Refresh and Open Full Manager in its menu**
 - **Filtering the sidebar opens a collapsed section and counts the matches**
 - **Under All Projects, a sidebar project whose packages are still being read says provisional**
+- **Under All Projects, the sidebar's Installed list is one tree of folders and projects that fold with the arrow keys**
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 
 ### Fixed

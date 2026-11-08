@@ -68,7 +68,7 @@ body {
     flex: var(--nuiget-sidebar-share, 1) 1 0;
 }
 
-/* All Projects: a caption per workspace folder (with several), a heading and a list per project. */
+/* Updates pane under All Projects until UX-P3.7d: a caption per workspace folder (the Installed pane is one tree since UX-P3.7c). */
 .nuiget-sidebar-folder-caption {
     margin: var(--nuiget-space-3) var(--nuiget-space-4) var(--nuiget-space-1);
     color: var(--nuiget-color-fg-muted);
@@ -77,6 +77,7 @@ body {
     text-transform: uppercase;
 }
 
+/* Updates pane under All Projects until UX-P3.7d: the stacked lists scroll inside their section. */
 .nuiget-sidebar-section-content:has(.nuiget-sidebar-project) {
     overflow-y: auto;
 }
@@ -105,20 +106,10 @@ body {
     --nuiget-pane-header-line: transparent;
 }
 
-/* An All Projects project header is a tree level: normal case, indented by workbench.tree.indent, and its rows with it. */
-/* A project header's chevron and title keep their own x and normal case (P3.7c). */
+/* Updates pane under All Projects until UX-P3.7d: a project header in normal case, its rows indented by workbench.tree.indent. */
 .nuiget-sidebar-project {
     --nuiget-section-header-inset: 0;
     --nuiget-group-title-transform: none;
     --nuiget-row-indent: var(--nuiget-tree-indent);
-}
-
-.nuiget-sidebar-project .nuiget-section-heading {
-    font-size: var(--nuiget-font-size-md);
-    font-weight: normal;
-}
-
-.nuiget-sidebar-project .nuiget-section-toggle {
-    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-tree-indent));
 }
 

@@ -80,7 +80,7 @@ describe('sidebar parity: chrome and indent (UX-P3.7a)', () => {
         expect(getComputedStyle(screen.getByTestId('section-header-installed').querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
     });
 
-    it('All Projects project headers are in normal case and name their path', async () => {
+    it('All Projects project rows are level rows of the tree in normal case, indented by workbench.tree.indent', async () => {
         const host = await mountWith([pkg('Serilog')]);
         await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
         const stream = host.requests('allProjects/installed')[0];
@@ -89,17 +89,16 @@ describe('sidebar parity: chrome and indent (UX-P3.7a)', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq')] } } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
 
-        const header = screen.getByTestId('section-header-project-app');
-        expect(header).toHaveAttribute('title', A);
-        // The project's context switches the group look's transform off through its carrier (DS-TYPE-5's sidebar clause is P3.7a's).
-        const box = header.closest('.nuiget-section-header') as HTMLElement;
-        expect(box).toHaveAttribute('data-variant', 'group');
-        expect(getComputedStyle(header.querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
-        expect(getComputedStyle(box).getPropertyValue('--nuiget-section-title-transform')).toContain('--nuiget-group-title-transform');
-        expect(getComputedStyle(header.closest('.nuiget-sidebar-project') as HTMLElement).getPropertyValue('--nuiget-group-title-transform')).toBe('none');
-        // A project is a tree level: its rows indent by the carrier the row's padding reads (UX-P3.7a).
-        expect(getComputedStyle(header.closest('.nuiget-sidebar-project') as HTMLElement).getPropertyValue('--nuiget-row-indent')).toContain('--nuiget-tree-indent');
-        const appOption = within(screen.getByTestId('sidebar-installed-list-app')).getByRole('option');
-        expect(getComputedStyle(appOption).getPropertyValue('padding-inline')).toContain('--nuiget-row-indent');
+        // D48 (UX-P3.7c): a project is a group row of the one tree, the level variant (13/600, no transform), at level 1 with one folder.
+        const row = screen.getByTestId('group-row-project-app');
+        expect(row).toHaveAttribute('data-level', '1');
+        expect(within(row).getByRole('treeitem')).toHaveAttribute('aria-level', '1');
+        const box = within(row).getByTestId('section-header-project-app').closest('.nuiget-section-header') as HTMLElement;
+        expect(box).toHaveAttribute('data-variant', 'level');
+        // Its packages are one level down: the wrapper's data-level sets the indent the compact row's padding reads.
+        const serilog = screen.getByTestId('package-row-serilog');
+        expect(serilog).toHaveAttribute('data-level', '2');
+        expect(getComputedStyle(serilog).getPropertyValue('--nuiget-row-indent')).toContain('--nuiget-tree-indent');
+        expect(getComputedStyle(within(serilog).getByRole('treeitem')).getPropertyValue('padding-inline')).toContain('--nuiget-row-indent');
     });
 });

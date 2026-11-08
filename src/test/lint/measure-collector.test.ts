@@ -534,6 +534,25 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(facts.endOfP0.rows.find(row => row.nameLeft === 28)?.band).toEqual({ left: 4, top: 400, right: 296, bottom: 422 });
     });
 
+    it('reads a sidebar tree row at its level: the title and name x less its indents, a group row as a compact row, a start padding as a slot (UX-P3.7c)', () => {
+        document.body.insertAdjacentHTML('beforeend', '<main data-testid="nuiget-sidebar" id="tree-fixture" style="--nuiget-tree-indent: 8px" data-rect="0,0,300,600">'
+            + '<div class="nuiget-row nuiget-row--compact" data-row-kind="group" data-level="2" data-rect="0,100,300,122"><div class="nuiget-row-group nuiget-row-group--compact" role="treeitem" data-rect="4,100,296,122"><div class="nuiget-section-header" data-rect="4,100,296,122"><span class="nuiget-section-title" data-rect="36,103,80,119" data-text="36,103,80,119">App</span></div></div></div>'
+            + '<div class="nuiget-row nuiget-row--compact" data-level="3" data-rect="0,122,300,144"><div class="nuiget-row-option nuiget-row-option--compact" style="padding-left: 44px; --nuiget-row-indent: 16px" data-rect="4,122,296,144"><span class="nuiget-row-name" data-rect="44,125,90,141" data-text="44,125,90,141">Moq</span></div></div>'
+            + '<div class="nuiget-row nuiget-row--compact" data-row-kind="message" data-level="3" data-rect="0,144,300,166"><div class="nuiget-row-message" style="padding-left: 45px; --nuiget-row-indent: 16px" data-rect="0,144,300,166" data-text="45,147,200,163">No packages installed.</div></div>'
+            + '</main>');
+        try {
+            const layout = collect('nuiget-sidebar');
+            // DS-INSET-1: the level-2 title at 36 and the level-3 name at 44 both read 28 after their indents.
+            expect(layout.sidebar).toMatchObject({ titles: [28], names: [28] });
+            // DS-HEIGHT-2: a compact tree's group row is a compact row; the message leaf stays out.
+            expect(layout.heights.compactRows).toEqual([22, 22]);
+            // DS-GRID-1: a start padding less its 16 px twistie column and its indent is judged: 44 - 16 - 16 = 12 holds, 45 does not.
+            expect(layout.offRamp.filter(entry => entry.includes('(slot)'))).toEqual(['.nuiget-row-message padding-left 45 = 13 + 16 + 16 (slot)']);
+        } finally {
+            document.getElementById('tree-fixture')?.remove();
+        }
+    });
+
     it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
         panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-property-list" data-rect="620,200,880,260"><dt class="nuiget-property-term" data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd class="nuiget-property-value" data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd><dt class="nuiget-property-term" data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd class="nuiget-property-value" data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');

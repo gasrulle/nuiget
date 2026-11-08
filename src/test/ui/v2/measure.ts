@@ -956,6 +956,18 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
             }
         }
         if (prop.startsWith('margin') && value > 40) continue;
+        // A tree row's or message leaf's start padding is a slot: its inset, the 16 px twistie column, a ramp step and
+        // (level - 1) indents of workbench.tree.indent; the rest is judged (DS-GRID-1, UX-P3.7c design-advisor follow-up 2).
+        if ((prop === 'padding-left' || prop === 'padding-inline-start') && (el.classList.contains('nuiget-row-option--compact') || el.classList.contains('nuiget-row-message'))) {
+            // The row's own indent, (level - 1) x workbench.tree.indent where a compact tree sets it, 0 elsewhere (the main panel).
+            const indent = px(getComputedStyle(el).getPropertyValue('--nuiget-row-indent'));
+            const rest = round(value - 16 - indent);
+            if (!ramp.some(step => Math.abs(rest - step) <= tolerance)) {
+                offRampCount++;
+                if (offRamp.length < 12) offRamp.push(label(el) + ' ' + prop + ' ' + round(value) + ' = ' + rest + ' + 16 + ' + round(indent) + ' (slot)');
+            }
+            continue;
+        }
         if (!ramp.some(step => Math.abs(value - step) <= tolerance)) {
             offRampCount++;
             if (offRamp.length < 12) offRamp.push(label(el) + ' ' + prop + ' ' + raw);
@@ -1095,9 +1107,12 @@ if (visible(panel)) {
 }
 let sidebar;
 if (rootTestId === 'nuiget-sidebar' && visible(root)) {
-    const lefts = selector => [...root.querySelectorAll(selector)].filter(visible).map(el => round(el.getBoundingClientRect().left));
     const search = root.querySelector('[data-testid="sidebar-search-input"]');
-    sidebar = { rootLeft: root.getBoundingClientRect().left, titles: lefts('.nuiget-section-title'), names: lefts('.nuiget-row-name'), search: visible(search) ? search.getBoundingClientRect().left : undefined };
+    // A tree row's x less (level - 1) indents of workbench.tree.indent: every level reads against the one title x (DS-INSET-1, UX-P3.7c).
+    const treeIndent = px(getComputedStyle(root).getPropertyValue('--nuiget-tree-indent'));
+    const levelOf = el => Number(el.closest('[data-level]')?.getAttribute('data-level') ?? 1) || 1;
+    const levelled = selector => [...root.querySelectorAll(selector)].filter(visible).map(el => round(el.getBoundingClientRect().left - (levelOf(el) - 1) * treeIndent));
+    sidebar = { rootLeft: root.getBoundingClientRect().left, titles: levelled('.nuiget-section-title'), names: levelled('.nuiget-row-name'), search: visible(search) ? search.getBoundingClientRect().left : undefined };
 }
 // Helper 3: heights, and the computed styles the height rules name.
 const rectOf = el => el.getBoundingClientRect();
@@ -1122,7 +1137,8 @@ const hitOf = el => {
 };
 const heights = {
     headers: shown('[data-testid^="section-box-"]').map(el => ({ id: el.dataset.testid.replace(/^section-box-/, ''), variant: el.dataset.variant ?? '', height: heightOf(el) })),
-    compactRows: shown('.nuiget-row--compact:not([data-row-kind="group"]):not([data-row-kind="message"])').map(heightOf),
+    // A compact tree's group rows are compact rows too (UX-P3.7c); message leaves wrap and stay out.
+    compactRows: shown('.nuiget-row--compact:not([data-row-kind="message"])').map(heightOf),
     comfortableRows: shown('.nuiget-row--comfortable:not([data-row-kind="group"]):not([data-row-kind="message"])').map(heightOf),
     comfortablePitches: [...scope.querySelectorAll('.nuiget-listbox')].flatMap(list => {
         // Pitches between consecutive package rows: a group row restarts the count.
@@ -2197,6 +2213,11 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
                 }
                 if (actions(true).length > 0) {
                     parts.push(check('row actions', actions(true), TRAILING.rowAction));
+                }
+                // A compact tree's group rows end their count 6 inside the band, as a row's action (UX-P3.7c).
+                const groupRows = layout.sections.filter(section => section.inList === true && section.trailingEnd !== undefined).map(section => section.trailingEnd as number);
+                if (groupRows.length > 0) {
+                    parts.push(check('group rows', groupRows, TRAILING.rowAction));
                 }
             }
             if (parts.length === 0) {
@@ -3309,9 +3330,10 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         case 'DS-INSET-2': {
             // A sidebar pane box reads its trailing element's border box as a group box does (UX-P3.7a).
             const sectionBoxes = layout.sections.map(section => [
-                section.variant === 'pane' ? `${section.id}\u0001` : section.id,
-                section.variant,
-                section.insets === undefined || section.variant !== 'pane' ? section.insets : { ...section.insets, end: section.trailingEnd ?? section.paddingEnd ?? section.insets.end },
+                // A sidebar pane header, and a tree's group row in the sidebar (UX-P3.7c follow-up 2), read top and bottom only.
+                section.variant === 'pane' || (scope === 'sidebar' && section.inList === true) ? `${section.id}\u0001` : section.id,
+                section.variant === 'pane' || (scope === 'sidebar' && section.inList === true) ? 'pane' : section.variant,
+                section.insets === undefined || !(section.variant === 'pane' || (scope === 'sidebar' && section.inList === true)) ? section.insets : { ...section.insets, end: section.trailingEnd ?? section.paddingEnd ?? section.insets.end },
             ] as [string, string, Insets | undefined]);
             // A header's end inset is its trailing element's border box (the rule's `last.right`), or the slot's padding when nothing
             // trails; the leaf union would read a badge's text or a clipped title's range (UX-P2.6a).

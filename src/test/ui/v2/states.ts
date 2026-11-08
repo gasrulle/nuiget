@@ -215,6 +215,8 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected; the pointer rests on package-row-serilog in the Installed section: the hovered band and its action (DS-ROW-3, DS-INSET-3 a; UX-P3.7a).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-filter', 'sidebar', [primary('sidebar')],
         '"@installed Seri" typed in the sidebar search box: the Installed section alone, open, its header reading "k of N" in the badge\'s place (DS-COPY-5), the Serilog rows; the box is cleared after the capture (UX-P3.7b).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
+    { ...ready('sidebar-all-projects', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
+        'All Projects selected in the main panel and "@installed" typed in the sidebar box: the Installed pane alone with its tree, the two folder rows, the project rows, their rows and the message leaves of Empty and Unsupported; the box is cleared and Gateway chosen again after the capture (UX-P3.7c).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
     { ...ready('sidebar-narrow-200px', 'sidebar', [{ theme: 'dark-modern', look: 'modern', width: 200 }],
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],

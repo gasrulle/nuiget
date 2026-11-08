@@ -298,6 +298,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .find(line => line.name === 'DS-INSET-2@sidebar-sections');
         expect(pane(5.5, 5.5)).toMatchObject({ pass: true, value: 'sidebar-header 8/8 4/4; installed 4/6 5.5/5.5 (start DS-INSET-1, end DS-INSET-3 b)' });
         expect(pane(4, 8)).toMatchObject({ pass: false });
+        // UX-P3.7c (design-advisor follow-up 2): a sidebar tree's group row is judged on top and bottom only, as a pane header.
+        const treeRow = (top: number, bottom: number) => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 4, bottom: 4 }, sections: [{ id: 'folder-app', variant: 'level', inList: true, insets: { start: 4, end: 244, top, bottom }, trailingEnd: undefined, paddingEnd: 6, above: undefined, below: undefined }] }), 'modern')
+            .find(line => line.name === 'DS-INSET-2@sidebar-sections');
+        expect(treeRow(3, 3)).toMatchObject({ pass: true });
+        expect(treeRow(3, 5)).toMatchObject({ pass: false });
+        // DS-INSET-3 (a): a tree's group row ends its count 6 inside the band.
+        const groupEnd = (end: number) => lineOf('sidebar-sections', layout({ sections: [{ id: 'project-app', variant: 'level', inList: true, insets: undefined, trailingEnd: end, above: undefined, below: undefined }] }), 'DS-INSET-3@sidebar-sections');
+        expect(groupEnd(6)).toMatchObject({ pass: true, value: 'group rows 6 (target 6)' });
+        expect(groupEnd(10)).toMatchObject({ pass: false });
         // UX-P3.7a: the sidebar header is 4 above and below in both looks; 8 there is red.
         expect(measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 8, bottom: 8 } }), 'modern').find(line => line.name === 'DS-INSET-2@sidebar-sections')).toMatchObject({ pass: false });
     });

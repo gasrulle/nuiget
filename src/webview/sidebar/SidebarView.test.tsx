@@ -402,7 +402,41 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByTestId('section-box-installed').querySelector('.nuiget-badge--count')).toBeNull();
     });
 
-    it('All Projects: one section per project over allProjects/installed, in folder order, and uninstall sends the row\'s project', async () => {
+    it('All Projects tree: an empty project and an unsupported one say so in a leaf, a failed one in a banner with Retry; Left and Right fold a project row (UX-P3.7c)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith([pkg('Serilog')]);
+        const C = '/w/Old/Old.csproj';
+        const D = '/w/Bad/Bad.csproj';
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }, { name: 'Old', path: C }, { name: 'Bad', path: D }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: C, projectName: 'Old', result: { projectPath: C, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq')], unsupported: { reason: 'sdk-too-old', message: 'needs SDK 10' } } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: D, projectName: 'Bad', error: 'boom' } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C, D], errored: [{ projectPath: D, error: 'boom' }] }));
+
+        expect(screen.getByTestId('sidebar-installed-empty-lib')).toHaveTextContent('No packages installed.');
+        expect(screen.getByTestId('sidebar-installed-unsupported-old')).toHaveTextContent('Unsupported project: needs SDK 10');
+        // An unsupported project's rows are read-only: no uninstall button.
+        expect(within(screen.getByTestId('package-row-moq')).queryByTestId('row-action-uninstall')).toBeNull();
+        // A failed project is a banner above the tree, never inside a treeitem.
+        const banner = screen.getByTestId('sidebar-installed-error-bad');
+        expect(screen.getByRole('tree')).not.toContainElement(banner);
+        await user.click(within(banner).getByRole('button', { name: 'Retry' }));
+        expect(host.requests('allProjects/installed').length).toBeGreaterThan(1);
+        // Left folds a project row, Right unfolds it.
+        const app = within(screen.getByTestId('group-row-project-app')).getByRole('treeitem');
+        await user.click(app);
+        await user.keyboard('{ArrowLeft}');
+        expect(app).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('package-row-serilog')).toBeNull();
+        await user.keyboard('{ArrowRight}');
+        expect(app).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('package-row-serilog')).toBeInTheDocument();
+    });
+
+    it('All Projects: one tree with a folder row per workspace folder and a project row under it, in folder order; uninstall sends the row\'s project', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountWith([pkg('Serilog')]);
@@ -419,16 +453,26 @@ describe('sidebar: Installed section', () => {
         // SB10 (UX-P3.7b): a provisional project's header says so under All Projects; an authoritative one does not.
         expect(screen.getByTestId('sidebar-installed-provisional-lib')).toHaveTextContent('provisional');
         expect(screen.queryByTestId('sidebar-installed-provisional-app')).toBeNull();
-        expect(screen.getAllByText(/^w[12]$/).map(element => element.textContent)).toEqual(['w1', 'w2']);
-        expect(screen.getByTestId('section-header-project-app').closest('h3')).not.toBeNull();
-        const lib = screen.getByTestId('sidebar-installed-list-lib');
-        expect(lib).toHaveAccessibleName('Lib');
-        await user.click(within(within(lib).getByTestId('package-row-moq')).getByRole('option'));
+        // D48 (UX-P3.7c): one tree, a folder row per workspace folder at level 1, its projects at level 2, their packages at level 3.
+        const tree = screen.getByRole('tree');
+        expect(tree).toHaveAttribute('data-testid', 'sidebar-installed-list');
+        // In folder order: w1's rows before w2's.
+        expect([...document.querySelectorAll('[data-testid^="group-row-folder-"]')].map(row => row.getAttribute('data-testid'))).toEqual(['group-row-folder-w1', 'group-row-folder-w2']);
+        for (const [testId, level] of [['group-row-folder-w1', '1'], ['group-row-folder-w2', '1'], ['group-row-project-app', '2'], ['group-row-project-lib', '2']] as const) {
+            expect(within(screen.getByTestId(testId)).getByRole('treeitem')).toHaveAttribute('aria-level', level);
+        }
+        expect(within(screen.getByTestId('group-row-project-lib')).getByTestId('section-header-project-lib')).toHaveTextContent('Lib');
+        expect(within(screen.getByTestId('group-row-project-lib')).getByTestId('sidebar-installed-provisional-lib')).toBeInTheDocument();
+        const moq = within(screen.getByTestId('package-row-moq')).getByRole('treeitem');
+        expect(moq).toHaveAttribute('aria-level', '3');
+        await user.click(moq);
         await user.keyboard('{Delete}');
         expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq' }]);
         await user.keyboard('{Shift>}{F10}{/Shift}');
         expect(menus.contexts[0]).toMatchObject({ packageId: 'Moq', webviewSection: 'installedRow', projectPath: B });
-        expect(await axe(document.body)).toHaveNoViolations();
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
     });
 
     it('the search box filters the installed packages by id, and the host can ask for the focus to be there', async () => {

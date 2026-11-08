@@ -184,7 +184,8 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const virtualizer = useVirtualizer<HTMLDivElement, HTMLElement>({
         count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: index => (isGroupAt(index) || isMessageAt(index) ? groupHeight : rowHeight),
+        // A compact tree's group rows and leaves are compact rows (UX-P3.7c): the estimate equals the laid-out row.
+        estimateSize: index => (density !== 'compact' && (isGroupAt(index) || isMessageAt(index)) ? groupHeight : rowHeight),
         overscan: OVERSCAN,
         getItemKey: index => items[index].id,
         measureElement: element => element.getBoundingClientRect().height || rowHeight,
