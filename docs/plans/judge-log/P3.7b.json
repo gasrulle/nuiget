@@ -1,0 +1,199 @@
+{
+  "item": "P3.7b",
+  "runs": [
+    {
+      "runId": "42445799846",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "6886b20 (the reading commit 97f9e88 and the docs commit)",
+      "look": "modern",
+      "workflow": "wf_58085223-ff2",
+      "note": "No sidebar artboard: the four sidebar states are judged against main-installed-single.dark-modern.932.png and its spec (P2.9a precedent). The sash band carries UX-P3.7a follow-up 1 (P3.9); the placeholder goes to P3.11 by the design ruling's DO 8 (Chromium draws no ellipsis on ::placeholder).",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/42445799846/sidebar-sections.dark-modern.300.png",
+          "sha256": "48093b0738a0e49c615d8813f4d2850dba607f6abc813fad70a10888bb34a699",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "sidebar-hover": {
+          "png": "captures/42445799846/sidebar-hover.dark-modern.300.png",
+          "sha256": "d1f09186f204210742e8a35f7decef13ad381c24c2f5f317619680144b8a1fae",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "sidebar-filter": {
+          "png": "captures/42445799846/sidebar-filter.dark-modern.300.png",
+          "sha256": "a92f184f931b485ecbe2bf649609cad94562983181dd6f76de46d3c390ee9bc5",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "sidebar-narrow-200px": {
+          "png": "captures/42445799846/sidebar-narrow-200px.dark-modern.200.png",
+          "sha256": "8b788b2d3d2c53ff5ffed44cfa9d3a16078ef67947e803570055a50bebae63df",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 15,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "sidebar-sections#D1",
+          "state": "sidebar-sections",
+          "finding": "[native] Between the Installed and Updates sections a 4 px tall, full-width band (rgb 49,49,49, the input-background grey, y 425-428, x 0-299 touching both pane edges) separates the panes, where the Modern UI pane header draws a 1 px separator inset 4 px on each side in sideBarSectionHeader.border; it reads as a splitter bar, not a native pane boundary. | [geometry] Between the Installed list and the Updates pane header a 4 px opaque full-width band (y 425-428, x 0-299) is painted, where DS-DIVIDER-6 draws a 1 px separator under a transparent 4 px sash at rest and DS-DIVIDER-1 (Modern UI) draws a 1 px line inset 4 px from each pane edge. | [states] A 4 px full-width band filled in the input-background grey (#313131, x 0–299, y 425–428) is painted at rest between the Installed and Updates sections and touches both pane edges. DS-DIVIDER-6 calls for a 1 px settings.sashBorder separator with a transparent sash at rest, and DS-DIVIDER-1 (Modern UI) for a 1 px separator inset 4 px above the second header.",
+          "severity": "major",
+          "box": [
+            0,
+            425,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1, DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash band between the sidebar sections (V15, V16), as UX-P3.7a's sidebar-sections#D1 and sidebar-hover#D2",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-sections#D2",
+          "state": "sidebar-sections",
+          "finding": "[native] The search box placeholder 'Search, or filter: @installed, @updates...' is cut mid-glyph at the filter button with no ellipsis, where the overflow table declares that the sidebar header placeholder ellipsizes. | [states] The search box placeholder is cut mid-glyph at the start of the Filter button (the final \"s\" of \"@updates\" is sliced at x≈264, no ellipsis drawn), where the overflow table (§8, sidebar header row) declares that the placeholder ellipsizes.",
+          "severity": "major",
+          "box": [
+            15,
+            29,
+            260,
+            16
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "the placeholder fits by its copy: Chromium draws no ellipsis on ::placeholder (text-overflow had no effect on run 42445799846; the declaration removed), so the copy shortens at P3.11",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7b design ruling DO 8 (docs/plans/handoff/P3.7b.md)"
+        },
+        {
+          "id": "sidebar-hover#D1",
+          "state": "sidebar-hover",
+          "finding": "[native] The separator above the Updates section header is a 4 px full-width bar (y 425-428, x 0-299) in a light widget/input grey, where a native Modern UI pane separator, and the rule, draw a 1 px line inset 4 px in sideBarSectionHeader.border; it reads as a sash or panel edge rather than a built-in pane divider. | [geometry] The line between the Installed and Updates panes is a 4 px opaque bar (y 425–428) painted edge to edge from x 0 to 299 while the sash is at rest. The rules want a 1 px separator with a transparent 4 px sash (DS-DIVIDER-6), and under Modern UI a 1 px separator inset 4 px above a later section header (DS-DIVIDER-1). Here the divider is four times too thick and touches both pane edges. | [states] The 4 px full-width band between the Installed and Updates sections (y 425-428) is painted rgb(49,49,49), the general border / input-background colour of Dark Modern, not the sidebar's divider role sideBarSectionHeader.border (#2b2b2b in this theme's token record), so the divider between groups is drawn in the wrong colour role.",
+          "severity": "major",
+          "box": [
+            0,
+            425,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1, DS-DIVIDER-6, DS-DIVIDER-4",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash band between the sidebar sections (V15, V16), as UX-P3.7a's sidebar-sections#D1 and sidebar-hover#D2",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-narrow-200px#D1",
+          "state": "sidebar-narrow-200px",
+          "finding": "[native] Above the Updates section header a 4 px, full-width band (rows 425-428, x 0-200, painted #313131) separates the two sections, where the Modern UI pane separator of a VS Code side bar is a 1 px line inset 4 px in the sidebar's divider role sideBarSectionHeader.border (#2b2b2b in Dark Modern, DS-DIVIDER-4); it reads as a resize bar rather than a built-in pane separator (judged against the rule and exemplar: the supplied artboard is a main-panel artboard with no sidebar counterpart). | [geometry] The line between the Installed and Updates sections is a 4 px opaque band (y 425-428) running from pane edge to pane edge (x 0-199), painted at rest. DS-DIVIDER-1 asks for a 1 px separator inset 4 px under Modern UI, and DS-DIVIDER-6 for a split that stays transparent at rest.",
+          "severity": "major",
+          "box": [
+            0,
+            425,
+            200,
+            4
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the sash band between the sidebar sections (V15, V16), as UX-P3.7a's sidebar-sections#D1 and sidebar-hover#D2",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "sidebar-hover#D2",
+          "state": "sidebar-hover",
+          "finding": "[states] The search box placeholder ('Search, or filter: @installed, @updates…') is hard-clipped mid-glyph at its content edge (last ink at x 262, before the Filter action) with no ellipsis, where the overflow table row 'Sidebar header (search box)' declares that the placeholder ellipsizes.",
+          "severity": "major",
+          "box": [
+            16,
+            32,
+            247,
+            13
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "states"
+          ],
+          "informational": "singleJudge, informational: the placeholder, P3.11 (design ruling DO 8)"
+        },
+        {
+          "id": "sidebar-narrow-200px#D2",
+          "state": "sidebar-narrow-200px",
+          "finding": "[geometry] The search box placeholder is cut through a glyph ('@inst' then half of an 'a') just before the filter icon, with no ellipsis. The overflow table says the sidebar header's placeholder ellipsizes at narrow widths.",
+          "severity": "major",
+          "box": [
+            14,
+            29,
+            150,
+            16
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational: the placeholder, P3.11 (design ruling DO 8)"
+        },
+        {
+          "id": "sidebar-narrow-200px#D3",
+          "state": "sidebar-narrow-200px",
+          "finding": "[geometry] At 200 px, compact row text (names and versions) ellipsizes at about x 162 in every row of both sections, which leaves about 32 px empty before the row band's end (196) when no row is hovered. The exemplar's tree rows use the full band and show actions only on hover.",
+          "severity": "minor",
+          "box": [
+            28,
+            83,
+            168,
+            330
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "informational": "singleJudge, informational: at 200 px a compact row's text stops at the end slot the one action overlays (32 px, DECISIONS 2026-11-08, UX-P3.7a), as the workbench's tree row reserves its action area"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "state": "sidebar-sections",
+          "finding": "Long package names in the Installed list (Microsoft.Extensions.AI.Abstracti..., .Configurati..., .Dependenc..., .Logging.Ab..., .Options.Co...) ellipsize at about x 252, leaving about 40 px of empty row band to their right with no version or action shown, whereas a native side-bar tree row (Explorer exemplar) lets its label run to the end of the band at rest.",
+          "reason": "The crop shows long names ellipsizing near x 254 with about 40 px of empty band after them, but that is the declared compact-row action end slot of 32 px (6+22+4) inside the 4 px band inset (DECISIONS 2026-11-08, UX-P3.7a), and the hard DS-ROW-5 measurement reads '29 rows, 10 names cut', with versions yielding first as the overflow table requires."
+        },
+        {
+          "id": "native-2",
+          "state": "sidebar-hover",
+          "finding": "The section titles 'Installed' and 'Updates' have a cap height of about 10 px, slightly taller than the 13 px row names (about 9 px), where the Modern UI pane-header title is 12 px/600 and so should look smaller than the tree rows' text.",
+          "reason": "The hard measurements contradict the finding. DS-TYPE-5 reads the pane titles as '12px/600/capitalize ×2 (target 12px/600/capitalize)' and DS-TYPE-2 reads the rows at 13 px ×29, so the titles are already smaller than the row text. The cap-height difference the judge saw is glyph rendering, which rubric §6 excludes."
+        }
+      ]
+    }
+  ]
+}

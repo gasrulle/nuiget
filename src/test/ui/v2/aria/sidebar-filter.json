@@ -1,0 +1,16 @@
+{
+  "state": "sidebar-filter",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  heading \"Installed # of #\"",
+    "    button \"Installed # of #\" [expanded] {section-header-installed}",
+    "  listbox \"Installed\" {sidebar-installed-list}",
+    "    option \"Serilog #\"",
+    "    option \"Serilog.Sinks.Console #\"",
+    "  status \"\" {status-live}"
+  ]
+}

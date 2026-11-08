@@ -167,7 +167,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
         expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: 'hard' });
         expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard' });
-        expect(scopes('DS-OVERFLOW-4')).toEqual({ sidebar: { pending: 'P3.7b' } });
+        expect(scopes('DS-OVERFLOW-4')).toEqual({ sidebar: 'hard' });
+        expect(scopes('DS-COPY-5')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // UX-P3.7b: DS-OVERFLOW-4 reads the suite's count of the side bar's view-title actions.
         expect(lineOf('sidebar-sections', layout({ viewTitleActions: 4 }), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: true, value: 'view-title actions 4 (target ≤ 4)' });
         expect(lineOf('sidebar-sections', layout({ viewTitleActions: 6 }), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: false });

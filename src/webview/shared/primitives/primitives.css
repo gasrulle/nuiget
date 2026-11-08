@@ -931,10 +931,8 @@
     block-size: var(--nuiget-control-height);
 }
 
-/* A placeholder longer than its field ends in an ellipsis, never mid-word (judge P3.7a sidebar-sections#D5, UX-P3.7b). */
 .nuiget-text-field::placeholder {
     color: var(--nuiget-color-input-placeholder);
-    text-overflow: ellipsis;
 }
 
 .nuiget-text-field::-webkit-search-cancel-button {
