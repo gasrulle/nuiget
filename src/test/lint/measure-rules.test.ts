@@ -556,6 +556,19 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(measureLines('main-installed-single', sideways, 'modern', {}, undefined, 220).find(line => line.name === 'PF-6@main-installed-single')?.status).toBe('hard');
     });
 
+    it('passes DS-GRID-2b and DS-INSET-3 headers with "no group header in the window" on a tree scrolled past its headers, and keeps not measurable at scrollTop 0 (UX-P3.fix-1)', () => {
+        // The collapsed Transitive group row of a two-framework project has no trailing control and no block below it.
+        const end = { id: 'transitive', variant: 'group', insets: undefined, above: 0, below: undefined, trailingEnd: undefined };
+        const scrolled = layout({ sections: [end], listScrollTop: 480 });
+        expect(lineOf('main-installed-details', scrolled, 'DS-GRID-2b@main-installed-details')).toMatchObject({ pass: true, status: 'hard', value: 'no group header in the window (scrollTop 480)' });
+        expect(lineOf('main-installed-details', scrolled, 'DS-INSET-3@main-installed-details/headers')).toMatchObject({ pass: true, status: 'hard', value: 'no group header in the window (scrollTop 480)' });
+        const top = layout({ sections: [end], listScrollTop: 0 });
+        expect(lineOf('main-installed-details', top, 'DS-GRID-2b@main-installed-details')).toMatchObject({ pass: false, value: 'not measurable' });
+        expect(lineOf('main-installed-details', top, 'DS-INSET-3@main-installed-details/headers')).toMatchObject({ pass: false, value: 'not measurable' });
+        // A flat list keeps its own answer, never the scrolled one.
+        expect(lineOf('main-updates', layout({ flatList: true, listScrollTop: 480 }), 'DS-INSET-3@main-updates/headers')).toMatchObject({ pass: true, value: 'no group header (flat list)' });
+    });
+
     it('checks DS-INSET-3\'s trailing ends, DS-OVERFLOW-2\'s collisions and DS-ROW-5\'s truncation order', () => {
         const row = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'installed-list', compact: false, name, nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides });
         const built = layout({

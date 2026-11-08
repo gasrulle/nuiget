@@ -708,6 +708,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(looks.absent).toBeNull();
     });
 
+    it('reads the Installed tree\'s scrollTop, 0 when it is not scrolled (UX-P3.fix-1)', () => {
+        document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,600,700">
+          <div class="nuiget-listbox" role="tree" data-testid="installed-list" data-rect="0,70,600,300"></div>
+        </main>`;
+        expect(collect().listScrollTop).toBe(0);
+        Object.defineProperty(document.querySelector('[data-testid="installed-list"]'), 'scrollTop', { value: 480 });
+        expect(collect().listScrollTop).toBe(480);
+    });
+
     it('reads the icon buttons and the tabs (UX-P2.5)', () => {
         document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,600,700">
           <div role="tablist" data-testid="tab-bar" data-rect="0,0,600,36"><button role="tab" aria-selected="true" data-testid="installed-tab" data-rect="6,0,100,36">Installed</button><button role="tab" aria-selected="false" data-testid="updates-tab" data-rect="100,0,200,36">Updates</button></div>

@@ -616,6 +616,8 @@ export interface Layout {
     browsing: boolean;
     /** UX-P2.6: the list of this state is a flat listbox, no tree: it has no group header to read. */
     flatList: boolean;
+    /** The Installed tree's scrollTop (0 without one): a tree scrolled past its group headers has none to read (UX-P3.fix-1). */
+    listScrollTop?: number;
     /** DS-OVERFLOW-6: the document's client and scroll sizes, and the deepest element outside the viewport no scroller holds. */
     documentOverflow: { clientWidth: number; clientHeight: number; scrollWidth: number; scrollHeight: number; outside: string | undefined } | undefined;
     endOfP0: EndOfP0;
@@ -1690,7 +1692,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -2228,6 +2230,9 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
                 }
                 if (scope === 'headers' && noListCell(layout, state)) {
                     return { value: 'no group header (no list)', pass: true };
+                }
+                if (scope === 'headers') {
+                    return scrolledPastHeaders(layout) ?? { value: NOT_MEASURABLE, pass: false };
                 }
                 return { value: NOT_MEASURABLE, pass: false };
             }
@@ -2938,6 +2943,15 @@ function noListCell(layout: Layout, state: string): boolean {
 }
 
 /** The Installed cells (design-system.md §9, UX-P2.8b). */
+/**
+ * A tree scrolled past every group header has none to read: DS-GRID-2b and DS-INSET-3's headers answer so and pass, never at
+ * scrollTop 0 and never on a flat list (design-advisor ruling of 2026-11-08, UX-P3.fix-1 follow-up 1).
+ */
+function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } | undefined {
+    const top = layout.listScrollTop ?? 0;
+    return !layout.flatList && top > 0 ? { value: `no group header in the window (scrollTop ${top})`, pass: true } : undefined;
+}
+
 function evaluateStateCell(definition: RuleDefinition, state: string, facts: EndOfP0): { value: string; pass: boolean } {
     const cells = facts.stateCells;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
@@ -3294,7 +3308,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         case 'DS-GRID-2b': {
             const measured = layout.sections.filter(section => section.above !== undefined && section.below !== undefined);
             if (measured.length === 0) {
-                return { value: NOT_MEASURABLE, pass: false };
+                return scrolledPastHeaders(layout) ?? { value: NOT_MEASURABLE, pass: false };
             }
             const far = measured.filter(section => (section.below as number) > (section.above as number) + tolerance);
             return { value: measured.map(section => `${section.id} ${section.above}/${section.below}`).join('; '), pass: far.length === 0 };
