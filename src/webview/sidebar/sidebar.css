@@ -25,7 +25,7 @@ body {
     flex: none;
     flex-direction: column;
     gap: var(--nuiget-space-1);
-    padding: var(--nuiget-space-2) var(--nuiget-space-4);
+    padding: var(--nuiget-space-2) var(--nuiget-inset-sidebar);
 }
 
 /* The section takes the height that is left; its list scrolls inside it. */
@@ -67,20 +67,14 @@ body {
     overflow-y: auto;
 }
 
-/* The Installed and Updates headers in VS Code's side-bar section colours, with its top line (P9.10). */
-.nuiget-sidebar-section > .nuiget-section-header {
-    border-top: var(--nuiget-line-width) solid var(--nuiget-color-section-header-border);
-    background: var(--nuiget-color-section-header-bg);
-    color: var(--nuiget-color-section-header-fg);
+/* A later pane draws its header's top line; the first never (DS-DIVIDER-1, UX-P3.7a). */
+.nuiget-sidebar-section ~ .nuiget-sidebar-section {
+    --nuiget-pane-header-line: var(--nuiget-color-section-header-border);
 }
 
-.nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle {
-    color: inherit;
-}
-
-/* The sash draws the line between the sections already: no second one under it (1.x). */
-.nuiget-sash--horizontal + .nuiget-sidebar-section > .nuiget-section-header {
-    border-top-color: transparent;
+/* The sash is the line while it stands above the pane: no second one under it. */
+.nuiget-sash--horizontal + .nuiget-sidebar-section {
+    --nuiget-pane-header-line: transparent;
 }
 
 /* An All Projects project header is a tree level: normal case, indented by workbench.tree.indent, and its rows with it. */

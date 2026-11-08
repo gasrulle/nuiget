@@ -1,30 +1,6 @@
 [
   {
     "file": "src/webview/sidebar/sidebar.css",
-    "rule": "specificity",
-    "selector": ".nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle",
-    "property": null,
-    "value": "(0,3,0)",
-    "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "specificity",
-    "selector": ".nuiget-sash--horizontal + .nuiget-sidebar-section > .nuiget-section-header",
-    "property": null,
-    "value": "(0,3,0)",
-    "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "override",
-    "selector": ".nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle",
-    "property": "color",
-    "value": "inherit",
-    "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
     "rule": "override",
     "selector": ".nuiget-sidebar-project .nuiget-section-heading",
     "property": "font-size",

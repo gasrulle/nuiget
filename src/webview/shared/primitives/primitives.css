@@ -153,9 +153,9 @@
     cursor: default;
 }
 
-/* Modern UI's hover tint, none in classic: the token is the section-header colour there. */
+/* A tree row hovers with list.hoverBackground in both looks (UX-P3.7a). */
 .nuiget-row-group:hover {
-    background: var(--nuiget-color-section-header-hover-bg);
+    background: var(--nuiget-color-list-hover-bg);
 }
 
 /* M a 1 px separator inset 4 / C full width (paneHeaders.css, DS-DIVIDER-1), above every level-1 group but the first. A border: axe cannot read the contrast of text over a pseudo element with a background. */
@@ -666,7 +666,11 @@
     border-radius: var(--nuiget-radius-section-header);
 }
 
-/* DS-HEIGHT-1, DS-TYPE-5, DS-INSET-3 b; the 20 px button's 24 px hit stays inside the document (DS-OVERFLOW-6). The start x, the colours and the top line are P3.7a's in sidebar.css. */
+/*
+ * The native pane header (UX-P3.7a; DS-HEIGHT-1, DS-TYPE-5, DS-INSET-1, DS-INSET-3 b, DS-DIVIDER-1): the box inset and its start padding
+ * M 4 / C 0 each, the section-header colours, and a top line through the carrier --nuiget-pane-header-line, which a context sets
+ * (transparent unless set). The 20 px button's 24 px hit stays inside the document (DS-OVERFLOW-6).
+ */
 .nuiget-section-header[data-variant="pane"] {
     --nuiget-icon-button-size: var(--nuiget-action-size-compact);
     --nuiget-section-header-inset: 0;
@@ -674,8 +678,12 @@
     --nuiget-section-title-weight: var(--nuiget-font-weight-section-title);
     --nuiget-section-title-transform: var(--nuiget-text-transform-section-title);
     block-size: var(--nuiget-pane-header-height);
-    padding-inline-start: var(--nuiget-space-2);
+    margin-inline: var(--nuiget-pane-header-margin-x);
+    padding-inline-start: var(--nuiget-pane-header-padding-start);
     padding-inline-end: var(--nuiget-pane-header-padding-end);
+    border-block-start: var(--nuiget-line-width) solid var(--nuiget-pane-header-line, transparent);
+    background: var(--nuiget-color-section-header-bg);
+    color: var(--nuiget-color-section-header-fg);
 }
 
 /* A main-list group header is a pane header (T-13, DECISIONS round 1). */

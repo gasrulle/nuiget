@@ -114,8 +114,6 @@ const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: '
 const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };
 const LIVE_DIALOG_TITLE: Mask = { selector: '.nuiget-dialog-title', reason: 'the title names the newest version on nuget.org' };
 const LIVE_BULK_LIST: Mask = { selector: '.nuiget-dialog-list', reason: 'the dialog lists the newest versions on nuget.org' };
-/** The versions level's `‹ <id>` header above the suggestions (UX-P0.15, design-advisor ruling of CI run 40097664968). */
-const LIVE_POPUP_HEADER: Mask = { selector: '.nuiget-search-popup-header', reason: 'the popup text renders with greyscale or subpixel anti-aliasing from run to run (H27, corrected); the options are under LIVE_SUGGESTIONS' };
 
 /**
  * A state at 0 px on a run and its rerun of one SHA compares with a zero `diffTolerance` (UX-P0.15, CI run 40097664968 and its
@@ -198,7 +196,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-quicksearch-open', 'main', [primary('main')],
         '"Serilog" typed in the search box; the suggestions have an enabled option.', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-quicksearch-versions', 'main', [primary('main')],
-        'The first suggestion opened with ArrowRight; the versions level is listed.', [LIVE_SUGGESTIONS, LIVE_CARET, LIVE_POPUP_HEADER]), diffTolerance: 0 },
+        'The first suggestion opened with ArrowRight; the versions level is listed.', [LIVE_SUGGESTIONS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-quicksearch-loading', 'main', [primary('main')],
         '"Serilog" typed with its suggestions held in the webview document: the "Searching…" row (marker search-suggestions-loading); released after the capture (UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-quicksearch-error', 'main', [primary('main')],

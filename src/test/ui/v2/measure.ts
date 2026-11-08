@@ -472,6 +472,7 @@ export interface SectionBox {
     titleText?: string;
     title?: { fontSize: string; fontWeight: string; textTransform: string } | undefined;
     lineAbove?: boolean;
+    afterSash?: boolean;
     level?: number | undefined;
     posInSet?: number | undefined;
     /** DS-GRID-2b on border boxes: the previous block's bottom to the box's top, and the box's bottom to the first block it labels. */
@@ -959,7 +960,8 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
 const blockGaps = [];
 const containers = dialog ? [dialog] : rootTestId === 'nuiget-app' ? [...document.querySelectorAll('.nuiget-main, .nuiget-main-list, .nuiget-installed')] : [root];
 for (const container of containers) {
-    const children = [...container.children].filter(visible).filter(el => getComputedStyle(el).position !== 'absolute' && getComputedStyle(el).position !== 'fixed');
+    // A sash (role=separator) sits on the boundary of two blocks and is no block of the column (DS-GRID-2 a, UX-P3.7a).
+    const children = [...container.children].filter(visible).filter(el => getComputedStyle(el).position !== 'absolute' && getComputedStyle(el).position !== 'fixed' && el.getAttribute('role') !== 'separator');
     for (let i = 1; i < children.length; i++) {
         // The space between content boxes, the facing borders not counted: a padded stack's rhythm (DS-GRID-2 a, UX-P2.7).
         const gap = children[i].getBoundingClientRect().top + px(getComputedStyle(children[i]).paddingTop) - children[i - 1].getBoundingClientRect().bottom + px(getComputedStyle(children[i - 1]).paddingBottom);
@@ -1016,7 +1018,9 @@ const headerFacts = box => {
     const row = box.closest('[data-row-kind="group"]');
     const group = row ? row.querySelector('.nuiget-row-group') : null;
     const before = group ? getComputedStyle(group, '::before') : undefined;
-    const lineAbove = parseFloat(getComputedStyle(box).borderTopWidth) > 0 || (before !== undefined && before.content !== 'none' && parseFloat(before.borderTopWidth) === 1 && before.borderTopColor !== 'rgba(0, 0, 0, 0)');
+    // A border counts as a line only in a colour (a transparent carrier draws none, UX-P3.7a).
+    const boxStyle = getComputedStyle(box);
+    const lineAbove = (parseFloat(boxStyle.borderTopWidth) > 0 && boxStyle.borderTopColor !== 'rgba(0, 0, 0, 0)' && boxStyle.borderTopColor !== 'transparent') || (before !== undefined && before.content !== 'none' && parseFloat(before.borderTopWidth) === 1 && before.borderTopColor !== 'rgba(0, 0, 0, 0)');
     return {
         paddingEnd: round(px(getComputedStyle(box).paddingInlineEnd || getComputedStyle(box).paddingRight)),
         inList: row !== null,
@@ -1025,6 +1029,8 @@ const headerFacts = box => {
         titleText: titleEl ? titleEl.textContent ?? '' : '',
         title: titleStyle ? { fontSize: titleStyle.fontSize, fontWeight: titleStyle.fontWeight, textTransform: titleStyle.textTransform } : undefined,
         lineAbove,
+        // A sidebar pane right below a sash: the sash is its line (DS-DIVIDER-1, UX-P3.7a).
+        afterSash: box.closest('.nuiget-sidebar-section')?.previousElementSibling?.getAttribute('role') === 'separator',
         level: group ? Number(group.getAttribute('aria-level')) : undefined,
         posInSet: group ? Number(group.getAttribute('aria-posinset')) : undefined,
     };
@@ -1806,6 +1812,8 @@ const SIDEBAR_INSETS = { modern: { content: 28, header: 8 }, classic: { content:
 interface InsetTarget {
     startEnd?: number;
     topBottom?: number;
+    /** A sidebar pane header: equal top and bottom only; its start is DS-INSET-1's and its end DS-INSET-3 (b)'s (UX-P3.7a). */
+    verticalOnly?: boolean;
 }
 
 function insetTarget(scope: Scope, box: string, variant: string, look: 'modern' | 'classic'): InsetTarget {
@@ -1816,13 +1824,16 @@ function insetTarget(scope: Scope, box: string, variant: string, look: 'modern' 
         return { startEnd: MAIN_INSET };
     }
     if (scope === 'sidebar' && box === 'sidebar-header') {
-        return { startEnd: SIDEBAR_INSETS[look].header, topBottom: SIDEBAR_INSETS[look].header };
+        return { startEnd: SIDEBAR_INSETS[look].header, topBottom: 4 };
+    }
+    if (scope === 'sidebar' && variant === 'pane') {
+        return { verticalOnly: true };
     }
     return {};
 }
 
 function meetsInset(insets: Insets, target: InsetTarget, tolerance: number): boolean {
-    const symmetric = near(insets.start, insets.end, tolerance) && near(insets.top, insets.bottom, tolerance);
+    const symmetric = (target.verticalOnly === true || near(insets.start, insets.end, tolerance)) && near(insets.top, insets.bottom, tolerance);
     const startEnd = target.startEnd === undefined || (near(insets.start, target.startEnd, tolerance) && near(insets.end, target.startEnd, tolerance));
     const topBottom = target.topBottom === undefined || (near(insets.top, target.topBottom, tolerance) && near(insets.bottom, target.topBottom, tolerance));
     return symmetric && startEnd && topBottom;
@@ -2434,7 +2445,18 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-DIVIDER-1': {
             if (scope === 'sidebar') {
-                return notMeasurable('no helper until P3.7a');
+                // The first pane is unlined; every later one has exactly one line, its own or the sash above it; no row has one (UX-P3.7a).
+                const panes = layout.sections.filter(section => section.variant === 'pane');
+                if (panes.length === 0) {
+                    return notMeasurable('no pane header');
+                }
+                const [first, ...later] = panes;
+                const linedBySash = later.filter(pane => pane.afterSash === true && pane.lineAbove !== true).length;
+                const rowsLined = facts.rows.filter(row => row.lineWidth > 0).length;
+                return {
+                    value: `panes ${panes.length}: first ${first.lineAbove === true ? 'lined' : 'unlined'}, ${later.filter(pane => pane.lineAbove === true || pane.afterSash === true).length} lined${linedBySash > 0 ? ' (by the sash)' : ''}; rows ${facts.rows.length} ${rowsLined === 0 ? 'unlined' : `${rowsLined} lined`}`,
+                    pass: first.lineAbove !== true && later.every(pane => (pane.lineAbove === true) !== (pane.afterSash === true)) && rowsLined === 0,
+                };
             }
             if (scope === 'headers') {
                 const rows = layout.sections.filter(section => section.inList === true);
@@ -3271,7 +3293,12 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
             return undefined;
         }
         case 'DS-INSET-2': {
-            const sectionBoxes = layout.sections.map(section => [section.id, section.variant, section.insets] as [string, string, Insets | undefined]);
+            // A sidebar pane box reads its trailing element's border box as a group box does (UX-P3.7a).
+            const sectionBoxes = layout.sections.map(section => [
+                section.variant === 'pane' ? `${section.id}\u0001` : section.id,
+                section.variant,
+                section.insets === undefined || section.variant !== 'pane' ? section.insets : { ...section.insets, end: section.trailingEnd ?? section.paddingEnd ?? section.insets.end },
+            ] as [string, string, Insets | undefined]);
             // A header's end inset is its trailing element's border box (the rule's `last.right`), or the slot's padding when nothing
             // trails; the leaf union would read a badge's text or a clipped title's range (UX-P2.6a).
             const groupBoxes = layout.sections.filter(isGroupHeader).map(section => [
@@ -3307,6 +3334,9 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
                 return { value: NOT_MEASURABLE, pass: false };
             }
             const value = measured.length === 1 && scope !== 'headers' ? insetText(measured[0][2]) : measured.map(([id, , insets]) => {
+                if (id.endsWith('\u0001')) {
+                    return `${id.slice(0, -1)} ${insetText(insets)} (start DS-INSET-1, end DS-INSET-3 b)`;
+                }
                 const [name, pad] = id.split('\u0000');
                 return pad === undefined ? `${name} ${insetText(insets)}` : `${name} ${insets.start}/${insets.end} (pad ${pad}) ${insets.top}/${insets.bottom}`;
             }).join('; ');

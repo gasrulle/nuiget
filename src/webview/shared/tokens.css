@@ -167,7 +167,6 @@
 
     /* Colours: the sidebar section header (the pane-header variant) */
     --nuiget-color-section-header-bg: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
-    --nuiget-color-section-header-hover-bg: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
     --nuiget-color-section-header-fg: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
     --nuiget-color-section-header-border: var(--vscode-sideBarSectionHeader-border, transparent);
 
@@ -265,7 +264,6 @@
     --nuiget-font-weight-section-title: var(--nuiget-font-weight-semibold);
     --nuiget-text-transform-section-title: capitalize;
     --nuiget-color-section-header-bg: var(--vscode-sideBar-background);
-    --nuiget-color-section-header-hover-bg: var(--vscode-list-hoverBackground);
     --nuiget-color-section-header-border: var(--vscode-sideBarSectionHeader-border, var(--vscode-surface-border, transparent));
 }
 
@@ -320,7 +318,6 @@ body.vscode-high-contrast-light {
         --nuiget-color-progress: Highlight;
         --nuiget-color-picker-separator: CanvasText;
         --nuiget-color-section-header-bg: Canvas;
-        --nuiget-color-section-header-hover-bg: Canvas;
         --nuiget-color-section-header-fg: CanvasText;
         --nuiget-color-section-header-border: CanvasText;
         --nuiget-color-code-bg: Canvas;

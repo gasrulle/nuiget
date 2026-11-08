@@ -283,10 +283,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(toolbar({ start: 16, end: 16, top: 4, bottom: 4 })).toMatchObject({ pass: true });
         // Symmetric is not enough: the toolbar's start and end are the main panel's 16.
         expect(toolbar({ start: 6, end: 6, top: 4, bottom: 4 })).toMatchObject({ pass: false });
-        const sidebar = (look: 'modern' | 'classic') => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 8, bottom: 8 } }), look)
+        const sidebar = (look: 'modern' | 'classic') => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 4, bottom: 4 } }), look)
             .find(line => line.name === 'DS-INSET-2@sidebar-sections');
         expect(sidebar('modern')).toMatchObject({ pass: true, status: { pending: 'P3.7a' } });
         expect(sidebar('classic')).toMatchObject({ pass: false });
+        // UX-P3.7a: a pane box is judged top/bottom only, its end read at its trailing element (start DS-INSET-1, end DS-INSET-3 b).
+        const pane = (top: number, bottom: number) => measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 4, bottom: 4 }, sections: [{ id: 'installed', variant: 'pane', insets: { start: 4, end: 20, top, bottom }, trailingEnd: 6, above: undefined, below: undefined }] }), 'modern')
+            .find(line => line.name === 'DS-INSET-2@sidebar-sections');
+        expect(pane(5.5, 5.5)).toMatchObject({ pass: true, value: 'sidebar-header 8/8 4/4; installed 4/6 5.5/5.5 (start DS-INSET-1, end DS-INSET-3 b)' });
+        expect(pane(4, 8)).toMatchObject({ pass: false });
+        // UX-P3.7a: the sidebar header is 4 above and below in both looks; 8 there is red.
+        expect(measureLines('sidebar-sections', layout({ sidebarHeader: { start: 8, end: 8, top: 8, bottom: 8 } }), 'modern').find(line => line.name === 'DS-INSET-2@sidebar-sections')).toMatchObject({ pass: false });
     });
 
     it('checks block gaps against {4, 8}, spacing against the ramp and header proximity', () => {
@@ -1211,6 +1218,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(divide(divider(true, true))).toMatchObject({ pass: false });
         expect(divide(divider(false, false))).toMatchObject({ pass: false });
         expect(lineOf('main-updates', layout({ flatList: true }), 'DS-DIVIDER-1@main-updates/headers')).toMatchObject({ pass: true, value: 'no group header (flat list)' });
+        // UX-P3.7a: the sidebar's panes, the first unlined and a later one lined once, by its own line or by the sash above it.
+        const panes = (first: boolean, second: boolean, sash: boolean) => layout({ sections: [
+            { id: 'installed', variant: 'pane', insets: undefined, above: undefined, below: undefined, lineAbove: first, afterSash: false },
+            { id: 'updates', variant: 'pane', insets: undefined, above: undefined, below: undefined, lineAbove: second, afterSash: sash },
+        ] });
+        const sidebarLine = (built: Layout) => lineOf('sidebar-sections', built, 'DS-DIVIDER-1@sidebar-sections');
+        expect(sidebarLine(panes(false, false, true))).toMatchObject({ pass: true, value: 'panes 2: first unlined, 1 lined (by the sash); rows 0 unlined' });
+        expect(sidebarLine(panes(false, true, false))).toMatchObject({ pass: true, value: 'panes 2: first unlined, 1 lined; rows 0 unlined' });
+        expect(sidebarLine(panes(true, false, true))).toMatchObject({ pass: false });
+        expect(sidebarLine(panes(false, true, true))).toMatchObject({ pass: false });
+        expect(sidebarLine(panes(false, false, false))).toMatchObject({ pass: false });
         // DS-TYPE-8 and DS-HC-1 on the badges.
         expect(lineOf('sidebar-sections', layout({}, { badges: [badge()] }), 'DS-TYPE-8@sidebar-sections')).toMatchObject({ pass: true, status: 'hard', value: 'badges 1: 10px (target 10px)' });
         expect(lineOf('sidebar-sections', layout({}, { badges: [badge({ fontSize: '12px' })] }), 'DS-TYPE-8@sidebar-sections')).toMatchObject({ pass: false });

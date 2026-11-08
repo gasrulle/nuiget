@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The NuGet sources dialog shows when it is refreshing, empty or could not be read**
 - **Adding a package source checks the URL in place, and Credentials shows whether its fields are open**
 - **Side bar package rows are as compact as VS Code's own tree rows, and a long version gives way before the package name**
+- **Sidebar section titles line up with the package names below them**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

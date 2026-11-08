@@ -300,34 +300,34 @@
     "sidecarSha256": "e8a1d2ed44ce08f0bc3bc39393ec2ccb9572eef73c204f6be16eff6b2d409a54"
   },
   "main-quicksearch-error.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "42432241759",
-    "sha256": "e60bfecbc0ee1ff0b653138760d4b4672baeccf678d453fcffac306019c792dd",
-    "sidecarSha256": "62c07e06a830667a2313bf6caeebf5ff6fde5580e0c954a2a0f7dd60060f6dbc"
+    "status": "approved",
+    "run": "42435481083",
+    "sha256": "efb84c3baef81c0d129bf4dc21d5ee833a88e1503524c5f3273b68a7cdfbe6fb",
+    "sidecarSha256": "909861df719417d301384cd8ffb0dfcfb8009c33a99c2b2c1d8cf82e20f63359"
   },
   "main-quicksearch-grouped.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "42432241759",
+    "status": "approved",
+    "run": "42435481083",
     "sha256": "ab063f516724c549661da34edf90dd5db0ae30ae98e1c77f0ce64f215dc0ecb2",
-    "sidecarSha256": "b8e01006b8c93ba7d05c28672f9254a7668d8a0d46529d3bdffb855cb8d9a90d"
+    "sidecarSha256": "96fd3bdacf16696fe7822b1f1689ea4840a2868fb7bd15b53de30ba6b1c9f060"
   },
   "main-quicksearch-loading.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "42432241759",
-    "sha256": "b84ec7e262807d0e0ca076bf54cb2b2e95015fca76b515e33443944d70b04505",
-    "sidecarSha256": "99f3af4d94cf0c92bf53df10a6f65fb852e3cd9a5afef7fa1660d5c38b30f1fb"
+    "status": "approved",
+    "run": "42435481083",
+    "sha256": "126e732350eb452eeb1615b524740d3023fc854577cf016bbf415b4db04ba2f6",
+    "sidecarSha256": "4bd46ded1e370fd92c4a74edc448ebebba93483ce749d76da4753e1765e9c928"
   },
   "main-quicksearch-open.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "42432241759",
-    "sha256": "7f6e72da4034581055418ff5837d6cf7b690de76ca048d0fedd273af7351a730",
-    "sidecarSha256": "fcbd38453b45ba81db6e87432459d816593df6b6c5c6a65b52fc6a71452012a8"
+    "status": "approved",
+    "run": "42435481083",
+    "sha256": "96c54d1b7ee29bd479df610f581a16886400d0b75808d708b673da4c27de4384",
+    "sidecarSha256": "537106f7fab81f258b4247c80393c7e71c25aa6056a486fcb02afc1b4867b00d"
   },
   "main-quicksearch-versions.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "42432241759",
-    "sha256": "ef584d98eca779f2921fae70d35fa3277c8a83e4a84feda27a2aeef92202f295",
-    "sidecarSha256": "4a17c6035915a5954a39edb381f7ac0f1afe80d2b4aa95dc0c5ff98961d74063"
+    "status": "approved",
+    "run": "42435481083",
+    "sha256": "e22247c2c7e09c6e7c1c5a04bf74f960c218220555574ff33ebf460c2d235c01",
+    "sidecarSha256": "df417bb0a3efcab049e512636de9cc8f16e7f7db9428083f8c2b50d41c12878c"
   },
   "main-sources-add-invalid.dark-modern.1200.png": {
     "status": "approved",
