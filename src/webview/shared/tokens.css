@@ -33,6 +33,7 @@
     --nuiget-popup-row-padding-x: var(--nuiget-space-3);
     --nuiget-pane-header-margin-x: 0px;
     --nuiget-pane-header-padding-start: 0px;
+    --nuiget-row-indent: 0px;
     --nuiget-pane-header-padding-end: var(--nuiget-space-5);
     --nuiget-badge-padding-block: calc(var(--nuiget-space-2) - var(--nuiget-space-hairline));
     --nuiget-badge-padding-inline: calc(var(--nuiget-space-3) - var(--nuiget-space-hairline));
@@ -67,8 +68,8 @@
 
     /* Heights and sizes: literal, bound to the probe (DS-HEIGHT-*) */
     --nuiget-line-width: var(--vscode-strokeThickness, 1px);
-    /* 22 px with the compact row (P3.7a, D47), with `ROW_HEIGHT` in Listbox.tsx. */
-    --nuiget-row-height-compact: 24px;
+    /* 22 px, the native row (D47), with `ROW_HEIGHT` in Listbox.tsx. */
+    --nuiget-row-height-compact: 22px;
     /* The Extensions row (D46), with `ROW_HEIGHT` in Listbox.tsx. */
     --nuiget-row-height-comfortable: 72px;
     --nuiget-pane-header-height: 22px;

@@ -304,6 +304,19 @@ async function sidebarSections(): Promise<void> {
     await findByTestId('sidebar-installed-list', 120_000);
     await findByTestId('package-row-serilog', 120_000);
     await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row in the sidebar', 120_000);
+    await parkSidebarPointer();
+}
+
+/**
+ * Rests the pointer in the search row's start padding, inside the side bar but off both lists: a shot's composition never
+ * depends on where a sash drag left the cursor (UX-P3.7a, design-advisor ruling DO 5). Moving to the window's corner leaves
+ * the webview's last :hover in place.
+ */
+async function parkSidebarPointer(): Promise<void> {
+    const input = await findByTestId('sidebar-search-input', 30_000);
+    const { width } = await input.getRect();
+    await driverOf().actions().move({ origin: input, x: -Math.ceil(width / 2) - 3, y: 0 }).perform();
+    await until('document.querySelector(\'.nuiget-sidebar .nuiget-row-option:hover\') === null', 'no sidebar row under the pointer', 10_000);
 }
 
 // ---- the states ------------------------------------------------------------------------------------------------------
@@ -351,7 +364,7 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover', 'sidebar-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
@@ -861,6 +874,18 @@ const REACH: Record<string, Reach> = {
     },
     'sidebar-sections': { reach: sidebarSections },
     'sidebar-narrow-200px': { reach: sidebarSections },
+    'sidebar-hover': {
+        reach: async () => {
+            await sidebarSections();
+            const option = await optionOf('package-row-serilog');
+            await driverOf().actions().move({ origin: option }).perform();
+            await until('document.querySelector(\'.nuiget-sidebar [data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog row under the pointer', 10_000);
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await parkSidebarPointer();
+        },
+    },
     'sidebar-update-all-dialog': {
         reach: async () => {
             await sidebarSections();

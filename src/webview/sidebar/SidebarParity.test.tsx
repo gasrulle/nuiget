@@ -14,9 +14,6 @@ const snapshot = (rev: number, selectedProject: string): SessionSnapshot => ({ r
 const pkg = (id: string): InstalledPackage => ({ id, version: '1.0.0', versionType: 'standard', declaration: 'project' });
 const config = (treeIndent: number): ExtensionConfig => ({ searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent, isWindows: false });
 
-/** The rows' padding before their name: the section title's start (toggle padding, chevron, gap). */
-const SECTION_ROW_START = 'calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2))';
-const PROJECT_ROW_START = 'calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-tree-indent))';
 
 const hostSays = (say: () => void): Promise<void> => act(async () => {
     say();
@@ -46,12 +43,12 @@ async function mountWith(packages: InstalledPackage[]): Promise<FakeHost> {
 
 const option = (id: string): HTMLElement => within(screen.getByTestId(`package-row-${id.toLowerCase()}`)).getByRole('option');
 
-describe('sidebar parity: chrome and indent (P9.10)', () => {
+describe('sidebar parity: chrome and indent (UX-P3.7a)', () => {
     let removeLayout: () => void;
     let removeStyles: () => void;
 
     beforeEach(() => {
-        removeLayout = installFakeLayout({ viewport: 240, row: 24 });
+        removeLayout = installFakeLayout({ viewport: 240, row: 22 });
         removeStyles = installSidebarStylesheet();
     });
 
@@ -71,7 +68,13 @@ describe('sidebar parity: chrome and indent (P9.10)', () => {
 
     it('rows start at the section title', async () => {
         await mountWith([pkg('Serilog')]);
-        expect(getComputedStyle(option('Serilog')).paddingInlineStart).toBe(SECTION_ROW_START);
+        // The compact row's own padding puts the name on the pane title's x (UX-P3.7a); jsdom keeps `padding-inline` as written.
+        const padding = getComputedStyle(option('Serilog')).getPropertyValue('padding-inline');
+        for (const carrier of ['--nuiget-row-indent', '--nuiget-pane-header-margin-x', '--nuiget-pane-header-padding-start', '--nuiget-icon-size-md']) {
+            expect(padding).toContain(carrier);
+        }
+        // The sidebar's stylesheet sets no padding on a row option: the primitive's is the one rule (ADR-010).
+        expect(readFileSync(resolve('src/webview/sidebar/sidebar.css'), 'utf-8')).not.toMatch(/\.nuiget-row-option[^{]*\{[^}]*padding/);
         // jsdom resolves no var(): the title reads the section-title type through the pane header's carrier.
         expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
         expect(getComputedStyle(screen.getByTestId('section-header-installed').querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
@@ -94,7 +97,9 @@ describe('sidebar parity: chrome and indent (P9.10)', () => {
         expect(getComputedStyle(header.querySelector('.nuiget-section-title') as HTMLElement).textTransform).toContain('--nuiget-section-title-transform');
         expect(getComputedStyle(box).getPropertyValue('--nuiget-section-title-transform')).toContain('--nuiget-group-title-transform');
         expect(getComputedStyle(header.closest('.nuiget-sidebar-project') as HTMLElement).getPropertyValue('--nuiget-group-title-transform')).toBe('none');
+        // A project is a tree level: its rows indent by the carrier the row's padding reads (UX-P3.7a).
+        expect(getComputedStyle(header.closest('.nuiget-sidebar-project') as HTMLElement).getPropertyValue('--nuiget-row-indent')).toContain('--nuiget-tree-indent');
         const appOption = within(screen.getByTestId('sidebar-installed-list-app')).getByRole('option');
-        expect(getComputedStyle(appOption).paddingInlineStart).toBe(PROJECT_ROW_START);
+        expect(getComputedStyle(appOption).getPropertyValue('padding-inline')).toContain('--nuiget-row-indent');
     });
 });

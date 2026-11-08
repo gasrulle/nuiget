@@ -111,6 +111,8 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
     const metaSep = separated(Boolean(meta), version !== undefined);
     const authorsSep = separated(hasAuthors, version !== undefined || Boolean(meta));
     const statusSep = separated(Boolean(status), version !== undefined || Boolean(meta) || hasAuthors);
+    // A compact row shows the name, the version and the badges; the rest is still read out (D14, UX-P3.7a).
+    const hidden = density === 'compact' ? ' nuiget-visually-hidden' : '';
     const factsLine = (authorsSpan: React.ReactNode): React.ReactNode => (
         <span className="nuiget-row-line">
             {version === undefined ? null : (
@@ -120,13 +122,13 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
                     {nextVersion === undefined ? null : <>{' → '}<span className="nuiget-row-version-new">{nextVersion}</span></>}
                 </span>
             )}
-            {meta ? <span className={`nuiget-row-meta${metaSep}`} id={ids.meta}>{meta}</span> : null}
+            {meta ? <span className={`nuiget-row-meta${metaSep}${hidden}`} id={ids.meta}>{meta}</span> : null}
             {authorsSpan}
-            {status ? <span className={`nuiget-row-status${statusSep}`} id={ids.status}>{status}</span> : null}
+            {status ? <span className={`nuiget-row-status${statusSep}${hidden}`} id={ids.status}>{status}</span> : null}
         </span>
     );
     const authorsSpan = hasAuthors ? (
-        <span className={`nuiget-row-authors${authorsSep}`} id={ids.authors}>
+        <span className={`nuiget-row-authors${authorsSep}${hidden}`} id={ids.authors}>
             {/* A space, not a margin: the icon's title and the authors are two words when read out. */}
             {verified ? <><VerifiedIcon size={12} className="nuiget-verified" title="Verified: the package id prefix is reserved by its owner" />{' '}</> : null}
             {authors}
@@ -175,7 +177,7 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
                         <span className="nuiget-row-name" id={ids.name}>{name}</span>
                         {badges ? <span className="nuiget-row-badges" id={ids.badges}>{badges}</span> : null}
                     </span>
-                    {description ? <span className="nuiget-row-description" id={ids.description}>{description}</span> : null}
+                    {description ? <span className={`nuiget-row-description${hidden}`} id={ids.description}>{description}</span> : null}
                     {factsLine(authorsSpan)}
                 </span>
             </div>

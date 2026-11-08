@@ -212,6 +212,8 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 250 },
         { theme: 'dark-modern', look: 'modern', width: 170 },
     ], 'The nUIget side bar view with Gateway selected; the Installed section lists package-row-serilog and the Updates section has a row.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
+    { ...ready('sidebar-hover', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
+        'Gateway selected; the pointer rests on package-row-serilog in the Installed section: the hovered band and its action (DS-ROW-3, DS-INSET-3 a; UX-P3.7a).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-narrow-200px', 'sidebar', [{ theme: 'dark-modern', look: 'modern', width: 200 }],
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],

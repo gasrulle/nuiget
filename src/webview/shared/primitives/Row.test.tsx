@@ -383,11 +383,18 @@ describe('Row layout (P9.2, D46)', () => {
         const shown = option.querySelector('.nuiget-row-version') as HTMLElement;
         expect(follows(name, shown)).toBe(true);
         expect(name.textContent).toBe('Serilog');
-        // The version gives way first; the name keeps its width.
-        expect(Number(getComputedStyle(name).flexShrink)).toBeLessThan(Number(getComputedStyle(shown).flexShrink));
+        // The version gives way first (DS-ROW-5, UX-P3.7a): it takes only the room the name leaves, at most its own width,
+        // and ellipsizes; the name grows to its content and is never capped.
+        expect(getComputedStyle(name).flexGrow).toBe('0');
+        expect(getComputedStyle(name).flexBasis).toBe('auto');
+        expect(getComputedStyle(name).maxWidth).not.toBe('70%');
+        expect(getComputedStyle(shown).flexBasis).toBe('0px');
+        expect(getComputedStyle(shown).flexGrow).toBe('1');
+        expect(getComputedStyle(shown).maxWidth).toBe('max-content');
         expect(getComputedStyle(shown).minWidth).toBe('0px');
-        // Authors and description are read out, not shown (D14).
+        // Authors and description are read out, not shown (D14): the visually hidden span (UX-P3.7a).
         for (const hidden of option.querySelectorAll('.nuiget-row-authors, .nuiget-row-description')) {
+            expect(hidden).toHaveClass('nuiget-visually-hidden');
             expect(getComputedStyle(hidden).position).toBe('absolute');
         }
     });

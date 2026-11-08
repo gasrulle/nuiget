@@ -6,7 +6,7 @@ import type { RowPlacement } from './Row';
 import './primitives.css';
 
 /** Row heights in pixels. They repeat `--nuiget-row-height-*`: a script cannot read a token before layout (CA-R4, `webview-tokens.test.ts`). */
-const ROW_HEIGHT = { compact: 24, comfortable: 72 } as const;
+const ROW_HEIGHT = { compact: 22, comfortable: 72 } as const;
 const GROUP_ROW_HEIGHT_FALLBACK = 22;
 
 /** The group row's height is the look's token, the one source (CA-R4). */

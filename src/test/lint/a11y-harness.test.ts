@@ -40,9 +40,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // UX-P0.23 in every state (run 40152178889). UX-P3.4 removed the README results UX-P3.3b had put here (underlined links,
         // link-only list items on a 24 px line; design-advisor ruling of 2026-11-07).
         expect(AXE_PENDING).toEqual([]);
-        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group', 'target-size .nuiget-row-message', 'target-size .nuiget-row-message']);
-        expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-message']);
-        expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-message']);
+        expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group', 'target-size .nuiget-row-option--compact', 'target-size .nuiget-row-option--compact', 'target-size .nuiget-row-message', 'target-size .nuiget-row-message']);
+        expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-option--compact', '.nuiget-row-message']);
+        expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-option--compact', '.nuiget-row-message']);
     });
 
     it('accepts a violation a decision declares only on its selector or its surface', () => {
@@ -374,7 +374,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         });
         expect(momentLines('hover-main', 'light-2026', facts, 'hard', [{ where: 'hover-main', theme: 'light-2026', rule: 'color-contrast', item: 'P4.6' }]).failures).toEqual([]);
         // Axe's check messages follow the sample, as the full run's lines carry them.
-        expect(momentLines('hover-sidebar', 'dark-modern', { violations: [], passes: 15, acceptedTargets: 1 }, 'hard', []).lines[0]).toBe('[contrast] hover-sidebar@dark-modern: 15 nodes passed, 0 violations, 0 pairs measured, accepted target-size 1 on .nuiget-icon-button, .nuiget-section-toggle, .nuiget-row-group, .nuiget-row-message (hard)');
+        expect(momentLines('hover-sidebar', 'dark-modern', { violations: [], passes: 15, acceptedTargets: 1 }, 'hard', []).lines[0]).toBe('[contrast] hover-sidebar@dark-modern: 15 nodes passed, 0 violations, 0 pairs measured, accepted target-size 1 on .nuiget-icon-button, .nuiget-section-toggle, .nuiget-row-group, .nuiget-row-option--compact, .nuiget-row-message (hard)');
         const withReasons = { violations: [{ rule: 'target-size' as const, count: 3, sample: 'li:nth-child(2) > a', reasons: [{ text: 'Target has insufficient size (16px by 16px, should be at least 24px by 24px)', count: 3 }] }], passes: 5 };
         expect(momentLines('readme', 'dark-modern', withReasons, 'hard', [{ where: 'readme', theme: 'dark-modern', rule: 'target-size', item: 'P3.4' }]).lines[1])
             .toBe('[contrast] readme@dark-modern: violation target-size ×3: li:nth-child(2) > a; "Target has insufficient size (16px by 16px, should be at least 24px by 24px)" ×3 (pending P3.4)');

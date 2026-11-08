@@ -284,7 +284,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-INSET-4', { helper: 2, scopes: inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'] } }),
+    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
@@ -338,7 +338,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'section-header-transitive-net8.0': 'P3.7a', 'package-details-panel': 'P3.9', 'transitive-details': 'P3.9' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'package-details-panel': 'P3.9', 'transitive-details': 'P3.9' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -1204,7 +1204,8 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         versionCut: visible(version) && version.scrollWidth > version.clientWidth,
         badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,
         badgesClipped: [...option.querySelectorAll('.nuiget-row-line .nuiget-badge')].filter(badge => visible(badge) && badge.getBoundingClientRect().right > badge.closest('.nuiget-row-line').getBoundingClientRect().right + 0.5).length,
-        actionsEnd: actions.length > 0 ? round(rectOf(row).right - Math.max(...actions.map(action => rectOf(action).right))) : undefined,
+        // A compact row's band is the wrapper inset by the option's margin (DS-ROW-3, UX-P3.7a); a comfortable row's is the wrapper.
+        actionsEnd: actions.length > 0 ? round((row.classList.contains('nuiget-row--compact') ? rectOf(option).right : rectOf(row).right) - Math.max(...actions.map(action => rectOf(action).right))) : undefined,
     };
 });
 const boxOf = el => { const r = rectOf(el); return { left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height) }; };
@@ -1361,7 +1362,8 @@ const endRows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-ki
     return {
         list: list && list.dataset.testid ? list.dataset.testid : '',
         compact: row.classList.contains('nuiget-row--compact'),
-        band: edgesOf(row),
+        // A compact row's band is the wrapper inset by the option's computed margin-inline (UX-P3.7a).
+        band: row.classList.contains('nuiget-row--compact') ? (() => { const edges = edgesOf(row); return { ...edges, left: round(edges.left + px(style.marginLeft)), right: round(edges.right - px(style.marginRight)) }; })() : edgesOf(row),
         painted: opaque(style.backgroundColor) || (style.outlineStyle !== 'none' && px(style.outlineWidth) > 0) ? edgesOf(option) : undefined,
         state: option.getAttribute('aria-current') === 'true' ? 'current' : option.getAttribute('aria-selected') === 'true' ? 'selected' : focused ? 'focus' : row.matches(':hover') ? 'hover' : 'rest',
         icon: iconRect ? { left: round(iconRect.left), right: round(iconRect.right), w: round(iconRect.width), h: round(iconRect.height), centre: round(iconRect.top + iconRect.height / 2), radius: glyph ? getComputedStyle(glyph).borderTopLeftRadius : '' } : undefined,

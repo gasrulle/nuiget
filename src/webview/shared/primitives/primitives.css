@@ -89,8 +89,15 @@
     transform: translateY(var(--nuiget-virtual-offset));
 }
 
+/*
+ * 22 px, the workbench's tree row (D47, DS-HEIGHT-2); the line box is the row (DS-TYPE-4). A fixed height, as the
+ * comfortable row's: the 12 px version on the 13 px name's baseline grows a 22 px line box to 23 (UX-P3.7a).
+ */
 .nuiget-row--compact {
+    box-sizing: border-box;
     min-height: var(--nuiget-row-height-compact);
+    block-size: var(--nuiget-row-height-compact);
+    line-height: var(--nuiget-row-height-compact);
 }
 
 /* A fixed height: the list's estimate equals the laid-out row, so its sizer does not depend on what was rendered. */
@@ -122,6 +129,16 @@
     box-sizing: border-box;
     gap: var(--nuiget-space-5);
     padding-inline: var(--nuiget-inset) calc(var(--nuiget-row-action-end-inset) + var(--nuiget-action-size) + var(--nuiget-space-4));
+}
+
+/*
+ * The compact band is inset --nuiget-row-inset-x (M 4 / C 0); the name starts on the pane title's x (M 28 / C 20) whatever
+ * the inset, and the end padding is the slot the row's one action overlays (DS-ROW-3, DS-INSET-1, DS-INSET-3 a; UX-P3.7a).
+ */
+.nuiget-row-option--compact {
+    box-sizing: border-box;
+    margin-inline: var(--nuiget-row-inset-x);
+    padding-inline: calc(var(--nuiget-row-indent) + var(--nuiget-pane-header-margin-x) + var(--nuiget-pane-header-padding-start) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) - var(--nuiget-row-inset-x)) calc(var(--nuiget-row-action-end-inset) + var(--nuiget-action-size) + var(--nuiget-space-2));
 }
 
 .nuiget-row-group {
@@ -437,8 +454,8 @@
 }
 
 /*
- * Compact: one line, name first. The version gives way before the name does, so a long prerelease version never
- * hides the package; a long name stops at 70 % of the line. Height, padding and border stay those of a compact row.
+ * Compact: one line, name first. The version takes only the room the name leaves: it ellipsizes, then collapses to
+ * nothing before the name loses a pixel (DS-ROW-5). Height, padding and border stay those of a compact row.
  */
 .nuiget-row--compact .nuiget-row-body {
     flex-direction: row;
@@ -452,18 +469,10 @@
     overflow: visible;
 }
 
-.nuiget-row--compact .nuiget-row-name {
-    flex-grow: 0;
-    flex-shrink: 0;
-    flex-basis: auto;
-    max-width: 70%;
-}
-
 .nuiget-row--compact .nuiget-row-version {
-    flex-grow: 0;
-    flex-shrink: 1;
-    flex-basis: auto;
+    flex: 1 1 0;
     min-width: 0;
+    max-width: max-content;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -471,18 +480,6 @@
 .nuiget-row--compact .nuiget-row-badges {
     order: 1;
     margin-inline-start: auto;
-}
-
-/* A compact row has room for the name, the version and the badges; the rest is still read out (D14). */
-.nuiget-row--compact .nuiget-row-authors,
-.nuiget-row--compact .nuiget-row-meta,
-.nuiget-row--compact .nuiget-row-description,
-.nuiget-row--compact .nuiget-row-status {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
 }
 
 /* Pointer actions: there when the pointer or the focus is on the row, and while the row is busy. */
@@ -507,6 +504,13 @@
     position: absolute;
     inset-block: 0;
     inset-inline-end: var(--nuiget-row-action-end-inset);
+}
+
+/* 6 inside the inset band (DS-INSET-3 a, UX-P3.7a). */
+.nuiget-row--compact .nuiget-row-actions {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: calc(var(--nuiget-row-inset-x) + var(--nuiget-row-action-end-inset));
 }
 
 /* ── Focus ── */

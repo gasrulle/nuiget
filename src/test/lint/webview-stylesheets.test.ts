@@ -62,8 +62,8 @@ export function findStylesheetDefects(css: string): Record<'reducedMotion' | 'im
 
 /**
  * Pointer targets under 24 px (WCAG 2.5.8, `--nuiget-target-min`): a rule that gives the pointer cursor and does not
- * set `min-height: var(--nuiget-target-min)`. A row option keeps the default cursor; its height is the row's, and the
- * compact row is as high as the target.
+ * set `min-height: var(--nuiget-target-min)`. A row option keeps the default cursor; its height is the row's: 22 px
+ * for a compact row (D47), its pointer target DS-HEIGHT-2's and the AXE_ACCEPTED pair's (UX-P3.7a).
  */
 export function findSmallTargets(css: string): string[] {
     const rules = parseRules(css);

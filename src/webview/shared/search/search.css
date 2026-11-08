@@ -22,7 +22,9 @@
     align-items: center;
 }
 
+/* Its own compositing layer, so its text renders the same way in every run (H27 probe (a), UX-P3.7a). */
 .nuiget-search-popup {
+    will-change: transform;
     position: absolute;
     z-index: var(--nuiget-z-popover);
     top: 100%;

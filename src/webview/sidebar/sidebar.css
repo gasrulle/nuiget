@@ -83,16 +83,12 @@ body {
     border-top-color: transparent;
 }
 
-/* Rows start where the section title does: after the toggle's padding, chevron and gap. Browse rows stay at the edge. */
-.nuiget-sidebar-section-content .nuiget-row-option {
-    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2));
-}
-
 /* An All Projects project header is a tree level: normal case, indented by workbench.tree.indent, and its rows with it. */
 /* A project header's chevron and title keep their own x and normal case (P3.7c). */
 .nuiget-sidebar-project {
     --nuiget-section-header-inset: 0;
     --nuiget-group-title-transform: none;
+    --nuiget-row-indent: var(--nuiget-tree-indent);
 }
 
 .nuiget-sidebar-project .nuiget-section-heading {
@@ -102,9 +98,5 @@ body {
 
 .nuiget-sidebar-project .nuiget-section-toggle {
     padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-tree-indent));
-}
-
-.nuiget-sidebar-project .nuiget-row-option {
-    padding-inline-start: calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-tree-indent));
 }
 

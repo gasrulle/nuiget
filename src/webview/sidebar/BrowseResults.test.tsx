@@ -49,7 +49,7 @@ describe('sidebar: search modes and browse', () => {
     let removeLayout: () => void;
 
     beforeEach(() => {
-        removeLayout = installFakeLayout({ viewport: 240, row: 24 });
+        removeLayout = installFakeLayout({ viewport: 240, row: 22 });
     });
 
     afterEach(() => {

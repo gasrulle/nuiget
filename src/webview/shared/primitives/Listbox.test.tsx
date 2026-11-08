@@ -58,8 +58,8 @@ describe('Listbox', () => {
     let removeLayout: () => void;
 
     beforeEach(() => {
-        // Five compact rows fit.
-        removeLayout = installFakeLayout({ viewport: 120, row: 24 });
+        // Five compact rows fit (22 px, D47; UX-P3.7a).
+        removeLayout = installFakeLayout({ viewport: 110, row: 22 });
     });
 
     afterEach(() => {
@@ -264,8 +264,8 @@ describe('Listbox', () => {
         expect(rendered.length).toBeLessThanOrEqual(12);
         // Every option says where it is among all hundred.
         expect(options()[0]).toHaveAttribute('aria-setsize', '100');
-        expect(container.querySelector('.nuiget-listbox-sizer')?.getAttribute('style')).toBe('--nuiget-virtual-total: 2400px;');
-        expect(screen.getByTestId('package-row-package3').getAttribute('style')).toBe('--nuiget-virtual-offset: 72px;');
+        expect(container.querySelector('.nuiget-listbox-sizer')?.getAttribute('style')).toBe('--nuiget-virtual-total: 2200px;');
+        expect(screen.getByTestId('package-row-package3').getAttribute('style')).toBe('--nuiget-virtual-offset: 66px;');
 
         await user.tab();
         await user.keyboard('{End}');
@@ -274,7 +274,7 @@ describe('Listbox', () => {
         expect(last).toHaveFocus();
         expect(last).toHaveAttribute('aria-posinset', '100');
         expect(options().length).toBeLessThanOrEqual(13);
-        expect(screen.getByTestId('package-row-package99').getAttribute('style')).toBe('--nuiget-virtual-offset: 2376px;');
+        expect(screen.getByTestId('package-row-package99').getAttribute('style')).toBe('--nuiget-virtual-offset: 2178px;');
     });
 
     it('the only inline styles are the virtual total and offsets', () => {

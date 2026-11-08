@@ -1,21 +1,5 @@
 [
   {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row--compact .nuiget-row-authors, .nuiget-row--compact .nuiget-row-meta, .nuiget-row--compact .nuiget-row-description, .nuiget-row--compact .nuiget-row-status",
-    "property": "width",
-    "value": "1px",
-    "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/shared/primitives/primitives.css",
-    "rule": "pxLength",
-    "selector": ".nuiget-row--compact .nuiget-row-authors, .nuiget-row--compact .nuiget-row-meta, .nuiget-row--compact .nuiget-row-description, .nuiget-row--compact .nuiget-row-status",
-    "property": "height",
-    "value": "1px",
-    "item": "P3.7a"
-  },
-  {
     "file": "src/webview/sidebar/sidebar.css",
     "rule": "specificity",
     "selector": ".nuiget-sidebar-section > .nuiget-section-header .nuiget-section-toggle",
@@ -42,14 +26,6 @@
   {
     "file": "src/webview/sidebar/sidebar.css",
     "rule": "override",
-    "selector": ".nuiget-sidebar-section-content .nuiget-row-option",
-    "property": "padding-inline-start",
-    "value": "calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2))",
-    "item": "P3.7a"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "override",
     "selector": ".nuiget-sidebar-project .nuiget-section-heading",
     "property": "font-size",
     "value": "var(--nuiget-font-size-md)",
@@ -69,14 +45,6 @@
     "selector": ".nuiget-sidebar-project .nuiget-section-toggle",
     "property": "padding-inline-start",
     "value": "calc(var(--nuiget-space-2) + var(--nuiget-tree-indent))",
-    "item": "P3.7c"
-  },
-  {
-    "file": "src/webview/sidebar/sidebar.css",
-    "rule": "override",
-    "selector": ".nuiget-sidebar-project .nuiget-row-option",
-    "property": "padding-inline-start",
-    "value": "calc(var(--nuiget-space-2) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-tree-indent))",
     "item": "P3.7c"
   }
 ]

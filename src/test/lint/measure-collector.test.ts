@@ -525,6 +525,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         document.getElementById('state-cells')?.remove();
     });
 
+    it('reads a compact row\'s band inside the option\'s margin and its action from that band (UX-P3.7a)', () => {
+        document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,400,300,422"><div class="nuiget-row-option nuiget-row-option--compact" role="option" style="margin-left: 4px; margin-right: 4px" data-rect="4,400,296,422"><span class="nuiget-row-name" data-rect="28,403,100,419" data-text="28,403,90,419">Polly</span></div><div class="nuiget-row-actions"><button data-rect="268,400,290,422"></button></div></div>');
+        const facts = collect();
+        // DS-INSET-3 (a): the action ends 6 inside the inset band, not 10 inside the wrapper.
+        expect(facts.rows.find(row => row.name === 'Polly')?.actionsEnd).toBe(6);
+        // DS-ROW-3: the band is the wrapper inset by the option's margin, so a painted option coincides with it.
+        expect(facts.endOfP0.rows.find(row => row.nameLeft === 28)?.band).toEqual({ left: 4, top: 400, right: 296, bottom: 422 });
+    });
+
     it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
         panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-property-list" data-rect="620,200,880,260"><dt class="nuiget-property-term" data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd class="nuiget-property-value" data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd><dt class="nuiget-property-term" data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd class="nuiget-property-value" data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');
