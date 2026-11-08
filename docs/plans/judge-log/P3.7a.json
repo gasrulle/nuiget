@@ -1,0 +1,421 @@
+{
+  "item": "P3.7a",
+  "runs": [
+    {
+      "runId": "42432241759",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "3d1978e (series -a reading commit 2134718 and the DS counts)",
+      "look": "modern",
+      "workflow": "wf_995b0da6-b3c",
+      "note": "Series -a. No sidebar artboard: sidebar-sections and sidebar-hover are judged against main-installed-single.dark-modern.932.png and its spec (P2.9a precedent); main-installed-details, main-browse-details and main-quicksearch-open against main-installed-details.dark-modern.1200.png (the quick-search states have no artboard; the page beneath, P3.6 DO 11 form). Dispositions: design-advisor follow-up 1 (every standing and single-judge finding `fixed` to its owner). The P3.3a/P3.3b dependency-row findings (24 px pitch) did not stand: the level header is 22, `SPEC@main-transitive-details/list: 16/16 within 1 (hard)` (42432241759, ui-output.txt:1466).",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/42432241759/sidebar-sections.dark-modern.300.png",
+          "sha256": "ae3bd6dee4afed38f3472a15fb7086656aeabb72ad8a4d8627e350f8bf65a82d",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "sidebar-hover": {
+          "png": "captures/42432241759/sidebar-hover.dark-modern.300.png",
+          "sha256": "e247cedb2c1beecb3caad19a1eaebb8bc0a6948ae02cf5f0c35d899203e32044",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-details": {
+          "png": "captures/42432241759/main-installed-details.dark-modern.1200.png",
+          "sha256": "d5bbb6bb69c96ee6b457e5afefba6b35be4ed76590b182ca0252abfabdca82e3",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+        },
+        "main-browse-details": {
+          "png": "captures/42432241759/main-browse-details.dark-modern.1200.png",
+          "sha256": "6eb30bdc05fe5b15d53cd440aacc75d75a21cb6962371a97f5a3dadea6d2aaa4",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+        },
+        "main-quicksearch-open": {
+          "png": "captures/42432241759/main-quicksearch-open.dark-modern.1200.png",
+          "sha256": "7f6e72da4034581055418ff5837d6cf7b690de76ca048d0fedd273af7351a730",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 5,
+        "candidates": 36,
+        "standing": 12,
+        "blocking": 0,
+        "refuted": 9,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "sidebar-sections#D1",
+          "state": "sidebar-sections",
+          "finding": "[native] Between the Installed and Updates sections a 4 px band, edge to edge (x 0 to 299, y 415 to 418), is painted in the input-background grey (49,49,49, the same fill as the search box). DS-DIVIDER-1 allows only a 1 px separator inset 4 px above a later sidebar section header. If the band is the sash, DS-DIVIDER-6 requires it to be transparent at rest with a 1 px line. Either way it does not read as a native pane boundary. | [geometry] The divider above the Updates section header is a 4 px band painted across the full pane width (y 415-418, x 0-299), where DS-DIVIDER-1 (Modern UI) draws a 1 px separator inset 4 px, and DS-DIVIDER-6 a 1 px separator with its 4 px sash transparent at rest.",
+          "severity": "major",
+          "box": [
+            0,
+            415,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the 4 px sash band between the sections: V15, V16 (the sash a 1 px separator with a transparent hit area; DS-COLOR-5 `sash` pending P3.9); the band's thickness and colour are the sash's own",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-sections#D2",
+          "state": "sidebar-sections",
+          "finding": "[native] The first section header (Installed, box y 34 to 61) has a 1 px divider line (43,43,43) along its top, running full width from x 1 to 298. DS-DIVIDER-1 says the first sidebar section header has no line, and a Modern UI separator would be inset 4 px rather than edge to edge. | [geometry] A 1 px separator inset about 2-4 px (y 34, x 2-297) sits directly on top of the first section header (Installed, which starts at y 35), where DS-DIVIDER-1 says the first section header has no line. The two dividers of this surface have swapped forms: the first header gets the 1 px inset separator and the second gets a 4 px band.",
+          "severity": "major",
+          "box": [
+            0,
+            34,
+            300,
+            3
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: the line carrier is transparent on the first section; DS-DIVIDER-1 `sidebar` flips at -b's closing, whose judge run is the re-run",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-sections#D3",
+          "state": "sidebar-sections",
+          "finding": "[native] Section titles and row names do not start at the same x. The ink of 'Installed' starts at x 25 and the ink of 'Dapper' below it at x 29; the Updates title and its first row show the same 4 px offset. DS-INSET-1 requires sidebar section titles and row names to start at the pane-header title x. | [geometry] The section titles start left of the row names they label: the ink of \"Installed\" (y 42-51) and of \"Updates\" (y 428-436) begins at x 24 while every row name (Dapper, FluentValidation, Humanizer.Core, Microsoft.*, Polly) begins at x 28, about 4 px apart, where DS-INSET-1 puts section titles and row names on one x, the pane-header title x of M 28.",
+          "severity": "major",
+          "box": [
+            23,
+            42,
+            93,
+            38
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: margin-inline 4 and padding-inline-start 4 on the pane variant put the title on the rows' x (28); DS-INSET-1 `sidebar` flips at -b's closing",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-hover#D1",
+          "state": "sidebar-hover",
+          "finding": "[native] A 1 px separator (inset 4 px, x 4..295, y 34) is drawn above the Installed section header, which is the first header; DS-DIVIDER-1 allows a line only above every section header except the first, and a native Modern UI pane stack draws no separator under the view's search header. (No sidebar artboard exists: the given artboard main-installed-single.932 and its spec cover only main-panel elements, so this is judged against the rule and the exemplar.) | [geometry] A 1 px separator (#2b2b2b with faded inset ends) is drawn at y=34 on top of the first section header ('Installed'). DS-DIVIDER-1 gives the first section header no line.",
+          "severity": "major",
+          "box": [
+            1,
+            33,
+            298,
+            3
+          ],
+          "rule": "DS-DIVIDER-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: the line carrier is transparent on the first section; DS-DIVIDER-1 `sidebar` flips at -b's closing",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-hover#D2",
+          "state": "sidebar-hover",
+          "finding": "[native] The divider above the Updates header (y 415..418) is a 4 px full-width bar touching both pane edges in the search box's fill grey (49,49,49), not the 1 px separator inset 4 px that DS-DIVIDER-1 prescribes for Modern UI (and not the transparent sash over a 1 px line of DS-DIVIDER-6); it also differs from the 43,43,43 line at y 34, so the surface shows two divider greys. | [geometry] Between the Installed and Updates sections a 4 px opaque bar (#313131, full width, y 415-418) is painted at rest while the pointer is on a row. DS-DIVIDER-6 calls for a 1 px separator with a transparent 4 px sash, and DS-DIVIDER-1 calls for a 1 px inset separator above a later section header; here the heavy bar replaces both.",
+          "severity": "major",
+          "box": [
+            0,
+            415,
+            300,
+            4
+          ],
+          "rule": "DS-DIVIDER-1, DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the 4 px sash band between the sections: V15, V16 (the sash a 1 px separator with a transparent hit area; DS-COLOR-5 `sash` pending P3.9)",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-hover#D3",
+          "state": "sidebar-hover",
+          "finding": "[native] The section header contents start 4 px early: the Installed title ink starts at x 24 (chevron ink 7..16) while the row names start at x 28-29, but DS-INSET-1 puts sidebar section titles and row names at the same x, the pane-header title x of 28 under Modern UI; the Updates header (y 419..447) has the same offset. | [geometry] The section title 'Installed' starts at x≈23 (ink 24) while the row names under it start at x≈28 (ink 29, 'Dapper'), so titles and row names miss the one shared start edge DS-INSET-1 sets at M 28 px from the pane edge. The rows are on 28 and the title is about 5 px short. The 'Updates' header repeats it: title ink 24, row ink 29.",
+          "severity": "major",
+          "box": [
+            7,
+            41,
+            109,
+            39
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: margin-inline 4 and padding-inline-start 4 on the pane variant; DS-INSET-1 `sidebar` flips at -b's closing",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-hover#D4",
+          "state": "sidebar-hover",
+          "finding": "[native] The Installed count badge ends at x 294, 6 px from the pane edge, where DS-INSET-3 (b) requires a Modern UI section header's trailing badge to end 6 px inside the header box, 10 px from the pane edge; the Updates header's badge (x 267..294, y 423..442) is placed the same way. | [geometry] The trailing count badge of the 'Installed' header ends at x=294, 6 px from the pane edge, instead of DS-INSET-3 (b)'s M 10 px from the pane edge (6 inside the inset header box). It also overshoots the hovered row's trash action, which ends at x=290, by 4 px. The 'Updates' badge ends at 294 too.",
+          "severity": "major",
+          "box": [
+            267,
+            39,
+            27,
+            20
+          ],
+          "rule": "DS-INSET-3",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: the box's 4 px margin puts the count 10 from the pane edge; DS-INSET-3 `sidebar` stays hard (header.right − last.right, 6 inside the box before and after)",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The split between the list and the details pane is painted as a 4 px wide lighter band (x 420-423, rgb 49,49,49, full height y 77-803) where the artboard draws a 1 px separator at x 420 in the divider colour with a transparent sash; the band reads as a non-native splitter at rest and pushes the details pane content 3 px right (title and labels at x 444 vs the artboard's 441, spec package-details-panel x 421). | [geometry] The split between the Installed list and the details pane is drawn as an opaque 4 px band (x 420-423, rgb 49,49,49, y 77-803). The artboard draws a 1 px separator at x 420 (rgb 43,43,43), and the spec puts the details panel at x 421 (installed-list w 420). The band pushes the details pane 3 px right: its masked rect starts at x 424 with w 776 against the spec's 421/779, so the title, the Installed/Version rows, the buttons and the tabs all sit 3 px right of the artboard.",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the list/details sash band (DS-DIVIDER-6, V15, V16)",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar's secondary button reads \"Select all\" in sentence case where the artboard (select-all-button) and the copy rule draw the Title Case command label \"Select All\". | [states] The bulk-select button in the list toolbar reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and the copy rule requires Title Case button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 Title Case (\"Select all\")",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[native] The toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard (uninstall-selected-button) and the copy rule draw the Title Case command label \"Uninstall Selected (0)\". | [states] The bulk-uninstall button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws \"Uninstall Selected (0)\" and the copy rule requires Title Case button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 Title Case (\"Uninstall selected (0)\")",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-browse-details#D1",
+          "state": "main-browse-details",
+          "finding": "[native] The split between the Browse list and the details pane is drawn as a 4 px opaque bar (x 420-423, y 77-802, painted #313131, an input-background grey) where the artboard draws a 1 px separator in the header-border role (#2b2b2b at x 420); a VS Code split at rest shows only the 1 px line with a transparent sash, and the extra width pushes the details content 3 px right (title and labels at x 444 against the artboard's 441). | [geometry] Between the Browse list's scrollbar and the details pane the capture paints a solid 4 px band (x 420-423, y 77 to the bottom) in a lighter grey than the divider, where the artboard draws a 1 px separator at x 420 with the details pane starting at x 421; the details pane and all its content therefore start 3 px further right (title x 444 against the artboard's 441).",
+          "severity": "major",
+          "box": [
+            420,
+            77,
+            4,
+            726
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the list/details sash band (DS-DIVIDER-6, V15, V16)",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-quicksearch-open#D1",
+          "state": "main-quicksearch-open",
+          "finding": "[native] The split between the list and details panes is a 4 px band in rgb(49,49,49), the popup's widget.border value, while the artboard draws a 1 px rgb(43,43,43) separator at x 420 with a transparent sash at rest. | [geometry] The split between the list column and the details pane is drawn as a solid 4 px band (x 420-423, rgb 49,49,49) running the full body height, where the artboard draws a 1 px divider at x 420 and DS-DIVIDER-6 asks for a 1 px separator with a transparent 4 px sash at rest.",
+          "severity": "major",
+          "box": [
+            420,
+            186,
+            4,
+            617
+          ],
+          "rule": "DS-DIVIDER-6",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.9",
+          "evidence": "the list/details sash band (DS-DIVIDER-6, V15, V16)",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "sidebar-sections#D4",
+          "state": "sidebar-sections",
+          "finding": "[geometry] The count badge of each section header ends at x 294, 6 px from the pane edge at 300 and 2 px past the end of the search box (x 292), where DS-INSET-3 (b) says the trailing count of a sidebar section header ends 6 px inside an inset header box, 10 px from the pane edge (Modern UI).",
+          "severity": "major",
+          "box": [
+            267,
+            39,
+            27,
+            20
+          ],
+          "rule": "DS-INSET-3",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7a",
+          "evidence": "series -b DO 11: the box's 4 px margin (DS-INSET-3 b); DS-INSET-3 `sidebar` stays hard",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "sidebar-sections#D5",
+          "state": "sidebar-sections",
+          "finding": "[states] The sidebar search box's placeholder 'Search, or filter: @installed, @updates…' is cut off mid-word against the filter action at the 300 px primary width, with no ellipsis; the copy is longer than the box can hold (the artboard's search field shows its whole placeholder, and the workbench's side-bar search placeholders fit at 300 px).",
+          "severity": "minor",
+          "box": [
+            8,
+            5,
+            284,
+            24
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P3.7b",
+          "evidence": "the sidebar header's content and DS-OVERFLOW-4 `sidebar` are P3.7b's (the placeholder cut mid-word at 300); whether the copy shortens is then P3.11's",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        },
+        {
+          "id": "main-browse-details#D2",
+          "state": "main-browse-details",
+          "finding": "[states] The current Browse row (Newtonsoft.Json, marked Installed) shows no row action at the end of its selection band. The artboard draws the current row's action visible, a 22 px icon button at x 384 inside the band, and the interaction model offers Install and Update as the row's hover and focus action, so the selected row has no visible action.",
+          "severity": "major",
+          "box": [
+            384,
+            102,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "P5.9a",
+          "evidence": "the next item that rebuilds the main Browse row: the interaction model promises Install as the row's hover/focus action (interaction-model.md:131) and BrowseList.tsx passes no `actions`; a model-versus-product gap named for the P3 review; if the planning session re-homes it, the owner follows",
+          "ruling": "design-advisor, 2026-11-08, UX-P3.7a follow-up 1 (docs/plans/handoff/P3.7a.md)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-3",
+          "state": "main-installed-details",
+          "finding": "The two header actions at the top-right draw different glyphs from the artboard: source-settings is a cog where the artboard has a rayed gear, and refresh has two arrows where the artboard has one circular arrow.",
+          "reason": "The crop does show a cog and a two-arrow sync glyph where the artboard has a rayed gear and a one-arrow refresh. The artboard draws hand-made stroke SVGs, though, while the product draws the pinned codicons settings-gear and sync (docs/design/icons.json, release 0.0.46-49), which is what DS-ICON-1 requires; DS-ICON-2 measures 16x16 x4 in icon.foreground, and §6 excludes glyph-shape differences."
+        },
+        {
+          "id": "states-1",
+          "state": "main-browse-details",
+          "finding": "Rows whose package has no icon show the raster default icon, an orange box image, in the 36 px icon slot. The artboard draws the placeholder as a monochrome package glyph in the icon colour on the icon tile. That puts a decorative, non-codicon colour graphic in nine of the ten visible rows.",
+          "reason": "The crop shows the bundled orange default package image in the 36 px slot (hard DS-ICON-3 '36×36 ×16'). Package icons are live content under rubric §6, and the artboard's monochrome tile stands in for every row's icon. The same run's main-installed-details capture shows real .NET and parrot icons where that same artboard draws tiles. DS-ICON-1 covers codicon glyphs in icons.tsx, not package images."
+        },
+        {
+          "id": "native-1",
+          "state": "main-quicksearch-open",
+          "finding": "Below the popup the list pane is bare background: no Installed list rows, check boxes, package icons or scrollbar where the artboard draws installed-list (spec rect 0,147,420,656) and its rows from y 175; the page behind the popup no longer reads as the Installed view.",
+          "reason": "The crop shows a blank list pane, but the scene is Browse with the quick-search popup open, not the Installed view: hard lines read 'MS-8 … not shown: tab-bar (browsing)' and 'DS-COPY-5 … tab strip not shown (browsing)', quicksearch mode sends no Browse search until Enter, and the artboard's spec composition is main-installed-details' own scene, so its Installed rows are not expected here."
+        },
+        {
+          "id": "native-2",
+          "state": "main-quicksearch-open",
+          "finding": "The details pane is bare background: no package title, Uninstall/Version/Update controls, Details/README strip or property list where the artboard draws package-details-panel (spec rect 421,77,779,726), and no empty-state message in its place.",
+          "reason": "The details pane behind the popup is in Browse with nothing current, and the hard measurement 'DS-INSET-4@main-quicksearch-open: empty top 20 (target 20)' places the details empty state at y≈97, under the popup; Newtonsoft.Json's details belong to the main-installed-details artboard, a different state."
+        },
+        {
+          "id": "native-4",
+          "state": "main-quicksearch-open",
+          "finding": "The header refresh action draws the two-arrow sync glyph, while the artboard's refresh-button (spec rect 1162,10,22,22) draws the single circular arrow that workbench view Refresh actions use.",
+          "reason": "The crop shows the codicon 'sync' glyph that docs/design/icons.json lists. The artboard's refresh icon is a hand-drawn SVG path, and its settings glyph also differs from the codicon gear, so the difference is in the artboard's placeholder drawing and §6 excludes glyph shapes; DS-ICON-2 measures 16×16 in icon.foreground (hard)."
+        },
+        {
+          "id": "native-5",
+          "state": "main-quicksearch-open",
+          "finding": "The suggestion rows draw the typed query 'Serilog' in plain list foreground, with no match highlight, while the quick-input exemplar highlights matched characters in list.highlightForeground.",
+          "reason": "The crop shows the suggestions in plain list foreground, but no artboard covers the popup and neither the design system nor the interaction model asks for match highlighting, so §6 treats it as a feature suggestion; DS-HEIGHT-2 rows 22 ×5 and DS-RADIUS-2 hold."
+        },
+        {
+          "id": "geometry-2",
+          "state": "main-quicksearch-open",
+          "finding": "Behind the popup the panel body is empty: the artboard's Installed/Updates tab strip is missing (its bottom line at y 112 from x 0, which would show left of the popup at x 0-15, is absent), along with the Select All toolbar, the Direct Packages header, the package rows (the artboard's first row would show below the popup from y 186) and the whole details pane.",
+          "reason": "The tab strip, toolbar and Installed rows are absent because the capture is in Browse mode ('MS-8 … not shown: tab-bar (browsing)' and 'DS-COPY-5 … tab strip not shown (browsing)', both hard), and the comparison artboard is a different state whose spec declares its own scene."
+        },
+        {
+          "id": "states-1",
+          "state": "main-quicksearch-open",
+          "finding": "Below the popup the Installed list pane is completely blank, with no package rows, no skeleton rows and no empty or error message. The artboard draws the Direct Packages rows here (Microsoft.Extensions.* through Serilog, package-row-* and installed-list at y 147–803), and a pixel scan finds only background colours below y 190.",
+          "reason": "The crop shows an empty list area, but in quicksearch mode typing asks only for suggestions and Browse searches on Enter, so no result list, skeleton or empty message is expected before a search; the installed rows cited come from another state's artboard."
+        },
+        {
+          "id": "states-2",
+          "state": "main-quicksearch-open",
+          "finding": "Below the popup the details pane is completely blank, with no package facts, no Vulnerabilities or Dependencies blocks and no details-empty sentence. The artboard's package-details-panel draws Newtonsoft.Json's description, facts, vulnerability and dependency groups from y 186 down, so the scene behind the open popup shows no defined state.",
+          "reason": "The hard line 'DS-INSET-4@main-quicksearch-open: empty top 20 (target 20)' shows the details empty state is rendered, at y≈97 under the popup, so the pane has a defined state; Newtonsoft.Json's facts come from the main-installed-details artboard, a different state."
+        }
+      ]
+    }
+  ]
+}

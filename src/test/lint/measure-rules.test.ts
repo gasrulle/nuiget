@@ -103,7 +103,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'PF-5')?.states).toEqual(['main-installed-details']);
         // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar.
         expect(scopes('DS-HEIGHT-1')).toEqual({ sidebar: { pending: 'P3.7a' } });
-        expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: { pending: 'P3.7a' }, popup: { pending: 'P3.7a' } });
+        expect(scopes('DS-HEIGHT-2')).toEqual({ sidebar: 'hard', popup: 'hard' });
         expect(scopes('DS-RADIUS-2')).toEqual({ rows: 'hard', popup: 'hard', layers: 'hard' });
         // UX-P3.5 (design-advisor ruling of 2026-11-07): the dialog layer's elevation and backdrop, hard in the three dialog states.
         expect(scopes('DS-DIVIDER-2')).toEqual({ layers: 'hard' });
@@ -150,22 +150,22 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toBeUndefined();
         // UX-P0.14's 220 px width closed at UX-P2.7a.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toBeUndefined();
-        expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' });
         expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
-        expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
         expect(scopes('DS-INSET-4')).toEqual(Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])));
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
-        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' });
         expect(scopes('DS-ROW-6')).toEqual(mainHard());
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
         // UX-P1.4b: the two states whose readiness holds a Verified mark.
         expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
-        expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: { pending: 'P3.7a' } });
+        expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: 'hard' });
         expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: { pending: 'P3.7a' } });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
@@ -180,7 +180,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // group; the red groups and the groups no state measures yet to the items that make them hold.
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
-        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: 'hard' });
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard' });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' });
@@ -567,7 +567,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The facts line yields the authors, never the version (judge main-installed-single#D7, UX-P2.8a).
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: false })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0; version whole ×1' });
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: true })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 0; version whole ×0, 1 cut' });
-        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: { pending: 'P3.7a' }, value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
+        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {
@@ -842,7 +842,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The rows scope does not apply in a popup state; the popup scope applies in no list state.
         expect(lineOf('main-quicksearch-open', popup(), 'DS-RADIUS-2@main-quicksearch-open/rows')).toBeUndefined();
         expect(lineOf('main-browse-results', popup(), 'DS-RADIUS-2@main-browse-results/popup')).toBeUndefined();
-        expect(lineOf('main-quicksearch-open', popup(), 'DS-HEIGHT-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: { pending: 'P3.7a' } });
+        expect(lineOf('main-quicksearch-open', popup(), 'DS-HEIGHT-2@main-quicksearch-open/popup')).toMatchObject({ pass: true, status: 'hard' });
         expect(lineOf('main-quicksearch-open', popup({ optionHeights: [24] }), 'DS-HEIGHT-2@main-quicksearch-open/popup')).toMatchObject({ pass: false });
         expect(lineOf('main-quicksearch-grouped', popup(), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: true, value: 'labels 2 (text-transform none, 11px descriptionForeground); separators 1/1 pickerGroup.border' });
         expect(lineOf('main-quicksearch-grouped', popup({ labels: [{ transform: 'uppercase', size: 11, colour: 'rgb(157, 157, 157)' }, { transform: 'none', size: 11, colour: 'rgb(157, 157, 157)' }] }), 'DS-DIVIDER-3@main-quicksearch-grouped')).toMatchObject({ pass: false });

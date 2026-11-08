@@ -63,6 +63,6 @@
     "dialog \"NuGet sources\" {source-settings-modal}",
     "  heading \"NuGet sources\"",
     "  button \"Close NuGet sources\" [focused]",
-    "  button \"Add source\""
+    "  button \"Add source\" {add-source-button}"
   ]
 }

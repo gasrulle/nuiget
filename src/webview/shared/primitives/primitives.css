@@ -89,10 +89,7 @@
     transform: translateY(var(--nuiget-virtual-offset));
 }
 
-/*
- * 22 px, the workbench's tree row (D47, DS-HEIGHT-2); the line box is the row (DS-TYPE-4). A fixed height, as the
- * comfortable row's: the 12 px version on the 13 px name's baseline grows a 22 px line box to 23 (UX-P3.7a).
- */
+/* Fixed at the token, the workbench's 22 px tree row: a 12 px version on the 13 px name's baseline would grow the line to 23 (DS-TYPE-4, DS-HEIGHT-2). */
 .nuiget-row--compact {
     box-sizing: border-box;
     min-height: var(--nuiget-row-height-compact);

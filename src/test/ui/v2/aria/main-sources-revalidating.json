@@ -69,6 +69,6 @@
     "    listitem \"nuget.org https://api.nuget.org/v#/index.json/home/runner/work/nuiget/nuiget/src/test/ui/fixtures/dense-workspace/nuget.\" {source-row-nuget.org}",
     "      checkbox \"nuget.org\" [checked]",
     "      button \"Remove nuget.org\" {source-row-remove-nuget.org}",
-    "  button \"Add source\""
+    "  button \"Add source\" {add-source-button}"
   ]
 }

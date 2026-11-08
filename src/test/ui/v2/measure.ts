@@ -253,7 +253,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar (P3.7a's files: the sidebar and the compact Row).
     rule('DS-HEIGHT-1', { helper: 3, scopes: on('P3.7a', 'sidebar'), tolerance: TOLERANCES.height }),
     // UX-P3.2 (design-advisor ruling): the popup's rows are the compact row, as the quick pick's (22, `quickInputRow`); read at P3.7a.
-    rule('DS-HEIGHT-2', { helper: 3, scopes: { ...on('P3.7a', 'sidebar'), popup: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, scopeStates: { popup: POPUP_STATES } }),
+    rule('DS-HEIGHT-2', { helper: 3, scopes: { sidebar: 'hard', popup: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { popup: POPUP_STATES } }),
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
@@ -274,17 +274,17 @@ export const RULES: readonly RuleDefinition[] = [
     rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
+    rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: NO_LIST_STATES }),
-    rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     // UX-P3.3b: the header's computed padding, or the empty state's top inset where the pane shows no package.
     rule('DS-INSET-4', { helper: 2, scopes: inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), tolerance: TOLERANCES.coincide }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
+    rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
@@ -318,7 +318,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
-    rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
+    rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), sidebar: { pending: 'P3.7a' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'] }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -326,7 +326,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: { pending: 'P3.7a' }, sources: 'hard' }, tolerance: TOLERANCES.gapMembership }),
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.gapMembership }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: NO_ROW_STATES,
     }),

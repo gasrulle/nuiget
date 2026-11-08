@@ -186,7 +186,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.7a",
-          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here.",
+          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here. Closed at UX-P3.7a-a: the token at 22, `SPEC@main-transitive-details/list: 16/16 within 1 (hard)` (run 42432241759, ui-output.txt:1466).",
           "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
         },
         {
@@ -417,7 +417,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.7a",
-          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here.",
+          "evidence": "Ordered to UX-P3.7a: the 22 px pitch is --nuiget-row-height-compact's re-value under D47; trigger 2 forbids it here. Closed at UX-P3.7a-a: the token at 22, `SPEC@main-transitive-details/list: 16/16 within 1 (hard)` (run 42432241759, ui-output.txt:1466).",
           "ruling": "design-advisor, 2026-11-07, UX-P3.3a step 4 (docs/plans/handoff/P3.3a.md, Advisor decisions, follow-up ruling 2)"
         },
         {
