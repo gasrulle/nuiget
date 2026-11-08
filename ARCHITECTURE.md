@@ -719,8 +719,9 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
   reported, so a per-step report does not drop the others. Enter or the button sends
   `ops/update` with the row's `sourceUrl`; the row is busy from the request on and leaves with the host's next
   list. `@updates <text>` filters by id.
-- **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)", centrally
-  managed and busy rows left out); the `ConfirmDialog` lists `id: from → to` and Confirm sends `ops/bulkUpdate`.
+- **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)") take the rows
+  that `updateCandidates` (`src/webview/shared/installed/rules.ts`, both surfaces' one rule, UX-P3.7d) admits: installed and
+  resolvable, not `central`, not busy, not an unsupported project's; `UpdateAllDialog` (`src/webview/shared/updates/`, the sidebar's body too) lists `id: from → to` and Confirm sends `ops/bulkUpdate`.
 - **Centrally managed packages.** Enter or the button on a package whose version `Directory.Packages.props` sets
   calls `central.ask({ kind: 'update', … })` (both the single project and All Projects): the shell's one
   `CentralUpdateDialog` (`cpm-preview-dialog`) lists the projects the central version applies to, and its confirm
@@ -739,7 +740,7 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
 - **State cells (UX-P3.1b).** The tab draws its own 2 px bar over the list area's top edge while the list loads or asks
   again (`updates-progress`; the header's `RefreshBar` is Browse's only), three skeleton rows on a first load, the
   empty state `updates-empty` ("No packages installed." or "No updates available.") and the inline error
-  `updates-error` with Retry; a host's reason ends as one sentence (`updatesTree.ts`'s `sentence`).
+  `updates-error` with Retry; a host's reason ends as one sentence (`sentence`, `src/webview/shared/updates/sentence.ts`, UX-P3.7d).
 
 The sidebar's `UpdatesSection` (`src/webview/sidebar`) reads the same slice: compact rows in
 `sidebar-updates-list` under `section-header-updates`, the count only when known, Enter and the row button
@@ -783,9 +784,9 @@ is why it is not a dialog.
   install nothing and say why. The sidebar asks no suggestions; it enables the sources slice (`sources/list`, then `sources/health` and the sources invalidations) to name the active source on its `sidebar-source` header line, and asks `config/get` once, for `workbench.tree.indent` (UX-P3.7b). Its pane headers show no count badge at 0 and `k of N` while a filter is on (`directCount`, `src/webview/shared/counts.ts`); an All Projects project header carries the provisional badge (`sidebar-installed-provisional-<name>`); a filter mode opens its section without writing the kept layout.
   Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
   Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
-  `ConfirmDialog` that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
-  `ops/bulkUpdateAllProjects`; centrally managed (`central`) rows, busy rows and an unsupported project's rows stay
-  out (N76). An Updates project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`); the
+  `UpdateAllDialog`, the main panel's body, that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
+  `ops/bulkUpdateAllProjects`; it takes the rows of `updateCandidates`, the main panel's rule (installed and
+  resolvable, not `central` (N76), not busy, not an unsupported project's; UX-P3.7d). An Updates project header of All Projects carries the project's path as its tooltip (`SectionHeader.tooltip`); the
   Installed tree's project rows carry none (UX-P3.7c).
   The Installed and Updates headers take VS Code's side-bar section colours (`--nuiget-color-section-header-*`), rows
   start where the section title does, and an All Projects project is a tree level in normal case: `SidebarView`

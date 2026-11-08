@@ -3,13 +3,14 @@ import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../protocol';
 import { groupByFolder } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
-import { isCentral, whyNotUpdatable } from '../shared/installed/rules';
-import { ArrowUpIcon, Banner, ConfirmDialog, cssVars, EmptyState, IconButton, SectionHeader, Skeleton } from '../shared/primitives';
+import { updateCandidates } from '../shared/installed/rules';
+import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, SectionHeader, Skeleton } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import { UpdateAllDialog } from '../shared/updates/UpdateAllDialog';
 import { ProjectUpdates } from './ProjectUpdates';
 
 export interface UpdatesSectionProps {
@@ -31,26 +32,11 @@ function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string
     return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
 }
 
-/**
- * The updates of a shown list that Update all takes: the package is installed there, can be updated (a supported,
- * resolved reference), is not set centrally (a `central` row goes through its preview, N76; a `central-override` row
- * joins, N74) and is not busy.
- */
-function updateCandidates(updates: readonly PackageUpdate[], installed: InstalledResult | undefined, filter: string, isBusy: (id: string) => boolean): PackageUpdate[] {
-    if (installed === undefined) {
-        return [];
-    }
+/** The updates of a list shown under the `@updates` text, sorted by id as the main panel's lists are (MU9, P9.10). */
+function visibleUpdates(updates: readonly PackageUpdate[], filter: string): PackageUpdate[] {
     const needle = filter.trim().toLowerCase();
-    return updates
-        .filter(update => update.id.toLowerCase().includes(needle))
-        .filter(update => {
-            const entry = installed.packages.find(candidate => candidate.id.toLowerCase() === update.id.toLowerCase());
-            return entry !== undefined && whyNotUpdatable(entry, installed) === undefined && !isCentral(entry) && !isBusy(update.id);
-        })
-        .sort((a, b) => a.id.localeCompare(b.id));
+    return updates.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
 }
-
-const updateLine = (update: PackageUpdate): string => `${update.id}: ${update.installedVersion} → ${update.latestVersion}`;
 
 interface ProjectSectionProps {
     chunk: ProjectUpdatesChunk;
@@ -142,7 +128,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
         const chunks = (stream.projects ?? []).map(project => stream.chunks.get(project.path)).filter((chunk): chunk is ProjectUpdatesChunk => chunk !== undefined);
         groups = chunks
             .filter(chunk => chunk.error === undefined)
-            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(chunk.updates, all.chunks.get(chunk.projectPath)?.result, filter, id => isPackageBusy(chunk.projectPath, id)) }))
+            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(visibleUpdates(chunk.updates, filter), all.chunks.get(chunk.projectPath)?.result, id => isPackageBusy(chunk.projectPath, id)) }))
             .filter(group => group.updates.length > 0);
         if (stream.status === 'ready' && !stream.sourcesUnavailable && chunks.every(chunk => chunk.error === undefined)) {
             count = chunks.reduce((sum, chunk) => sum + chunk.updates.length, 0);
@@ -180,7 +166,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
             count = rows.length;
             shown = shownOf(rows);
         }
-        const single = updateCandidates(rows, installed.result, filter, id => isPackageBusy(projectPath, id));
+        const single = updateCandidates(visibleUpdates(rows, filter), installed.result, id => isPackageBusy(projectPath, id));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
         content = (
             <>
@@ -243,15 +229,12 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 ) : undefined}
             />
             {expanded ? <div className="nuiget-sidebar-section-content" id={contentId}>{content}</div> : null}
-            <ConfirmDialog
+            <UpdateAllDialog
                 open={confirming && candidates.length > 0}
-                title={candidates.length === 1 ? 'Update 1 package?' : `Update ${candidates.length} packages?`}
-                confirmLabel="Update"
-                onCancel={() => setConfirming(false)}
+                updates={candidates}
+                groups={all.active ? groups.map(group => ({ projectName: group.projectName, updates: group.updates })) : undefined}
                 onConfirm={confirm}
-                groups={all.active
-                    ? groups.map(group => ({ label: `In ${group.projectName}:`, items: group.updates.map(updateLine) }))
-                    : [{ items: candidates.map(updateLine) }]}
+                onCancel={() => setConfirming(false)}
             />
         </section>
     );

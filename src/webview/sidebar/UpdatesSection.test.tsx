@@ -203,6 +203,18 @@ describe('sidebar: Updates section', () => {
         expectFocusAfterClose('sidebar-update-all-confirm');
     });
 
+    it('an unresolved row is listed but stays out of Update all, its dialog and the bulk update (UX-P3.7d)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: [...UPDATES, update('Moq', '4.20.0', '4.20.72')] }, [...PACKAGES, pkg('Moq', '', { versionType: 'unresolved', declaration: 'unresolved' })]);
+        expect(within(updatesList()).getByTestId('package-row-moq')).toBeInTheDocument();
+        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update all (1)');
+        await user.click(screen.getByTestId('sidebar-update-all-button'));
+        expect(screen.getByTestId('confirm-dialog')).not.toHaveTextContent('Moq');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-update-all-confirm');
+        expect(host.requests('ops/bulkUpdate').map(request => request.payload)).toEqual([{ projectPath: A, packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] }]);
+    });
+
     it('update all under All Projects sends one ops/bulkUpdateAllProjects grouped by project', async () => {
         const user = userEvent.setup();
         const host = await mountWith();

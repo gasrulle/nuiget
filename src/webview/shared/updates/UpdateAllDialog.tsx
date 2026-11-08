@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { PackageUpdate } from '../../../../protocol';
-import { ConfirmDialog } from '../../../shared/primitives';
+import type { PackageUpdate } from '../../../protocol';
+import { ConfirmDialog } from '../primitives';
 
 export interface UpdateAllDialogProps {
     open: boolean;

@@ -74,6 +74,22 @@ export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult
 /** A row whose version comes from the central entry: its update changes every project that uses the entry. */
 export const isCentral = (entry: InstalledPackage): boolean => entry.declaration === 'central';
 
+/**
+ * The updates a bulk update takes, on both surfaces (UX-P3.7d): the package is installed in the project and can be updated
+ * there (a supported project, a resolved reference), its version is not set centrally (a `central` row goes through its
+ * preview, N76; a `central-override` row joins, N74) and it is not busy. The subset keeps the order of `rows`: the callers
+ * filter and sort.
+ */
+export function updateCandidates(rows: readonly PackageUpdate[], installed: InstalledResult | undefined, isBusy: (id: string) => boolean): PackageUpdate[] {
+    if (installed === undefined) {
+        return [];
+    }
+    return rows.filter(row => {
+        const entry = installed.packages.find(candidate => candidate.id.toLowerCase() === row.id.toLowerCase());
+        return entry !== undefined && whyNotUpdatable(entry, installed) === undefined && !isCentral(entry) && !isBusy(row.id);
+    });
+}
+
 /** The tooltip of an unresolved version cell (interaction model §4). */
 export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.';
 

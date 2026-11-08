@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { IN_PROGRESS, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -14,8 +14,8 @@ import type { ListView } from '../../MainShell';
 import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { AllProjectsUpdates } from './AllProjectsUpdates';
-import { UpdateAllDialog } from './UpdateAllDialog';
-import { sentence } from './updatesTree';
+import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
+import { sentence } from '../../../shared/updates/sentence';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
@@ -118,9 +118,9 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
             ? <SectionHeader presentation="content" title="Direct packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
             : null),
     }), [collapsed]);
-    // A bulk update takes the rows shown that are neither centrally managed nor busy; the bulk set is a subset of them,
-    // keyed as the rows are, and a row that leaves them leaves the set (UX-P2.1c).
-    const candidates = unsupported ? [] : shown.filter(update => !changesCentral(update.id) && !isBusy(update.id));
+    // A bulk update takes the rows shown that both surfaces' rule admits (installed and resolvable, not central, not busy;
+    // UX-P3.7d); the bulk set is a subset of them, keyed as the rows are, and a row that leaves them leaves the set (UX-P2.1c).
+    const candidates = updateCandidates(shown, installed.result, isBusy);
     const candidateKey = candidates.map(update => keyOf(update.id)).join('\0');
     const candidateIds = useMemo(() => (candidateKey === '' ? [] : candidateKey.split('\0')), [candidateKey]);
     const bulk = useBulkSelection(candidateIds, selection);
@@ -166,6 +166,12 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         }
         if (changesCentral(update.id)) {
             announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
+            return;
+        }
+        const entry = entryOf(update.id);
+        const obstacle = entry !== undefined && installed.result !== undefined ? whyNotUpdatable(entry, installed.result) : undefined;
+        if (obstacle !== undefined) {
+            announce(obstacle);
             return;
         }
         if (!bulk.toggle(key)) {

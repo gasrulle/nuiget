@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { InstalledPackage } from '../../../protocol';
-import { UNRESOLVED_HINT, updateRowContext, versionCell } from './rules';
+import type { InstalledPackage, InstalledResult, PackageUpdate } from '../../../protocol';
+import { UNRESOLVED_HINT, updateCandidates, updateRowContext, versionCell } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -28,5 +28,35 @@ describe('updateRowContext', () => {
 
     it('a row of an unsupported project is read-only', () => {
         expect(updateRowContext(update as never, '/p', entry({ id: 'Moq' }), result({ unsupported: { reason: 'sdk-too-old', message: 'x' } }))['nuiget.readOnly']).toBe(true);
+    });
+});
+
+describe('updateCandidates', () => {
+    const row = (id: string): PackageUpdate => ({ id, installedVersion: '1.0.0', latestVersion: '2.0.0', sourceUrl: 'https://feed' });
+    const installed = (packages: InstalledPackage[], changes: Partial<InstalledResult> = {}): InstalledResult => ({ projectPath: '/p', fidelity: 'authoritative', isCpm: true, packages, ...changes });
+    const idle = (): boolean => false;
+
+    it('takes nothing before the installed list is known', () => {
+        expect(updateCandidates([row('Lib')], undefined, idle)).toEqual([]);
+    });
+
+    it('leaves out an unresolved row, a central row and a row with no installed entry; an override row joins', () => {
+        const result = installed([
+            entry({ id: 'Lib' }),
+            entry({ id: 'Broken', version: '', versionType: 'unresolved', declaration: 'unresolved' }),
+            entry({ id: 'Central', declaration: 'central' }),
+            entry({ id: 'Override', declaration: 'central-override' }),
+        ]);
+        expect(updateCandidates([row('Lib'), row('Broken'), row('Central'), row('Override'), row('Gone')], result, idle).map(update => update.id)).toEqual(['Lib', 'Override']);
+    });
+
+    it('takes nothing from an unsupported project', () => {
+        const result = installed([entry({ id: 'Lib' })], { unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } });
+        expect(updateCandidates([row('Lib')], result, idle)).toEqual([]);
+    });
+
+    it('leaves out a busy row, matches ids whatever the case and keeps the order it is given', () => {
+        const result = installed([entry({ id: 'alpha' }), entry({ id: 'Beta' }), entry({ id: 'Gamma' })]);
+        expect(updateCandidates([row('Gamma'), row('Alpha'), row('Beta')], result, id => id === 'Beta').map(update => update.id)).toEqual(['Gamma', 'Alpha']);
     });
 });

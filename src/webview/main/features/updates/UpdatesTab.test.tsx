@@ -165,6 +165,27 @@ describe('main panel: Updates tab', () => {
         ] }]);
     });
 
+    it('an unresolved row is listed, joins no bulk update and Space says why (UX-P3.7d)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: UPDATES }, A, [
+            pkg('Serilog', { version: '3.0.0' }),
+            pkg('Moq', { version: '', versionType: 'unresolved', declaration: 'unresolved' }),
+            pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' }),
+        ]);
+        expect(names()).toContain('Moq');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        await user.click(optionOf('Moq'));
+        await user.keyboard(' ');
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq cannot be updated: its reference could not be resolved'));
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        await user.click(screen.getByTestId('update-all-button'));
+        const dialog = screen.getByRole('alertdialog', { name: 'Update 1 package?' });
+        expect(within(dialog).queryByText(/Moq/)).toBeNull();
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('updates-update-all-confirm');
+        expect(host.requests('ops/bulkUpdate').map(sent => sent.payload)).toEqual([{ projectPath: A, packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] }]);
+    });
+
     it('Space selects for the bulk update; a centrally managed package cannot be selected', async () => {
         const user = userEvent.setup();
         const host = await mountWith();

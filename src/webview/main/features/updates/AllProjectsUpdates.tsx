@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { IN_PROGRESS, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
@@ -12,8 +12,8 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import type { ListView } from '../../MainShell';
 import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
-import { UpdateAllDialog } from './UpdateAllDialog';
-import { sentence } from './updatesTree';
+import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
+import { sentence } from '../../../shared/updates/sentence';
 
 const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
@@ -89,9 +89,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
     const needle = filter.trim().toLowerCase();
     const filtering = needle !== '';
     const rowsOf = (section: Section): PackageUpdate[] => rowsIn(section, needle);
-    const candidatesOf = (section: Section): PackageUpdate[] => (section.installed?.unsupported
-        ? []
-        : rowsOf(section).filter(update => !changesCentralIn(section.installed, update.id) && !isPackageBusy(section.projectPath, update.id)));
+    const candidatesOf = (section: Section): PackageUpdate[] => updateCandidates(rowsOf(section), section.installed, id => isPackageBusy(section.projectPath, id));
 
     // The bulk set: a subset of the rows a bulk update may take, keyed as the rows are; a new listing clears it (UX-P2.1c).
     const candidateKey = sections.flatMap(section => candidatesOf(section).map(update => rowId(section.projectPath, update.id))).join('\0');
@@ -232,6 +230,12 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
         }
         if (changesCentralIn(section.installed, update.id)) {
             announce(`${update.id} is centrally managed; update it on its own to see the projects it changes`);
+            return;
+        }
+        const entry = entryIn(section.installed, update.id);
+        const obstacle = entry !== undefined && section.installed !== undefined ? whyNotUpdatable(entry, section.installed) : undefined;
+        if (obstacle !== undefined) {
+            announce(obstacle);
             return;
         }
         if (!bulk.toggle(rowId(section.projectPath, update.id))) {
