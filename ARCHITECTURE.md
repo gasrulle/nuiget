@@ -777,7 +777,7 @@ is why it is not a dialog.
   `@vulnerable`) is a browse search, 300 ms after the last key from two characters on, or at once on Enter.
   `BrowseResults` (`sidebar-browse-list`) lists compact rows; Enter or the row's button installs the version found
   into the committed project with the row's `sourceUrl`. An installed package and a surface without a single project
-  install nothing and say why. The sidebar never asks for suggestions or the source list; it asks `config/get` once, for `workbench.tree.indent`.
+  install nothing and say why. The sidebar asks no suggestions; it enables the sources slice (`sources/list`, then `sources/health` and the sources invalidations) to name the active source on its `sidebar-source` header line, and asks `config/get` once, for `workbench.tree.indent` (UX-P3.7b). Its pane headers show no count badge at 0 and `k of N` while a filter is on (`directCount`, `src/webview/shared/counts.ts`); an All Projects project header carries the provisional badge (`sidebar-installed-provisional-<name>`); a filter mode opens its section without writing the kept layout.
   Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
   Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
   `ConfirmDialog` that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one

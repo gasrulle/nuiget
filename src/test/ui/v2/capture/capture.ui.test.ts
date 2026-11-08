@@ -874,6 +874,22 @@ const REACH: Record<string, Reach> = {
     },
     'sidebar-sections': { reach: sidebarSections },
     'sidebar-narrow-200px': { reach: sidebarSections },
+    'sidebar-filter': {
+        reach: async () => {
+            await sidebarSections();
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await search.click();
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@installed Seri');
+            await until('/^\\d+ of \\d+$/.test(document.querySelector(\'[data-testid="section-box-installed"] .nuiget-section-count-text\')?.textContent ?? "") && document.querySelector(\'[data-testid="sidebar-updates-list"]\') === null && document.querySelector(\'[data-testid="sidebar-installed-list"] .nuiget-row-option\') !== null', 'the Installed section filtered, "k of N"', 30_000);
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+            await findByTestId('sidebar-updates-list', 30_000);
+        },
+    },
     'sidebar-hover': {
         reach: async () => {
             await sidebarSections();
@@ -889,6 +905,8 @@ const REACH: Record<string, Reach> = {
     'sidebar-update-all-dialog': {
         reach: async () => {
             await sidebarSections();
+            // The header's actions show on the section's hover (UX-P3.7b): rest the pointer on the Updates header first.
+            await driverOf().actions().move({ origin: await findByTestId('section-header-updates', 30_000) }).perform();
             await (await findByTestId('sidebar-update-all-button', 30_000)).click();
             await findByTestId('confirm-dialog', 10_000);
         },
@@ -1606,10 +1624,25 @@ function specFor(state: NamedState, capture: Capture): SpecLook | undefined {
 }
 
 /**
+ * DS-OVERFLOW-4 (UX-P3.7b): the side bar's visible view-title actions in the top document, the `...` item left out (the
+ * research probe's `sidebar_title` count).
+ */
+const VIEW_TITLE_ACTIONS = `return [...document.querySelectorAll('.part.sidebar .title-actions .action-item')].filter(item => {
+    const label = item.querySelector('.action-label');
+    const more = label !== null && (label.classList.contains('codicon-toolbar-more') || /more actions/i.test(label.getAttribute('aria-label') ?? ''));
+    return !more && item.getBoundingClientRect().width > 0;
+}).length;`;
+
+/**
  * Measures the state the driver has just reached (UX-P0.10, `measure.ts`): one `[measure]` line per rule that applies;
  * returns the names of the red `hard` rules.
  */
 async function measure(state: NamedState, capture: Capture): Promise<{ red: string[]; layout: Layout; overflowHard: boolean }> {
+    let viewTitleActions: number | undefined;
+    if (state.surface === 'sidebar') {
+        await leaveWebview();
+        viewTitleActions = await script<number>(VIEW_TITLE_ACTIONS);
+    }
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
     await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
     // A state that declares its settled truths has them re-checked here, before the collector reads (UX-P3.1b).
@@ -1617,7 +1650,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
     if (settled !== undefined) {
         await settleOrReport(state.name, settled());
     }
-    const layout = await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment, cellList(state.name));
+    const layout = { ...await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment, cellList(state.name)), viewTitleActions };
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;
     const before = chromeReferences.get(key);
     // Measured against the reference as it stood; then an element (or first row) the reference lacked joins it.

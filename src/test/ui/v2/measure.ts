@@ -187,6 +187,8 @@ const POPUP_STATES: readonly string[] = ['main-quicksearch-open', 'main-quicksea
 /** The popup's state cells: their markers are DS-STATE-1's; the list-cell rules (a bar, a banner, a welcome sentence) do not read a popup row. */
 const POPUP_CELL_STATES: readonly string[] = ['main-quicksearch-loading', 'main-quicksearch-error'];
 const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES];
+/** UX-P3.7b (design-advisor ruling, trigger 1): the filtered sidebar shows `k of N` text in the badge's place (DS-COPY-5) and no row badge; the badge rules have nothing to read. */
+const NO_BADGE_STATES: readonly string[] = ['sidebar-filter'];
 /**
  * The states without a list row by design. The quick-search popup states stay here: a popup option is no list row, and the
  * `popup` scope of DS-RADIUS-2 and DS-HEIGHT-2 reads it (design-advisor ruling of 2026-11-06, UX-P3.2).
@@ -263,7 +265,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
-    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES] }),
+    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
@@ -300,9 +302,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines are P3.9's.
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -319,6 +321,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: NO_ROW_STATES }),
+    // UX-P3.7b (design trigger 6, design-advisor ruling): the sidebar's view-title actions, read by the capture suite in the top document.
+    rule('DS-OVERFLOW-4', { helper: 6, scopes: { sidebar: { pending: 'P3.7b' } }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'] }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -563,6 +567,8 @@ export function rowLeftsOf(state: string, layout: Layout): RowLefts | undefined 
 export interface Layout {
     /** Whether the webview root was found; every rule is `not measurable` without it. */
     root: boolean;
+    /** DS-OVERFLOW-4 (UX-P3.7b): the side bar's visible view-title actions, `...` left out; read by the suite in the top document. */
+    viewTitleActions?: number;
     /** The visible elements DS-GRID-1 read. */
     examined: number;
     /** Spacing values off the ramp: `selector prop value`, at most 12, and their count. */
@@ -1053,16 +1059,19 @@ const sections = [...scope.querySelectorAll('[data-testid^="section-box-"]')].fi
         ...headerFacts(box),
     };
 });
-// DS-INSET-2: the main header's top and bottom against its row boxes; start and end as the leaf union reads them.
-const mainHeaderInsets = () => {
-    const insets = contentInsets(header);
+// DS-INSET-2: a header's top and bottom against its row boxes (the main header since UX-P2.7, the sidebar header since
+// UX-P3.7b: the source line's 16 px line box holds an 11 px text whose glyph box starts 1.5 below it); start and end as the
+// leaf union reads them.
+const rowInsets = box => {
+    const insets = contentInsets(box);
     if (!insets) return insets;
-    const rows = [...header.children].filter(visible).filter(el => !/absolute|fixed/.test(getComputedStyle(el).position));
+    const rows = [...box.children].filter(visible).filter(el => !/absolute|fixed/.test(getComputedStyle(el).position));
     if (rows.length === 0) return insets;
-    const outer = header.getBoundingClientRect();
-    const style = getComputedStyle(header);
+    const outer = box.getBoundingClientRect();
+    const style = getComputedStyle(box);
     return { ...insets, top: round(rows[0].getBoundingClientRect().top - outer.top - px(style.borderTopWidth)), bottom: round(outer.bottom - px(style.borderBottomWidth) - rows[rows.length - 1].getBoundingClientRect().bottom) };
 };
+const mainHeaderInsets = () => rowInsets(header);
 const toolbars = [...scope.querySelectorAll('[data-testid="installed-toolbar"], [data-testid="updates-toolbar"]')].filter(visible).map(box => ({ id: box.dataset.testid, insets: contentInsets(box) }));
 const header = scope.querySelector('[data-testid="main-header"]');
 const sidebarHeader = rootTestId === 'nuiget-sidebar' ? root.querySelector('.nuiget-sidebar-header') : null;
@@ -1663,7 +1672,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? contentInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -2566,6 +2575,11 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return notMeasurable();
             }
             return { value: facts.sideways.length === 0 ? 'no sideways scroll' : `sideways: ${facts.sideways.join('; ')}`, pass: facts.sideways.length === 0 };
+        case 'DS-OVERFLOW-4':
+            if (layout.viewTitleActions === undefined) {
+                return notMeasurable('the suite read no view title');
+            }
+            return { value: `view-title actions ${layout.viewTitleActions} (target ≤ 4)`, pass: layout.viewTitleActions <= 4 };
         case 'DS-OVERFLOW-3': {
             const kind = scope === 'details' ? 'details' : scope === 'tabs' ? 'tabs' : scope === 'main-header' ? 'main-header' : 'toolbars';
             const containers = facts.controlsOut.filter(entry => entry.container === kind);

@@ -55,15 +55,19 @@ describe('package.json menus', () => {
         }
     });
 
-    it('view/title shows the sidebar buttons in order and one command of each switch pair by its context key', () => {
+    it('view/title shows four navigation buttons in order and the two actions under `...`; each switch is one command of its pair by its context key', () => {
         const entries = (menus['view/title'] ?? []).filter(entry => /\bview == nuiget\.sidebarView\b/.test(entry.when ?? ''));
         const position = (entry: MenuEntry): number => Number(/^navigation@(\d+)$/.exec(entry.group ?? '')?.[1] ?? NaN);
-        // Restore, prerelease, project, source, refresh, full view: the order of the 1.x title bar.
-        const order = [...entries].sort((a, b) => position(a) - position(b)).map(entry => entry.command.replace(/Off$/, ''));
+        // DS-OVERFLOW-4 (UX-P3.7b): four navigation buttons, a switch pair counting once: restore, prerelease, project, source.
+        const navigation = entries.filter(entry => /^navigation@/.test(entry.group ?? ''));
+        const order = [...navigation].sort((a, b) => position(a) - position(b)).map(entry => entry.command.replace(/Off$/, ''));
         expect([...new Set(order)]).toEqual([
-            'nuiget.sidebar.toggleRestore', 'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.selectProject',
-            'nuiget.sidebar.selectSource', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView',
+            'nuiget.sidebar.toggleRestore', 'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.selectProject', 'nuiget.sidebar.selectSource',
         ]);
+        expect(new Set(navigation.map(entry => entry.group)).size).toBeLessThanOrEqual(4);
+        // Refresh and Open Full Manager are items of the view's `...` menu, one non-navigation group, in that order.
+        const more = entries.filter(entry => !/^navigation@/.test(entry.group ?? '')).map(entry => `${entry.group}:${entry.command}`);
+        expect(more).toEqual(['1_more@1:nuiget.sidebar.refresh', '1_more@2:nuiget.sidebar.openFullView']);
         // Each switch shows one of its two commands: the one that turns it on while the key is false, and back.
         for (const [on, key] of [['nuiget.sidebar.toggleRestore', 'nuiget.restoreEnabled'], ['nuiget.sidebar.togglePrerelease', 'nuiget.prereleaseEnabled']]) {
             expect(entryOf('view/title', on).when).toBe(`view == nuiget.sidebarView && !${key}`);

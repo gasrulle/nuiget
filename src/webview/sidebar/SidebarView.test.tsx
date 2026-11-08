@@ -368,7 +368,9 @@ describe('sidebar: Installed section', () => {
         const host = await mountWith([]);
         expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('No packages installed.');
         expect(screen.queryByRole('listbox')).toBeNull();
-        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 0');
+        // SB13 (UX-P3.7b): an empty project's header shows no count badge; the empty sentence says it.
+        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed');
+        expect(screen.getByTestId('section-box-installed').querySelector('.nuiget-badge--count')).toBeNull();
 
         await hostSays(() => host.event('session/changed', snapshot(2, '')));
         expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('No .NET projects found in this workspace.');
@@ -377,6 +379,27 @@ describe('sidebar: Installed section', () => {
         expect(host.requests('allProjects/installed')).toHaveLength(1);
         expect(screen.queryByTestId('sidebar-installed-empty')).toBeNull();
         expect(host.requests('installed/get')).toHaveLength(1);
+    });
+
+    it('the header line names the active source: "All sources", a source by its name, an unknown one by its URL (X15, UX-P3.7b)', async () => {
+        const host = await mountWith([pkg('Serilog')]);
+        expect(screen.getByTestId('sidebar-source')).toHaveTextContent('All sources');
+        // The line is no part of the search landmark.
+        expect(screen.getByRole('search')).not.toContainElement(screen.getByTestId('sidebar-source'));
+        await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }], failed: [] }));
+        await hostSays(() => host.event('session/changed', { ...snapshot(2, A), selectedSource: 'https://api.nuget.org/v3/index.json' }));
+        expect(screen.getByTestId('sidebar-source')).toHaveTextContent('Package source nuget.org');
+        expect(screen.getByTestId('sidebar-source')).toHaveAttribute('title', 'https://api.nuget.org/v3/index.json');
+        await hostSays(() => host.event('session/changed', { ...snapshot(3, A), selectedSource: 'https://feed.example/v3/index.json' }));
+        expect(screen.getByTestId('sidebar-source')).toHaveTextContent('https://feed.example/v3/index.json');
+    });
+
+    it('a loading list shows the spinner and no count badge (SB13, UX-P3.7b)', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        expect(screen.getByTestId('section-box-installed').querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(screen.getByTestId('section-box-installed').querySelector('.nuiget-badge--count')).toBeNull();
     });
 
     it('All Projects: one section per project over allProjects/installed, in folder order, and uninstall sends the row\'s project', async () => {
@@ -389,10 +412,13 @@ describe('sidebar: Installed section', () => {
         const projects = [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w2' }];
         await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog')] } } }));
-        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq'), pkg('xunit')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'provisional', isCpm: false, packages: [pkg('Moq'), pkg('xunit')] } } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
 
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 3');
+        // SB10 (UX-P3.7b): a provisional project's header says so under All Projects; an authoritative one does not.
+        expect(screen.getByTestId('sidebar-installed-provisional-lib')).toHaveTextContent('provisional');
+        expect(screen.queryByTestId('sidebar-installed-provisional-app')).toBeNull();
         expect(screen.getAllByText(/^w[12]$/).map(element => element.textContent)).toEqual(['w1', 'w2']);
         expect(screen.getByTestId('section-header-project-app').closest('h3')).not.toBeNull();
         const lib = screen.getByTestId('sidebar-installed-list-lib');
@@ -412,8 +438,8 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByRole('search')).toContainElement(search);
         await userEvent.type(search, '@installed SERI');
         expect(names()).toEqual(['Serilog', 'Serilog.Sinks.Console']);
-        // The count is of the project, not of the filter.
-        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 3');
+        // The count reads the filter, "k of N" in the badge's place (DS-COPY-5, UX-P3.7b).
+        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2 of 3');
         await userEvent.type(search, 'x');
         expect(screen.getByTestId('sidebar-installed-empty')).toHaveTextContent('No installed packages match "SERIx".');
         await userEvent.clear(search);

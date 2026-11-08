@@ -49,6 +49,8 @@ describe('2.0 sidebar parity', () => {
         await openSidebarView();
         await enterSidebarWebview();
         await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row', 120_000);
+        // The header's actions show on the section's hover (UX-P3.7b): rest the pointer on the Updates header first.
+        await driverOf().actions().move({ origin: await findByTestId('section-header-updates', 30_000) }).perform();
         await (await findByTestId('sidebar-update-all-button', 30_000)).click();
         try {
             const dialog = await findByTestId('confirm-dialog', 10_000);

@@ -125,9 +125,7 @@ export function statusBadges(result: InstalledResult | undefined, marker?: strin
 }
 
 /**
- * The single-project group row's count: the total, `k of N` while a filter is on. While the vulnerability data is unknown
- * `@vulnerable` counts nothing, so the count stays the total.
+ * The single-project group row's count: the total, `k of N` while a filter is on (shared with the sidebar, UX-P3.7b). While the
+ * vulnerability data is unknown `@vulnerable` counts nothing, so the count stays the total.
  */
-export function directCount(total: number, shown: number, filtering: boolean): number | string {
-    return filtering ? `${shown} of ${total}` : total;
-}
+export { directCount } from '../../../shared/counts';

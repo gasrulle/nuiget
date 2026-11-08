@@ -31,10 +31,10 @@ does. Rows, buttons, inputs, selects, check boxes and icons are the same in both
 Both surfaces show the **same active context** — project, source, prerelease, restore toggle —
 owned by the host (`SessionStore`). Changing it in one surface changes it in the other within one
 broadcast. The active project and source are always visible: in the main panel as the header's selectors; in the
-sidebar the view title names the project and the title-bar actions show the source, prerelease and restore state (at
-most four actions in the title bar, the rest in its `...` menu). Where the sidebar names the source in words is ruled
-in the sidebar phase (X15): the single-view container hides the view description, so the choices are the title string
-or a line in the webview's own header.
+sidebar the view title names the project, the header line under it names the source (`sidebar-source`; "All sources"
+when none is selected), and the title-bar actions show the restore and pre-release state and the project and source
+pickers (four actions, DS-OVERFLOW-4); Refresh and Open Full Manager are items of its `...` menu. A sidebar section
+header shows its actions on the section's hover and focus, as the workbench's pane headers do (UX-P3.7b).
 
 The main panel header shows the title "Manage NuGet packages", the Restore after operations and
 Include prerelease check boxes, the project and source selectors (a source the host could not reach
@@ -296,6 +296,8 @@ State markers (§4) and layer roots:
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
 | `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
+| `sidebar-installed-provisional-<name>` | The same badge on one project's header under All Projects (UX-P3.7b; P3.7c moves it to the group row) |
+| `sidebar-source` | The sidebar header line that names the active source (UX-P3.7b) |
 | `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog`, `multi-install-button` | Dialog roots (central package management preview, install into several projects), the preview's *Update Central Version* button and the details pane's *Install in Projects...* |
 
 All Projects (§3; `<name>` = project name lower-cased):

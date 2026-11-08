@@ -299,12 +299,12 @@
                 {
                     "command": "nuiget.sidebar.refresh",
                     "when": "view == nuiget.sidebarView",
-                    "group": "navigation@4"
+                    "group": "1_more@1"
                 },
                 {
                     "command": "nuiget.sidebar.openFullView",
                     "when": "view == nuiget.sidebarView",
-                    "group": "navigation@5"
+                    "group": "1_more@2"
                 }
             ],
             "webview/context": [

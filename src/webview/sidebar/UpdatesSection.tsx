@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../protocol';
 import { groupByFolder } from '../shared/allProjects/folderGroups';
+import { directCount } from '../shared/counts';
 import { isCentral, whyNotUpdatable } from '../shared/installed/rules';
 import { ArrowUpIcon, Banner, ConfirmDialog, cssVars, EmptyState, IconButton, SectionHeader, Skeleton } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -126,7 +127,11 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     const { run } = useOpsActions();
     const [confirming, setConfirming] = useState(false);
 
+    // The total once the list is settled; the header shows no badge at 0 and `k of N` while a filter is on (DS-COPY-5, SB13; UX-P3.7b).
     let count: number | undefined;
+    let shown = 0;
+    const needle = filter.trim().toLowerCase();
+    const shownOf = (list: ReadonlyArray<{ id: string }>): number => list.filter(entry => entry.id.toLowerCase().includes(needle)).length;
     let busy = updates.status === 'loading' || updates.revalidating;
     let content: React.ReactNode;
     // What Update all takes, per project (one group outside All Projects).
@@ -141,6 +146,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
             .filter(group => group.updates.length > 0);
         if (stream.status === 'ready' && !stream.sourcesUnavailable && chunks.every(chunk => chunk.error === undefined)) {
             count = chunks.reduce((sum, chunk) => sum + chunk.updates.length, 0);
+            shown = chunks.reduce((sum, chunk) => sum + shownOf(chunk.updates), 0);
         }
         const render = (chunk: ProjectUpdatesChunk) => (
             <ProjectSection key={chunk.projectPath} chunk={chunk} installed={all.chunks.get(chunk.projectPath)?.result} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} revalidating={stream.revalidating} onRetry={stream.refreshUpdates} />
@@ -172,6 +178,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     } else {
         if (updates.status === 'ready' && !updates.sourcesUnavailable) {
             count = rows.length;
+            shown = shownOf(rows);
         }
         const single = updateCandidates(rows, installed.result, filter, id => isPackageBusy(projectPath, id));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
@@ -227,7 +234,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 variant="pane"
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
-                count={count}
+                count={count === undefined ? undefined : needle !== '' ? directCount(count, shown, true) : count > 0 ? count : undefined}
                 busy={busy}
                 actions={count !== undefined && count > 0 && (all.active || installed.result?.unsupported === undefined) ? (
                     <IconButton label={`Update all (${candidates.length})`} data-testid="sidebar-update-all-button" disabled={candidates.length === 0} onClick={() => setConfirming(true)}>

@@ -79,6 +79,21 @@ describe('sidebar layout', () => {
         expect(sash()).toBeNull();
     });
 
+    it('a collapsed section opens in its filter mode and is collapsed again after it (SB2, UX-P3.7b)', async () => {
+        const user = userEvent.setup();
+        const store = storeWith({ layout: { split: 50, installedExpanded: false, updatesExpanded: true } });
+        await mount(store);
+        const toggle = (): HTMLElement => screen.getByTestId('section-header-installed');
+        expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+        const search = screen.getByTestId('sidebar-search-input');
+        await user.type(search, '@installed Seri');
+        expect(toggle()).toHaveAttribute('aria-expanded', 'true');
+        // Opening for the filter writes nothing: the kept layout still says collapsed.
+        expect(store.setState).not.toHaveBeenCalled();
+        await user.clear(search);
+        expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    });
+
     it('readLayout falls back to the default for missing or broken state and clamps the split', () => {
         expect(readLayout(undefined)).toEqual({ split: 50, installedExpanded: true, updatesExpanded: true });
         expect(readLayout(storeWith('nonsense'))).toEqual({ split: 50, installedExpanded: true, updatesExpanded: true });

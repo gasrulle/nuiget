@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type React from 'react';
 import type { ProjectInstalledChunk } from '../../protocol';
 import { groupByFolder } from '../shared/allProjects/folderGroups';
+import { directCount } from '../shared/counts';
 import { Badge, Banner, cssVars, EmptyState, SectionHeader, Skeleton } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
@@ -64,6 +65,10 @@ function ProjectSection({ chunk, filter, announce, revalidating, onRetry }: Proj
                 expanded={expanded}
                 onToggle={() => setExpanded(previous => !previous)}
                 count={result === undefined || (result.unsupported !== undefined && result.packages.length === 0) ? undefined : result.packages.length}
+                // SB10 (UX-P3.7b): a provisional project says so under All Projects too (interaction model §4).
+                badges={result?.fidelity === 'provisional'
+                    ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid={`sidebar-installed-provisional-${name}`}><Badge label="provisional" tone="info" /></span>
+                    : undefined}
             />
             {expanded ? <div id={contentId}>{content}</div> : null}
         </div>
@@ -88,11 +93,19 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
     const contentId = `${baseId}-content`;
     const { projectPath, result } = installed;
 
-    let count: number | undefined;
+    // The header's count (DS-COPY-5, SB13; UX-P3.7b): the total, no badge at 0, `k of N` while a filter is on, "0 of N" included.
+    const needle = filter.trim().toLowerCase();
+    const shownOf = (packages: ReadonlyArray<{ id: string }>): number => packages.filter(entry => entry.id.toLowerCase().includes(needle)).length;
+    const headerCount = (total: number, shown: number): number | string | undefined => (needle !== '' ? directCount(total, shown, true) : total > 0 ? total : undefined);
+    let count: number | string | undefined;
     let content: React.ReactNode;
     if (all.active) {
         const chunks = (all.projects ?? []).map(project => all.chunks.get(project.path)).filter((chunk): chunk is ProjectInstalledChunk => chunk !== undefined);
-        count = chunks.reduce((sum, chunk) => sum + (chunk.result?.packages.length ?? 0), 0);
+        // Only a settled stream counts: no partial total beside the spinner (SB13).
+        count = all.status !== 'ready' ? undefined : headerCount(
+            chunks.reduce((sum, chunk) => sum + (chunk.result?.packages.length ?? 0), 0),
+            chunks.reduce((sum, chunk) => sum + shownOf(chunk.result?.packages ?? []), 0),
+        );
         if (chunks.length === 0) {
             content = all.status === 'error'
                 ? <Banner severity="error" action={{ label: 'Retry', onClick: all.refresh }}>{`The projects could not be listed: ${all.error?.message ?? 'unknown error'}`}</Banner>
@@ -117,7 +130,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
         // An error is shown by the banner above the section; there is nothing to list.
         content = installed.status === 'error' ? null : <Skeleton density="compact" />;
     } else {
-        count = result.packages.length;
+        count = headerCount(result.packages.length, shownOf(result.packages));
         content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 

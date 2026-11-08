@@ -24,8 +24,22 @@ body {
     display: flex;
     flex: none;
     flex-direction: column;
-    gap: var(--nuiget-space-1);
+    gap: var(--nuiget-space-2);
     padding: var(--nuiget-space-2) var(--nuiget-inset-sidebar);
+}
+
+/* The source line: the view's hidden description, one muted line that ellipsizes (X15, UX-P3.7b). */
+.nuiget-sidebar-context {
+    position: relative;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--nuiget-color-fg-muted);
+    font-size: var(--nuiget-font-size-sm);
+    font-weight: var(--nuiget-font-weight-regular);
+    line-height: var(--nuiget-line-height-button);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The section takes the height that is left; its list scrolls inside it. */
@@ -65,6 +79,20 @@ body {
 
 .nuiget-sidebar-section-content:has(.nuiget-sidebar-project) {
     overflow-y: auto;
+}
+
+/*
+ * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with alwaysShowHeaderActions
+ * off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in the accessibility tree and the Tab order.
+ * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets.
+ */
+.nuiget-sidebar-section {
+    --nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0);
+}
+
+.nuiget-sidebar-section:hover,
+.nuiget-sidebar-section:focus-within {
+    --nuiget-section-actions-opacity: 1;
 }
 
 /* A later pane draws its header's top line; the first never (DS-DIVIDER-1, UX-P3.7a). */

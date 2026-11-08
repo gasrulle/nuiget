@@ -761,6 +761,11 @@
     gap: var(--nuiget-space-2);
 }
 
+/* The carrier a context sets to draw the actions on hover and focus only; opacity keeps them in the tree and the Tab order (UX-P3.7b). */
+.nuiget-section-actions {
+    opacity: var(--nuiget-section-actions-opacity, 1);
+}
+
 .nuiget-section-count {
     display: inline-flex;
     flex: none;
@@ -926,8 +931,10 @@
     block-size: var(--nuiget-control-height);
 }
 
+/* A placeholder longer than its field ends in an ellipsis, never mid-word (judge P3.7a sidebar-sections#D5, UX-P3.7b). */
 .nuiget-text-field::placeholder {
     color: var(--nuiget-color-input-placeholder);
+    text-overflow: ellipsis;
 }
 
 .nuiget-text-field::-webkit-search-cancel-button {

@@ -6,6 +6,8 @@ import { SearchBox } from '../shared/search/SearchBox';
 import { useConfig } from '../shared/store/config';
 import { useInstalled } from '../shared/store/installed';
 import { useSearch } from '../shared/store/search';
+import { useSession } from '../shared/store/session';
+import { useSources } from '../shared/store/sources';
 import { BrowseResults } from './BrowseResults';
 import { InstalledSection } from './InstalledSection';
 import { UpdatesSection } from './UpdatesSection';
@@ -60,6 +62,10 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     // `workbench.tree.indent` indents the All Projects levels; the settings come once asked (the config slice is lazy).
     const { config, enable: enableConfig } = useConfig();
     useEffect(() => enableConfig(), [enableConfig]);
+    // The header line names the active source (X15, UX-P3.7b): the sources slice is lazy, enabled here.
+    const { session } = useSession();
+    const { sources, enable: enableSources } = useSources();
+    useEffect(() => enableSources(), [enableSources]);
     const { search: runSearch, clear: clearSearch } = useSearch();
     const [query, setQuery] = useState('');
     const { announce, live, searchRef } = useShellChrome();
@@ -86,6 +92,11 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     // `@vulnerable` is no mode here: the text is searched for like any other.
     const mode = parsed.mode === 'vulnerable' ? 'browse' : parsed.mode;
     const browseText = mode === 'browse' ? query.trim() : '';
+    // A filter mode opens its section whatever the kept layout says, and never writes the layout (SB2, UX-P3.7b).
+    // Keyed by the mode, so entering a filter mode opens its section in the same render.
+    const [filterState, setFilterState] = useState<{ mode: string; open: boolean }>({ mode: 'default', open: true });
+    const filterOpen = filterState.mode === mode ? filterState.open : true;
+    const setFilterOpen = (toggle: (open: boolean) => boolean): void => setFilterState({ mode, open: toggle(filterOpen) });
     useEffect(() => {
         if (browseText.length === 0) {
             clearSearch();
@@ -108,25 +119,37 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const unsupported = installed.result?.unsupported;
     // The sash stands between the two sections while both are shown and open.
     const bothOpen = mode === 'default' && layout.installedExpanded && layout.updatesExpanded;
+    const selectedSource = session?.selectedSource ?? 'all';
+    const sourceName = selectedSource === 'all' ? undefined : (sources?.find(source => source.url === selectedSource)?.name ?? selectedSource);
     return (
         <main className="nuiget-sidebar" data-testid="nuiget-sidebar" style={cssVars({ '--nuiget-tree-indent': `${config?.treeIndent ?? 8}px` })}>
-            <div className="nuiget-sidebar-header" role="search">
-                <SearchBox
-                    inputRef={searchRef}
-                    testId="sidebar-search-input"
-                    label="Search packages, or filter with @installed or @updates"
-                    placeholder="Search, or filter: @installed, @updates"
-                    prefixes={PREFIXES}
-                    value={query}
-                    onChange={setQuery}
-                    onSubmit={() => {
-                        // Enter does not wait: the pending search for the same text is not sent as well.
-                        clearTimeout(debounce.current);
-                        if (browseText.length > 0) {
-                            runSearch(browseText);
-                        }
-                    }}
-                />
+            <div className="nuiget-sidebar-header">
+                {sourceName === undefined
+                    ? <p className="nuiget-sidebar-context" data-testid="sidebar-source">All sources</p>
+                    : (
+                        <p className="nuiget-sidebar-context" data-testid="sidebar-source" title={selectedSource}>
+                            <span className="nuiget-visually-hidden">Package source </span>
+                            {sourceName}
+                        </p>
+                    )}
+                <div className="nuiget-sidebar-search" role="search">
+                    <SearchBox
+                        inputRef={searchRef}
+                        testId="sidebar-search-input"
+                        label="Search packages, or filter with @installed or @updates"
+                        placeholder="Search, or filter: @installed, @updates"
+                        prefixes={PREFIXES}
+                        value={query}
+                        onChange={setQuery}
+                        onSubmit={() => {
+                            // Enter does not wait: the pending search for the same text is not sent as well.
+                            clearTimeout(debounce.current);
+                            if (browseText.length > 0) {
+                                runSearch(browseText);
+                            }
+                        }}
+                    />
+                </div>
                 {installed.revalidating && mode !== 'browse' ? <ProgressBar label="Refreshing installed packages" /> : null}
             </div>
             {mode === 'browse' ? <BrowseResults announce={announce} /> : (
@@ -139,8 +162,8 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                         <InstalledSection
                             filter={mode === 'installed' ? parsed.filterText : ''}
                             announce={announce}
-                            expanded={layout.installedExpanded}
-                            onToggle={() => changeLayout({ ...layout, installedExpanded: !layout.installedExpanded })}
+                            expanded={mode === 'installed' ? filterOpen : layout.installedExpanded}
+                            onToggle={mode === 'installed' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, installedExpanded: !layout.installedExpanded })}
                             share={bothOpen ? String(layout.split) : undefined}
                         />
                     ) : null}
@@ -160,8 +183,8 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                         <UpdatesSection
                             filter={mode === 'updates' ? parsed.filterText : ''}
                             announce={announce}
-                            expanded={layout.updatesExpanded}
-                            onToggle={() => changeLayout({ ...layout, updatesExpanded: !layout.updatesExpanded })}
+                            expanded={mode === 'updates' ? filterOpen : layout.updatesExpanded}
+                            onToggle={mode === 'updates' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, updatesExpanded: !layout.updatesExpanded })}
                             share={bothOpen ? String(100 - layout.split) : undefined}
                         />
                     ) : null}

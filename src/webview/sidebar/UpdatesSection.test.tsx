@@ -160,11 +160,24 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('ops/update')).toHaveLength(0);
     });
 
-    it('a complete empty answer says "No updates available" and counts 0; the header collapses the section', async () => {
+    it('@updates with text counts the matches as "k of N", "0 of N" included (DS-COPY-5, UX-P3.7b)', async () => {
+        const user = userEvent.setup();
+        await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72'), update('Serilog', '3.0.0', '3.1.1')] }, [pkg('Moq', '4.18.0'), pkg('Serilog', '3.0.0')]);
+        expect(header()).toHaveAccessibleName('Updates 2');
+        const search = screen.getByTestId('sidebar-search-input');
+        await user.type(search, '@updates ser');
+        expect(header()).toHaveAccessibleName('Updates 1 of 2');
+        await user.type(search, 'zz');
+        expect(header()).toHaveAccessibleName('Updates 0 of 2');
+    });
+
+    it('a complete empty answer says "No updates available" and shows no count; the header collapses the section', async () => {
         const user = userEvent.setup();
         await mountWith({ updates: [] });
         expect(screen.getByTestId('sidebar-updates-empty')).toHaveTextContent('No updates available.');
-        expect(header()).toHaveAccessibleName('Updates 0');
+        // SB13 (UX-P3.7b): no 0 badge; the sentence says it.
+        expect(header()).toHaveAccessibleName('Updates');
+        expect(screen.getByTestId('section-box-updates').querySelector('.nuiget-badge--count')).toBeNull();
         expect(header()).toHaveAttribute('aria-expanded', 'true');
         await user.click(header());
         expect(header()).toHaveAttribute('aria-expanded', 'false');

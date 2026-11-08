@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The sidebar names the active package source** — A line above the search box shows the source the lists come from.
 - **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
 
 ### Changed
@@ -41,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Adding a package source checks the URL in place, and Credentials shows whether its fields are open**
 - **Side bar package rows are as compact as VS Code's own tree rows, and a long version gives way before the package name**
 - **Sidebar section titles line up with the package names below them**
+- **The sidebar title bar keeps four buttons, with Refresh and Open Full Manager in its menu**
+- **Filtering the sidebar opens a collapsed section and counts the matches**
+- **Under All Projects, a sidebar project whose packages are still being read says provisional**
+- **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 
 ### Fixed
 - **A package stays marked busy while its operation waits in the queue**

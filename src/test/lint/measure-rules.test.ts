@@ -55,7 +55,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1',
@@ -167,6 +167,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-ICON-4')?.states).toEqual(['main-installed-details', 'main-transitive-details']);
         expect(scopes('DS-DENSITY-1')).toEqual({ ...mainHard(), sidebar: 'hard' });
         expect(scopes('DS-OVERFLOW-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard' });
+        expect(scopes('DS-OVERFLOW-4')).toEqual({ sidebar: { pending: 'P3.7b' } });
+        // UX-P3.7b: DS-OVERFLOW-4 reads the suite's count of the side bar's view-title actions.
+        expect(lineOf('sidebar-sections', layout({ viewTitleActions: 4 }), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: true, value: 'view-title actions 4 (target ≤ 4)' });
+        expect(lineOf('sidebar-sections', layout({ viewTitleActions: 6 }), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: false });
+        expect(lineOf('sidebar-sections', layout(), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: false, value: 'not measurable (the suite read no view title)' });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
@@ -213,7 +218,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0,
         });
@@ -803,7 +808,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
-            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList]);
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList, 'sidebar-filter']); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3)
             expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
         }
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;

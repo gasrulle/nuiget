@@ -109,6 +109,7 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
  * list does: masked whole, since a version of another length moves the name's ellipsis point (UX-P0.fix-2, P0 phase review).
  */
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
+const LIVE_SIDEBAR_CARET: Mask = { selector: '[data-testid="sidebar-search-input"]', reason: 'the caret blinks in the sidebar search box (UX-P3.7b)' };
 /** The main Updates list: the newest versions on nuget.org change between runs. */
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };
@@ -212,6 +213,8 @@ export const STATES: readonly NamedState[] = [
     ], 'The nUIget side bar view with Gateway selected; the Installed section lists package-row-serilog and the Updates section has a row.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-hover', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
         'Gateway selected; the pointer rests on package-row-serilog in the Installed section: the hovered band and its action (DS-ROW-3, DS-INSET-3 a; UX-P3.7a).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
+    { ...ready('sidebar-filter', 'sidebar', [primary('sidebar')],
+        '"@installed Seri" typed in the sidebar search box: the Installed section alone, open, its header reading "k of N" in the badge\'s place (DS-COPY-5), the Serilog rows; the box is cleared after the capture (UX-P3.7b).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
     { ...ready('sidebar-narrow-200px', 'sidebar', [{ theme: 'dark-modern', look: 'modern', width: 200 }],
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],
