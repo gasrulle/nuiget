@@ -112,10 +112,20 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: 10.0.x
 
-      - run: dotnet --version
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -162,10 +172,20 @@ jobs:
           node-version-file: .nvmrc
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: 10.0.x
 
-      - run: dotnet --version
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - name: Probe the SDK and compare with the tracked fixture
         run: node scripts/probe-sdk.mjs --check --out sdk-probe.json
@@ -201,8 +221,20 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: 10.0.x
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - name: Warm up dotnet
         run: dotnet --version && dotnet msbuild -version
@@ -291,10 +323,22 @@ jobs:
       # SDK 10 for the product, and the exact SDK that the dense workspace's Unsupported project pins in its
       # global.json (never 8.0.x: a different patch would not resolve, and the project would read as supported).
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: |
             10.0.x
             8.0.425
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -423,10 +467,22 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: |
             10.0.x
             8.0.425
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -512,10 +568,22 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: |
             10.0.x
             8.0.425
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -625,10 +693,22 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: |
             10.0.x
             8.0.425
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -712,10 +792,22 @@ jobs:
           cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: |
             10.0.x
             8.0.425
+
+      - name: Check that dotnet resolves SDK 10
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - run: npm ci --no-audit --no-fund
 
@@ -876,7 +968,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # Informational (plan P7.2a): times the dotnet commands the extension runs; docs/perf-baseline.md cites one run.
-  # No npm ci (the script uses Node built-ins only) and no warm-up: the SDK probe row is the job's first dotnet call.
+  # No npm ci (the script uses Node built-ins only) and no warm-up: the SDK probe row is the job's first dotnet call,
+  # so the SDK 10 check runs after Measure.
   perf:
     name: Perf baseline (informational)
     runs-on: ubuntu-latest
@@ -892,11 +985,24 @@ jobs:
           node-version-file: .nvmrc
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           dotnet-version: 10.0.x
 
       - name: Measure
         run: node scripts/perf-baseline.mjs --out "$RUNNER_TEMP/perf-baseline.json" --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Check that dotnet resolves SDK 10
+        if: always()
+        shell: bash
+        run: |
+          version=$(dotnet --version)
+          echo "resolves .NET SDK $version"
+          case "$version" in
+            10.*) ;;
+            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+          esac
 
       - name: Upload the measurement
         if: always()
