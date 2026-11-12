@@ -1097,6 +1097,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lines.find(line => line.name === 'SPEC@main-transitive-details/list')?.value).not.toContain('transitive-details');
     });
 
+    it('reads a composed row action from the instance in the current row, the bare key elsewhere (UX-P3.fix-1)', () => {
+        const element = (x: number, y: number, w: number, h: number): SpecElement => ({ rect: { x, y, w, h }, inset: x, padding: '0px 0px 0px 0px', gap: 'normal normal' });
+        const spec: SpecLook = {
+            'package-row-first': element(0, 175, 327, 72),
+            'package-row-sixth': element(0, 535, 327, 72),
+            'row-action-uninstall': { ...element(299, 560, 22, 22), composed: 'main-details-readme' },
+        };
+        const rows = { 'package-row-first': element(0, 175, 327, 72), 'package-row-sixth': { ...element(0, 535, 327, 72), current: true as const } };
+        const listOf = (state: string, testIds: Record<string, SpecElement>) =>
+            measureLines(state, layout({ testIds }), 'modern', {}, undefined, 932, spec).find(line => line.name === `SPEC@${state}/list`);
+        // The collector keys the first row's action bare and flags the current row's instance; the spec draws the current row's.
+        const flagged = { ...rows, 'row-action-uninstall': element(299, 200, 22, 22), 'row-action-uninstall#6': { ...element(299, 560, 22, 22), current: true as const } };
+        expect(listOf('main-details-readme', flagged)).toMatchObject({ pass: true, value: '3/3 within 1' });
+        // Without a flagged instance the bare key is read, as before.
+        const unflagged = { ...rows, 'row-action-uninstall': element(299, 200, 22, 22), 'row-action-uninstall#6': element(299, 560, 22, 22) };
+        expect(listOf('main-details-readme', unflagged)).toMatchObject({ pass: false, value: expect.stringContaining('off: row-action-uninstall Δy -360') });
+        // Outside its composed state the id is not required.
+        expect(listOf('main-installed-single', flagged)).toMatchObject({ pass: true, value: '2/2 within 1; composed (main-details-readme): row-action-uninstall' });
+    });
+
     it('holds DS-SCROLL-1 to the look\'s bar thickness in every scrolling list and the root\'s scrollbar-color reset (UX-P0.22)', () => {
         const scroller = (label: string, size: number) => ({ label, left: 0, top: 0, width: 300, height: 200, right: 300, size, thumb: 50, backdrop: 'rgb(30, 30, 30)' });
         const bars = (rootColor: string, ...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor, slider: '#79797966', scrollers } });

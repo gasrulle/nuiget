@@ -660,6 +660,8 @@ export interface SpecElement {
     tokens?: string[];
     /** The state this element is compared in, when the artboard composes it beyond the state it specifies (UX-P2.8a). */
     composed?: string;
+    /** The product's instance inside the row made current (`aria-current="true"` on its option); written by the collector, never by the export (UX-P3.fix-1). */
+    current?: true;
 }
 
 /** The elements of one look of an artboard spec, by test id (a repeated id as `id#2`). */
@@ -1660,7 +1662,8 @@ const endOfP0 = {
     unselectable,
 };
 // UX-P0.13 helper 8: every element under the root with a test id, read as the artboard export reads its panel
-// (zz-artboards.ui.test.ts, SPEC): document order, a repeated id numbered #2, #3, rects relative to the root.
+// (zz-artboards.ui.test.ts, SPEC): document order, a repeated id numbered #2, #3, rects relative to the root. The instance in
+// the current row is flagged, never re-keyed (UX-P3.fix-1); read without a visibility filter: a row action is hidden by DS-ROW-4.
 const rootBox = root.getBoundingClientRect();
 const testIds = {};
 for (const el of root.querySelectorAll('[data-testid]')) {
@@ -1675,6 +1678,7 @@ for (const el of root.querySelectorAll('[data-testid]')) {
         inset: round(r.left - rootBox.left + px(s.borderLeftWidth) + px(s.paddingLeft)),
         padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
         gap: [s.rowGap, s.columnGap].join(' '),
+        ...(el.closest('[data-testid^="package-row-"]')?.querySelector('.nuiget-row-option')?.getAttribute('aria-current') === 'true' ? { current: true } : {}),
     };
 }
 // UX-P0.22 (DS-SCROLL-1): every visible element with a vertical scrollbar, the root's scrollbar-color and the slider token.
@@ -3197,8 +3201,12 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5 && inner.y >= outer.y - 0.5 && inner.y + inner.h <= outer.y + outer.h + 0.5;
     };
     let relative = false;
+    // UX-P3.fix-1: an id the artboard composes for this state is the current row's instance, the bare key when none is flagged.
+    const instanceOf = (id: string): SpecElement | undefined => (spec[id].composed === state
+        ? Object.entries(layout.testIds).find(([key, entry]) => (key === id || key.startsWith(`${id}#`)) && entry.current === true)?.[1] ?? layout.testIds[id]
+        : layout.testIds[id]);
     for (const id of required) {
-        const actual = layout.testIds[id];
+        const actual = instanceOf(id);
         if (actual === undefined) {
             continue;
         }

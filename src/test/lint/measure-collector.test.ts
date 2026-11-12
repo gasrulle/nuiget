@@ -690,6 +690,26 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().testIds['select-all-button#2']).toMatchObject({ rect: { x: 120, y: 74, w: 80, h: 26 }, inset: 133 });
     });
 
+    it('flags the test ids inside the row made current, the keys unchanged (SPEC, UX-P3.fix-1)', () => {
+        const row = (id: string, top: number, current: boolean) => `<div class="nuiget-row" data-testid="package-row-${id}" data-rect="0,${top},600,${top + 72}">
+            <div class="nuiget-row-option" role="treeitem"${current ? ' aria-current="true"' : ''} data-rect="0,${top},600,${top + 72}"></div>
+            <div class="nuiget-row-actions" aria-hidden="true" data-rect="560,${top},600,${top + 72}"><button class="nuiget-icon-button" data-testid="row-action-uninstall" data-rect="572,${top + 25},594,${top + 47}"></button></div>
+          </div>`;
+        document.body.innerHTML = `<main data-testid="nuiget-app" data-rect="0,0,600,700">
+          <div class="nuiget-listbox" role="tree" data-testid="installed-list" data-rect="0,70,600,400">${row('a', 70, false)}${row('b', 142, true)}${row('c', 214, false)}</div>
+        </main>`;
+        const testIds = collect().testIds;
+        expect(testIds['row-action-uninstall']).toMatchObject({ rect: { x: 572, y: 95, w: 22, h: 22 } });
+        expect(testIds['row-action-uninstall'].current).toBeUndefined();
+        expect(testIds['row-action-uninstall#2']).toMatchObject({ rect: { x: 572, y: 167, w: 22, h: 22 }, current: true });
+        expect(testIds['row-action-uninstall#3']).toMatchObject({ rect: { x: 572, y: 239, w: 22, h: 22 } });
+        expect(testIds['row-action-uninstall#3'].current).toBeUndefined();
+        expect(testIds['package-row-b']).toMatchObject({ current: true });
+        expect(testIds['package-row-a'].current).toBeUndefined();
+        document.querySelector('[aria-current="true"]')?.removeAttribute('aria-current');
+        expect(Object.values(collect().testIds).filter(entry => entry.current !== undefined)).toEqual([]);
+    });
+
     it('answers a missing root with an empty layout', () => {
         expect(collect('nuiget-sidebar')).toMatchObject({ root: false, sections: [], centring: [] });
     });
