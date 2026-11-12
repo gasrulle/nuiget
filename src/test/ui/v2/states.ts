@@ -105,8 +105,9 @@ const LIVE_MOTION: Mask = { selector: '.nuiget-progress, .nuiget-skeleton', reas
 /** The package icon of every comfortable row (UX-P0.15, design-advisor ruling of CI run 40097664968). */
 const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icons are resolved by the host per run: the breaker race (X2, V31; P7.1) and any failed fetch leave the default icon, so which rows show one differs between runs' };
 /**
- * The side bar's Updates list and the Update-all dialog's list show the newest versions on nuget.org, as `main-updates`'
- * list does: masked whole, since a version of another length moves the name's ellipsis point (UX-P0.fix-2, P0 phase review).
+ * The side bar's Updates list shows the newest versions on nuget.org, as `main-updates`' list does: masked whole, since a
+ * version of another length moves the name's ellipsis point (UX-P0.fix-2, P0 phase review). The Update-all dialog lists
+ * them too, and its surface's height and top follow the list's wrapping: the surface is masked, not the list (UX-P3.fix-2).
  */
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_SIDEBAR_CARET: Mask = { selector: '[data-testid="sidebar-search-input"]', reason: 'the caret blinks in the sidebar search box (UX-P3.7b)' };
@@ -114,7 +115,7 @@ const LIVE_SIDEBAR_CARET: Mask = { selector: '[data-testid="sidebar-search-input
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };
 const LIVE_DIALOG_TITLE: Mask = { selector: '.nuiget-dialog-title', reason: 'the title names the newest version on nuget.org' };
-const LIVE_BULK_LIST: Mask = { selector: '.nuiget-dialog-list', reason: 'the dialog lists the newest versions on nuget.org' };
+const LIVE_BULK_LIST: Mask = { selector: '.nuiget-dialog', reason: 'the dialog surface\'s height and top follow the wrapping of its list of the newest versions on nuget.org' };
 
 /**
  * A state at 0 px on a run and its rerun of one SHA compares with a zero `diffTolerance` (UX-P0.15, CI run 40097664968 and its

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ActivityBar, By, VSBrowser, type WebDriver, type WebElement } from 'vscode-extension-tester';
+import { ActivityBar, By, Key, VSBrowser, type WebDriver, type WebElement } from 'vscode-extension-tester';
 import type { LegacyState } from './states';
 
 /**
@@ -50,6 +50,33 @@ export async function poll<T>(probe: () => Promise<T | undefined>, what: string,
         }
         await new Promise(resolve => setTimeout(resolve, POLL_MS));
     }
+}
+
+/**
+ * Replaces the text of a box by typing, and holds it until the box reads exactly `text` (UX-P3.fix-2). Run 43298630096
+ * read `updates` where `@updates` was typed: a key was lost, the filter became a browse search and four waits timed
+ * out in a cascade. Each poll step that reads another value logs a `[typed]` line and types the text again; `poll`
+ * counts the throw as "not yet" and names the last value read when the budget runs out.
+ */
+export async function typeHeld(box: WebElement, text: string, what: string, timeoutMs = 10_000): Promise<void> {
+    const modifier = process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL;
+    const type = async (): Promise<void> => {
+        await box.click();
+        await box.sendKeys(Key.chord(modifier, 'a'), Key.BACK_SPACE);
+        if (text.length > 0) {
+            await box.sendKeys(text);
+        }
+    };
+    await type();
+    await poll(async () => {
+        const value = await box.getAttribute('value');
+        if (value === text) {
+            return true;
+        }
+        console.warn(`[typed] ${what}: the box read "${value}", retyped`);
+        await type();
+        throw new Error(`the box read "${value}" instead of "${text}"`);
+    }, `the box to read "${text}" (${what})`, timeoutMs);
 }
 
 /** Opens the nUIget view from the Activity Bar; the control appears once the extension has activated. */

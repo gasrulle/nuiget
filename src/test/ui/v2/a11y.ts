@@ -299,7 +299,7 @@ try {
 }
 `;
 
-/** A committed snapshot: the state and one line per node. */
+/** A committed snapshot: the state and one line per node, a run of live version options one line. */
 export interface AriaSnapshot {
     state: string;
     lines: string[];
@@ -312,7 +312,33 @@ export const maskDigits = (text: string): string => text.replace(/\s+/g, ' ').tr
 export const ariaLine = (node: AriaNode): string =>
     `${'  '.repeat(node.depth)}${node.role} "${maskDigits(node.name)}"${node.states.length > 0 ? ` [${node.states.join(', ')}]` : ''}${node.testid ? ` {${maskDigits(node.testid)}}` : ''}`;
 
-export const ariaSnapshot = (state: string, nodes: readonly AriaNode[]): AriaSnapshot => ({ state, lines: nodes.map(ariaLine) });
+/** A version option whose name is all digits: how many of them a select lists follows nuget.org. */
+const LIVE_OPTION = 'option "#"';
+
+/**
+ * One line per node, except that a run of equal `option "#"` lines under a `combobox` keeps its first line: the native
+ * version select lists every published version, a count that grows with each publish (UX-P3.fix-2, design-advisor
+ * ruling). A capped list (the quick search's versions, a `listbox`) stays enumerated, and an option with a state or a
+ * test id is never merged.
+ */
+export const ariaSnapshot = (state: string, nodes: readonly AriaNode[]): AriaSnapshot => {
+    const lines: string[] = [];
+    // The open ancestors: the nearest preceding node of smaller depth is the parent.
+    const ancestors: AriaNode[] = [];
+    for (const node of nodes) {
+        const line = ariaLine(node);
+        while (ancestors.length > 0 && ancestors[ancestors.length - 1].depth >= node.depth) {
+            ancestors.pop();
+        }
+        const parentRole = ancestors[ancestors.length - 1]?.role;
+        ancestors.push(node);
+        if (line.trim() === LIVE_OPTION && parentRole === 'combobox' && lines[lines.length - 1] === line) {
+            continue;
+        }
+        lines.push(line);
+    }
+    return { state, lines };
+};
 
 /** Lines only in `expected` (removed) and only in `actual` (added), by a longest common subsequence; the first of each. */
 export function compareAria(expected: readonly string[], actual: readonly string[]): { equal: boolean; removed: number; added: number; firstRemoved?: string; firstAdded?: string } {

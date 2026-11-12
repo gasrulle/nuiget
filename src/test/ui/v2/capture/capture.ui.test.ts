@@ -7,7 +7,7 @@ import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } 
 import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
-import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, waitForTestIdGone, waitForText } from '../sidebarWebview';
+import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureExemplar, measureWorkbench } from '../workbench';
 import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
@@ -905,8 +905,7 @@ const REACH: Record<string, Reach> = {
             await openSidebarView();
             await enterSidebarWebview();
             const search = await findByTestId('sidebar-search-input', 60_000);
-            await search.click();
-            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@installed ');
+            await typeHeld(search, '@installed ', 'sidebar-all-projects');
             // Settled: the pane's count shown once every project answered, and the two folder rows at level 1 of the one tree.
             await until('/\\d/.test(document.querySelector(\'[data-testid="section-box-installed"] .nuiget-badge--count\')?.textContent ?? "") && Number(document.querySelector(\'[data-testid="sidebar-installed-list"] [role="treeitem"][aria-level="1"]\')?.getAttribute("aria-setsize")) === 2 && document.querySelector(\'[data-testid="sidebar-installed-list"] .nuiget-spinner\') === null', 'the sidebar\'s All Projects tree settled', 120_000);
             await parkSidebarPointer();
@@ -929,8 +928,7 @@ const REACH: Record<string, Reach> = {
             await openSidebarView();
             await enterSidebarWebview();
             const search = await findByTestId('sidebar-search-input', 60_000);
-            await search.click();
-            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@updates ');
+            await typeHeld(search, '@updates ', 'sidebar-all-projects-updates');
             // Settled: the pane's count shown once every project answered, and the two folder rows at level 1 of the one tree.
             await until('/\\d/.test(document.querySelector(\'[data-testid="section-box-updates"] .nuiget-badge--count\')?.textContent ?? "") && Number(document.querySelector(\'[data-testid="sidebar-updates-list"] [role="treeitem"][aria-level="1"]\')?.getAttribute("aria-setsize")) === 2 && document.querySelector(\'[data-testid="sidebar-updates-list"] .nuiget-spinner\') === null', 'the sidebar\'s All Projects Updates tree settled', 120_000);
             // Pinned at the Tools folder, its two leaves rendered (design-advisor ruling of 2026-11-08, DO 7).
@@ -951,8 +949,7 @@ const REACH: Record<string, Reach> = {
         reach: async () => {
             await sidebarSections();
             const search = await findByTestId('sidebar-search-input', 30_000);
-            await search.click();
-            await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, '@installed Seri');
+            await typeHeld(search, '@installed Seri', 'sidebar-filter');
             await until('/^\\d+ of \\d+$/.test(document.querySelector(\'[data-testid="section-box-installed"] .nuiget-section-count-text\')?.textContent ?? "") && document.querySelector(\'[data-testid="sidebar-updates-list"]\') === null && document.querySelector(\'[data-testid="sidebar-installed-list"] .nuiget-row-option\') !== null', 'the Installed section filtered, "k of N"', 30_000);
             await parkSidebarPointer();
         },

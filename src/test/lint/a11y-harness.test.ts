@@ -168,6 +168,46 @@ describe('the accessibility harness (UX-P0.23)', () => {
         axe.teardown();
     });
 
+    it('holds a run of version options under a combobox as one line, and enumerates every other list (UX-P3.fix-2)', () => {
+        const node = (depth: number, role: string, name: string, states: string[] = [], testid?: string): AriaNode => ({ depth, role, name, states, testid });
+        const version = (depth = 2): AriaNode => node(depth, 'option', '13.0.4');
+        const snapshot = ariaSnapshot('main-details-readme', [
+            node(0, 'region', 'Details'),
+            node(1, 'combobox', 'Version', [], 'version-selector'),
+            version(), version(), version(),
+            node(2, 'option', '13.0.3 (installed)'),
+            version(), version(),
+            node(2, 'option', '12.0.1', ['selected']),
+            version(), version(),
+            node(1, 'listbox', 'Versions of Serilog', [], 'search-suggestions'),
+            version(), version(), version(),
+            node(1, 'group', 'Filters'),
+            version(2),
+            node(2, 'combobox', 'Source'),
+            version(3), version(3),
+            version(2), version(2),
+        ]);
+        expect(snapshot.lines).toEqual([
+            'region "Details"',
+            '  combobox "Version" {version-selector}',
+            '    option "#"',
+            '    option "# (installed)"',
+            '    option "#"',
+            '    option "#" [selected]',
+            '    option "#"',
+            '  listbox "Versions of Serilog" {search-suggestions}',
+            '    option "#"',
+            '    option "#"',
+            '    option "#"',
+            '  group "Filters"',
+            '    option "#"',
+            '    combobox "Source"',
+            '      option "#"',
+            '    option "#"',
+            '    option "#"',
+        ]);
+    });
+
     it('masks digits, collapses white space and compares snapshots line by line', () => {
         expect(maskDigits('  Newtonsoft.Json  13.0.3\n 1,234 downloads ')).toBe('Newtonsoft.Json # # downloads');
         expect(maskDigits('x'.repeat(200))).toHaveLength(120);
