@@ -42,6 +42,14 @@ body {
     white-space: nowrap;
 }
 
+/*
+ * The search row paints the side bar's surface: the layer that the box's blinking caret starts keeps the pane header
+ * and rows below it in subpixel text (H27 form 2, UX-P3.8; form 1 on the section left run 43342362387 unchanged).
+ */
+.nuiget-sidebar-search {
+    background-color: var(--nuiget-color-bg-sidebar);
+}
+
 /* The section takes the height that is left; its list scrolls inside it. */
 .nuiget-sidebar-section,
 .nuiget-sidebar-section-content {
@@ -77,12 +85,10 @@ body {
 /*
  * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with alwaysShowHeaderActions
  * off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in the accessibility tree and the Tab order.
- * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets. The section paints the side bar's surface, so its
- * header and rows keep subpixel text while the search box's caret blinks (H27, UX-P3.8).
+ * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets.
  */
 .nuiget-sidebar-section {
     --nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0);
-    background-color: var(--nuiget-color-bg-sidebar);
 }
 
 .nuiget-sidebar-section:hover,

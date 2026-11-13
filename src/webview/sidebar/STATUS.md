@@ -21,7 +21,21 @@ Reading (the design-advisor's caret reading holds): a caret in the focused box g
 
 ## Visual evidence (UI items)
 
-None yet.
+**Push 1, form (1), run 43342362387 on 82cb616: green on every job; the criterion does not hold** (design-advisor DO 2). `ui-diff.txt`:
+`[diff] sidebar-all-projects.dark-modern.300: 124 px (0.052 %, tolerance 0 %, 7384 px masked, above)`,
+`[diff] summary: 88 compared, 87 at 0 px, 1 above tolerance, 0 without a golden, 0 refused`; `differs` 0 in both looks. Fringe bands
+(script above) of the run's crops:
+
+| Crop | sha256 (12) | total | 55 | 66 | 88 | 110 |
+|---|---|---|---|---|---|---|
+| `sidebar-filter.dark-modern.300` | bc89a8e8e26c (byte-equal to 43314017322's) | 1460 | 0 | 0 | 0 | 0 |
+| `sidebar-all-projects.dark-modern.300` | 0290fdcaa8e6 | 26594 | 0 | 0 | 152 | 611 |
+| `sidebar-sections.dark-modern.300` | 56224588abee | 29222 | 108 | 319 | 411 | 751 |
+| `sidebar-hover.dark-modern.300` | a1338611064e | 29219 | 108 | 319 | 411 | 751 |
+| `sidebar-narrow-200px.dark-modern.200` | 8b788b2d3d2c | 19772 | 108 | 319 | 411 | 690 |
+
+The opaque section changed no pixel. Form (2) next (DO 4): the surface moved to the search row `.nuiget-sidebar-search`, the
+section's background removed; one proving run, same criterion; if it fails too, stop and return with the band counts.
 
 ## Done (tested)
 
