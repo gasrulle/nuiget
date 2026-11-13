@@ -597,7 +597,9 @@ links.
   filters the installed packages by id, a progress bar while the list is revalidated, a banner for an
   unsupported project and one with "Retry" for an error, the Installed section and the one live region
   (`status-live`). It announces a first load and, through `describeOutcome` (`outcomes.ts`), how every
-  operation ended, on whichever surface it started.
+  operation ended, on whichever surface it started. The search box claims the focus once, when the sidebar's
+  document has the focus and nothing in it holds it (at mount, else at its first `focus`; SB14, UX-P3.8), so a
+  mount never takes the focus from an editor; the host's `ui/focusSearch` focuses it on every change to visible.
 - `InstalledSection.tsx` is the Installed section (`section-header-installed`, `sidebar-installed-list`):
   `SectionHeader`, then the committed project's flat `Listbox` (`ProjectPackages`), or under All Projects one compact tree
   (`AllProjectsTree`, `Listbox` with `groups`); both render their rows through `usePackageRows` (`packageRows.tsx`).

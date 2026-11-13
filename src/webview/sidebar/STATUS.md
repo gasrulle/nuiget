@@ -127,6 +127,29 @@ two-section cells did not move: nothing adopted, no `LIVE_SIDEBAR_CARET`, as rul
 moved, so no `design-judge` run for push 3; the item's judge dispositions stand as recorded (wf_bd76cb75-079:
 `sidebar-browse-hover#D1` `fixed` by UX-P3.fix-5's row).
 
+G-UI on run 43456752429 (ambient advisor, 2026-11-13): `grep -c 'pending P3.8)'` → 0 in `ui-output.txt` and in
+`ui-classic-output.txt`; the sidebar cells' `[axe]` lines, all `0 violations` and `hard`:
+
+```text
+[axe] sidebar-sections: 0 violations, 0 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-hover: 0 violations, 0 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-filter: 0 violations, 0 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-all-projects: 0 violations, 0 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-all-projects-updates: 0 violations, 1 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-update-all-dialog: 0 violations, 1 incomplete, 2 accepted-as-design, 43 rules passed, 48 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-results: 0 violations, 0 incomplete, 3 accepted-as-design, 36 rules passed, 53 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-hover: 0 violations, 0 incomplete, 3 accepted-as-design, 36 rules passed, 53 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-loading: 0 violations, 0 incomplete, 2 accepted-as-design, 32 rules passed, 58 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-revalidating: 0 violations, 0 incomplete, 3 accepted-as-design, 38 rules passed, 52 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-empty: 0 violations, 0 incomplete, 2 accepted-as-design, 31 rules passed, 59 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-browse-error: 0 violations, 0 incomplete, 2 accepted-as-design, 31 rules passed, 59 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-installed-loading: 0 violations, 0 incomplete, 2 accepted-as-design, 36 rules passed, 54 inapplicable (a11y-full-axe-real-page, hard)
+[axe] sidebar-narrow-200px: 0 violations, 0 incomplete, 3 accepted-as-design, 39 rules passed, 51 inapplicable (a11y-full-axe-real-page, hard)
+```
+
+After the StrictMode ref: `node esbuild.mjs --production --analyze` → `dist/extension.js 299460 / 326720`, `dist/webview.js 587014 /
+613761`, `dist/sidebar.js 360770 / 374532`.
+
 ## Visual evidence (UI items)
 
 **Push 1, form (1), run 43342362387 on 82cb616: green on every job; the criterion does not hold** (design-advisor DO 2). `ui-diff.txt`:
@@ -313,6 +336,16 @@ badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact r
 - `src/webview/sidebar/packageRows.tsx` returns `busyStatus` (the Browse row reads its operation's status; precommit-review).
 - `BrowseResults.test.tsx` `Enter or the row button installs the version found into the selected project, with the source it came from`:
   one assertion added (the row's status reads "Installing"); title unchanged.
+
+- `src/test/ui/v2/sidebar.ui.test.ts` ("the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)"): the
+  design-advisor's ruled steps are open the view, run `nuiget.sidebarView.focus`, poll; the case adds `Developer: Reload Webviews`
+  after the open (the remount precondition of red run 43454600679's fix, 40abf19) and holds the command inside the wait. Never
+  returned to the design-advisor: for the planning session's ratification.
+- The first-open gap (an activity-bar open gives the view no focus) rests on one local macOS ExTester reading (`[sb14-open]`).
+- A first pointer click on a row of a fresh, unfocused sidebar (scratch, local, after `Developer: Reload Webviews` with the editor
+  focused): `[sb14-click] fresh: … in editor true …; sidebar hasFocus false, active body`; `after the first click on a row: top
+  iframe.webview.ready …; sidebar hasFocus true, active div` (the row's option): the focus ends on the row, the claim does not take
+  a click aimed at a row (whether the box held it for a moment first is not read).
 
 ## Advisor decisions
 
