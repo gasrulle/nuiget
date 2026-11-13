@@ -55,6 +55,8 @@ export interface FringeSummary {
     skipped: number;
     /** The first greyscale line's label, or undefined. */
     first?: string;
+    /** The skipped lines by reason (opening ruling's follow-up 1, DO 7). */
+    reasons: Record<string, number>;
     /** `judged ≥ 1` and no greyscale line. */
     pass: boolean;
 }
@@ -129,19 +131,27 @@ export function lineVerdicts(image: Pixels, lines: readonly TextLine[], dpr: num
 export function summarize(verdicts: readonly LineVerdict[]): FringeSummary {
     const judged = verdicts.filter(verdict => verdict.skipped === undefined);
     const greyscale = judged.filter(verdict => verdict.greyscale);
+    const reasons: Record<string, number> = {};
+    for (const verdict of verdicts) {
+        if (verdict.skipped !== undefined) {
+            reasons[verdict.skipped] = (reasons[verdict.skipped] ?? 0) + 1;
+        }
+    }
     return {
         judged: judged.length,
         greyscale: greyscale.length,
         skipped: verdicts.length - judged.length,
         first: greyscale[0]?.label,
+        reasons,
         pass: judged.length >= 1 && greyscale.length === 0,
     };
 }
 
-/** `[fringe] <name>: <judged> lines, <g> greyscale (<first>), <s> skipped`. */
+/** `[fringe] <name>: <judged> lines, <g> greyscale (<first>), <s> skipped (<reason> <n>, …)`. */
 export function fringeLine(name: string, summary: FringeSummary): string {
     const first = summary.first === undefined ? '' : ` (${summary.first})`;
-    return `[fringe] ${name}: ${summary.judged} lines, ${summary.greyscale} greyscale${first}, ${summary.skipped} skipped`;
+    const reasons = Object.entries(summary.reasons).map(([reason, count]) => `${reason} ${count}`).join(', ');
+    return `[fringe] ${name}: ${summary.judged} lines, ${summary.greyscale} greyscale${first}, ${summary.skipped} skipped${reasons === '' ? '' : ` (${reasons})`}`;
 }
 
 /** The value of DS-TYPE-10's `[measure]` line. */

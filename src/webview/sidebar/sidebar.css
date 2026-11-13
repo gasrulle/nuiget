@@ -20,7 +20,14 @@ body {
     line-height: var(--nuiget-line-height);
 }
 
+/*
+ * The header paints after the sections (H27, DS-TYPE-10, UX-P3.fix-4): the box's caret gets a layer of its own, and text
+ * painted after it lost its subpixel rendering while the box had focus. The popover value keeps the search popup above
+ * the sections' progress bar and under a dialog, as it was before the header became a stacking context.
+ */
 .nuiget-sidebar-header {
+    position: relative;
+    z-index: var(--nuiget-z-popover);
     display: flex;
     flex: none;
     flex-direction: column;

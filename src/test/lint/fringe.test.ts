@@ -39,7 +39,7 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
             expect(verdict.greyscale, verdict.label).toBe(false);
         }
         const summary = summarize(verdicts);
-        expect(summary).toEqual({ judged: 5, greyscale: 0, skipped: 0, first: undefined, pass: true });
+        expect(summary).toEqual({ judged: 5, greyscale: 0, skipped: 0, first: undefined, reasons: {}, pass: true });
         expect(fringeLine('sidebar-sections.dark-modern.300', summary)).toBe('[fringe] sidebar-sections.dark-modern.300: 5 lines, 0 greyscale, 0 skipped');
     });
 
@@ -47,7 +47,7 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
         const verdicts = lineVerdicts(fixture('h27-P-a-greyscale.png'), LINES, 1);
         expect(verdicts.every(verdict => verdict.skipped === undefined && verdict.greyscale && verdict.fringe === 0)).toBe(true);
         const summary = summarize(verdicts);
-        expect(summary).toEqual({ judged: 5, greyscale: 5, skipped: 0, first: 'section-header-installed', pass: false });
+        expect(summary).toEqual({ judged: 5, greyscale: 5, skipped: 0, first: 'section-header-installed', reasons: {}, pass: false });
         expect(fringeLine('h27 P-a', summary)).toBe('[fringe] h27 P-a: 5 lines, 5 greyscale (section-header-installed), 0 skipped');
         expect(fringeValue(summary)).toBe('5 lines judged, 5 greyscale (first section-header-installed)');
     });
@@ -85,6 +85,14 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
 
     it('passes a cell only when it judged a line and found none greyscale', () => {
         expect(summarize([]).pass).toBe(false);
-        expect(summarize([{ label: 'x', ink: 50, fringe: 0, skipped: 'little ink', greyscale: false }])).toEqual({ judged: 0, greyscale: 0, skipped: 1, first: undefined, pass: false });
+        expect(summarize([{ label: 'x', ink: 50, fringe: 0, skipped: 'little ink', greyscale: false }])).toEqual({ judged: 0, greyscale: 0, skipped: 1, first: undefined, reasons: { 'little ink': 1 }, pass: false });
+        // The skipped lines by reason close the line (follow-up 1, DO 7).
+        const skipped = summarize([
+            { label: 'a', ink: 0, fringe: 0, skipped: 'covered', greyscale: false },
+            { label: 'b', ink: 0, fringe: 0, skipped: 'covered', greyscale: false },
+            { label: 'c', ink: 90, fringe: 40, greyscale: false },
+            { label: 'd', ink: 10, fringe: 0, skipped: 'little ink', greyscale: false },
+        ]);
+        expect(fringeLine('sidebar-update-all-dialog.dark-modern.300', skipped)).toBe('[fringe] sidebar-update-all-dialog.dark-modern.300: 1 lines, 0 greyscale, 3 skipped (covered 2, little ink 1)');
     });
 });
