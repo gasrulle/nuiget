@@ -510,6 +510,7 @@
 
 .nuiget-row--compact .nuiget-row-badges {
     order: 1;
+    align-self: center;
     margin-inline-start: auto;
 }
 
