@@ -462,9 +462,9 @@ revalidating marker is the screen's progress bar with `aria-busy` on its list; o
 | Main · Transitive details | n/a (reads loaded slices) | n/a | "No longer listed as a transitive package.": `transitive-details-empty` | n/a | n/a | n/a |
 | Main · Sources dialog | bar over the list: `source-settings-progress` | `source-settings-progress` (rows kept, list `aria-busy`) | "No package sources.": `source-settings-empty` | inline + Retry: `source-settings-error` (above the kept list after a failed refresh) | unreachable mark: `source-health-indicator` (exists) | n/a |
 | Main · header (projects) | "Loading Projects…" option, selects disabled: `project-selector` disabled | refresh button busy: `refresh-button` `aria-busy` | "No .NET projects found in this workspace.": `projects-empty` | banner: `projects-error` | n/a | n/a |
-| Sidebar · Installed (single and All Projects) | `sidebar-installed-loading` | `sidebar-installed-progress` | `sidebar-installed-empty` (exists) | `sidebar-installed-error` (exists) | `sidebar-installed-provisional` (exists) | `sidebar-unsupported` (exists) |
+| Sidebar · Installed (single and All Projects) | the pane's bar over its skeleton rows, the header spinner, no count: `sidebar-installed-progress` (capture `sidebar-installed-loading`) | `sidebar-installed-progress` | `sidebar-installed-empty` (exists) | `sidebar-installed-error` (exists) | `sidebar-installed-provisional` (exists) | `sidebar-unsupported` (exists) |
 | Sidebar · Updates | `sidebar-updates-loading` | `sidebar-updates-progress` | `sidebar-updates-empty` (exists) | `sidebar-updates-error` | `sidebar-updates-unavailable` (exists) | read-only, no Update All: `sidebar-updates-unsupported` |
-| Sidebar · Browse | the bar, then rows first under it (D56): `sidebar-browse-loading` | `sidebar-browse-progress` | `sidebar-browse-empty` | `sidebar-browse-error` | `sidebar-browse-unavailable` (exists) | n/a |
+| Sidebar · Browse | the bar, then rows first under it (D56): `sidebar-browse-progress` (capture `sidebar-browse-loading`) | `sidebar-browse-progress` | `sidebar-browse-empty` | `sidebar-browse-error` | `sidebar-browse-unavailable` (exists) | n/a |
 | Whole view (both surfaces) | n/a | n/a | n/a | "Something went wrong in this view." + Reload: `view-error` | n/a | n/a |
 
 ## 10. Microcopy
