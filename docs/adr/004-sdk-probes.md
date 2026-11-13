@@ -1,12 +1,12 @@
 # ADR-004 supplement: SDK probes for Central Package Management mutation
 
-Status: evidence for [ADR-004](004-project-model.md) tier 3 (`ProjectMutator`) · Probed: 2026-10-12 · Extended: 2026-10-16 (plan item P7.5a: input cpm-override, rows add-existing-entry and add-override)
+Status: evidence for [ADR-004](004-project-model.md) tier 3 (`ProjectMutator`) · Probed: 2026-10-12 · Extended: 2026-10-16 (plan item P7.5a: input cpm-override, rows add-existing-entry and add-override) · Extended: 2026-11-13 (UX-P7.0: SDK 11.0.100, linux-x64, CI run 43309447085)
 
 This file is not a separate decision. It records what `dotnet package add` and `dotnet package remove`
 were **measured** to do on a Central Package Management (CPM) project, so that the `cpmAwareAdd`
 capability in ADR-004 rests on a tracked fixture instead of on documentation or memory.
 
-Machine-readable result: [`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`](../../src/core/cli/__fixtures__/sdk-probes/10.0.401.json).
+Machine-readable results: [`src/core/cli/__fixtures__/sdk-probes/10.0.401.json`](../../src/core/cli/__fixtures__/sdk-probes/10.0.401.json) (SDK 10) and [`src/core/cli/__fixtures__/sdk-probes/11.0.100.json`](../../src/core/cli/__fixtures__/sdk-probes/11.0.100.json) (SDK 11).
 
 ## What was probed
 
@@ -89,6 +89,29 @@ Verdict recorded in the fixture:
 | `addWithoutCentralEntryCreatesIt` | `true` | `add-absent` |
 | `removeKeepsCentralEntry` | `true` | `remove` |
 
+## Results on SDK 11.0.100
+
+Since UX-P7.0 (plan D58) a second fixture records the same probe on SDK 11.0.100, linux-x64, probed 2026-11-12 by
+the `SDK probe` job of CI run 43309447085 (runner image `20261111.196.1`). It is that job's own output of
+`node scripts/probe-sdk.mjs --check --out sdk-probe.json`, written before the check found no SDK 11 fixture and
+exited 2, and promoted byte for byte as `11.0.100.json` (sha256
+`fcb8bd34e6f8000a1e64ddbc0a18be08dbebb35a020beeaee1c469d044199c15`).
+
+Every command row of the table above, on both inputs, has the same exit code (0), the same project diff and the same
+props diff on SDK 11.0.100 as on SDK 10.0.401, and the seven evaluations are identical: `compareProbes` of the two
+fixtures (`scripts/probe-sdk.mjs`) reports no difference. The verdict is identical:
+
+| Key | Value |
+|---|---|
+| `addUpdatesCentralVersion` | `true` |
+| `noRestoreWritesProjectVersion` | `false` |
+| `addWithoutCentralEntryCreatesIt` | `true` |
+| `removeKeepsCentralEntry` | `true` |
+
+The identical verdict is not the proof on its own. The CI job `SDK probe (11.0.x)` re-probes the newest SDK 11 on
+every push and compares it with `11.0.100.json` (`SDK probe (10.0.x)` does the same for SDK 10 and `10.0.401.json`),
+and each lane then runs the gated real-SDK tests of the runner, the evaluator and the mutator's CPM update on its SDK.
+
 ## Control on SDK 8.0.425
 
 The same fixture, pinned with `global.json` (`"version": "8.0.425"`, `"rollForward": "disable"`), was given
@@ -134,7 +157,7 @@ are below the 2.0 floor (plan D13) and get no tracked probe.
 - Plan decision D7 is unchanged: until the mutator lands (P6.3), 2.0 refuses `add` and `update` on CPM
   projects, and 2.0 never passes `--no-restore` to `package add` on a CPM project. One SDK patch on one
   platform with one project shape does not justify relaxing a rule whose failure corrupts a project file.
-- `sdk.ts` (P1.6) reads `verdict` from the fixture to set `cpmAwareAdd` and its provenance for SDK 10.
+- `sdk.ts` (P1.6) reads `verdict` from the fixture to set `cpmAwareAdd` and its provenance for SDK 10 and 11.
 - The mutator (P6.3) has to treat the props file as rewritten after any `add --version`, because of
   finding 2: dirty-file refusal, consumer invalidation and the diff a user sees in source control are all
   affected even when the version did not change.
@@ -143,7 +166,8 @@ are below the 2.0 floor (plan D13) and get no tracked probe.
 
 ## Limits of this evidence
 
-One SDK patch (10.0.401), one platform (macOS arm64), one single-target project, exact versions only. Not
+Two SDK majors: 10 (10.0.401 on macOS arm64, re-read on linux-x64 in CI) and 11 (11.0.100 on linux-x64, in CI
+only, never probed on Windows or macOS). One single-target project, exact versions only. Not
 covered: multi-targeted projects and conditional references, creating a `VersionOverride` on a central reference
 (no command does), an override conditional on the target framework, CPM enabled outside
 `Directory.Packages.props`, nested props files, floating versions, Windows. P6.1 (`scripts/probe-sdk.mjs`)

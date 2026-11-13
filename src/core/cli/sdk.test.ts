@@ -53,8 +53,9 @@ describe('capabilitiesFor', () => {
 
     it('calls the CPM behaviour verified only where a probe fixture exists', () => {
         expect(capabilitiesFor(10)).toEqual({ supported: true, cpmAwareAdd: true, cpmAwareAddProvenance: 'verified' });
+        expect(capabilitiesFor(11)).toEqual({ supported: true, cpmAwareAdd: true, cpmAwareAddProvenance: 'verified' });
         // Supported, but nothing proves what `package add` does there: the mutator must refuse CPM edits.
-        expect(capabilitiesFor(11)).toEqual({ supported: true, cpmAwareAdd: false, cpmAwareAddProvenance: 'unverified' });
+        expect(capabilitiesFor(12)).toEqual({ supported: true, cpmAwareAdd: false, cpmAwareAddProvenance: 'unverified' });
         expect(capabilitiesFor(9)).toEqual({ supported: false, cpmAwareAdd: false, cpmAwareAddProvenance: 'unverified' });
         expect(capabilitiesFor(8)).toEqual({ supported: false, cpmAwareAdd: false, cpmAwareAddProvenance: 'unverified' });
     });
@@ -63,6 +64,7 @@ describe('capabilitiesFor', () => {
         const fixtureDir = path.join(__dirname, '__fixtures__', 'sdk-probes');
         const files = fs.readdirSync(fixtureDir).filter(file => file.endsWith('.json'));
         expect(files).toContain('10.0.401.json');
+        expect(files).toContain('11.0.100.json');
 
         for (const file of files) {
             const fixture = JSON.parse(fs.readFileSync(path.join(fixtureDir, file), 'utf8')) as {

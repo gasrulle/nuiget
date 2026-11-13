@@ -479,7 +479,7 @@ describe('PackageWorkflows admission (D7, D13)', () => {
         expect(runner.calls.filter(isRestore)).toEqual([['restore', projectA]]);
     });
 
-    it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')('cpm (SDK 10): an update writes the central version to Directory.Packages.props without --no-restore and a remove keeps the entry', async () => {
+    it.skipIf(process.env.NUIGET_SDK_TESTS !== '1')('cpm (a verified SDK): an update writes the central version to Directory.Packages.props without --no-restore and a remove keeps the entry', async () => {
         const scratch = await createScratchDir('workflows-sdk');
         try {
             fs.cpSync(path.join(__dirname, '..', 'cli', '__fixtures__', 'sdk-probes', 'cpm'), scratch.dir, { recursive: true });

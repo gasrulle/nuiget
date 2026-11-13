@@ -206,7 +206,7 @@ export interface SdkInfo {
     supported: boolean;
     /** `dotnet package add` writes the central version of a Central Package Management project (ADR-004 supplement). */
     cpmAwareAdd: boolean;
-    /** P1.6 produces `'verified'` for SDK 10 from the P0.0 fixture and `'unverified'` otherwise; the other two values are reserved by the plan row. */
+    /** `'verified'` for a major with a tracked probe fixture (`PROBED_CPM_AWARE_ADD` in `src/core/cli/sdk.ts`: 10 since P1.6, 11 since UX-P7.0) and `'unverified'` otherwise; the other two values are reserved by the plan row. */
     cpmAwareAddProvenance: CapabilityProvenance;
 }
 

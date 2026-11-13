@@ -28,7 +28,7 @@ permissions:
   contents: read
 
 env:
-  # SDK-dependent tests run only where a .NET 10 SDK is guaranteed (plan §2.6).
+  # SDK-dependent tests run only where the job installs and checks the .NET SDK it lists (plan §2.6).
   NUIGET_SDK_TESTS: '1'
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
@@ -155,13 +155,19 @@ jobs:
             echo "| Statements | ${STATEMENTS}% | 90% |" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Re-runs the CPM probe of src/core/cli/__fixtures__/sdk-probes on the newest SDK 10 and fails when its exit codes,
-  # file diffs, evaluations or verdict differ from the tracked fixture (plan P6.1, ADR-004). A red run means the SDK
-  # changed what `dotnet package add` does to a CPM project: the uploaded probe is the evidence for that decision.
+  # One lane per SDK major with a tracked probe fixture (plan P6.1, D58, ADR-004). Each lane re-runs the CPM probe of
+  # src/core/cli/__fixtures__/sdk-probes on the newest SDK of its major and fails when its exit codes, file diffs,
+  # evaluations or verdict differ from that major's fixture; a red probe means the SDK changed what
+  # `dotnet package add` does to a CPM project, and the uploaded probe is the evidence for that decision. The lane
+  # then runs the gated real-SDK tests of the evaluator, the mutator's CPM path and the runner on that SDK.
   sdk-probe:
-    name: SDK probe
+    name: SDK probe (${{ matrix.sdk }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: ['10.0.x', '11.0.x']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,21 +176,25 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          cache: npm
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         env:
           DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ matrix.sdk }}
 
-      - name: Check that dotnet resolves SDK 10
+      - name: Check that dotnet resolves the lane's SDK
         shell: bash
+        env:
+          SDK: ${{ matrix.sdk }}
         run: |
+          major=${SDK%%.*}
           version=$(dotnet --version)
           echo "resolves .NET SDK $version"
           case "$version" in
-            10.*) ;;
-            *) echo "::error::expected .NET SDK 10.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
+            "$major".*) ;;
+            *) echo "::error::expected .NET SDK ${major}.x, dotnet resolved $version: the runner image preinstalls a newer SDK and DOTNET_INSTALL_DIR did not isolate it"; exit 1;;
           esac
 
       - name: Probe the SDK and compare with the tracked fixture
@@ -194,9 +204,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: sdk-probe
+          name: sdk-probe-${{ matrix.sdk }}
           path: sdk-probe.json
           if-no-files-found: ignore
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Run the gated real-SDK tests on the lane's SDK
+        run: npx vitest run --project backend src/core/cli src/core/project src/core/ops/PackageWorkflows.test.ts --reporter=verbose
 
   # The extension host suites (`v2-*`, selected by .vscode-test.mjs; plan items P3.5 and P8.1).
   e2e:

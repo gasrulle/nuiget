@@ -23,6 +23,7 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 describe('SDK probe script', () => {
     it('tracks the probe inputs it reads', () => {
         expect(fixtureFiles).toContain('10.0.401.json');
+        expect(fixtureFiles).toContain('11.0.100.json');
         expect(COMMAND_INPUTS).toEqual(['cpm', 'cpm-override']);
         for (const input of COMMAND_INPUTS) {
             for (const file of ['Directory.Packages.props', 'nuget.config', path.join('App', 'App.csproj')]) {

@@ -57,6 +57,7 @@ export interface SdkCapabilities {
  */
 const PROBED_CPM_AWARE_ADD: ReadonlyMap<number, boolean> = new Map([
     [10, true],
+    [11, true],
 ]);
 
 /** Static capabilities of an SDK major version. */

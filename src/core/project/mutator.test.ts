@@ -12,7 +12,7 @@ import { DefaultProjectMutator } from './mutator';
 
 const sdk10 = sdkInfoFromVersion('10.0.401') as SdkInfo;
 const sdk8 = sdkInfoFromVersion('8.0.425') as SdkInfo;
-const sdk11 = sdkInfoFromVersion('11.0.100') as SdkInfo;
+const sdk12 = sdkInfoFromVersion('12.0.100') as SdkInfo;
 
 const scratches: ScratchDir[] = [];
 afterEach(async () => {
@@ -103,7 +103,7 @@ describe('DefaultProjectMutator.canMutate', () => {
         const app = path.join(dir, 'App', 'App.csproj');
         const { mutator: subject } = mutator(dir);
         const documented: SdkInfo = { ...sdk10, cpmAwareAddProvenance: 'documented' };
-        for (const sdk of [sdk11, documented]) {
+        for (const sdk of [sdk12, documented]) {
             for (const request of [install, update]) {
                 await expect(subject.canMutate(context(app, sdk), request)).resolves.toEqual({ ok: false, error: `Central Package Management edits are not verified for .NET SDK ${sdk.version}` });
             }
@@ -118,7 +118,7 @@ describe('DefaultProjectMutator.canMutate', () => {
         });
         const app = path.join(dir, 'App', 'App.csproj');
         const { mutator: subject } = mutator(dir, { dirty: [path.join(dir, 'Directory.Packages.props')] });
-        await expect(subject.canMutate(context(app, sdk11), remove)).resolves.toEqual({ ok: true, isCpm: true });
+        await expect(subject.canMutate(context(app, sdk12), remove)).resolves.toEqual({ ok: true, isCpm: true });
         await expect(subject.canMutate(context(app), remove)).resolves.toEqual({ ok: true, isCpm: true });
     });
 

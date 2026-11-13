@@ -38,7 +38,7 @@ Three tiers with explicit fidelity:
    `Directory.*.props` mtimes). Produces `fidelity: 'authoritative'`. Runs off the render path; the
    UI upgrades from provisional to authoritative when it lands.
 3. **Mutate** (`ProjectMutator` in `src/core/contracts.ts`: `canMutate`, `previewCpmImpact`): only
-   SDK-verified commands, on SDK 10 only (plan decision D13). Non-CPM: `dotnet package add/remove`.
+   SDK-verified commands, on SDK 10 or newer (D13), with CPM edits only on a major a tracked probe verifies (10 since P1.6, 11 since UX-P7.0). Non-CPM: `dotnet package add/remove`.
    CPM: `cpmAwareAdd` and `cpmAwareAddProvenance` say whether `dotnet package add` updates the
    central version and how that is known; they come from the tracked probe fixture
    ([SDK probes](004-sdk-probes.md)), and the provenance is `'verified'` only when a fixture proves
