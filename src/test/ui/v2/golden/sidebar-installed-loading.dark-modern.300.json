@@ -1,0 +1,49 @@
+{
+  "state": "sidebar-installed-loading",
+  "theme": "dark-modern",
+  "look": "modern",
+  "width": 300,
+  "tolerance": 0.5,
+  "masks": [
+    {
+      "selector": ".nuiget-progress, .nuiget-skeleton",
+      "reason": "the indeterminate stripe and the breathe animation are mid-phase until P4.5 honours vscode-reduce-motion; NO_RUNNING_TRANSITION reads transitions only",
+      "rects": [
+        {
+          "h": 2,
+          "w": 300,
+          "x": 0,
+          "y": 82
+        },
+        {
+          "h": 66,
+          "w": 300,
+          "x": 0,
+          "y": 82
+        }
+      ]
+    },
+    {
+      "selector": "[data-testid=\"sidebar-search-input\"]",
+      "reason": "the caret blinks in the sidebar search box (UX-P3.7b)",
+      "rects": [
+        {
+          "h": 26,
+          "w": 284,
+          "x": 8,
+          "y": 24
+        }
+      ]
+    }
+  ],
+  "fingerprint": {
+    "fontFamily": "system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "font": "13px system-ui, Ubuntu, \"Droid Sans\", sans-serif",
+    "referenceWidth": 379.23,
+    "dpr": 1,
+    "vscode": "1.140.0",
+    "chromium": "150",
+    "image": "ubuntu26 20261101.186.1"
+  },
+  "run": "43353120809"
+}

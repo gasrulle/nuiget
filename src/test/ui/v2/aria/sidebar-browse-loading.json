@@ -1,0 +1,12 @@
+{
+  "state": "sidebar-browse-loading",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  progressbar \"Searching\" {sidebar-browse-progress}",
+    "  status \"\" {status-live}"
+  ]
+}

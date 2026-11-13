@@ -1,0 +1,32 @@
+{
+  "state": "sidebar-browse-hover",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  listbox \"Search results for Serilog\" {sidebar-browse-list}",
+    "    option \"Serilog #\"",
+    "    option \"Serilog.Sinks.File #\"",
+    "    option \"Serilog.Sinks.Console #\"",
+    "    option \"Serilog.Extensions.Logging #\"",
+    "    option \"Serilog.Settings.Configuration #\"",
+    "    option \"Serilog.Formatting.Compact #\"",
+    "    option \"Serilog.Extensions.Hosting #\"",
+    "    option \"Serilog.Sinks.Debug #\"",
+    "    option \"Serilog.AspNetCore #\"",
+    "    option \"Serilog.Sinks.PeriodicBatching #\"",
+    "    option \"Serilog.Enrichers.Environment #\"",
+    "    option \"Serilog.Enrichers.Thread #\"",
+    "    option \"Serilog.Sinks.Async #\"",
+    "    option \"Serilog.Expressions #\"",
+    "    option \"Serilog.Sinks.Seq #\"",
+    "    option \"Serilog.Exceptions #+build.#\"",
+    "    option \"Serilog.Sinks.RollingFile #\"",
+    "    option \"Serilog.Enrichers.Process #\"",
+    "    option \"Serilog.Sinks.ApplicationInsights #\"",
+    "    option \"Serilog.Formatting.Elasticsearch #\"",
+    "  status \"\" {status-live}"
+  ]
+}

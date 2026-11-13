@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8)   commit fe63e13 (push 2 written on it; pushes 1 and 1b are 82cb616 and 853edd4)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8)   commit e3f3574 (push 2; read on run 43353120809; the closing commit adopts its cells)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -67,6 +67,52 @@ section's background removed; one proving run, same criterion; if it fails too, 
 `sidebar-sections.dark-modern.300` 56224588abee (29222; 55:108 66:319). Neither form moved a pixel: returned to the
 design-advisor (DO 4); no browse golden adopted, SB14 not pushed.
 
+**Push 2, run 43353120809 on e3f3574 (fe63e13, 0343ba5, d136c89, e3f3574): green on every job.** `ui-log` (artifact 14006006730) and
+`ui-screenshots` (14005503441) in `captures/43353120809/`.
+
+- `[diff] sidebar-all-projects.dark-modern.300: 124 px (0.052 %, tolerance 0 %, 7384 px masked, above)` (the H27 witness); the eight new cells
+  `no golden`; `[diff] summary: 88 compared, 87 at 0 px, 1 above tolerance, 8 without a golden, 0 refused`; `differs` 0 in both looks;
+  `grep -c 'pending P3.8)'` 0.
+- Hard `not measurable` lines on the seven cells: 0. `DS-DIVIDER-1@sidebar-browse-results|-hover|-revalidating: no pane header (browse); rows
+  20 unlined (hard)`; `DS-INSET-3@sidebar-browse-hover: row actions 6 (target 6) (hard)`; `DS-DIVIDER-1@sidebar-installed-loading: panes 1:
+  first unlined, 0 lined; rows 0 unlined (hard)`; `DS-GRID-2b@sidebar-installed-loading: installed 0/0 (hard)`; DS-STATE-1 `missing: none`
+  on `-loading`, `-revalidating`, `-empty`, `-error` and `sidebar-installed-loading`; DS-INSET-1 `content 28; search 8` (modern rows),
+  `content 20; search 20` (classic hover), `content none; search 8` (`-empty`, `-error`, `-loading`).
+- `[axe]` 0 violations, 0 incomplete on all eight captures (e.g. `[axe] sidebar-browse-results: 0 violations, 0 incomplete, 3
+  accepted-as-design, 36 rules passed, 53 inapplicable (a11y-full-axe-real-page, hard)`).
+- Pending P3.10 lines of the state cells (follow-up 3 DO 4; all on target):
+  `[measure] DS-STATE-2@sidebar-browse-loading: bar at list top; skeleton rows 0, rows 0; rows-first pending P5.9a (pending P3.10)`,
+  `[measure] DS-STATE-2@sidebar-browse-revalidating: bar at list top; rows 20; aria-busy (pending P3.10)`,
+  `[measure] DS-STATE-2@sidebar-installed-loading: bar at list top; skeleton 3, rows 0 (pending P3.10)`,
+  `[measure] DS-STATE-3@sidebar-browse-empty: start, 20/20, 0 buttons, gap 8 (1) (pending P3.10)`,
+  `[measure] DS-STATE-4@sidebar-browse-error: 1 glyph (error), 1 buttons, ends with a full stop (1) (pending P3.10)`,
+  `[measure] DS-HEIGHT-11@sidebar-browse-loading|-revalidating|@sidebar-installed-loading: 2 (target 2) (pending P3.10)`.
+- `node scripts/check-rule-coverage.mjs --states <the seven>` → `check-rule-coverage: 7 states, 12 unasserted ids, 0 gap or hard at P0`.
+- H27 probe: `[probe] h27 P-a|P-b|P-c: popups 0, aria-expanded false, active sidebar-search-input, hasFocus true, animations 0`; the three
+  PNGs byte-identical (`probe/h27-P-a.png` cab6a927734c…). Ink/chroma per 11 px band (cols 0-285; ink = > 30 from the background, chroma =
+  spread > 8): P-a `55:224/0 66:552/0 88:332/0 110:575/0 132:534/0 154:911/0`; `sidebar-sections` (56224588abee) `55:241/102 66:593/300
+  88:390/351 110:725/674 132:651/594 154:1123/1042`. **P-a is greyscale: a focused, empty box is enough** (follow-up 1 DO 5): SB14 not pushed.
+- Adopted as `baseline` from 43353120809 through `captures/43353120809/adopt-p38/` (`compare-goldens: 8 goldens adopted from run
+  43353120809 as baseline`), with the seven ARIA snapshots (artifact = committed):
+
+| Cell | sha256 | Text by band |
+|---|---|---|
+| `sidebar-browse-results.dark-modern.300` | 3c53215be86209e8c9c73dfef767dc700bc4b8004fe3faa1ed1a861d5cdb3ace | rows LCD |
+| `sidebar-browse-hover.dark-modern.300` | 6f160e537758eb5948bd329e7ee278aec0d515b1d1196de80d6a7116cc741495 | rows LCD |
+| `sidebar-browse-hover.dark-modern-classic.300` | d982a5c685fca7f5a44243a73de718cf381cc28db322309a7a2a151f044788e8 | rows LCD |
+| `sidebar-browse-revalidating.dark-modern.300` | b32e06553a12a9eb169f6a548e7416fe621f43cb413d4d66f54bbf6f0e2ee6a7 | rows LCD |
+| `sidebar-browse-loading.dark-modern.300` | 0def00fe4c420476b97453779ec579ffdd62acc853fe3f1501c8037d494be243 | the bar alone |
+| `sidebar-browse-empty.dark-modern.300` | a21f4b97f0422f4973fe63441ace8f2da62dacace3e240021085d129a5840959 | **greyscale** (sentence 66:869/0) |
+| `sidebar-browse-error.dark-modern.300` | c62e12e6907d2901c9d6fa51e195e81037814f021a186ad3233f08910238a6d8 | **greyscale** (banner 55:237/0 66:380/0) |
+| `sidebar-installed-loading.dark-modern.300` | 432be39cf6df9fb248190d53c13202894de2570a25121a048316eabc0144d352 | **greyscale** pane header (55:103/0 66:319/0) |
+
+  ARIA: `sidebar-browse-empty` 8868edf9dc0342e3…, `-error` 504ae5ffbccf416c…, `-hover` 43b989ab180bdde4…, `-loading` 1847f732e760f239…,
+  `-results` d4bc881fb17d2899…, `-revalidating` 1a09ae19b9dd2807…, `sidebar-installed-loading` 5ee5fea14bf34d0b… (byte-equal to the artifact's).
+- design-judge wf_bd76cb75-079 (screen; the three row cells against `main-installed-all.dark-modern.1200.png` and its spec):
+  `{states 3, candidates 3, standing 1, blocking 0, refuted 0, singleJudge 1, incomplete 0}`; standing `sidebar-browse-hover#D1` (major,
+  the 20 px label badge 2/0 in the 22 px compact band) `fixed` by a fix row to be placed (follow-up 4); the `-results` single-judge finding
+  the same defect, informational. Five cells `pending artboard`. `docs/plans/judge-log/P3.8.json`.
+
 ## Done (tested)
 
 Push 2 (jsdom and the lint suite; the UI job is its test):
@@ -116,7 +162,8 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
 
 ## Not started
 
-- Push 2's run, the adoption of its seven cells as `baseline`, the judge, and the P-a reading; SB14 (push 3) only if P-a is LCD.
+- SB14 (focus the box on first render, push 3): **blocked**: the probe's P-a is greyscale, so focus on first render would turn every user's
+  side bar greyscale; it waits on the H27 fix row (follow-up 1 DO 5).
 
 ## For the planning session (H27 hand-off, design-advisor follow-up 1 DO 6)
 
@@ -132,6 +179,23 @@ Proposed row (architecture-advisor ruling of 2026-11-13, DO 4; the worker does n
 installed Browse row. Names `docs/adr/013-keyboard-and-menus.md` under the sentinel; one sentence; before or with P4.2b." The proposed sentence:
 "*Delete* (Cmd+Backspace on macOS) uninstalls an Installed or an Updates row, and in the sidebar a Browse row of a package installed in the
 selected project."
+
+Additions to the H27 hand-off (follow-up 3 DO 6): the probe of run 43353120809 (P-a cab6a927734c…) decides alone: a focused, empty box turns
+both panes greyscale; no popup is mounted and no animation runs, so the quick-search popup's `will-change` is not the cause and the first
+candidate is the box itself (its focus ring or caret layer). The lead: with the box focused, `sidebar-browse-results` rows are LCD while P-a's
+pane rows, the empty sentence and the error banner are greyscale; both lists paint the carrier and neither overflows, so the first comparison is
+what differs between the two-section tree and the plain browse wrapper. Greyscale `baseline` cells to re-adopt when cured: `sidebar-filter`
+(its golden), `sidebar-browse-empty`, `sidebar-browse-error`, `sidebar-installed-loading`; `sidebar-all-projects.dark-modern.300` (124 px) is
+the witness. The probe stays in the suite as that row's instrument and is removed by it. SB14 waits on that row.
+
+Second proposed row (follow-up 4; different cause, its own proving run): **compact row badge centring.** Box `sidebar-browse-hover.dark-modern.300`
+208,54,56,22 (run 43353120809, 6f160e53…); cause `primitives.css:490-494, 511-514, 623-649` (`.nuiget-row--compact .nuiget-row-body` is
+`align-items: baseline`, so the 20 px label badge rides the 13 px name's baseline: 2 px above, 0 below in the 22 px band; the CPM pills of the
+`sidebar-all-projects` golden the same since UX-P3.7c). Cells that move: the three Browse row cells, `sidebar-browse-hover` classic,
+`sidebar-all-projects` both looks, and any other compact row with a badge. Fix: the badge slot centred in the existing
+`.nuiget-row--compact .nuiget-row-badges` rule, no new selector, no `*Props` change. Rule first, `pending` on that row and failing on today's
+captures: a badge in a compact row is centred in the row band and never touches its edge, `|(badge.top − band.top) − (band.bottom −
+badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact row, both looks. Proposed beside P3.9 (which edits `primitives.css`).
 
 ## Deviations from contract/ADR/decision
 
@@ -419,6 +483,111 @@ selected project."
 >
 > Not checked: I did not trace DS-ROW-5, DS-TYPE-6, DS-DENSITY-1, DS-HC-1 or DS-HEIGHT-10 inside their helpers; I took "no row / no badge" from your lines and the rule texts. I did not read the diff of 0343ba5 beyond its file list.
 
+### 2026-11-13, design-advisor, follow-up 3: judge inputs, probe read (verbatim)
+
+> FOLLOW-UP 3 RULING, UX-P3.8 (judge inputs; probe read)
+>
+> DECISION: Split, on the P3.2 and P3.6 precedent. One `design-judge` call on the three Modern UI cells that show rows (`sidebar-browse-results`, `sidebar-browse-hover`, `sidebar-browse-revalidating`), against `docs/design/artboards/main-installed-all.dark-modern.1200.png` and `main-installed-all.spec.json` (the sidebar precedent of P3.7c/P3.7d). The four state cells (`sidebar-browse-loading`, `-empty`, `-error`, `sidebar-installed-loading`) and the classic hover cell are recorded `pending artboard` without a panel; their gate is the measurements. The probe result stands: SB14 is not pushed and P3.8 ends `blocked` on SB14 alone.
+>
+> Checked:
+> - Tree at e3f3574, with the adoption uncommitted in the working tree.
+> - The eight adopted crop hashes match the prefixes you give; the three probe PNGs are byte-identical (cab6a927734c).
+> - I opened `probe/h27-P-a.png`, `sidebar-browse-hover.dark-modern.300.png`, `sidebar-browse-error`, `sidebar-browse-empty` and `sidebar-installed-loading` from `captures/43353120809/`.
+> - I did not open `sidebar-browse-results`, `-revalidating`, `-loading` or the classic hover.
+> - The band counts and `[measure]` lines are yours, not verified by me.
+>
+> WHY:
+> - The rubric judges a capture against an artboard and a redline. A bar alone, one sentence, or one banner has nothing in a main-panel artboard to be compared with. P3.2 recorded its quick-search cells and P3.6 its three state cells `pending artboard` for that reason (`judge-log/P3.2.json:10`, `P3.6.json:10`); `RUN-ux.md:182` gives the wording.
+> - The cells with rows can be read for row anatomy, band, action and badge against the one sidebar proxy already used. Keeping the same proxy keeps the cross-surface dispositions of `judge-log/P3.7d.json` reusable.
+> - The classic hover has no classic proxy at this composition. P3.7c and P3.7d judged the Modern UI cell only, and its hard lines (`content 20; search 20`, `row actions 6`) carry it.
+> - Probe: P-a shows the box focused and empty with both panes (ring at about 8,25,284,26), and your counts read chroma 0 in every band where `sidebar-sections` reads 102 to 1042. A focused empty box is sufficient; no popup and no animation is involved.
+> - P-b and P-c ended byte-identical to P-a, so they add nothing beyond it; Escape evidently leaves the box empty.
+>
+> DO:
+> 1. Run `design-judge` once, screen mode, on the three cells from `captures/43353120809/` with their sha256, `artboardPng` and `spec` as above.
+> 2. In `docs/plans/judge-log/P3.8.json`, write the panel note: "No sidebar artboard: the three Browse cells with rows are judged against main-installed-all.dark-modern.1200.png and its spec (design-advisor follow-up 3, UX-P3.8; the P3.7c precedent), the Modern UI cells. sidebar-browse-loading, -empty, -error, sidebar-installed-loading and the classic hover are pending artboard: their gate is the measurements (DS-STATE-1, DS-INSET-1, DS-INSET-3, axe)."
+> 3. Dispositions:
+>    - A finding that compares a main-panel element the sidebar does not have (icons, descriptions, group headers, check column, 72 px rows, the 16 px inset) is `accepted-as-design` under this ruling, citing DS-DENSITY-1 and T-3.
+>    - A finding a hard line contradicts is `refuted-by-measurement` with the line.
+>    - Anything else standing comes back to me before the closing commit.
+> 4. Paste into the STATUS note the `(pending P3.10)` lines of DS-STATE-2, -3, -4 and DS-HEIGHT-11 for the four state cells. They are these cells' real rules and are not asserted yet. A value off target is fixed in `sidebar.css` now; if the value is the helper's (not reading the sidebar ids), it goes to P3.10's hand-off with the line.
+> 5. Commit the adoption (eight goldens, sidecars, `index.json`, seven ARIA snapshots) with the note listing which cells are greyscale by your bands (`-empty`, `-error`, `sidebar-installed-loading`).
+> 6. Close the run as ruled: P3.8 `blocked`, "SB14 waits on the H27 fix row". In the H27 hand-off add:
+>    - P-a alone decides; the popup is not needed.
+>    - The lead from this run: with the box focused, `sidebar-browse-results` rows are LCD while P-a's pane rows, the empty sentence and the error banner are greyscale. Both lists paint the carrier and neither overflows, so the first comparison is what differs between the two-section tree and the plain browse wrapper.
+>    - The probe stays in the suite as the fix row's instrument and is removed by that row.
+>
+> DO NOT:
+> - Do not pass a proxy artboard for the four state cells or the classic hover to fill the panel.
+> - Do not call the four cells judged, or leave them out of the judge log.
+> - Do not push SB14, and do not mark P3.8 `done`.
+> - Do not re-run the probe or extend it in this item.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - `judge-log/P3.8.json` has three judged states with zero `incomplete`, five entries `pending artboard`, and every standing finding with a disposition.
+> - `grep -c 'pending P3.10)' ui-output.txt` lines for the four cells are pasted in the STATUS note.
+> - Tracker: P3.8 `blocked` with the SB14 reason; the H27 hand-off names run 43353120809 and cab6a927734c.
+>
+> DEFECTS:
+> - captures/43353120809/adopt-p38/sidebar-installed-loading.dark-modern.300.png 8,88,180,54 NEW: a compact skeleton row starts at the x of the row names it stands for (sidebar M 28 / C 20); measured as `skeletonRow.left − root.left` beside DS-INSET-1's names. minor: the three skeleton bars start at about x 8 where the pane's rows start at 28. `Skeleton` is unchanged by this item; hand to P3.10 with the sidebar DS-STATE-2 flip. Does not block the baseline.
+> - captures/43353120809/probe/h27-P-a.png 0,55,300,390 NEW (first ruling's fringe-band rule) major: both panes greyscale with the box focused and empty, by your counts; owned by the H27 fix row; blocks SB14.
+> - captures/43353120809/adopt-p38/sidebar-browse-empty.dark-modern.300.png 20,62,240,36 and sidebar-browse-error.dark-modern.300.png 8,58,284,54 same rule major: sentence and banner text greyscale by your counts; same owner; re-adopt when cured.
+>
+> Looked at and not a defect: the hover cell's band spans about 4 to 296 with the trash about 6 inside it and names at 28; the error banner is one glyph, one sentence with a period, one Retry; the empty sentence starts at 20; the loading header shows the spinner and no badge (SB13).
+>
+> Not checked: the 2 px bar's extent in `sidebar-installed-loading` (only a stripe segment from about x 8 is visible; the track's left edge cannot be read from the PNG). P3.10's DS-STATE-2 and DS-HEIGHT-11 lines should say whether the track spans the pane.
+
+### 2026-11-13, design-advisor, follow-up 4: the judge's standing finding (verbatim)
+
+> FOLLOW-UP 4 RULING, UX-P3.8 (judge finding sidebar-browse-hover#D1)
+>
+> DECISION: Option 1, sharpened. The finding is real and is the shared compact row's, not this item's. Disposition `fixed`, owner a fix row the planning session places (proposed: beside P3.9, which already edits `primitives.css` and re-proves sidebar cells), with a new measurable rule. Nothing changes in P3.8's CSS. The single-judge finding on `-results` is the same defect and takes the same owner.
+>
+> Checked:
+> - I cropped and opened `captures/43353120809/adopt-p38/sidebar-browse-hover.dark-modern.300.png` at 150,46,150,84. The "Installed" pill sits low in the hovered band and reaches its bottom edge, and the Serilog.Sinks.Console pill does the same.
+> - I cropped and opened golden `src/test/ui/v2/golden/sidebar-all-projects.dark-modern.300.png` at 150,120,150,60. The CPM pills, adopted at UX-P3.7c, have the same placement, so the offset predates this item and is already in a committed golden.
+> - Cause, read in `primitives.css:490-494, 511-514, 623-649`: `.nuiget-row--compact .nuiget-row-body` is `align-items: baseline`, and the label badge (10 px text, `line-height: 1`, Modern UI padding 4, 1 px border, so 20 px high) is placed by its text baseline on the 13 px name's baseline in a 22 px band. That gives the judge's 2 above / 0 below.
+> - `DS-HEIGHT-10` reads padding, font and radius only (`measure.ts:2099`), so no measurement contradicts the finding.
+>
+> WHY:
+> - Not `refuted-by-measurement`: no line measures the pill's position. Not `accepted-as-design`: no spec line, artboard or DECISIONS row declares a pill flush with the band's edge, and the rubric lists an element touching an edge among its defects.
+> - Closest to the workbench settles the target: a badge in a native list row is centred in the row (the pane-header count badge and the Extensions row's labels are centred in their boxes, `extensions.json pane_headers[4]`), so the pill belongs 1/1 in the 22 px band.
+> - Not option 2: a sidebar-scoped correction of a primitive's placement is the layering ADR-010 forbids.
+> - Not option 3 here: the one-declaration fix moves every compact row with a badge, including `sidebar-all-projects` in both looks. That cell is the standing H27 witness, and P3.8 is ending `blocked`. One cause per proving run.
+>
+> DO:
+> 1. In `docs/plans/judge-log/P3.8.json`, give `sidebar-browse-hover#D1` disposition `fixed`, owner "fix row to be placed (compact row badge centring)", with this ruling cited. Record the `-results` single-judge finding as informational with the same owner.
+> 2. Add a tracker hand-off for the planning session with:
+>    - the box: `sidebar-browse-hover.dark-modern.300` 208,54,56,22 (run 43353120809, 6f160e53…);
+>    - the cause lines above;
+>    - the cells that will move: the three Browse row cells, `sidebar-browse-hover` classic, `sidebar-all-projects` both looks, and any other compact row with a badge;
+>    - the expected fix: the badge slot of a compact row centred in the band, in the existing `.nuiget-row--compact .nuiget-row-badges` rule of `primitives.css`, no new selector and no `*Props` change;
+>    - the rule below, landing `pending` on that row first and failing on today's captures.
+> 3. Keep the eight goldens as adopted (`baseline`). The owner row re-adopts the moved cells with its CSS reason.
+> 4. Close P3.8 as already ruled (`blocked` on SB14).
+>
+> DO NOT:
+> - Do not edit `primitives.css`, `Row.tsx` or `Badge.tsx` in P3.8.
+> - Do not add a badge-alignment rule or carrier to `sidebar.css`.
+> - Do not mark the finding `accepted-as-design` or `refuted-by-measurement`.
+> - Do not fold this into the H27 fix row: different cause, different proving run.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - `grep -n '"disposition"' docs/plans/judge-log/P3.8.json` shows `fixed` for `sidebar-browse-hover#D1` with the owner text.
+> - `git diff --stat` for the closing commit touches no file under `src/webview/shared/primitives/`.
+> - The tracker hand-off names the box, the run and the rule.
+>
+> DEFECTS:
+> - captures/43353120809/adopt-p38/sidebar-browse-hover.dark-modern.300.png 208,54,56,22 NEW: a badge in a compact row is centred in the row band and never touches its edge; measured as `|(badge.top − band.top) − (band.bottom − badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact row, both looks. major: the "Installed" pill is 2 px below the band's top and flush with its bottom. Does not block the baseline.
+> - src/test/ui/v2/golden/sidebar-all-projects.dark-modern.300.png 218,128,40,20 (and each CPM row below) same NEW rule, major: the CPM pills carry the same offset since UX-P3.7c; same owner.
+>
+> Not checked: I measured no pixel rows myself; the 2/0 numbers are the judge's, and my crops confirm only the direction. I did not open the classic hover cell or `sidebar-browse-results`, and did not check whether a popup row or the Updates tree shows a badge in a compact row.
+
 ## Exact next step
 
-UX-P3.8: push 2's local capture tier (first ruling DO 11), then the push; read its run (probe, cells, `[diff]`), adopt, judge; SB14 by P-a.
+UX-P3.8 is `blocked` on SB14 alone (it waits on the H27 fix row the planning session places, then SB14 is push 3 of this item:
+first ruling DO 13, 14, 16). No other row starts while it is `blocked` (RUN-ux §3.3) unless the planning session places rows before it.

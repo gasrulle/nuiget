@@ -1,0 +1,111 @@
+{
+  "item": "P3.8",
+  "runs": [
+    {
+      "runId": "43353120809",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "e3f3574 (push 2: fe63e13, 0343ba5, d136c89, e3f3574)",
+      "look": "modern",
+      "workflow": "wf_bd76cb75-079",
+      "note": "No sidebar artboard: the three Browse cells with rows are judged against main-installed-all.dark-modern.1200.png and its spec (design-advisor follow-up 3, UX-P3.8; the P3.7c precedent), the Modern UI cells. sidebar-browse-loading, -empty, -error, sidebar-installed-loading and the classic hover are pending artboard: their gate is the measurements (DS-STATE-1, DS-INSET-1, DS-INSET-3, axe).",
+      "captures": {
+        "sidebar-browse-results": {
+          "png": "captures/43353120809/sidebar-browse-results.dark-modern.300.png",
+          "sha256": "3c53215be86209e8c9c73dfef767dc700bc4b8004fe3faa1ed1a861d5cdb3ace",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-browse-hover": {
+          "png": "captures/43353120809/sidebar-browse-hover.dark-modern.300.png",
+          "sha256": "6f160e537758eb5948bd329e7ee278aec0d515b1d1196de80d6a7116cc741495",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-browse-revalidating": {
+          "png": "captures/43353120809/sidebar-browse-revalidating.dark-modern.300.png",
+          "sha256": "b32e06553a12a9eb169f6a548e7416fe621f43cb413d4d66f54bbf6f0e2ee6a7",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        }
+      },
+      "pendingArtboard": [
+        {
+          "state": "sidebar-browse-loading",
+          "png": "captures/43353120809/sidebar-browse-loading.dark-modern.300.png",
+          "sha256": "0def00fe4c420476b97453779ec579ffdd62acc853fe3f1501c8037d494be243"
+        },
+        {
+          "state": "sidebar-browse-empty",
+          "png": "captures/43353120809/sidebar-browse-empty.dark-modern.300.png",
+          "sha256": "a21f4b97f0422f4973fe63441ace8f2da62dacace3e240021085d129a5840959"
+        },
+        {
+          "state": "sidebar-browse-error",
+          "png": "captures/43353120809/sidebar-browse-error.dark-modern.300.png",
+          "sha256": "c62e12e6907d2901c9d6fa51e195e81037814f021a186ad3233f08910238a6d8"
+        },
+        {
+          "state": "sidebar-installed-loading",
+          "png": "captures/43353120809/sidebar-installed-loading.dark-modern.300.png",
+          "sha256": "432be39cf6df9fb248190d53c13202894de2570a25121a048316eabc0144d352"
+        },
+        {
+          "state": "sidebar-browse-hover (classic)",
+          "png": "captures/43353120809/sidebar-browse-hover.dark-modern-classic.300.png",
+          "sha256": "d982a5c685fca7f5a44243a73de718cf381cc28db322309a7a2a151f044788e8"
+        }
+      ],
+      "panel": {
+        "states": 3,
+        "candidates": 3,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "sidebar-browse-hover#D1",
+          "state": "sidebar-browse-hover",
+          "finding": "[native] In the hovered row (and in the Serilog.Sinks.Console row), the 20 px 'Installed' label badge is not centred vertically in the 22 px compact row band. It starts 2 px below the band top (y 56) and runs down to the band's bottom edge (y 75 in a band of 54–75), so it looks like it rests on the band's bottom edge. Native tree-row badges sit centred in their band. | [geometry] In the hovered Serilog row, the Installed label badge sits off-centre in the 22 px band: it spans y 56–75 inside the band at y 54–75, so it has 2 px above and 0 px below and its bottom edge lies on the band's bottom edge. Its text reads about 2 px lower than the name beside it. The non-hovered Serilog.Sinks.Console row shows the same 2/0 offset, with the badge at y 100–119 in a row at y 98–119.",
+          "severity": "major",
+          "box": [
+            208,
+            54,
+            56,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "fix row to be placed (compact row badge centring)",
+          "evidence": "design-advisor follow-up 4 of 2026-11-13 (UX-P3.8, in src/webview/sidebar/STATUS.md): the shared compact row places the badge by its text baseline (primitives.css:490-494, 511-514, 623-649: `.nuiget-row--compact .nuiget-row-body` is `align-items: baseline`), so a 20 px label badge sits 2/0 in the 22 px band; the same offset is in the sidebar-all-projects golden since UX-P3.7c. Not this item's file (plan §2.1); the fix is the badge slot centred in the existing `.nuiget-row--compact .nuiget-row-badges` rule, with a new rule (badge centred within 1 px, never touching the band) landing pending on the owner row first."
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "sidebar-browse-results#D1",
+          "state": "sidebar-browse-results",
+          "finding": "[native] The 'Installed' label badge sits 1 px low in its 22 px compact row: its 20 px pill runs from 2 px below the row's top to flush with the row's bottom edge (y 56–75 in the row band 54–75, likewise 100–119 in 98–119), so it is not vertically centred as a workbench badge is beside a tree row label.",
+          "severity": "minor",
+          "box": [
+            208,
+            54,
+            55,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "informational": "singleJudge, informational: the same defect as sidebar-browse-hover#D1; owner the fix row to be placed (compact row badge centring), design-advisor follow-up 4 of 2026-11-13."
+        }
+      ],
+      "refuted": []
+    }
+  ]
+}
