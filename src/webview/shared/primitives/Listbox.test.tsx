@@ -84,13 +84,17 @@ describe('Listbox', () => {
     it('marks itself scrolled away from its start, and only then, for the scroll shadow (DS-SCROLL-2, UX-P3.9)', () => {
         render(<PackageList items={three} />);
         const listbox = screen.getByRole('listbox', { name: 'Installed packages' });
-        expect(listbox).not.toHaveAttribute('data-scrolled');
+        // The root carries the signal; its overlay draws the shadow over the list (follow-up 4).
+        const root = listbox.parentElement as HTMLElement;
+        expect(root).toHaveClass('nuiget-listbox-root');
+        expect(root).not.toHaveAttribute('data-scrolled');
         listbox.scrollTop = 30;
         fireEvent.scroll(listbox);
-        expect(listbox).toHaveAttribute('data-scrolled', 'true');
+        expect(root).toHaveAttribute('data-scrolled', 'true');
+        expect(listbox).not.toHaveAttribute('data-scrolled');
         listbox.scrollTop = 0;
         fireEvent.scroll(listbox);
-        expect(listbox).not.toHaveAttribute('data-scrolled');
+        expect(root).not.toHaveAttribute('data-scrolled');
         // The shadow is a pseudo-element: the list still owns its options only.
         expect(options()).toHaveLength(3);
     });
@@ -100,7 +104,7 @@ describe('Listbox', () => {
         const scrolledList = screen.getByRole('listbox', { name: 'Installed packages' });
         scrolledList.scrollTop = 30;
         fireEvent.scroll(scrolledList);
-        expect(scrolledList).toHaveAttribute('data-scrolled', 'true');
+        expect(scrolledList.parentElement).toHaveAttribute('data-scrolled', 'true');
         rerender(<PackageList items={[]} />);
         expect(screen.queryByRole('listbox')).toBeNull();
         // The refilled list is shorter than its viewport: the virtualizer's restore of the old offset clamps to 0 and fires
@@ -108,7 +112,7 @@ describe('Listbox', () => {
         Object.defineProperty(HTMLElement.prototype, 'scrollTop', { configurable: true, get: () => 0, set: () => undefined });
         try {
             rerender(<PackageList items={three.slice(0, 1)} />);
-            expect(screen.getByRole('listbox', { name: 'Installed packages' })).not.toHaveAttribute('data-scrolled');
+            expect(screen.getByRole('listbox', { name: 'Installed packages' }).parentElement).not.toHaveAttribute('data-scrolled');
         } finally {
             delete (HTMLElement.prototype as { scrollTop?: number }).scrollTop;
         }

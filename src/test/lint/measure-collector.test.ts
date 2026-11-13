@@ -354,6 +354,20 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().sections.find(section => section.id === 'direct')?.above).toBe(0);
     });
 
+    it('reads the scroll shadow a list\'s root draws over a scrolled list, and none without that root (DS-SCROLL-2, UX-P3.9 follow-up 4)', () => {
+        const list = document.querySelector<HTMLElement>('[data-testid="installed-list"]')!;
+        list.style.overflowY = 'auto';
+        Object.defineProperties(list, { scrollHeight: { value: 656 }, clientHeight: { value: 164 }, offsetWidth: { value: 590 }, clientWidth: { value: 580 }, scrollTop: { value: 120 } });
+        expect(collect().scrollbar.scrollers[0]).toMatchObject({ label: '[installed-list]', scrollTop: 120, shadow: 'none' });
+        // The stub answers a pseudo-element with its element's own style: the root's box-shadow stands for its ::after.
+        const root = document.createElement('div');
+        root.className = 'nuiget-listbox-root';
+        root.style.boxShadow = 'rgb(0, 0, 0) 0px 6px 6px -6px inset';
+        list.replaceWith(root);
+        root.append(list);
+        expect(collect().scrollbar.scrollers[0]).toMatchObject({ label: '[installed-list]', scrollTop: 120, shadow: 'rgb(0, 0, 0) 0px 6px 6px -6px inset' });
+    });
+
     it('reads every list that scrolls, its bar\'s thickness and thumb, the root\'s scrollbar-color and the slider token (UX-P0.22)', () => {
         const list = document.querySelector<HTMLElement>('[data-testid="installed-list"]')!;
         list.style.overflowY = 'auto';

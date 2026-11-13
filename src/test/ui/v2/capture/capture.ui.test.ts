@@ -4,7 +4,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { ActivityBar, By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, cellList, DIALOG_FRINGE_STATES, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostReading, type LineVerdict, summarize, type TextLine } from '../fringe';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
@@ -2187,15 +2187,21 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 chromeProbed.add(state.name);
                 printLines(await chromeProbes(state.name));
             }
-            // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot.
-            const textLines = state.surface === 'sidebar' && LANE === 'ui' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar') : undefined;
+            // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot; a
+            // dialog of DIALOG_FRINGE_STATES gives its title and body lines, not its buttons' (UX-P3.9 follow-up 4).
+            const textLines = LANE !== 'ui' ? undefined
+                : state.surface === 'sidebar' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar')
+                    : DIALOG_FRINGE_STATES.includes(state.name) ? (await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')).filter(line => line.label === 'confirm-dialog')
+                        : undefined;
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);
             if (textLines !== undefined) {
                 // Once per pass, before the first sidebar cell is judged: the side bar's own title in that cell's window
                 // screenshot (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red.
-                if (hostReading === undefined) {
+                // A dialog cell, which runs before every sidebar cell, reads its own and leaves the sidebar's as it was
+                // (UX-P3.9 follow-up 4; its rule is pending, so its host reading guards nothing).
+                if (hostReading === undefined && state.surface === 'sidebar') {
                     hostReading = await hostFringe(shot.png, shot.dpr);
                     const guard = hostGuard(hostReading, process.platform, LANE);
                     if (guard !== undefined) {
@@ -2203,8 +2209,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                         red.push(guard);
                     }
                 }
+                const host: HostReading = state.surface === 'sidebar' ? hostReading ?? 'not read' : await hostFringe(shot.png, shot.dpr);
                 const cell = captureFile(state.name, capture);
-                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr, hostReading);
+                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr, host);
                 console.warn(fringe.text);
                 for (const line of pixelRuleLines(state.name, capture.width, capture.theme, LANE, fringe.result === undefined ? {} : { 'DS-TYPE-10': fringe.result })) {
                     const text = formatLine(line);

@@ -401,8 +401,9 @@ document, every row says its place (`aria-posinset`, `aria-setsize`: among all i
 mounted when it is scrolled out of view, so focus never falls out of the list. The active row is remembered
 by item id. When its item disappears, the row now at its index takes over; when the list empties, the
 container around the empty state takes focus. The list never takes focus it did not have. Scrolled away from its start,
-the list carries `data-scrolled="true"` and its sticky `::before` draws the workbench's scroll shadow on its top edge
-(DS-SCROLL-2); the pseudo-element takes no layout and is no node of the accessibility tree.
+the list's root carries `data-scrolled="true"` and its `::after`, an overlay without a `z-index`, draws the workbench's scroll
+shadow over the list's top edge (DS-SCROLL-2); a sticky box inside the composited scroller turned a dialog's text over it
+greyscale (H27), and the pseudo-element is no node of the accessibility tree.
 
 **Numbers reach the DOM as custom properties.** The Content Security Policy allows no `style` attribute in
 markup (ADR-006), and a virtualized row, a progress bar and a split need a number per element. `cssVars()`

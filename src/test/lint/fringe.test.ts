@@ -80,7 +80,17 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
         expect(pixelRuleLines('sidebar-filter', 300, 'dark-modern', 'ui', {})).toEqual([
             { name: 'DS-TYPE-10@sidebar-filter', value: 'not measurable (no pixels)', status: 'hard', pass: false },
         ]);
-        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: 'hard' }, lanes: ['ui'], pixels: true });
+        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: 'hard', dialogs: { pending: 'P3.9' } }, scopeStates: { dialogs: ['main-installed-bulk-dialog'] }, lanes: ['ui'], pixels: true });
+    });
+
+    it('prints DS-TYPE-10 on the bulk dialog\'s cell, pending P3.9, and on no other dialog (UX-P3.9 follow-up 4)', () => {
+        const read = { 'DS-TYPE-10': { value: '3 lines judged, 0 greyscale', pass: true } };
+        expect(pixelRuleLines('main-installed-bulk-dialog', 1200, 'dark-modern', 'ui', read)).toEqual([
+            { name: 'DS-TYPE-10@main-installed-bulk-dialog', value: '3 lines judged, 0 greyscale', status: { pending: 'P3.9' }, pass: true },
+        ]);
+        expect(pixelRuleLines('main-installed-bulk-dialog', 1200, 'dark-modern', 'matrix', read)).toEqual([]);
+        expect(pixelRuleLines('sidebar-update-all-dialog', 300, 'dark-modern', 'ui', read)).toEqual([]);
+        expect(pixelRuleLines('main-browse-multi-install-dialog', 1200, 'dark-modern', 'ui', read)).toEqual([]);
     });
 
     it('gives DS-TYPE-10 a cell verdict from the host reading: asserted on an LCD host, where a cell that judges nothing is red', () => {

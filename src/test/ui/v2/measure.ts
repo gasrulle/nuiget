@@ -168,6 +168,8 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
+/** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4). */
+export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog'];
 
 /** One pending item for the state groups where a rule's elements are rendered. */
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
@@ -401,7 +403,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.fix-4 (H27; design-advisor opening ruling of 2026-11-13, DO 10): the side bar's text keeps its subpixel rendering,
     // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true }),
+    // UX-P3.9 follow-up 4: the text of a dialog over the main panel, judged as the sidebar's (H27); pending until the closing.
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -1818,8 +1821,8 @@ for (const el of document.body.querySelectorAll('*')) {
     scrollers.push({
         label: label(el), left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height), right: round(r.right - px(s.borderRightWidth)),
         size: round(el.offsetWidth - el.clientWidth - px(s.borderLeftWidth) - px(s.borderRightWidth)), thumb: round(el.clientHeight * el.clientHeight / el.scrollHeight), backdrop: backdrop(el),
-        // UX-P3.9 (DS-SCROLL-2): the scroll position and the shadow the scroller or its ::before draws.
-        scrollTop: round(el.scrollTop), shadow: [s.boxShadow, getComputedStyle(el, '::before').boxShadow].filter(shadow => shadow && shadow !== 'none').join(' / ') || 'none',
+        // UX-P3.9 (DS-SCROLL-2): the scroll position and the shadow the scroller or the overlay of its list's root draws (follow-up 4).
+        scrollTop: round(el.scrollTop), shadow: [s.boxShadow, el.parentElement && el.parentElement.classList.contains('nuiget-listbox-root') ? getComputedStyle(el.parentElement, '::after').boxShadow : ''].filter(shadow => shadow && shadow !== 'none').join(' / ') || 'none',
     });
 }
 const rootStyle = getComputedStyle(document.documentElement);
