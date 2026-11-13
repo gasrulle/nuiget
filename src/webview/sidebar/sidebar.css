@@ -60,8 +60,9 @@ body {
     display: inline-flex;
 }
 
-/* Browse results take the place of the sections; their list scrolls inside. */
+/* Browse results take the place of the sections; their list scrolls inside and paints the side bar's surface (H27, UX-P3.8). */
 .nuiget-sidebar-browse {
+    --nuiget-listbox-bg: var(--nuiget-color-bg-sidebar);
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -76,10 +77,12 @@ body {
 /*
  * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with alwaysShowHeaderActions
  * off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in the accessibility tree and the Tab order.
- * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets.
+ * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets. The section paints the side bar's surface, so its
+ * header and rows keep subpixel text while the search box's caret blinks (H27, UX-P3.8).
  */
 .nuiget-sidebar-section {
     --nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0);
+    background-color: var(--nuiget-color-bg-sidebar);
 }
 
 .nuiget-sidebar-section:hover,
