@@ -8,7 +8,7 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 | Item | Value |
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
-| Rules | 84: the 72 `DS-*` rules of the research (ids kept) and 12 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72)) |
+| Rules | 85: the 72 `DS-*` rules of the research (ids kept) and 13 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72), `DS-TYPE-10` (2026-11-13, H27)) |
 | Tokens | 179 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 30 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
@@ -89,6 +89,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 | DS-TYPE-7 | The panel title is 13/600; the details title and the dialog title are 18/600 (Heading2). | Computed size and weight of `.nuiget-main-title` (13/600), `.nuiget-details-title` and `.nuiget-dialog-title` (18/600). | 0.1 | measurable | V49, V61 | M = C: heading2 18, semiBold 600 (`vars`); upper bound Settings group title 26px/600 (`settings.json settings[9]`) |
 | DS-TYPE-8 | A relative font size (em, %) goes on leaf text only, never on a container that holds a Badge or other sized text; the type tokens are px, so no size compounds. | Lint: no `em` or `%` font-size in a webview stylesheet outside the README rules; probe: every `.nuiget-badge` computes the badge size wherever it sits. | 0.1 | measurable | V17 | M 10 / C 11 (`extensions.json pane_headers[4] .fontSize`); today the sidebar header badge computes 9.39 (`rules-bound` DS-HEIGHT-10) |
 | DS-TYPE-9 | Every heading outside the README sets its weight explicitly; none falls back to the UA's 700. | Computed font-weight of `h1`–`h4` outside `.nuiget-readme` ∈ {400, 600} (700 only per DS-TYPE-3). | exact | measurable | V61 | M = C: workbench headings set their weight (Settings group title 600, `settings.json settings[9] .fontWeight`) |
+| DS-TYPE-10 | In the side bar, text renders as the workbench renders its own: where the host draws subpixel (LCD) text, every line of neutral text on a neutral surface does too, in every state, with the focus in the search box or anywhere else. No focus, caret or layer turns it greyscale. | `ui` lane, per sidebar capture, from the crop's pixels inside the client rect of every judged text line: `fringe / ink ≥ 0.10` on every line with `ink ≥ 40`; `[fringe] <cell>: … 0 greyscale`, `judged ≥ 1`. | 0 lines | measurable | H27 | the `[fringe] host` line of the same run (the side bar's own title label in the window screenshot) |
 
 ### ICON
 
