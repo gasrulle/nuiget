@@ -107,6 +107,17 @@ Verified by running (local, macOS, VS Code 1.140.0; never pixel evidence):
   299460 / 326720`, `dist/webview.js 587014 / 613761`, `dist/sidebar.js 360726 / 374532` (+309 bytes); `npm run package:vsix` →
   exit 0 (the VSIX the local readings ran on).
 
+**Red run 1 of push 3: 43454600679 on affe1b8** (`UI` red, `48 passing`, `1 failing`: `the sidebar search box takes the focus
+when the view takes it (SB14, UX-P3.8)`, `Error: Timed out after 30000 ms waiting for the sidebar search box as the active element
+of the focused view`; every other job green). Cause, reproduced locally by running `sidebar-parity.ui.test.ts` and
+`sidebar.ui.test.ts` in CI order (`2) … takes the focus …` timed out): the box claims the focus once per document (the ruled
+form), and the parity suite, which runs first, had already spent the claim; run alone the case passed. Fix forward: the case
+reloads the webviews (`Developer: Reload Webviews`) after opening the view, so the sidebar mounts afresh, then gives the view the
+focus with the same command as before; the same two suites in CI order: `✔ the sidebar search box takes the focus when the view
+takes it (SB14, UX-P3.8)`, `13 passing`, `1 failing` the local-only parity case `Open Full Manager opens the main panel beside the
+sidebar` (`Timed out after 60000 ms waiting for two webviews`; `✔` on CI run 43454600679). Deviation: the remount precondition is
+added to the ruled steps (open, focus command, poll); the focus path itself is unchanged.
+
 ## Visual evidence (UI items)
 
 **Push 1, form (1), run 43342362387 on 82cb616: green on every job; the criterion does not hold** (design-advisor DO 2). `ui-diff.txt`:

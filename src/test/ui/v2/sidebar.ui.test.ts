@@ -35,6 +35,9 @@ describe('2.0 sidebar', () => {
     it('the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)', async function () {
         this.timeout(120_000);
         await openSidebarView();
+        // The box claims the focus once per document: an earlier suite may have spent the claim (sidebar-parity runs first, run
+        // 43454600679), so the webviews are reloaded and the sidebar mounts afresh before the view is given the focus.
+        await new Workbench().executeCommand('Developer: Reload Webviews');
         await enterSidebarWebview();
         await findByTestId('sidebar-search-input', 60_000);
         // The command is held inside the wait (re-run while the box is not the focused view's active element), as a tab
