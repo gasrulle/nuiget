@@ -1,0 +1,135 @@
+{
+  "item": "P3.fix-5",
+  "runs": [
+    {
+      "runId": "43470510120",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "eb70248 (the proving push; DS-ROW-7 pending)",
+      "look": "modern",
+      "workflow": "wf_9370fa6c-3de",
+      "note": "No sidebar artboard: the moved cell and the finding's own state are judged against main-installed-all.dark-modern.1200.png and its spec, as UX-P3.8's judge did (design-advisor follow-up 3 of UX-P3.8). The one moved cell is sidebar-all-projects.dark-modern.300; sidebar-browse-hover is the state of P3.8's sidebar-browse-hover#D1 (its list masked, so its pixels did not count as moved).",
+      "captures": {
+        "sidebar-all-projects": {
+          "png": "captures/43470510120/sidebar-all-projects.dark-modern.300.png",
+          "sha256": "3e368b42df42b6ea74b3cb9afe7db9377349c5c14b67dd89af60080e533bbb5e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-browse-hover": {
+          "png": "captures/43470510120/sidebar-browse-hover.dark-modern.300.png",
+          "sha256": "a9733b743d23fb7f8dff85957ec92bb53bed39a115b5f6cb6622b0cbbfb638d4",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 4,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 3,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "sidebar-all-projects#D1",
+          "state": "sidebar-all-projects",
+          "finding": "[geometry] In the Installed section header (box x 4-296, y 54-82, 28 px, measured from its corner pixels) the chevron and the 46 count badge sit 1 px below centre: the 20 px badge spans y 59-79, leaving 5 px above and 3 px below, while the title's caps are centred (y 63-71) and the compact group rows below centre their count badges 1/1 in the 22 px band.",
+          "severity": "minor",
+          "box": [
+            4,
+            54,
+            292,
+            28
+          ],
+          "rule": "DS-INSET-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-all-projects",
+              "finding": "In the Installed section header (box x 4-296, y 54-82, 28 px, measured from its corner pixels) the chevron and the 46 count badge sit 1 px below centre: the 20 px badge spans y 59-79, leaving 5 px above and 3 px below, while the title's caps are centred (y 63-71) and the compact group rows below centre their count badges 1/1 in the 22 px band.",
+              "severity": "minor",
+              "box": [
+                4,
+                54,
+                292,
+                28
+              ],
+              "rule": "DS-INSET-2",
+              "verdict": "confirmed",
+              "reason": "I read the pixels behind the crop. The header box's rounded-corner pixels at x 5–6 sit at y 54 and y 81, so the box is 28 px from 54 to 81. The 46 badge fills y 59–78, which leaves 5 px above and 3 px below, and the chevron (67–71) also sits low against the title caps (62–71). The hard DS-INSET-2 reading of 'installed … 5.5/5.5' covers a 17 px content run that cannot hold the 20 px badge, so it does not contradict this. It is optical-centring polish.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "informational": "singleJudge, informational: the Installed section header's chevron and count badge 1 px below centre (5 above, 3 below in the 28 px header); not a compact row, outside DS-ROW-7; for UX-P3.9's shared-chrome pass or the planning session."
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "sidebar-all-projects",
+          "finding": "The trailing badge column is ragged: every CPM label pill in the Catalog.csproj package rows ends at x 255, 26 px short of the count badges of the Catalog.csproj and Gateway.csproj group rows (end x 281) in the same tree. A native side-bar tree (Explorer and SCM decorations) ends a row's trailing decoration at the row's end inset, so these two columns should share one end edge.",
+          "severity": "major",
+          "box": [
+            220,
+            105,
+            62,
+            328
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show the CPM pills ending at about x 255 while the group counts end at 282. That is the declared reserved action slot, not a defect: DECISIONS 2026-11-08 says a compact row's one action overlays an end slot of 32 px (6 + 22 + 4) and 2026-11-01 says every product row reserves that slot. 288 − 32 = 256 matches the pill end, and the hard DS-INSET-3 reads 'group rows 6 ×5 (target 6)' with DS-OVERFLOW-2 at 0 offending.",
+          "method": "crop",
+          "refuterSeverity": "minor",
+          "disposition": "refuted-by-measurement"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "sidebar-all-projects",
+          "finding": "The CPM label badges of the Catalog.csproj rows end at x 255, about 33 px inside the row band (which ends at about 288), while the group-row counts (13 at x 255-281, 15 at x 413-432) and the section count end 6 px inside their boxes. The trailing badges of the list therefore form two right edges about 26 px apart, and the rows' trailing badge does not keep the end inset.",
+          "severity": "minor",
+          "box": [
+            220,
+            105,
+            62,
+            328
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Same crop and same cause as native-1: the CPM pills end about 33 px inside the roughly 288 px band because the row reserves the 32 px action end slot (DECISIONS 2026-11-08, 2026-11-01). The trailing elements the rule measures keep the end inset: hard DS-INSET-3 reads 'section headers 6; group rows 6 ×5'.",
+          "method": "crop",
+          "refuterSeverity": "minor",
+          "disposition": "refuted-by-measurement"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-all-projects",
+          "finding": "The folder group row label reads 'tools' (and 'app' above it) in lowercase, while the approved artboard draws the same folder group row as 'Tools' in Title Case, the casing DS-COPY-1 sets for group-header labels.",
+          "severity": "minor",
+          "box": [
+            28,
+            766,
+            38,
+            17
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop shows a lowercase 'tools' folder row, but the folder title is the workspace directory's own name, which is live content (§6). The sidebar's level group rows are styled with no text transform by design: the hard DS-TYPE-5 reads 'level ×7: 13px/600/none (target 13px/600/none)'. The 'Tools' in the artboard comes from the main panel at 1200 px, not from this sidebar surface, so it sets no target here.",
+          "method": "crop",
+          "refuterSeverity": "minor",
+          "disposition": "refuted-by-measurement"
+        }
+      ]
+    }
+  ]
+}

@@ -82,7 +82,7 @@
             "geometry"
           ],
           "disposition": "fixed",
-          "owner": "fix row to be placed (compact row badge centring)",
+          "owner": "UX-P3.fix-5, eb70248 (align-self: center on the compact row's badge slot; DS-ROW-7)",
           "evidence": "design-advisor follow-up 4 of 2026-11-13 (UX-P3.8, in src/webview/sidebar/STATUS.md): the shared compact row places the badge by its text baseline (primitives.css:490-494, 511-514, 623-649: `.nuiget-row--compact .nuiget-row-body` is `align-items: baseline`), so a 20 px label badge sits 2/0 in the 22 px band; the same offset is in the sidebar-all-projects golden since UX-P3.7c. Not this item's file (plan §2.1); the fix is the badge slot centred in the existing `.nuiget-row--compact .nuiget-row-badges` rule, with a new rule (badge centred within 1 px, never touching the band) landing pending on the owner row first."
         }
       ],
@@ -102,7 +102,7 @@
           "lenses": [
             "native"
           ],
-          "informational": "singleJudge, informational: the same defect as sidebar-browse-hover#D1; owner the fix row to be placed (compact row badge centring), design-advisor follow-up 4 of 2026-11-13."
+          "informational": "singleJudge, informational: the same defect as sidebar-browse-hover#D1; owner UX-P3.fix-5, eb70248 (align-self: center on the compact row's badge slot; DS-ROW-7), design-advisor follow-up 4 of 2026-11-13."
         }
       ],
       "refuted": []

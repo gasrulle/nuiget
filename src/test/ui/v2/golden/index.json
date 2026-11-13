@@ -457,9 +457,9 @@
   },
   "sidebar-all-projects.dark-modern.300.png": {
     "status": "approved",
-    "run": "42462064572",
-    "sha256": "157c6299264d5579601e963cc8db19ef20fd28db1076e67e879712371e755921",
-    "sidecarSha256": "83e72e211faf6179532e982d30ae78d8b725bf148718f9137a62bbd6e17a0d3a"
+    "run": "43470510120",
+    "sha256": "3e368b42df42b6ea74b3cb9afe7db9377349c5c14b67dd89af60080e533bbb5e",
+    "sidecarSha256": "18924fa578cdaf1d723b53ce57ebdbb204e34bfe22c58d565cbe294f80045d26"
   },
   "sidebar-browse-empty.dark-modern.300.png": {
     "status": "approved",

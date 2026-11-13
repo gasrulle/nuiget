@@ -273,8 +273,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
-    // UX-P3.fix-5 (design-advisor opening ruling of 2026-11-13): a compact row's badge centred in its band, both looks, every lane.
-    rule('DS-ROW-7', { helper: 4, scopes: { sidebar: { pending: 'P3.fix-5' } }, tolerance: TOLERANCES.centring, exceptStates: [...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
+    // UX-P3.fix-5 (design-advisor opening ruling of 2026-11-13): a compact row's badge centred in its band, both looks, every lane;
+    // hard for the sidebar since that row's closing (DO 8).
+    rule('DS-ROW-7', { helper: 4, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.centring, exceptStates: [...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
     // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar (P3.7a's files: the sidebar and the compact Row).
     rule('DS-HEIGHT-1', { helper: 3, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: SIDEBAR_BROWSE_STATES }),

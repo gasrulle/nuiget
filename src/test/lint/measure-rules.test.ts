@@ -1361,7 +1361,7 @@ describe('DS-ROW-7: a compact row\'s badge centred in its band (UX-P3.fix-5)', (
         measureLines(state, layout({ rowBadges }, { compactRows }), 'modern', {}, undefined, 300).find(line => line.name === `DS-ROW-7@${state}`);
 
     it('fails a badge 2 px under the band\'s top and flush with its bottom, and passes 1/1 and 2.5/2.5', () => {
-        expect(read('sidebar-browse-hover', [badge(2, 0)])).toMatchObject({ pass: false, status: { pending: 'P3.fix-5' }, value: 'label 2/0; count none (1 badges in 1 rows; first Serilog: top 2, bottom 0)' });
+        expect(read('sidebar-browse-hover', [badge(2, 0)])).toMatchObject({ pass: false, status: 'hard', value: 'label 2/0; count none (1 badges in 1 rows; first Serilog: top 2, bottom 0)' });
         expect(read('sidebar-browse-hover', [badge(1, 1), badge(1, 1, false, 'Serilog.Sinks.Console')])).toMatchObject({ pass: true, value: 'label 1/1 ×2; count none (2 badges in 2 rows; first Serilog: top 1, bottom 1)' });
         expect(read('sidebar-browse-hover', [badge(2.5, 2.5)])?.pass).toBe(true);
     });
@@ -1385,7 +1385,7 @@ describe('DS-ROW-7: a compact row\'s badge centred in its band (UX-P3.fix-5)', (
         expect(measureLines('main-installed-single', layout({ rowBadges: [badge(2, 0)] }), 'modern').some(line => line.name.startsWith('DS-ROW-7'))).toBe(false);
         expect(read('sidebar-filter', [badge(2, 0)])).toBeUndefined();
         expect(read('sidebar-browse-empty', [badge(2, 0)])).toBeUndefined();
-        expect(RULES.find(rule => rule.id === 'DS-ROW-7')).toMatchObject({ helper: 4, tolerance: 1, scopes: { sidebar: { pending: 'P3.fix-5' } } });
+        expect(RULES.find(rule => rule.id === 'DS-ROW-7')).toMatchObject({ helper: 4, tolerance: 1, scopes: { sidebar: 'hard' } });
         expect(RULES.find(rule => rule.id === 'DS-ROW-7')?.lanes).toBeUndefined();
     });
 });
