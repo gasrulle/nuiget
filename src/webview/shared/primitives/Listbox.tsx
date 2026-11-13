@@ -153,6 +153,13 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const rootRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const emptyRef = useRef<HTMLDivElement>(null);
+    // Scrolled away from its start: the stylesheet draws the workbench's scroll shadow on the top edge (DS-SCROLL-2, UX-P3.9).
+    // The scroller's own position: read again whenever the scroller comes or goes (an empty list renders none), and on scroll.
+    const [scrolled, setScrolled] = useState(false);
+    const hasScroller = items.length > 0;
+    useLayoutEffect(() => {
+        setScrolled((scrollRef.current?.scrollTop ?? 0) > 0);
+    }, [hasScroller]);
 
     // The active row is remembered by id, so that it stays with its item when the list is reordered. When the
     // item is gone, the row now at its index takes over (or the last one).
@@ -319,6 +326,8 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                 aria-busy={busy ? true : undefined}
                 aria-multiselectable={selectedIds === undefined ? undefined : true}
                 data-testid={testId}
+                data-scrolled={scrolled ? 'true' : undefined}
+                onScroll={event => setScrolled(event.currentTarget.scrollTop > 0)}
                 onKeyDown={handleKeyDown}
                 onFocus={event => {
                     const index = indexOf(event.target);

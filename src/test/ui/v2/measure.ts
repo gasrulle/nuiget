@@ -254,8 +254,8 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
     { role: 'skeleton', selector: '.nuiget-skeleton-row--comfortable', pseudo: '::before', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
     { role: 'skeleton', selector: '.nuiget-skeleton-row--compact', pseudo: '::after', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
 ];
-/** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5). */
-const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'];
+/** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5); `main-details-readme` returns it to the current row (UX-P3.9 follow-up 3), and the theme pass reads the details tab's ring. */
+const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
@@ -376,7 +376,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.5 (design-advisor follow-up 2): a dialog opened by a pointer click shows no ring on Cancel under Modern UI, the
     // DS-FOCUS-3 premise (run 42402701440: outline none); the dialog ring's form is read by the keyboard walk's bulk dialog.
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
-    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded'] }),
+    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
@@ -696,6 +696,8 @@ export interface Scrollbars {
     rootColor: string;
     slider: string;
     scrollers: Scroller[];
+    /** UX-P3.9 (DS-SCROLL-2): `--nuiget-color-scroll-shadow` as computed (transparent in high contrast). */
+    shadowColour?: string;
 }
 
 /** One element of an artboard spec, or of a capture: rect and content inset relative to the root, padding, gap. */
@@ -1821,7 +1823,7 @@ for (const el of document.body.querySelectorAll('*')) {
     });
 }
 const rootStyle = getComputedStyle(document.documentElement);
-const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
+const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers, shadowColour: computedColour('--nuiget-color-scroll-shadow') };
 return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, rowBadges, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
@@ -2121,15 +2123,17 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             };
         }
         case 'DS-SCROLL-2': {
-            // UX-P3.9 (DO 1d): every list scrolled away from its top draws a shadow at its top edge (today none).
+            // UX-P3.9 (DO 1d, follow-up 3 DO 6): a list scrolled away from its top draws the token shadow at its top edge, and a
+            // list at its top draws none; a taller window that leaves a list at 0 reads that clause, so no lane key is needed.
             const scrollers = layout.scrollbar.scrollers;
             if (scrollers.length === 0) {
                 return { value: `${NOT_MEASURABLE} (no scrolling list)`, pass: false };
             }
-            const scrolled = scrollers.filter(scroller => (scroller.scrollTop ?? 0) > 0);
+            const token = layout.scrollbar.shadowColour ? `${layout.scrollbar.shadowColour} 0px 6px 6px -6px inset` : undefined;
+            const holds = (scroller: Scroller): boolean => ((scroller.scrollTop ?? 0) > 0 ? token !== undefined && scroller.shadow === token : scroller.shadow === 'none');
             return {
-                value: scrollers.map(scroller => `${scroller.label} scrollTop ${scroller.scrollTop ?? 'unread'}, shadow ${scroller.shadow ?? 'unread'}`).join('; '),
-                pass: scrolled.length > 0 && scrolled.every(scroller => scroller.shadow !== undefined && scroller.shadow !== 'none'),
+                value: `${scrollers.map(scroller => `${scroller.label} scrollTop ${scroller.scrollTop ?? 'unread'}, shadow ${scroller.shadow ?? 'unread'}`).join('; ')} (token ${token ?? 'unread'})`,
+                pass: scrollers.every(holds),
             };
         }
         case 'PF-3b': {

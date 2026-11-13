@@ -81,6 +81,39 @@ describe('Listbox', () => {
         expect(tabStops()).toEqual([expect.stringContaining('Beta')]);
     });
 
+    it('marks itself scrolled away from its start, and only then, for the scroll shadow (DS-SCROLL-2, UX-P3.9)', () => {
+        render(<PackageList items={three} />);
+        const listbox = screen.getByRole('listbox', { name: 'Installed packages' });
+        expect(listbox).not.toHaveAttribute('data-scrolled');
+        listbox.scrollTop = 30;
+        fireEvent.scroll(listbox);
+        expect(listbox).toHaveAttribute('data-scrolled', 'true');
+        listbox.scrollTop = 0;
+        fireEvent.scroll(listbox);
+        expect(listbox).not.toHaveAttribute('data-scrolled');
+        // The shadow is a pseudo-element: the list still owns its options only.
+        expect(options()).toHaveLength(3);
+    });
+
+    it('a list emptied while scrolled and refilled too short to scroll draws no shadow (DS-SCROLL-2, UX-P3.9)', () => {
+        const { rerender } = render(<PackageList items={three} />);
+        const scrolledList = screen.getByRole('listbox', { name: 'Installed packages' });
+        scrolledList.scrollTop = 30;
+        fireEvent.scroll(scrolledList);
+        expect(scrolledList).toHaveAttribute('data-scrolled', 'true');
+        rerender(<PackageList items={[]} />);
+        expect(screen.queryByRole('listbox')).toBeNull();
+        // The refilled list is shorter than its viewport: the virtualizer's restore of the old offset clamps to 0 and fires
+        // no scroll event, as a browser's scroller does.
+        Object.defineProperty(HTMLElement.prototype, 'scrollTop', { configurable: true, get: () => 0, set: () => undefined });
+        try {
+            rerender(<PackageList items={three.slice(0, 1)} />);
+            expect(screen.getByRole('listbox', { name: 'Installed packages' })).not.toHaveAttribute('data-scrolled');
+        } finally {
+            delete (HTMLElement.prototype as { scrollTop?: number }).scrollTop;
+        }
+    });
+
     it('ArrowDown, ArrowUp, Home and End move the active option and the roving tabindex', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();

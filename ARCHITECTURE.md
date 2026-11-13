@@ -400,7 +400,9 @@ A click toggles a group row, as Enter does; Ctrl+Enter, Delete, the actions menu
 document, every row says its place (`aria-posinset`, `aria-setsize`: among all in a listbox, among its siblings in a tree), and the active row stays
 mounted when it is scrolled out of view, so focus never falls out of the list. The active row is remembered
 by item id. When its item disappears, the row now at its index takes over; when the list empties, the
-container around the empty state takes focus. The list never takes focus it did not have.
+container around the empty state takes focus. The list never takes focus it did not have. Scrolled away from its start,
+the list carries `data-scrolled="true"` and its sticky `::before` draws the workbench's scroll shadow on its top edge
+(DS-SCROLL-2); the pseudo-element takes no layout and is no node of the accessibility tree.
 
 **Numbers reach the DOM as custom properties.** The Content Security Policy allows no `style` attribute in
 markup (ADR-006), and a virtualized row, a progress bar and a split need a number per element. `cssVars()`

@@ -74,7 +74,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-details-readme'] });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
@@ -84,7 +84,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-DIVIDER-5')?.states).toEqual(dialogStates);
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] });
-        expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded']);
+        expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme']);
         expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'] });
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
@@ -1430,12 +1430,19 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true, focused: true })]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, value: 'sash: 0 of 0 unfocused in focusBorder' });
     });
 
-    it('DS-SCROLL-2 asks a shadow of every list scrolled from its top, in its three states only', () => {
+    it('DS-SCROLL-2 asks the token shadow of a list scrolled from its top and none at its top, in its three states only', () => {
         const scroller = (scrollTop: number, shadow: string) => ({ label: '[installed-list]', left: 0, top: 0, width: 300, height: 200, right: 300, size: 8, thumb: 50, backdrop: 'rgb(30, 30, 30)', scrollTop, shadow });
-        const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers } });
-        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.9' }, value: '[installed-list] scrollTop 120, shadow none' });
-        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(0, 0, 0) 0px 6px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
-        expect(lineOf('main-transitive-expanded', bars(scroller(0, 'none')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
+        const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers, shadowColour: 'rgb(0, 0, 0)' } });
+        const token = 'rgb(0, 0, 0) 0px 6px 6px -6px inset';
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.9' }, value: `[installed-list] scrollTop 120, shadow none (token ${token})` });
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, token)), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
+        // Another colour or geometry is not the token's.
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(255, 0, 0) 0px 6px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(0, 0, 0) 0px 3px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
+        // At its top a list draws none (a taller window), and a shadow there fails.
+        expect(lineOf('main-transitive-expanded', bars(scroller(0, 'none')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
+        expect(lineOf('main-transitive-expanded', bars(scroller(0, token)), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
+        expect(lineOf('main-transitive-expanded', layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers: [] } }), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
         expect(lineOf('main-installed-single', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-installed-single')).toBeUndefined();
     });
 });

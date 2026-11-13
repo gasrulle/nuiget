@@ -917,6 +917,15 @@ const REACH: Record<string, Reach> = {
             await until('(() => { const select = document.querySelector(\'[data-testid="version-selector"]\'); return select !== null && !select.disabled && (select.selectedOptions[0]?.textContent ?? "").endsWith("(installed)"); })()', 'the version selector listing the installed version', 60_000);
             await clickVisible('details-tab-readme');
             await until('document.querySelector(\'[data-testid="readme-content"], [data-testid="readme-empty"]\') !== null', 'the README or its empty state', 60_000);
+            // The artboard's scene keeps the focus on the current row: back from the README tab with Shift+Tab, bounded; a
+            // spent bound is `not reachable`, never a shot (design-advisor rulings of UX-P3.9: opening DO 4, follow-up 3 DO 8).
+            await poll(async () => {
+                if (await script<boolean>('const active = document.activeElement; return active !== null && active.matches(\'[data-testid="package-row-microsoft.extensions.dependencyinjection.abstractions"] .nuiget-row-option\');')) {
+                    return true;
+                }
+                await (await driverOf().switchTo().activeElement()).sendKeys(Key.chord(Key.SHIFT, Key.TAB));
+                return undefined;
+            }, 'the current row reached with Shift+Tab', 15_000).catch(() => notReachable('the current row reached with Shift+Tab'));
         },
     },
     'sidebar-sections': { reach: sidebarSections },

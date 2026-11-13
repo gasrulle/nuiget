@@ -136,6 +136,30 @@ async function toggle(rowTestId: string, selected: boolean): Promise<void> {
     await poll(async () => (((await option.getAttribute('aria-selected')) === 'true') === selected ? true : undefined), `${rowTestId} ${selected ? 'in' : 'out of'} the bulk set`, 10_000);
 }
 
+/**
+ * DS-FOCUS-1 `tabs` on the details tabs (UX-P3.9 design-advisor follow-up 3): the README tab just clicked draws the focus
+ * ring, 1 px solid in the resolved `--nuiget-color-focus` at offset -1, in every theme. A miss joins the moment failures.
+ */
+async function expectDetailsTabRing(theme: Theme, failures: string[]): Promise<void> {
+    type Ring = { focus: string; ring: string } | null;
+    const read = (): Promise<Ring> => driverOf().executeScript<Ring>(`
+        const tab = document.querySelector('[data-testid="details-tab-readme"]');
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--nuiget-color-focus)';
+        document.body.appendChild(probe);
+        const focus = getComputedStyle(probe).color;
+        probe.remove();
+        if (!tab) return null;
+        const style = getComputedStyle(tab);
+        return { focus, ring: style.outlineWidth + ' ' + style.outlineStyle + ' ' + style.outlineColor + ' offset ' + style.outlineOffset };`);
+    const holds = (reading: Ring): boolean => reading !== null && reading.ring === `1px solid ${reading.focus} offset -1px`;
+    const reading: Ring = await poll(async () => { const now = await read(); return holds(now) ? now : undefined; }, 'the README tab\'s focus ring', 10_000).catch(() => read());
+    console.warn(`[probe] details tab ring ${nameOf(theme)}: ${reading === null ? 'no README tab' : `${reading.ring} (focus ${reading.focus})`}`);
+    if (!holds(reading)) {
+        failures.push(`details tab ring under ${nameOf(theme)}: ${reading === null ? 'no README tab' : reading.ring}, expected 1px solid ${reading === null ? 'the focus colour' : reading.focus} offset -1px`);
+    }
+}
+
 /** The main panel's four moments, from the Installed tab with its first row current; the tab is left as it was found. */
 async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     const rows = await rowsOf('installed-list');
@@ -148,6 +172,7 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     // The README of a package with code blocks (A8); the details pane is judged like the rest since UX-P3.4.
     await (await optionOf('package-row-newtonsoft.json')).click();
     await (await findByTestId('details-tab-readme', 30_000)).click();
+    await expectDetailsTabRing(theme, failures);
     const readme = await poll(async () => (await driverOf().executeScript<string | null>(`
         const content = document.querySelector('[data-testid="readme-content"]');
         // ReadmeView mounts the container empty and fills it in an effect: decide once it holds the rendered README.

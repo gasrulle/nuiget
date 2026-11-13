@@ -173,6 +173,18 @@ describe('2.0 webview stylesheets', () => {
         expect(setters).toEqual(['.nuiget-section-header[data-variant="pane"] { --nuiget-section-header-line: var(--nuiget-pane-header-line, transparent) }']);
     });
 
+    it('a scrolled list draws the workbench\'s scroll shadow on its top edge, in the scroll-shadow token (DS-SCROLL-2, UX-P3.9)', () => {
+        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const declarationsOf = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
+        expect(declarationsOf('.nuiget-listbox[data-scrolled="true"]')).toEqual([
+            '--nuiget-listbox-shadow: var(--nuiget-color-scroll-shadow) 0 var(--nuiget-space-3) var(--nuiget-space-3) calc(var(--nuiget-space-3) * -1) inset',
+        ]);
+        expect(declarationsOf('.nuiget-listbox::before')).toEqual(expect.arrayContaining([
+            'position: sticky', 'inset-block-start: 0', 'block-size: var(--nuiget-space-3)', 'margin-block-end: calc(var(--nuiget-space-3) * -1)',
+            'box-shadow: var(--nuiget-listbox-shadow, none)', 'pointer-events: none',
+        ]));
+    });
+
     it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {
         const background = (file: string, prelude: string): string[] => parseRules(readFileSync(file, 'utf8')).find(rule => rule.prelude === prelude)?.declarations.filter(declaration => declaration.startsWith('background')) ?? [];
         expect(background('src/webview/main/main.css', '.nuiget-main')).toEqual(['background: var(--nuiget-color-bg)']);

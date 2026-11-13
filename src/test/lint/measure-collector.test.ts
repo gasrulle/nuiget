@@ -366,6 +366,9 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(scrollbar.scrollers).toEqual([{ label: '[installed-list]', left: 0, top: 136, width: 590, height: 164, right: 590, size: 10, thumb: 41, backdrop: 'rgb(30, 30, 30)', scrollTop: 0, shadow: 'none' }]);
             expect(scrollbar.slider).toBe('rgba(121, 121, 121, 0.4)');
             expect(typeof scrollbar.rootColor).toBe('string');
+            // DS-SCROLL-2's token colour, read through a probe of the token (UX-P3.9 follow-up 3 DO 6). jsdom leaves var() in a
+            // computed colour unresolved; Chromium resolves it, and the UI job's DS-SCROLL-2 lines print it as `token …`.
+            expect(scrollbar.shadowColour).toBe('var(--nuiget-color-scroll-shadow, transparent)');
         } finally {
             document.documentElement.style.removeProperty('--nuiget-color-scrollbar');
         }
