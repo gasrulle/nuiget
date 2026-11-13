@@ -56,8 +56,6 @@
     "    heading \"Newtonsoft.Json.Bson\"",
     "    combobox \"Version\" {version-selector}",
     "      option \"#\"",
-    "      option \"#\"",
-    "      option \"#\"",
     "    button \"Install\" {install-update-button}",
     "    button \"Install in projects…\" {multi-install-button}",
     "    tablist \"Details sections\" {details-tab-bar}",

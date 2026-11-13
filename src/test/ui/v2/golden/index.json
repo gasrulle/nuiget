@@ -523,8 +523,8 @@
   },
   "sidebar-update-all-dialog.dark-modern.300.png": {
     "status": "baseline",
-    "run": "42445799846",
-    "sha256": "0cf0605a4adc1dcf62da348b45b510eba567e8d82492ffeab509f38bb935f28f",
-    "sidecarSha256": "8fe990bf09f6f03bfd87c710257701d017c0b2a3fd3472d4fcc84aeda96f3c8c"
+    "run": "43314017322",
+    "sha256": "faf9fc5d451f854138eb56d3db1b43527e07bd0f5a5d027c449560348d5c22b4",
+    "sidecarSha256": "7c4653e25c94f19d881e0e42a09b21bdf86f653dc18a8aa1b2c8845420798a9f"
   }
 }
