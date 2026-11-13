@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8, blocked on SB14)   commit 57b28d9 (closing commit; this note completed after it)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8, `open` after P3.fix-4; SB14 is push 3)   commit 57b28d9 (closing commit of push 2; released by the planning session on 2026-11-13)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -609,5 +609,14 @@ badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact r
 
 ## Exact next step
 
-UX-P3.8 is `blocked` on SB14 alone (it waits on the H27 fix row the planning session places, then SB14 is push 3 of this item:
-first ruling DO 13, 14, 16). No other row starts while it is `blocked` (RUN-ux §3.3) unless the planning session places rows before it.
+**UX-P3.8 is `open`, `after P3.fix-4`** (released 2026-11-13 by the planning session under the owner's delegation; the
+tracker row holds the rulings and the ratified deviations). The three proposed rows are placed: UX-P3.fix-4 (the H27 cure
+with the search box focused; the probe is its instrument; above this row), UX-P3.fix-5 (the compact-row badge centring,
+after this row and after P3.fix-4) and UX-P4.fix-1 (the ADR-013 Decision 2 and D31 sentence, before P4.2b). Pushes 1 and 2
+of this item are landed and are not repeated. Once P3.fix-4 is `done`, this row resumes at push 3, SB14, under the first
+design-advisor ruling's DO 13, 14, 15 and 16 (above, verbatim): `SidebarView.tsx` focuses the box once at mount with its
+jsdom test; the DO 14 local readings pasted before the push; on CI the two-section cells 0 px or differing inside the box
+only, with P3.fix-4's fringe rule green on them, adopted `approved` under DO 15 with `LIVE_SIDEBAR_CARET`; a `[keys]` or
+hard DS-FOCUS change goes back to the design-advisor (DO 16); the host half is a stop-and-ask only if the UI test shows
+the box unfocused at first reveal. Then `done`. If P3.fix-4 ends without a cure, this row waits on the owner-action row
+it leaves. No other row of this item starts while P3.fix-4 is not `done` (RUN-ux §3.2 `after`).
