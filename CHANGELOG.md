@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 
 ### Fixed
+- **Sidebar text stays sharp while the search box has focus**
 - **A package stays marked busy while its operation waits in the queue**
 - **A password with a %VAR% placeholder inside a longer value is stored in clear text so the variable is read**
 - **Scrollbars in the package manager are thin again**

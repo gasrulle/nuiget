@@ -393,7 +393,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-LOOK-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.fix-4 (H27; design-advisor opening ruling of 2026-11-13, DO 10): the side bar's text keeps its subpixel rendering,
     // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: { pending: 'P3.fix-4' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true }),
+    // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true }),
 ];
 
 /** The state group of a named state, by its name. */

@@ -156,7 +156,22 @@ export function fringeLine(name: string, summary: FringeSummary): string {
 
 /** The value of DS-TYPE-10's `[measure]` line. */
 export function fringeValue(summary: FringeSummary): string {
+    if (summary.judged === 0) {
+        return 'not measurable (no judged line)';
+    }
     return `${summary.judged} lines judged, ${summary.greyscale} greyscale${summary.first === undefined ? '' : ` (first ${summary.first})`}`;
+}
+
+/**
+ * The states whose every text line is covered by a dialog's scrim: DS-TYPE-10 prints `not measurable (no judged line)` there
+ * and does not assert it (design-advisor follow-up 1 of 2026-11-13, DO 6). Anywhere else a cell with no judged line fails.
+ */
+export const NO_JUDGED_LINE_STATES: readonly string[] = ['sidebar-update-all-dialog'];
+
+/** DS-TYPE-10's result for a cell of `state`: `summary.pass`, except in the states of `NO_JUDGED_LINE_STATES`. */
+export function fringeVerdict(summary: FringeSummary, state: string): { value: string; pass: boolean } {
+    const unasserted = summary.judged === 0 && NO_JUDGED_LINE_STATES.includes(state);
+    return { value: fringeValue(summary), pass: unasserted || summary.pass };
 }
 
 /**

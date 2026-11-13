@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodePng } from '../../../scripts/crop-png.mjs';
-import { fringeLine, fringeValue, lineVerdict, lineVerdicts, LCD_RATIO, MIN_INK, summarize, type Pixels, type TextLine } from '../ui/v2/fringe';
+import { fringeLine, fringeValue, fringeVerdict, lineVerdict, lineVerdicts, LCD_RATIO, MIN_INK, summarize, type Pixels, type TextLine } from '../ui/v2/fringe';
 import { pixelRuleLines, RULES } from '../ui/v2/measure';
 
 /**
@@ -70,17 +70,27 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
         expect(lineVerdict(image, line('row 1', 13.5, 15, 75, 9), 2)).toEqual(lineVerdict(image, LINES[1], 1));
     });
 
-    it('prints DS-TYPE-10 after the shot, on the sidebar cells of the ui lane, pending on UX-P3.fix-4', () => {
+    it('prints DS-TYPE-10 after the shot, on the sidebar cells of the ui lane, hard since UX-P3.fix-4', () => {
         const read = { 'DS-TYPE-10': { value: fringeValue(summarize(lineVerdicts(fixture('h27-P-a-greyscale.png'), LINES, 1))), pass: false } };
         expect(pixelRuleLines('sidebar-sections', 300, 'dark-modern', 'ui', read)).toEqual([
-            { name: 'DS-TYPE-10@sidebar-sections', value: '5 lines judged, 5 greyscale (first section-header-installed)', status: { pending: 'P3.fix-4' }, pass: false },
+            { name: 'DS-TYPE-10@sidebar-sections', value: '5 lines judged, 5 greyscale (first section-header-installed)', status: 'hard', pass: false },
         ]);
         expect(pixelRuleLines('sidebar-sections', 300, 'dark-modern', 'matrix', read)).toEqual([]);
         expect(pixelRuleLines('main-installed-single', 1200, 'dark-modern', 'ui', read)).toEqual([]);
         expect(pixelRuleLines('sidebar-filter', 300, 'dark-modern', 'ui', {})).toEqual([
-            { name: 'DS-TYPE-10@sidebar-filter', value: 'not measurable (no pixels)', status: { pending: 'P3.fix-4' }, pass: false },
+            { name: 'DS-TYPE-10@sidebar-filter', value: 'not measurable (no pixels)', status: 'hard', pass: false },
         ]);
-        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: { pending: 'P3.fix-4' } }, lanes: ['ui'], pixels: true });
+        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: 'hard' }, lanes: ['ui'], pixels: true });
+    });
+
+    it('gives DS-TYPE-10 a cell verdict: a cell with no judged line is not measurable, unasserted only under a dialog\'s scrim', () => {
+        const covered = summarize([{ label: 'a', ink: 0, fringe: 0, skipped: 'covered', greyscale: false }]);
+        // Follow-up 1, DO 6: the dialog cell, whose every line is under the scrim, is not asserted.
+        expect(fringeVerdict(covered, 'sidebar-update-all-dialog')).toEqual({ value: 'not measurable (no judged line)', pass: true });
+        // Any other cell with no judged line fails: a reader that judges nothing never turns the rule green.
+        expect(fringeVerdict(covered, 'sidebar-sections')).toEqual({ value: 'not measurable (no judged line)', pass: false });
+        expect(fringeVerdict(summarize(lineVerdicts(fixture('h27-P-a-greyscale.png'), LINES, 1)), 'sidebar-sections')).toEqual({ value: '5 lines judged, 5 greyscale (first section-header-installed)', pass: false });
+        expect(fringeVerdict(summarize(lineVerdicts(fixture('sidebar-sections-lcd.png'), LINES, 1)), 'sidebar-sections')).toEqual({ value: '5 lines judged, 0 greyscale', pass: true });
     });
 
     it('passes a cell only when it judged a line and found none greyscale', () => {
