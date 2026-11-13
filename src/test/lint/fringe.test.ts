@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodePng } from '../../../scripts/crop-png.mjs';
-import { fringeLine, fringeValue, fringeVerdict, lineVerdict, lineVerdicts, LCD_RATIO, MIN_INK, summarize, type Pixels, type TextLine } from '../ui/v2/fringe';
+import { fringeLine, fringeValue, fringeVerdict, hostGuard, lineVerdict, lineVerdicts, LCD_RATIO, MIN_INK, summarize, type Pixels, type TextLine } from '../ui/v2/fringe';
 import { pixelRuleLines, RULES } from '../ui/v2/measure';
 
 /**
@@ -83,14 +83,28 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
         expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: 'hard' }, lanes: ['ui'], pixels: true });
     });
 
-    it('gives DS-TYPE-10 a cell verdict: a cell with no judged line is not measurable, unasserted only under a dialog\'s scrim', () => {
+    it('gives DS-TYPE-10 a cell verdict from the host reading: asserted on an LCD host, where a cell that judges nothing is red', () => {
         const covered = summarize([{ label: 'a', ink: 0, fringe: 0, skipped: 'covered', greyscale: false }]);
-        // Follow-up 1, DO 6: the dialog cell, whose every line is under the scrim, is not asserted.
-        expect(fringeVerdict(covered, 'sidebar-update-all-dialog')).toEqual({ value: 'not measurable (no judged line)', pass: true });
-        // Any other cell with no judged line fails: a reader that judges nothing never turns the rule green.
-        expect(fringeVerdict(covered, 'sidebar-sections')).toEqual({ value: 'not measurable (no judged line)', pass: false });
-        expect(fringeVerdict(summarize(lineVerdicts(fixture('h27-P-a-greyscale.png'), LINES, 1)), 'sidebar-sections')).toEqual({ value: '5 lines judged, 5 greyscale (first section-header-installed)', pass: false });
-        expect(fringeVerdict(summarize(lineVerdicts(fixture('sidebar-sections-lcd.png'), LINES, 1)), 'sidebar-sections')).toEqual({ value: '5 lines judged, 0 greyscale', pass: true });
+        const lcd = summarize(lineVerdicts(fixture('sidebar-sections-lcd.png'), LINES, 1));
+        const greyscale = summarize(lineVerdicts(fixture('h27-P-a-greyscale.png'), LINES, 1));
+        // An LCD host: asserted (follow-up 3, DO 2-3).
+        expect(fringeVerdict(lcd, 'lcd')).toEqual({ value: '5 lines judged, 0 greyscale', pass: true });
+        expect(fringeVerdict(greyscale, 'lcd')).toEqual({ value: '5 lines judged, 5 greyscale (first section-header-installed)', pass: false });
+        // A reader that judges nothing never turns the rule green.
+        expect(fringeVerdict(covered, 'lcd')).toEqual({ value: 'not measurable (no judged line)', pass: false });
+        // A host that draws no subpixel text (macOS), or that could not be read: not measurable, unasserted.
+        for (const host of ['greyscale', 'not read'] as const) {
+            expect(fringeVerdict(greyscale, host)).toEqual({ value: 'not measurable (host draws no subpixel text)', pass: true });
+            expect(fringeVerdict(covered, host)).toEqual({ value: 'not measurable (host draws no subpixel text)', pass: true });
+        }
+    });
+
+    it('turns a host without subpixel text into one red on Linux in the ui lane only', () => {
+        expect(hostGuard('lcd', 'linux', 'ui')).toBeUndefined();
+        expect(hostGuard('greyscale', 'linux', 'ui')).toBe('[fringe] host: greyscale, expected lcd on the ui lane');
+        expect(hostGuard('not read', 'linux', 'ui')).toBe('[fringe] host: not read, expected lcd on the ui lane');
+        expect(hostGuard('greyscale', 'darwin', 'ui')).toBeUndefined();
+        expect(hostGuard('greyscale', 'linux', 'matrix')).toBeUndefined();
     });
 
     it('passes a cell only when it judged a line and found none greyscale', () => {

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
-import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, type LineVerdict, summarize, type TextLine } from '../fringe';
+import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostReading, type LineVerdict, summarize, type TextLine } from '../fringe';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
@@ -1210,8 +1210,8 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     return { png: path.join(dir, `${windowName}.png`), x: rect.x, y: rect.y, dpr };
 }
 
-/** Whether this run has printed its `[fringe] host` line (UX-P3.fix-4). */
-let hostFringeRead = false;
+/** This pass's `[fringe] host` reading, read once at its first sidebar cell (UX-P3.fix-4, follow-up 3). */
+let hostReading: HostReading | undefined;
 
 /** Prints the line verdicts of a crop (DS-TYPE-10, `fringe.ts`), read with the decoder of `scripts/crop-png.mjs`; JSON in on stdin. */
 const READ_FRINGE = 'const { decodePng } = await import(process.argv[1]); const { lineVerdicts } = await import(process.argv[2]); let input = \'\'; '
@@ -1229,20 +1229,20 @@ function lineVerdictsOf(png: string, lines: readonly TextLine[], dpr: number): L
  * A crop's `[fringe]` line and DS-TYPE-10's result (UX-P3.fix-4): a reading that throws prints `not read` and leaves the
  * rule without a result, which prints `not measurable (no pixels)`.
  */
-function fringeOf(name: string, png: string, lines: readonly TextLine[], dpr: number, state: string): { text: string; result?: { value: string; pass: boolean } } {
+function fringeOf(name: string, png: string, lines: readonly TextLine[], dpr: number, host: HostReading): { text: string; result?: { value: string; pass: boolean } } {
     try {
         const summary = summarize(lineVerdictsOf(png, lines, dpr));
-        return { text: fringeLine(name, summary), result: fringeVerdict(summary, state) };
+        return { text: fringeLine(name, summary), result: fringeVerdict(summary, host) };
     } catch (error) {
         return { text: `[fringe] ${name}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})` };
     }
 }
 
 /**
- * `[fringe] host` (opening ruling, DO 9): the side bar's own title label in a window screenshot, read as one text line in
- * the top document; informational, the exemplar of DS-TYPE-10. Never throws.
+ * `[fringe] host` (opening ruling, DO 9; follow-up 3): the side bar's own title label in a window screenshot, read as one
+ * text line in the top document: the exemplar of DS-TYPE-10 and its condition. Never throws.
  */
-async function hostFringe(windowPng: string, dpr: number): Promise<void> {
+async function hostFringe(windowPng: string, dpr: number): Promise<HostReading> {
     try {
         await leaveWebview();
         const label = await script<TextLine | null>(`
@@ -1258,12 +1258,15 @@ const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rec
 return { x: rect.left, y: rect.top, width: rect.width, height: rect.height, label: element.textContent.trim().slice(0, 20), color: [p[0], p[1], p[2]], visible: hit !== null && (hit === element || element.contains(hit)) };`);
         if (label === null) {
             console.warn('[fringe] host: not read (no side bar title label)');
-            return;
+            return 'not read';
         }
         const [verdict] = lineVerdictsOf(windowPng, [label], dpr);
-        console.warn(`[fringe] host: ${verdict.fringe}/${verdict.ink} (${verdict.skipped !== undefined ? `not read: ${verdict.skipped}` : verdict.greyscale ? 'greyscale' : 'lcd'}) "${label.label}"`);
+        const reading: HostReading = verdict.skipped !== undefined ? 'not read' : verdict.greyscale ? 'greyscale' : 'lcd';
+        console.warn(`[fringe] host: ${verdict.fringe}/${verdict.ink} (${verdict.skipped !== undefined ? `not read: ${verdict.skipped}` : reading}) "${label.label}"`);
+        return reading;
     } catch (error) {
         console.warn(`[fringe] host: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+        return 'not read';
     }
 }
 
@@ -2096,14 +2099,19 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);
             if (textLines !== undefined) {
-                const cell = captureFile(state.name, capture);
-                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr, state.name);
-                console.warn(fringe.text);
-                // Once per run, the exemplar: the side bar's own title in this cell's window screenshot (opening ruling, DO 9).
-                if (!hostFringeRead && !HOVER_STATES.includes(state.name)) {
-                    hostFringeRead = true;
-                    await hostFringe(shot.png, shot.dpr);
+                // Once per pass, before the first sidebar cell is judged: the side bar's own title in that cell's window
+                // screenshot (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red.
+                if (hostReading === undefined) {
+                    hostReading = await hostFringe(shot.png, shot.dpr);
+                    const guard = hostGuard(hostReading, process.platform, LANE);
+                    if (guard !== undefined) {
+                        console.warn(guard);
+                        red.push(guard);
+                    }
                 }
+                const cell = captureFile(state.name, capture);
+                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr, hostReading);
+                console.warn(fringe.text);
                 for (const line of pixelRuleLines(state.name, capture.width, capture.theme, LANE, fringe.result === undefined ? {} : { 'DS-TYPE-10': fringe.result })) {
                     const text = formatLine(line);
                     console.warn(text);

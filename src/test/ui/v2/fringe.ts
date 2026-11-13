@@ -162,16 +162,27 @@ export function fringeValue(summary: FringeSummary): string {
     return `${summary.judged} lines judged, ${summary.greyscale} greyscale${summary.first === undefined ? '' : ` (first ${summary.first})`}`;
 }
 
-/**
- * The states whose every text line is covered by a dialog's scrim: DS-TYPE-10 prints `not measurable (no judged line)` there
- * and does not assert it (design-advisor follow-up 1 of 2026-11-13, DO 6). Anywhere else a cell with no judged line fails.
- */
-export const NO_JUDGED_LINE_STATES: readonly string[] = ['sidebar-update-all-dialog'];
+/** How the run's host draws its own text, read on the side bar's title (`[fringe] host`). */
+export type HostReading = 'lcd' | 'greyscale' | 'not read';
 
-/** DS-TYPE-10's result for a cell of `state`: `summary.pass`, except in the states of `NO_JUDGED_LINE_STATES`. */
-export function fringeVerdict(summary: FringeSummary, state: string): { value: string; pass: boolean } {
-    const unasserted = summary.judged === 0 && NO_JUDGED_LINE_STATES.includes(state);
-    return { value: fringeValue(summary), pass: unasserted || summary.pass };
+/**
+ * DS-TYPE-10's result for a cell (design-advisor follow-up 3 of 2026-11-13): asserted where the host draws subpixel text,
+ * and then a cell with no judged line is red (`not measurable (no judged line)`); where it does not (macOS), not measurable
+ * and unasserted.
+ */
+export function fringeVerdict(summary: FringeSummary, host: HostReading): { value: string; pass: boolean } {
+    if (host !== 'lcd') {
+        return { value: 'not measurable (host draws no subpixel text)', pass: true };
+    }
+    return { value: fringeValue(summary), pass: summary.pass };
+}
+
+/**
+ * The guard of follow-up 3, DO 2: on Linux in the `ui` lane the host has always drawn subpixel text, so a host reading of
+ * anything else is one red for the run, never a rule switched off. Undefined where the reading holds or is not required.
+ */
+export function hostGuard(host: HostReading, platform: string, lane: string): string | undefined {
+    return host !== 'lcd' && platform === 'linux' && lane === 'ui' ? `[fringe] host: ${host}, expected lcd on the ui lane` : undefined;
 }
 
 /**
