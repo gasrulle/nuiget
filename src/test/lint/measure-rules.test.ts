@@ -62,7 +62,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
         expect(scopes('PF-6')).toEqual({ 'main-installed': 'hard' });
-        expect(scopes('DS-COLOR-5')).toEqual({ rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } });
+        expect(scopes('DS-COLOR-5')).toEqual({ rows: 'hard', tabs: 'hard', sash: 'hard' });
         expect(scopes('DS-COLOR-4')).toEqual({ tabs: 'hard' });
         expect(scopes('DS-ICON-2')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard' });
         // UX-P2.2's flips hold only where their subject is, so a later edit cannot quietly shrink them.
@@ -219,8 +219,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
         expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
-        // UX-P0.22 (V15): the token scrollbars in every group, pending on P3.9 (Modern UI's 8 px needs P1.1's look token).
-        expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, { pending: 'P3.9' }])));
+        // UX-P0.22 (V15): the token scrollbars in every group, hard since UX-P3.9 (Modern UI's 8 px is P1.1's look token).
+        expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, 'hard'])));
+        expect(scopes('DS-DIVIDER-6')).toEqual({ sash: 'hard' });
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'DS-ROW-7': 1, 'PF-5': 1,
@@ -1105,9 +1106,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: true, status: 'hard', value: '0/0 within 1; composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
         const withEmpty: SpecLook = { ...spec, 'details-empty': element(328, 77, 604, 60) };
         expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 77, 601, 60) }, withEmpty))
-            .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
+            .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9; absolute off: details-empty Δx 3 Δw -3 Δinset 3); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
         expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 85, 601, 60) }, withEmpty))
             .toMatchObject({ pass: false, value: expect.stringContaining('off: details-empty Δy 8') });
+        // UX-P3.9 follow-up 6: the reading the clause hides is printed beside it, and never changes the verdict.
+        expect(at('details', { 'package-details-panel': element(328.6, 77, 603.4, 726), 'details-empty': element(328.6, 77, 603.4, 60) }, withEmpty))
+            .toMatchObject({ pass: true, value: expect.stringContaining('(x and inset relative to package-details-panel, pending P3.9; absolute: all within 1)') });
         // A header control lies across the panel's x range but above it: never read relative to the panel (UX-P3.3b fix-forward).
         const header = { ...withEmpty, 'project-selector': { ...element(862, 8, 157, 26), tokens: ['--nuiget-inset'] } };
         expect(at('header', { 'project-selector': element(862, 8, 157, 26), 'package-details-panel': element(331, 77, 601, 726) }, header))
@@ -1162,7 +1166,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const bars = (rootColor: string, ...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor, slider: '#79797966', scrollers } });
         const name = 'DS-SCROLL-1@main-installed-all';
         expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10)), name, 'classic')).toMatchObject({
-            value: '[installed-list] 10 (target 10); :root scrollbar-color auto; slider #79797966', status: { pending: 'P3.9' }, pass: true,
+            value: '[installed-list] 10 (target 10); :root scrollbar-color auto; slider #79797966', status: 'hard', pass: true,
         });
         // Modern UI's 8 px is a look token (P1.1): 10 px reads red there until then.
         expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10)), name, 'modern')).toMatchObject({ pass: false });
@@ -1416,9 +1420,9 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
     const withSashes = (sashes: Sash[]) => { const built = layout(); return { ...built, endOfP0: { ...built.endOfP0, sashes } }; };
 
-    it('DS-DIVIDER-6 passes a 1 px line with a transparent band and fails today\'s 4 px band, pending P3.9', () => {
+    it('DS-DIVIDER-6 passes a 1 px line with a transparent band and fails a 4 px band, hard since UX-P3.9', () => {
         expect(lineOf('main-transitive-details', withSashes([sash()]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({
-            pass: true, status: { pending: 'P3.9' }, value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 2/2',
+            pass: true, status: 'hard', value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 2/2',
         });
         expect(lineOf('main-transitive-details', withSashes([sash({ thickness: 4, background: 'rgba(0, 0, 0, 0)', band: { width: 0, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4 })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
         // The hit clause (follow-up 1): the sash taking the list scrollbar's press fails, as do unread hits.
@@ -1430,7 +1434,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 
     it('DS-COLOR-5 sash fails an unfocused sash in the focus role and ignores the focused one', () => {
-        expect(lineOf('main-installed-single', withSashes([sash()]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, status: { pending: 'P3.9' }, value: 'sash: 0 of 1 unfocused in focusBorder' });
+        expect(lineOf('main-installed-single', withSashes([sash()]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, status: 'hard', value: 'sash: 0 of 1 unfocused in focusBorder' });
         expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true })]), 'DS-COLOR-5@main-installed-single/sash')?.pass).toBe(false);
         expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true, focused: true })]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, value: 'sash: 0 of 0 unfocused in focusBorder' });
     });

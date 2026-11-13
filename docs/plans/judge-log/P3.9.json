@@ -1,0 +1,1122 @@
+{
+  "item": "P3.9",
+  "runs": [
+    {
+      "runId": "43520312504",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "baea494 (the last attempt; the closing adopts from this run)",
+      "look": "modern",
+      "workflow": "wf_a3d37f73-2d9",
+      "note": "The six artboard states at their artboard widths.",
+      "captures": {
+        "main-installed-all": {
+          "png": "captures/43520312504/main-installed-all.dark-modern.1200.png",
+          "sha256": "7d0219808aac45404debd26129a2056484b9ae5bc220db5a3a0933ee19bf09a9",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "main-installed-details": {
+          "png": "captures/43520312504/main-installed-details.dark-modern.1200.png",
+          "sha256": "57f244852060edfa0543c3167ae5bf370c83970f994d9c2bbdd471da27386470",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-installed-single": {
+          "png": "captures/43520312504/main-installed-single.dark-modern.932.png",
+          "sha256": "10f9afa0f24a81d399fae423ae425432342874954348c58022d9b17a4a62d7b5",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "f2c0217f4881b137f3484939b81467512742f377a38a4b1e166222af7e59fe1a"
+        },
+        "main-transitive-details": {
+          "png": "captures/43520312504/main-transitive-details.dark-modern.1200.png",
+          "sha256": "5ad3459f02727dafed24e31c4e8c63a10479e8d3d7bbf5fed28fda02654c4ec0",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png",
+          "artboardSha256": "3b3302b33ce84c53664e1834b0fd8291555c875dbd26efd444d2b4eb0d14831e"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/43520312504/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "8c52a16792cf7bdbdffee0772f0a2b4db960db14209231a799685fd780be01d0",
+          "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png",
+          "artboardSha256": "839fa9f168b6d66026cf04d34d549fc48eb6bca06e12ab779d5cdee733fb4607"
+        },
+        "main-updates": {
+          "png": "captures/43520312504/main-updates.dark-modern.1200.png",
+          "sha256": "ce4aa87732ea6a09e80fcdcd3904d7eeef4f46b44a6154cc376ab448294033bc",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "1226e13cf7f7fc34580bc664fe0bd1d39d112a12473ed160364cc0da159d94ce"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 29,
+        "standing": 12,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-all#D1",
+          "state": "main-installed-all",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rules require Title Case for button labels. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 makes button labels Title Case (design-system.md names \"Select All\" as the example).",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-all",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rules require Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the secondary button reading \"Select all\" where the artboard crop at the same box reads \"Select All\". The spec declares no copy difference, and the log has no DS-COPY-1 measurement that contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-all",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 makes button labels Title Case (design-system.md names \"Select All\" as the example).",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                73,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-1. The capture's button reads \"Select all\" and the artboard's select-all-button reads \"Select All\", which is the Title Case form that design-system.md §10 names. No measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-installed-all#D2",
+          "state": "main-installed-all",
+          "finding": "[native] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels. | [states] The disabled primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws \"Uninstall Selected (0)\" and DS-COPY-1 makes button labels Title Case (design-system.md names \"Uninstall Selected (0)\" as the example).",
+          "severity": "major",
+          "box": [
+            258,
+            117,
+            146,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-all",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                258,
+                117,
+                146,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the disabled primary button reading \"Uninstall selected (0)\" where the artboard reads \"Uninstall Selected (0)\". The spec declares no copy difference, and the log has no DS-COPY-1 measurement that contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-all",
+              "finding": "The disabled primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button draws \"Uninstall Selected (0)\" and DS-COPY-1 makes button labels Title Case (design-system.md names \"Uninstall Selected (0)\" as the example).",
+              "severity": "major",
+              "box": [
+                258,
+                117,
+                146,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-2. The capture's uninstall-selected-button reads \"Uninstall selected (0)\" in sentence case, and the artboard and the example in design-system.md §10 read \"Uninstall Selected (0)\".",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The bulk toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels. Workbench command buttons are Title Case, so these two labels do not read as built-in. | [states] The bulk-selection button reads \"Select all\" in sentence case, where the artboard's select-all-button and the copy rules' own example draw the Title Case label \"Select All\". | [states] The disabled bulk-uninstall button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the copy rules' own example draw the Title Case label \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "The bulk toolbar buttons read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Select All\" and \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels. Workbench command buttons are Title Case, so these two labels do not read as built-in.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                388,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the bulk toolbar buttons reading \"Select all\" and \"Uninstall selected (0)\". At the same box the artboard draws \"Select All\" and \"Uninstall Selected (0)\", which are the labels design-system §10 item 1 gives as DS-COPY-1's own examples. The spec declares no difference, and no DS-COPY-1 measurement in ui-output.txt contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "The bulk-selection button reads \"Select all\" in sentence case, where the artboard's select-all-button and the copy rules' own example draw the Title Case label \"Select All\".",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the button label \"Select all\" in sentence case. The artboard and DS-COPY-1's example (design-system §10) use \"Select All\". This is the same bulk-toolbar casing defect as native-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "The disabled bulk-uninstall button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button and the copy rules' own example draw the Title Case label \"Uninstall Selected (0)\".",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the disabled button reading \"Uninstall selected (0)\". The artboard and DS-COPY-1's example both use \"Uninstall Selected (0)\". This is the same bulk-toolbar casing defect as native-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The bulk toolbar's text button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rule requires Title Case for button labels. | [states] The Select All button reads \"Select all\" in sentence case. The artboard's select-all-button reads \"Select All\", and the copy rules list \"Select All\" as a Title Case button label.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The bulk toolbar's text button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and the copy rule requires Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the bulk toolbar button reading \"Select all\" where the artboard crop reads \"Select All\". DS-COPY-1 requires Title Case on button labels and lists \"Select All\" by name, and no DS-COPY-1 measurement at 932 contradicts this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The Select All button reads \"Select all\" in sentence case. The artboard's select-all-button reads \"Select All\", and the copy rules list \"Select All\" as a Title Case button label.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-1: the crop shows \"Select all\" against the artboard's \"Select All\", sentence case where DS-COPY-1 requires Title Case.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The disabled bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and the copy rule requires Title Case for button labels. | [states] The bulk uninstall button reads \"Uninstall selected (0)\" in sentence case. The artboard's uninstall-selected-button reads \"Uninstall Selected (0)\", and the copy rules list it as a Title Case label.",
+          "severity": "major",
+          "box": [
+            164,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The disabled bulk button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and the copy rule requires Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                164,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the disabled button reading \"Uninstall selected (0)\" where the artboard crop reads \"Uninstall Selected (0)\". That is sentence case against DS-COPY-1's Title Case rule for button labels. The only SPEC note on this element is a pending width delta (Δw -1.4), which says nothing about the casing.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The bulk uninstall button reads \"Uninstall selected (0)\" in sentence case. The artboard's uninstall-selected-button reads \"Uninstall Selected (0)\", and the copy rules list it as a Title Case label.",
+              "severity": "major",
+              "box": [
+                164,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-2: the crop shows \"Uninstall selected (0)\" against the artboard's \"Uninstall Selected (0)\", sentence case where DS-COPY-1 requires Title Case.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] The second transitive group header reads \"Transitive packages\" in sentence case, where the artboard's header at the same place reads \"Transitive Packages\" and the header just above it in the same capture is Title Case. Group-header labels are Title Case. | [states] The net8.0 group header reads \"Transitive packages\" in sentence case where the artboard's section-header-transitive-net8.0 reads \"Transitive Packages\". DS-COPY-1 requires Title Case on group-header labels, and the header directly above it already reads \"Transitive Packages\".",
+          "severity": "major",
+          "box": [
+            16,
+            706,
+            170,
+            22
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-transitive-details",
+              "finding": "The second transitive group header reads \"Transitive packages\" in sentence case, where the artboard's header at the same place reads \"Transitive Packages\" and the header just above it in the same capture is Title Case. Group-header labels are Title Case.",
+              "severity": "major",
+              "box": [
+                18,
+                708,
+                166,
+                17
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the second group header as \"Transitive packages\", while the artboard at the same box and the header above it in the capture both read \"Transitive Packages\". The spec declares no such difference, and the log has no DS-COPY-1 measurement for this state.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-transitive-details",
+              "finding": "The net8.0 group header reads \"Transitive packages\" in sentence case where the artboard's section-header-transitive-net8.0 reads \"Transitive Packages\". DS-COPY-1 requires Title Case on group-header labels, and the header directly above it already reads \"Transitive Packages\".",
+              "severity": "major",
+              "box": [
+                16,
+                706,
+                170,
+                22
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-1. The box at y 706–728 covers the net8.0 group header, which reads \"Transitive packages\", while the header directly above it reads \"Transitive Packages\".",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\". Button labels are Title Case, as in the workbench's own buttons. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard's select-all-button reads \"Select All\"; DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-transitive-details",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\". Button labels are Title Case, as in the workbench's own buttons.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the button as \"Select all\", while the artboard reads \"Select All\". DS-COPY-1 and design-system §10.1 name \"Select All\", and no measurement contradicts the finding.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-transitive-details",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard's select-all-button reads \"Select All\"; DS-COPY-1 requires Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-2. The capture crop reads \"Select all\" where the artboard reads \"Select All\", and the box covers the button.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-transitive-details#D3",
+          "state": "main-transitive-details",
+          "finding": "[native] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\". Button labels are Title Case. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\"; DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-transitive-details",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\". Button labels are Title Case.",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary button as \"Uninstall selected (0)\", while the artboard reads \"Uninstall Selected (0)\". The only spec line for this button is the P3.11 geometry delta (Δx 1.4), which does not cover casing.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-transitive-details",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\"; DS-COPY-1 requires Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-3. The capture crop reads \"Uninstall selected (0)\" where the artboard reads \"Uninstall Selected (0)\", and the box covers the button.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-transitive-expanded#D1",
+          "state": "main-transitive-expanded",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and DS-COPY-1 requires Title Case for button labels (the design system names \"Select All\" as the example). | [states] The secondary toolbar button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and DS-COPY-1 (with design-system §10's own example \"Select All\") requires Title Case button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-transitive-expanded",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard draws \"Select All\" and DS-COPY-1 requires Title Case for button labels (the design system names \"Select All\" as the example).",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop of [16,117,74,26] shows the secondary button labelled \"Select all\" where the artboard crop draws \"Select All\". The spec declares no label text, and no hard DS-COPY-1 measurement in ui-output.txt contradicts the finding.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-transitive-expanded",
+              "finding": "The secondary toolbar button reads \"Select all\" in sentence case, where the artboard's select-all-button reads \"Select All\" and DS-COPY-1 (with design-system §10's own example \"Select All\") requires Title Case button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same box and crop as native-1: the capture reads \"Select all\" and the artboard reads \"Select All\", which is Title Case broken on a button label (DS-COPY-1).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-transitive-expanded#D2",
+          "state": "main-transitive-expanded",
+          "finding": "[native] The disabled primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels (the design system names \"Uninstall Selected (0)\" as the example). | [states] The primary toolbar button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and DS-COPY-1 (with design-system §10's own example \"Uninstall Selected (0)\") requires Title Case button labels.",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-transitive-expanded",
+              "finding": "The disabled primary button reads \"Uninstall selected (0)\" in sentence case, where the artboard draws \"Uninstall Selected (0)\" and DS-COPY-1 requires Title Case for button labels (the design system names \"Uninstall Selected (0)\" as the example).",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop of [257,117,147,26] shows the disabled primary button reading \"Uninstall selected (0)\" where the artboard crop reads \"Uninstall Selected (0)\". This is label casing against DS-COPY-1, and no measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-transitive-expanded",
+              "finding": "The primary toolbar button reads \"Uninstall selected (0)\" in sentence case, where the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\" and DS-COPY-1 (with design-system §10's own example \"Uninstall Selected (0)\") requires Title Case button labels.",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This is the same box and crop as native-2: the capture reads \"Uninstall selected (0)\" and the artboard reads \"Uninstall Selected (0)\", which is Title Case broken on a button label (DS-COPY-1).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 requires Title Case on button labels, as workbench buttons use. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard element select-all-button draws \"Select All\" and DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 requires Title Case on button labels, as workbench buttons use.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the secondary button reading \"Select all\" with a lower-case a, where the artboard crop at the same box draws \"Select All\"; the log has no DS-COPY-1 measurement for main-updates, only DS-COPY-5, so no measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard element select-all-button draws \"Select All\" and DS-COPY-1 requires Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same box and defect as native-1: the crop reads \"Select all\" in sentence case against the artboard's \"Select All\", and the spec declares no copy difference for select-all-button.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and DS-COPY-1 requires Title Case on button labels. | [states] The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard element update-all-button draws \"Update All (14)\" and DS-COPY-1 requires Title Case on button labels.",
+          "severity": "major",
+          "box": [
+            295,
+            117,
+            109,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and DS-COPY-1 requires Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                295,
+                117,
+                109,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the primary button reading \"Update all (14)\" with a lower-case a, where the artboard crop draws \"Update All (14)\"; the log has no DS-COPY-1 line for this state, so no measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The bulk toolbar's primary button reads \"Update all (14)\" in sentence case, where the artboard element update-all-button draws \"Update All (14)\" and DS-COPY-1 requires Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                295,
+                117,
+                109,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same box and defect as native-2: the crop reads \"Update all (14)\" in sentence case against the artboard's \"Update All (14)\", and the spec declares no copy difference for update-all-button.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[geometry] The details facts grid runs 2 px shorter than the artboard: the Authors row is 23 px from Version and License 22 px from Authors (the artboard draws 24 and 23). Report abuse therefore ends at y 441 instead of 443, and the Vulnerabilities and Dependencies blocks below it sit 2 px higher than the artboard draws them.",
+          "severity": "minor",
+          "box": [
+            440,
+            292,
+            330,
+            152
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "The details facts grid runs 2 px shorter than the artboard: the Authors row is 23 px from Version and License 22 px from Authors (the artboard draws 24 and 23). Report abuse therefore ends at y 441 instead of 443, and the Vulnerabilities and Dependencies blocks below it sit 2 px higher than the artboard draws them.",
+              "severity": "minor",
+              "box": [
+                440,
+                292,
+                330,
+                152
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Side by side, the facts grid in the crop sits slightly higher than the artboard's. A pixel scan of the label column at x 440–540 finds the label tops at 295/318/340 and the Report abuse text ending at y 441 in the capture, against 295/319/342 and y 443 in the artboard. That is a 2 px drift, the spec declares no rect for the facts rows, and no hard measurement covers them.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-transitive-expanded#D3",
+          "state": "main-transitive-expanded",
+          "finding": "[geometry] In the NETStandard.Library row the label badges sit tighter than the artboard draws them: 8 px between the SDK and props pills in the capture (SDK 259-289, props 298-335) against 12 px in the artboard (SDK 261-291, props 304-341), and the name-to-first-badge gap is about 8 px against about 10 px; the spec gives no badge gap of its own, only the row's gap of 8.",
+          "severity": "minor",
+          "box": [
+            98,
+            360,
+            244,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-transitive-expanded",
+              "finding": "In the NETStandard.Library row the label badges sit tighter than the artboard draws them: 8 px between the SDK and props pills in the capture (SDK 259-289, props 298-335) against 12 px in the artboard (SDK 261-291, props 304-341), and the name-to-first-badge gap is about 8 px against about 10 px; the spec gives no badge gap of its own, only the row's gap of 8.",
+              "severity": "minor",
+              "box": [
+                98,
+                360,
+                244,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the NETStandard.Library row the capture's SDK pill spans x 258-290 and its props pill spans 297-336, a gap of about 6-8 px. The artboard's pills span 261-291 and 304-341, a gap of about 12 px. The spec sets no badge gap and no hard measurement covers it, so the difference shows only side by side.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "The divider between the list and the details pane sits at x=326 instead of the artboard's x=327, and the details pane starts at x=327 instead of 328. The list column is therefore 326 px wide against the spec's installed-list and tab-bar width of 327, and the details pane's x of 328. The scrollbar (318-325 against 319-326) and the end-anchored Direct Packages count badge (275-301 against 276-302) move 1 px left with it.",
+          "severity": "minor",
+          "box": [
+            318,
+            77,
+            10,
+            726
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The pixels do show the divider at x=326 in the capture and x=327 in the artboard. The hard measurements put the offset inside tolerance, though: MS-8 reads tab-bar 0,77 326.2×36 against the spec's 327, and SPEC@main-installed-single/list reads \"8/8 within 1\" and /details \"1/1 within 1\" (hard). A 0.8 px difference is within the 1 px tolerance, so the measurement refutes the finding.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The Installed tab has a full 1 px focusBorder ring (#0078d4 at x 6 and x 144, y 77 to 111). The artboard's rest state draws no focus ring on installed-tab, only the 1 px active-tab underline at y 111, so the capture shows a focus state that the artboard does not have.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show a 1 px #0078d4 ring on the Installed tab, from x 6 to 144 and y 77 to 111, which the artboard does not draw. The state measures this focus on purpose, though: the hard line DS-FOCUS-1@main-installed-single/tabs reads \"tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1)\". The ring is the asserted focus state, not a defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    },
+    {
+      "runId": "43520312504",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "baea494 (the last attempt; the closing adopts from this run)",
+      "look": "modern",
+      "workflow": "wf_7dff07f5-4d7",
+      "note": "No sidebar artboard: the two sidebar cells are judged against main-installed-all.dark-modern.1200.png and its spec, as UX-P3.8 and UX-P3.fix-5 did; main-details-readme against artboard A (main-installed-single.dark-modern.932), its scene.",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/43520312504/sidebar-sections.dark-modern.300.png",
+          "sha256": "5637f544e0a12ae02904e8f5a61397564e7c3a05ab8c6337330e95130f0035cc",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-all-projects": {
+          "png": "captures/43520312504/sidebar-all-projects.dark-modern.300.png",
+          "sha256": "d8d462f9d6c2382313d33d17590ea0ba66e67f7a046f33504a2f12daf3a567da",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "main-details-readme": {
+          "png": "captures/43520312504/main-details-readme.dark-modern.932.png",
+          "sha256": "289e2a4e183cb0e4b08386a7e3c6b72949d3de5ad6daaafb4915ecb983895df7",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "f2c0217f4881b137f3484939b81467512742f377a38a4b1e166222af7e59fe1a"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 6,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-details-readme#D1",
+          "state": "main-details-readme",
+          "finding": "[native] The bulk toolbar's two button labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case. The artboard draws \"Select All\" and \"Uninstall Selected (0)\", and DS-COPY-1 requires Title Case on button labels, giving these two labels as its examples. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, but the artboard's select-all-button reads \"Select All\". DS-COPY-1 requires Title Case on button labels, and the Design System's copy list names \"Select All\". | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, but the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\". DS-COPY-1 requires Title Case on button labels, and the Design System's copy list names \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            295,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-details-readme",
+              "finding": "The bulk toolbar's two button labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case. The artboard draws \"Select All\" and \"Uninstall Selected (0)\", and DS-COPY-1 requires Title Case on button labels, giving these two labels as its examples.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                295,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows \"Select all\" and \"Uninstall selected (0)\" where the artboard crop at the same box shows \"Select All\" and \"Uninstall Selected (0)\". Design System line 475 cites exactly these labels under DS-COPY-1, and the log has no DS-COPY-1 measurement that contradicts this (DS-COPY-2 \"labels 2: ok\" checks colons, not casing).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-details-readme",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, but the artboard's select-all-button reads \"Select All\". DS-COPY-1 requires Title Case on button labels, and the Design System's copy list names \"Select All\".",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                73,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The secondary button in the crop reads \"Select all\" and the artboard reads \"Select All\", which is the same sentence-case button-label defect against DS-COPY-1 as native-1. The box matches the spec rect of select-all-button, [16,117,73.7,26].",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-details-readme",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, but the artboard's uninstall-selected-button reads \"Uninstall Selected (0)\". DS-COPY-1 requires Title Case on button labels, and the Design System's copy list names \"Uninstall Selected (0)\".",
+              "severity": "major",
+              "box": [
+                165,
+                117,
+                146,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The primary button in the crop reads \"Uninstall selected (0)\" and the artboard reads \"Uninstall Selected (0)\", which is the same DS-COPY-1 casing defect in the bulk toolbar. The box matches the spec rect of uninstall-selected-button, [164,117,147,26].",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.11",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (0), Transitive packages, Update all (14)); P3.9's change touched no label",
+          "ruling": "design-advisor closing review of UX-P3.9, 2026-11-14 (docs/plans/handoff/P3.9.md): fixed, owner P3.11; P3.9 touched no label, and P3.11's tracker row names these labels"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-details-readme#D2",
+          "state": "main-details-readme",
+          "finding": "[states] At the same 932 px width, the details title ellipsizes to \"Microsoft.Extensions.DependencyInjection.Abstractio…\", while the artboard draws the whole id ending at x≈916. The overflow table (§8, Details title) allows the ellipsis, and DS-INSET-4 sets a 20 px end inset that the artboard's 16 px end does not keep, so the artboard drawing and the rules disagree here.",
+          "severity": "minor",
+          "box": [
+            348,
+            98,
+            568,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-details-readme",
+              "finding": "At the same 932 px width, the details title ellipsizes to \"Microsoft.Extensions.DependencyInjection.Abstractio…\", while the artboard draws the whole id ending at x≈916. The overflow table (§8, Details title) allows the ellipsis, and DS-INSET-4 sets a 20 px end inset that the artboard's 16 px end does not keep, so the artboard drawing and the rules disagree here.",
+              "severity": "minor",
+              "box": [
+                348,
+                98,
+                568,
+                22
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture's title ellipsizes as \"…Abstractio…\", with bright text ending at x=908, which keeps the measured DS-INSET-4 \"header 20/20 20/20 (target 20)\". The artboard draws the whole id, with text ending at x=914, which is inside the 20 px end inset. The overflow table allows the ellipsis for the details title, so the artboard drawing disagrees with the rules: a valid minor spec-conflict, not a product defect.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "sidebar-all-projects",
+          "finding": "The CPM label badges of the package rows end at x≈256, about 26 px left of the end edge the project group rows' count badges use (≈281, Catalog.csproj 13 and Gateway.csproj 15). The trailing badge column jumps between group rows and their leaf rows, and an empty end strip stays reserved while names such as Microsoft.AspNetCore… and StackExchange.Redis 2… are already ellipsized. Native trees (Explorer and SCM decorations) keep the trailing decoration on one end edge and draw hover actions before it.",
+          "severity": "major",
+          "box": [
+            220,
+            104,
+            62,
+            43
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show the CPM pills ending near x 256 and the Catalog.csproj count ending at x 282 (DS-OVERFLOW-2 measures the count at 255.3 to 282 in a box whose right edge is 288). This offset is a declared anatomy, though: DECISIONS 2026-11-08 (D47) gives the compact row an end slot of 32 (6 + 22 + 4) that its one action overlays, and 288 - 32 = 256. DECISIONS 2026-11-08 (UX-P3.7c) ends a group row's count 6 inside the band, 'as a row's action' (DS-INSET-3 measures group rows at 6). So this is a deliberate difference, not a defect.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "sidebar-all-projects",
+          "finding": "In the Installed tree the compact rows' CPM label pills end at x 256 (Mapster, MediatR, ... Swashbuckle) while the group rows' count badges directly above them end at x 282 (Catalog.csproj 13, Gateway.csproj 15, 6 inside the band per DS-INSET-3), so the tree's trailing badge column is ragged by 26 px: with no row hovered, the pills keep an empty hidden-action slot instead of ending at the band's end inset as a native tree's trailing decoration does (Explorer/SCM rows end their decoration in the same column as the folder rows').",
+          "severity": "major",
+          "box": [
+            230,
+            105,
+            52,
+            42
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the same 26 px offset: pills end near x 256, and the count badge ends at 282 (DS-OVERFLOW-2 measures 255.3 to 282, and DS-INSET-3 measures group rows at 6). Both positions come from declared decisions. D47 (DECISIONS 2026-11-08) reserves a 32 px end slot for the compact row's hidden action, which puts the pills at 288 - 32 = 256. UX-P3.7c ends the group count where a row's action ends. The empty strip is that declared action slot, so this is not a geometry defect.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        }
+      ]
+    }
+  ],
+  "handOffs": [
+    {
+      "finding": "P3.7d judge: the DS-DIVIDER-6 band findings (a 4 px band between the panes)",
+      "disposition": "fixed",
+      "evidence": "run 43520312504: DS-DIVIDER-6 hard, `sash 1 px … band 4 px in rgba(0, 0, 0, 0) … gap 1` on 86 cells",
+      "ruling": "design-advisor opening ruling of 2026-11-13, DO 5; closing review of 2026-11-14"
+    },
+    {
+      "finding": "P3.7d judge: no scroll shadow over a scrolled list (DS-SCROLL-2)",
+      "disposition": "fixed",
+      "owner": "P3.fix-6",
+      "evidence": "both measured forms cost subpixel text (runs 43508009789, 43514791659); DS-SCROLL-2 pending P3.fix-6",
+      "ruling": "design-advisor follow-up 5 of 2026-11-13, DO 9"
+    }
+  ],
+  "singleJudgeHandOffs": [
+    {
+      "id": "main-installed-details#D2",
+      "to": "P3.12"
+    },
+    {
+      "id": "main-transitive-expanded#D3",
+      "to": "P3.12"
+    },
+    {
+      "id": "main-details-readme#D2",
+      "to": "P3.10"
+    }
+  ],
+  "cornerPixels": "Accepted at adoption (closing review): ±1 grey level at the row check boxes' corners (x 17, pairs 15 px apart) and the \"All sources\" select's top corners (1029,8 / 1125,8), at most 16 px a cell, since push 2; cause not known; not the H27 class (no text, the direction differs between cells)."
+}

@@ -348,8 +348,8 @@ const namedWidth = (state: NamedState): number | undefined => {
  * that width only), in `theme`, Modern UI.
  */
 export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture: Capture }> {
-    // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (the
-    // dashed line is P3.9's): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3). No hovered current row is captured there (UX-P2.8a).
+    // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (UX-P3.9
+    // drew the dashed hover line on tabs only): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3). No hovered current row is captured there (UX-P2.8a).
     const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover' || state.name === 'main-installed-hover-current') && theme.includes('high-contrast'));
     return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B') && shown(state)).flatMap(state => {
         const fixed = namedWidth(state);

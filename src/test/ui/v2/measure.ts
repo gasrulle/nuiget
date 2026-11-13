@@ -330,7 +330,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.fontExact }),
-    // The tab's high-contrast lines are P3.9's.
+    // The tab's high-contrast lines (UX-P3.9) are asserted by the theme pass (`expectTabLines`, both HC themes).
     rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
@@ -341,12 +341,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard', layers: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES, layers: DIALOG_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
     // UX-P3.5 (design-advisor ruling of 2026-11-07): only layers are elevated, and the modal backdrop is black at 50 %.
     rule('DS-DIVIDER-2', { helper: 6, scopes: { layers: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
-    // UX-P3.9 (design-advisor opening ruling of 2026-11-13, DO 1a): the sash is a 1 px line with a transparent 4 px band; read at rest.
-    rule('DS-DIVIDER-6', { helper: 6, scopes: { sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    // UX-P3.9 (design-advisor opening ruling of 2026-11-13, DO 1a): the sash is a 1 px line with a transparent 4 px band; read at rest; hard since UX-P3.9.
+    rule('DS-DIVIDER-6', { helper: 6, scopes: { sash: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DIVIDER-5', { helper: 6, scopes: { dialogs: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
-    rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
+    rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
@@ -389,8 +389,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
-    // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
-    rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
+    // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
+    rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
     rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': { pending: 'P3.fix-6' }, details: { pending: 'P3.fix-6' }, sidebar: { pending: 'P3.fix-6' } }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
@@ -3421,6 +3421,8 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5 && inner.y >= outer.y - 0.5 && inner.y + inner.h <= outer.y + outer.h + 0.5;
     };
     let relative = false;
+    // UX-P3.9 follow-up 6: while the clause applies, the reading it hides (absolute x, w and inset) is printed beside it.
+    const absoluteOff: string[] = [];
     // UX-P3.fix-1: an id the artboard composes for this state is the current row's instance, the bare key when none is flagged.
     const instanceOf = (id: string): SpecElement | undefined => (spec[id].composed === state
         ? Object.entries(layout.testIds).find(([key, entry]) => (key === id || key.startsWith(`${id}#`)) && entry.current === true)?.[1] ?? layout.testIds[id]
@@ -3439,6 +3441,13 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
             x: tenth(actual.rect.x - expected.rect.x - dx), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w - dw),
             h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset - dx),
         };
+        if (inside) {
+            const absolute = Object.entries({ x: tenth(actual.rect.x - expected.rect.x), w: tenth(actual.rect.w - expected.rect.w), inset: tenth(actual.inset - expected.inset) })
+                .filter(([, delta]) => Math.abs(delta) > tolerance);
+            if (absolute.length > 0) {
+                absoluteOff.push(`${id} ${absolute.map(([key, delta]) => `Δ${key} ${delta}`).join(' ')}`);
+            }
+        }
         const named = Object.entries(deltas).filter(([, delta]) => Math.abs(delta) > tolerance);
         const owner = definition.pendingIds?.[id];
         if (named.length > 0) {
@@ -3462,7 +3471,8 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         }
     }
     const within = required.length - missing.length - off.length - pendingCount;
-    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}${relative ? ` (x and inset relative to ${PANEL}, pending ${definition.pendingIds?.[PANEL]})` : ''}`] : [];
+    const absoluteText = absoluteOff.length === 0 ? `; absolute: all within ${tolerance}` : `; absolute off: ${absoluteOff.join('; ')}`;
+    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}${relative ? ` (x and inset relative to ${PANEL}, pending ${definition.pendingIds?.[PANEL]}${absoluteText})` : ''}`] : [];
     if (composed.length > 0) {
         parts.push(`composed (${spec[composed[0]].composed}): ${composed.join(', ')}`);
     }
