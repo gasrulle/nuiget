@@ -2,7 +2,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
+import { ActivityBar, By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostReading, type LineVerdict, summarize, type TextLine } from '../fringe';
@@ -1210,6 +1210,83 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     return { png: path.join(dir, `${windowName}.png`), x: rect.x, y: rect.y, dpr };
 }
 
+/**
+ * UX-P3.9 push 1 (design-advisor opening ruling, DO 1f): the code point the Extensions view's Refresh title action draws,
+ * beside the `refresh` and `sync` code points of the pinned `@vscode/codicons`. Informational; never throws.
+ */
+async function workbenchRefreshGlyph(): Promise<void> {
+    const pinned = (name: string): string => {
+        try {
+            const css = fs.readFileSync(path.resolve('node_modules/@vscode/codicons/dist/codicon.css'), 'utf8');
+            const match = new RegExp(`\\.codicon-${name}:before \\{ content: "\\\\([0-9a-f]+)" \\}`).exec(css);
+            return match ? `U+${match[1].toUpperCase()}` : 'unread';
+        } catch {
+            return 'unread';
+        }
+    };
+    try {
+        await leaveWebview();
+        await (await new ActivityBar().getViewControl('Extensions'))?.openView();
+        const glyph = await script<string | null>(`
+const action = [...document.querySelectorAll('.part.sidebar .composite.title .action-label')].find(el => /refresh/i.test(el.getAttribute('aria-label') || el.title || ''));
+if (!action) return null;
+const content = getComputedStyle(action, '::before').content.replace(/^"|"$/g, '');
+return content && content !== 'none' ? 'U+' + content.codePointAt(0).toString(16).toUpperCase() : 'no glyph';`);
+        console.warn(`[probe] workbench refresh glyph: ${glyph ?? 'not found (no Refresh title action in the Extensions view)'} (refresh ${pinned('refresh')}, sync ${pinned('sync')})`);
+    } catch (error) {
+        console.warn(`[probe] workbench refresh glyph: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+    }
+}
+
+/** UX-P3.9 push 1 (DO 1e, 1g): the states whose chrome the probes read, once each, in the Modern UI pass of the `ui` lane. */
+const CHROME_PROBE_STATES: readonly string[] = ['main-installed-single', 'sidebar-sections', 'sidebar-all-projects'];
+const chromeProbed = new Set<string>();
+
+/** In the webview: what the page shows at a point, and the boxes of a sidebar pane header's parts (DO 1e, 1g). */
+const CHROME_PROBES = `
+const state = arguments[0];
+const label = el => !el ? 'nothing' : el.dataset && el.dataset.testid ? '[' + el.dataset.testid + ']' : (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/ +/)[0] : el.tagName.toLowerCase());
+const hit = (x, y) => label(document.elementFromPoint(x, y)) + ' at ' + Math.round(x) + ',' + Math.round(y);
+const lines = [];
+if (state === 'main-installed-single') {
+    const list = document.querySelector('[data-testid="installed-list"]');
+    if (list) {
+        const r = list.getBoundingClientRect();
+        const bar = list.offsetWidth - list.clientWidth;
+        lines.push('[probe] sash-hit main-installed-single list scrollbar: ' + (bar > 0 ? hit(r.right - bar / 2, r.top + r.height / 2) + ' (bar ' + bar + ')' : 'no scrollbar'));
+    } else lines.push('[probe] sash-hit main-installed-single list scrollbar: no installed-list');
+}
+if (state === 'sidebar-sections') {
+    const header = document.querySelector('[data-testid="section-box-updates"]');
+    if (header) { const r = header.getBoundingClientRect(); lines.push('[probe] sash-hit sidebar-sections Updates header 3 px inside its top: ' + hit(r.left + r.width / 2, r.top + 3)); }
+    else lines.push('[probe] sash-hit sidebar-sections Updates header: none');
+    const list = document.querySelector('[data-testid="sidebar-installed-list"]');
+    const listBox = list ? list.getBoundingClientRect() : null;
+    const rows = [...document.querySelectorAll('[data-testid="sidebar-installed-list"] .nuiget-row-option')].filter(el => el.getBoundingClientRect().height > 0 && (!listBox || el.getBoundingClientRect().bottom <= listBox.bottom + 0.5));
+    const last = rows[rows.length - 1];
+    if (last) { const r = last.getBoundingClientRect(); lines.push('[probe] sash-hit sidebar-sections last Installed row 3 px inside its bottom: ' + hit(r.left + r.width / 2, r.bottom - 3)); }
+    else lines.push('[probe] sash-hit sidebar-sections last Installed row: none');
+}
+if (state === 'sidebar-all-projects') {
+    const box = document.querySelector('[data-testid="section-box-installed"]');
+    if (box) {
+        const b = box.getBoundingClientRect();
+        const style = getComputedStyle(box);
+        const part = el => { if (!el) return 'none'; const r = el.getBoundingClientRect(); return 'top ' + Math.round((r.top - b.top) * 10) / 10 + ', bottom ' + Math.round((b.bottom - r.bottom) * 10) / 10; };
+        lines.push('[probe] pane-header centre sidebar-all-projects: header ' + Math.round(b.top) + '..' + Math.round(b.bottom) + ' (box-sizing ' + style.boxSizing + ', border-top ' + style.borderTopWidth + ' ' + style.borderTopStyle + ', border-bottom ' + style.borderBottomWidth + '); chevron ' + part(box.querySelector('.nuiget-section-toggle svg')) + '; count badge ' + part(box.querySelector('.nuiget-badge--count')) + '; title ' + part(box.querySelector('.nuiget-section-title')));
+    } else lines.push('[probe] pane-header centre sidebar-all-projects: no section-box-installed');
+}
+return lines;`;
+
+/** The chrome probes' lines for one state; a probe that throws prints `not read`. Moves nothing. */
+async function chromeProbes(state: string): Promise<string[]> {
+    try {
+        return await script<string[]>(CHROME_PROBES, state);
+    } catch (error) {
+        return [`[probe] ${state}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`];
+    }
+}
+
 /** This pass's `[fringe] host` reading, read once at its first sidebar cell (UX-P3.fix-4, follow-up 3). */
 let hostReading: HostReading | undefined;
 
@@ -2057,6 +2134,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             // Beside the heights of the run's `before`, in the file docs/design/workbench/<look>.json is copied from.
             const file = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), `workbench.${LOOK}.json`);
             fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), exemplar }, null, 2) + '\n');
+            if (LOOK === 'modern') {
+                await workbenchRefreshGlyph();
+            }
         });
     }
 
@@ -2092,6 +2172,11 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number; scrollTop: number; clip: string; direct: string } | null>(READ_VIRTUAL);
             if (virtual !== null) {
                 console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}, scrollTop ${virtual.scrollTop}, clip y ${virtual.clip}, direct header y ${virtual.direct}`);
+            }
+            // UX-P3.9 push 1 (DO 1e, 1g): the chrome probes, once per state, in the webview under the same settle.
+            if (LANE === 'ui' && LOOK === 'modern' && CHROME_PROBE_STATES.includes(state.name) && !chromeProbed.has(state.name)) {
+                chromeProbed.add(state.name);
+                printLines(await chromeProbes(state.name));
             }
             // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot.
             const textLines = state.surface === 'sidebar' && LANE === 'ui' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar') : undefined;

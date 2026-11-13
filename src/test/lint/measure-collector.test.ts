@@ -363,7 +363,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         document.documentElement.style.setProperty('--nuiget-color-scrollbar', 'rgba(121, 121, 121, 0.4)');
         try {
             const { scrollbar } = collect();
-            expect(scrollbar.scrollers).toEqual([{ label: '[installed-list]', left: 0, top: 136, width: 590, height: 164, right: 590, size: 10, thumb: 41, backdrop: 'rgb(30, 30, 30)' }]);
+            expect(scrollbar.scrollers).toEqual([{ label: '[installed-list]', left: 0, top: 136, width: 590, height: 164, right: 590, size: 10, thumb: 41, backdrop: 'rgb(30, 30, 30)', scrollTop: 0, shadow: 'none' }]);
             expect(scrollbar.slider).toBe('rgba(121, 121, 121, 0.4)');
             expect(typeof scrollbar.rootColor).toBe('string');
         } finally {
@@ -727,6 +727,19 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             { name: 'Gateway', band: 50, count: true, top: 1, bottom: 1 },
             { name: 'Serilog', band: 72, count: false, top: 2, bottom: 0 },
         ]);
+    });
+
+    it('reads each sash at rest: its thickness, background, band and the panes\' gap (DS-DIVIDER-6, UX-P3.9)', () => {
+        document.body.innerHTML = `
+<main data-testid="nuiget-app" data-rect="0,0,1200,800">
+  <div class="nuiget-main-split" data-rect="0,77,1200,800">
+    <div data-testid="installed-pane" data-rect="0,77,420,800">list</div>
+    <div class="nuiget-sash" role="separator" aria-valuemin="20" aria-valuemax="80" data-rect="420,77,424,800" style="background-color: rgb(43, 43, 43); width: 4px"></div>
+    <div data-testid="package-details-panel" data-rect="424,77,1200,800">details</div>
+  </div>
+</main>`;
+        // jsdom has no pseudo-element styles: the stub answers the element's own style for ::before.
+        expect(collect().endOfP0.sashes).toEqual([{ thickness: 4, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4, focused: false, outlineFocus: false }]);
     });
 
     it('answers a missing root with an empty layout', () => {

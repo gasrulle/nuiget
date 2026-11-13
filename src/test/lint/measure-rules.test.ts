@@ -55,9 +55,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'DS-ROW-7', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-6', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
-            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1',
+            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1', 'DS-SCROLL-2',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1', 'DS-TYPE-10',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
@@ -221,9 +221,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'DS-ROW-7': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
-            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
+            'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-6': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
-            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0, 'DS-TYPE-10': 0,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-SCROLL-2': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0, 'DS-TYPE-10': 0,
         });
     });
 
@@ -1164,7 +1164,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The host's colour pair switches the WebKit rules off (V15), whatever the thickness reads.
         expect(lineOf('main-installed-all', bars('rgba(121, 121, 121, 0.4) rgb(30, 30, 30)', scroller('[installed-list]', 10)), name, 'classic')).toMatchObject({ pass: false });
         expect(lineOf('main-installed-all', bars('auto', scroller('[installed-list]', 10), scroller('.nuiget-details', 15)), name, 'classic')).toMatchObject({ pass: false });
-        expect(lineOf('main-installed-all', bars('auto'), name, 'classic')).toMatchObject({ value: 'not measurable (no scrolling list)', pass: false });
+        // UX-P3.9 (design-advisor opening ruling, DO 1c): a cell where nothing scrolls is read on the root clause alone, except in
+        // the states whose list scrolls in every cell; with no root reading it is not measurable.
+        expect(lineOf('main-installed-all', bars('auto'), name, 'classic')).toMatchObject({ value: 'no scrolling list (one expected); :root scrollbar-color auto; slider #79797966', pass: false });
+        expect(lineOf('main-browse-empty', bars('auto'), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ value: 'no scrolling list; :root scrollbar-color auto; slider #79797966', pass: true });
+        expect(lineOf('main-browse-empty', bars('rgba(121, 121, 121, 0.4) rgb(30, 30, 30)'), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ pass: false });
+        expect(lineOf('main-browse-empty', bars(''), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ value: 'not measurable (no root scrollbar-color)', pass: false });
         // The `[probe] scrollbar` verdict: the slider's alpha over the backdrop, each channel within 2 of the thumb's pixel.
         expect(thumbVerdict('#79797966', 'rgb(30, 30, 30)', [66, 66, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
         expect(thumbVerdict('rgba(121, 121, 121, 0.4)', 'rgb(30, 30, 30)', [68, 64, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
@@ -1387,5 +1392,38 @@ describe('DS-ROW-7: a compact row\'s badge centred in its band (UX-P3.fix-5)', (
         expect(read('sidebar-browse-empty', [badge(2, 0)])).toBeUndefined();
         expect(RULES.find(rule => rule.id === 'DS-ROW-7')).toMatchObject({ helper: 4, tolerance: 1, scopes: { sidebar: 'hard' } });
         expect(RULES.find(rule => rule.id === 'DS-ROW-7')?.lanes).toBeUndefined();
+    });
+});
+
+describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-advisor opening ruling of 2026-11-13, DO 1)', () => {
+    type Sash = NonNullable<Layout['endOfP0']['sashes']>[number];
+    const sash = (overrides: Partial<Sash> = {}): Sash => ({
+        thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false, ...overrides,
+    });
+    const withSashes = (sashes: Sash[]) => { const built = layout(); return { ...built, endOfP0: { ...built.endOfP0, sashes } }; };
+
+    it('DS-DIVIDER-6 passes a 1 px line with a transparent band and fails today\'s 4 px band, pending P3.9', () => {
+        expect(lineOf('main-transitive-details', withSashes([sash()]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({
+            pass: true, status: { pending: 'P3.9' }, value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1',
+        });
+        expect(lineOf('main-transitive-details', withSashes([sash({ thickness: 4, background: 'rgba(0, 0, 0, 0)', band: { width: 0, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4 })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
+        // A 1 px line with no band: the 4 px band is part of the rule.
+        expect(lineOf('main-transitive-details', withSashes([sash({ band: { width: 0, background: 'rgba(0, 0, 0, 0)', delay: '0s' } })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
+        expect(lineOf('main-transitive-details', withSashes([]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({ pass: false, value: 'not measurable (no sash)' });
+    });
+
+    it('DS-COLOR-5 sash fails an unfocused sash in the focus role and ignores the focused one', () => {
+        expect(lineOf('main-installed-single', withSashes([sash()]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, status: { pending: 'P3.9' }, value: 'sash: 0 of 1 unfocused in focusBorder' });
+        expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true })]), 'DS-COLOR-5@main-installed-single/sash')?.pass).toBe(false);
+        expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true, focused: true })]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, value: 'sash: 0 of 0 unfocused in focusBorder' });
+    });
+
+    it('DS-SCROLL-2 asks a shadow of every list scrolled from its top, in its three states only', () => {
+        const scroller = (scrollTop: number, shadow: string) => ({ label: '[installed-list]', left: 0, top: 0, width: 300, height: 200, right: 300, size: 8, thumb: 50, backdrop: 'rgb(30, 30, 30)', scrollTop, shadow });
+        const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers } });
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.9' }, value: '[installed-list] scrollTop 120, shadow none' });
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(0, 0, 0) 0px 6px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
+        expect(lineOf('main-transitive-expanded', bars(scroller(0, 'none')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
+        expect(lineOf('main-installed-single', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-installed-single')).toBeUndefined();
     });
 });

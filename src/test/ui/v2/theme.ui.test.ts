@@ -346,6 +346,30 @@ describe('2.0 theme pass', () => {
         for (const control of ['button', 'select', 'checkbox']) {
             expect(lines[control], `${where}: ${control} border`).to.equal(lines.contrast);
         }
+        await printTabEdges(where);
+    }
+
+    /**
+     * UX-P3.9 push 1 (design-advisor opening ruling, DO 1h): the selected tab's and a hovered unselected tab's four edge lines
+     * and outline in a high-contrast theme, printed. Informational: never throws, and the pointer is parked on the main
+     * header afterwards, so no tab keeps a hover into a later reading.
+     */
+    async function printTabEdges(where: string): Promise<void> {
+        const EDGES = `
+            const edges = el => { if (!el) return 'none'; const s = getComputedStyle(el); return ['Top', 'Right', 'Bottom', 'Left'].map(side => side.toLowerCase() + ' ' + s['border' + side + 'Width'] + ' ' + s['border' + side + 'Style'] + ' ' + s['border' + side + 'Color']).join('; ') + '; outline ' + s.outlineWidth + ' ' + s.outlineStyle + ' ' + s.outlineColor; };
+            return edges(document.querySelector('[data-testid="' + arguments[0] + '"]'));`;
+        try {
+            const selected = await driverOf().executeScript<string>(EDGES, 'installed-tab');
+            await driverOf().actions().move({ origin: await findByTestId('updates-tab', 10_000) }).perform();
+            const hovered = await poll(async () => driverOf().executeScript<string>(`return document.querySelector('[data-testid="updates-tab"]').matches(':hover') ? 'hovered' : undefined;`), 'the Updates tab hovered', 5_000)
+                .then(() => driverOf().executeScript<string>(EDGES, 'updates-tab'), () => 'not hovered');
+            console.warn(`[probe] hc tabs ${where}: selected [installed-tab] ${selected}`);
+            console.warn(`[probe] hc tabs ${where}: hovered [updates-tab] ${hovered}`);
+        } catch (error) {
+            console.warn(`[probe] hc tabs ${where}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+        } finally {
+            await findByTestId('main-header', 10_000).then(header => driverOf().actions().move({ origin: header }).perform()).catch(() => undefined);
+        }
     }
 
     for (const theme of THEMES) {

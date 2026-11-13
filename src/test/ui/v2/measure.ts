@@ -339,6 +339,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-RADIUS-2', { helper: 6, scopes: { rows: 'hard', popup: 'hard', layers: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES.filter(state => !POPUP_STATES.includes(state)), scopeStates: { popup: POPUP_STATES, layers: DIALOG_STATES }, scopeExceptStates: { rows: POPUP_STATES } }),
     // UX-P3.5 (design-advisor ruling of 2026-11-07): only layers are elevated, and the modal backdrop is black at 50 %.
     rule('DS-DIVIDER-2', { helper: 6, scopes: { layers: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
+    // UX-P3.9 (design-advisor opening ruling of 2026-11-13, DO 1a): the sash is a 1 px line with a transparent 4 px band; read at rest.
+    rule('DS-DIVIDER-6', { helper: 6, scopes: { sash: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
     rule('DS-DIVIDER-5', { helper: 6, scopes: { dialogs: 'hard' }, tolerance: TOLERANCES.containment, states: DIALOG_STATES }),
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
@@ -387,6 +389,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
+    // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
+    rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': { pending: 'P3.9' }, details: { pending: 'P3.9' }, sidebar: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
     // README; the details pane's headings set their weight since UX-P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
@@ -681,6 +685,9 @@ export interface Scroller {
     thumb: number;
     /** The first painted background from the scroller up: what a transparent track shows. */
     backdrop: string;
+    /** UX-P3.9 (DS-SCROLL-2): how far it is scrolled, and the computed shadows of the scroller and its `::before`. */
+    scrollTop?: number;
+    shadow?: string;
 }
 
 export interface Scrollbars {
@@ -763,6 +770,12 @@ export interface EndOfP0 {
     detailsEmpty: { top: number } | undefined;
     /** UX-P3.3b: the split's width, its sash's percent bounds and width, and the two pane minimums (DS-OVERFLOW-5's bounds). */
     split: { width: number; sash: number; min: number; max: number; listMin: number; detailsMin: number } | undefined;
+    /**
+     * UX-P3.9 (DS-DIVIDER-6, DS-COLOR-5 `sash`): every visible sash: its thickness across the split, its background, its band's
+     * (`::before`) width, background and transition delay, the gap between the panes either side, and whether it draws the
+     * focus role's solid `focusBorder` outline (DO 1b reads the outline only, never a colour string).
+     */
+    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean }>;
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
     fonts: { root: string; others: string[] };
@@ -1485,6 +1498,15 @@ const paddingInsets = box => { const style = getComputedStyle(box); return { sta
 const detailsEmptyEl = scope.querySelector('[data-testid="package-details-panel"] [data-testid="details-empty"]');
 const splitEl = scope.querySelector('.nuiget-main-split');
 const sashEl = splitEl ? splitEl.querySelector(':scope > [role="separator"]') : null;
+// UX-P3.9 (DS-DIVIDER-6, DS-COLOR-5 sash): every visible sash, read at rest; nothing is hovered or focused here.
+const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(sash => {
+    const box = rectOf(sash);
+    const vertical = box.height >= box.width;
+    const band = getComputedStyle(sash, '::before');
+    const before = sash.previousElementSibling, after = sash.nextElementSibling;
+    const gap = before && after && visible(before) && visible(after) ? round(vertical ? rectOf(after).left - rectOf(before).right : rectOf(after).top - rectOf(before).bottom) : undefined;
+    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
+});
 const splitFacts = splitEl && sashEl && visible(splitEl) ? (() => { const style = getComputedStyle(splitEl); return { width: round(splitEl.clientWidth), sash: round(sashEl.getBoundingClientRect().width), min: Number(sashEl.getAttribute('aria-valuemin')), max: Number(sashEl.getAttribute('aria-valuemax')), listMin: px(style.getPropertyValue('--nuiget-list-pane-min')), detailsMin: px(style.getPropertyValue('--nuiget-details-pane-min')) }; })() : undefined;
 // The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
 const sideways = [document.documentElement, ...scope.querySelectorAll('*')]
@@ -1689,6 +1711,7 @@ const endOfP0 = {
     minContent: { toolbar: visible(toolbarEl) ? { scroll: toolbarEl.scrollWidth, client: toolbarEl.clientWidth } : undefined, header: visible(detailsHeaderEl) ? { scroll: detailsHeaderEl.scrollWidth, client: detailsHeaderEl.clientWidth } : undefined },
     detailsEmpty: visible(detailsEmptyEl) ? { top: round(px(getComputedStyle(detailsEmptyEl).paddingTop)) } : undefined,
     split: splitFacts,
+    sashes,
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
@@ -1746,6 +1769,8 @@ for (const el of document.body.querySelectorAll('*')) {
     scrollers.push({
         label: label(el), left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height), right: round(r.right - px(s.borderRightWidth)),
         size: round(el.offsetWidth - el.clientWidth - px(s.borderLeftWidth) - px(s.borderRightWidth)), thumb: round(el.clientHeight * el.clientHeight / el.scrollHeight), backdrop: backdrop(el),
+        // UX-P3.9 (DS-SCROLL-2): the scroll position and the shadow the scroller or its ::before draws.
+        scrollTop: round(el.scrollTop), shadow: [s.boxShadow, getComputedStyle(el, '::before').boxShadow].filter(shadow => shadow && shadow !== 'none').join(' / ') || 'none',
     });
 }
 const rootStyle = getComputedStyle(document.documentElement);
@@ -2021,21 +2046,42 @@ function evaluateRowBadges(definition: RuleDefinition, state: string, layout: La
     };
 }
 
+/** UX-P3.9 (DO 1c): the states whose list scrolls in every cell of the `ui` lane: there a missing scroller is a failure. */
+export const SCROLLING_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-details', 'main-installed-focus', 'sidebar-all-projects'];
+
 /** Helpers 3 and 4 (UX-P0.11): the value and the verdict of a height or centring rule, or undefined for another rule. */
-function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined): { value: string; pass: boolean } | undefined {
+function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined, state = ''): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     const heights = layout.heights;
     switch (definition.id) {
         case 'DS-SCROLL-1': {
             // The bar's thickness in every list that scrolls, and the root's reset that keeps the WebKit rules on (V15).
             const { rootColor, slider, scrollers } = layout.scrollbar;
+            if (rootColor === '') {
+                return { value: `${NOT_MEASURABLE} (no root scrollbar-color)`, pass: false };
+            }
+            // A cell where nothing scrolls is read on the root clause alone, except where a list must scroll (UX-P3.9, DO 1c).
             if (scrollers.length === 0) {
-                return { value: `${NOT_MEASURABLE} (no scrolling list)`, pass: false };
+                return SCROLLING_STATES.includes(state)
+                    ? { value: `no scrolling list (one expected); :root scrollbar-color ${rootColor}; slider ${slider || 'unset'}`, pass: false }
+                    : { value: `no scrolling list; :root scrollbar-color ${rootColor}; slider ${slider || 'unset'}`, pass: rootColor === 'auto' && slider !== '' };
             }
             const target = HEIGHTS.scrollbar[look];
             return {
                 value: `${scrollers.map(scroller => `${scroller.label} ${scroller.size}`).join(', ')} (target ${target}); :root scrollbar-color ${rootColor || 'unset'}; slider ${slider || 'unset'}`,
                 pass: rootColor === 'auto' && scrollers.every(scroller => near(scroller.size, target, tolerance)),
+            };
+        }
+        case 'DS-SCROLL-2': {
+            // UX-P3.9 (DO 1d): every list scrolled away from its top draws a shadow at its top edge (today none).
+            const scrollers = layout.scrollbar.scrollers;
+            if (scrollers.length === 0) {
+                return { value: `${NOT_MEASURABLE} (no scrolling list)`, pass: false };
+            }
+            const scrolled = scrollers.filter(scroller => (scroller.scrollTop ?? 0) > 0);
+            return {
+                value: scrollers.map(scroller => `${scroller.label} scrollTop ${scroller.scrollTop ?? 'unread'}, shadow ${scroller.shadow ?? 'unread'}`).join('; '),
+                pass: scrolled.length > 0 && scrolled.every(scroller => scroller.shadow !== undefined && scroller.shadow !== 'none'),
             };
         }
         case 'PF-3b': {
@@ -2628,7 +2674,13 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-COLOR-5': {
             if (scope === 'sash') {
-                return notMeasurable('no helper until P3.9');
+                // UX-P3.9 (DO 1b): an unfocused sash draws no focus ring (a solid focusBorder outline; the outline only, as P2.fix-1).
+                const sashes = facts.sashes ?? [];
+                if (sashes.length === 0) {
+                    return notMeasurable('no sash');
+                }
+                const painted = sashes.filter(sash => !sash.focused && sash.outlineFocus).length;
+                return { value: `sash: ${painted} of ${sashes.filter(sash => !sash.focused).length} unfocused in focusBorder`, pass: painted === 0 };
             }
             if (scope === 'tabs') {
                 const tabs = layout.heights.tabs;
@@ -2648,6 +2700,20 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const painted = facts.rows.reduce((sum, row) => sum + row.focusPainted, 0);
             const coincides = facts.focusCoincides.length === 0 ? '' : `; coincides: ${facts.focusCoincides.join(', ')}`;
             return { value: `${painted} elements of an unfocused row in focusBorder${coincides}`, pass: painted === 0 };
+        }
+        case 'DS-DIVIDER-6': {
+            /** DS-DIVIDER-6's transparent band across the 1 px line: `--nuiget-sash-size`. */
+            const SASH_BAND = 4;
+            // UX-P3.9 (DO 1a): the sash a 1 px line, its 4 px band transparent at rest, the panes 1 px apart; read at rest.
+            const sashes = facts.sashes ?? [];
+            if (sashes.length === 0) {
+                return notMeasurable('no sash');
+            }
+            const clear = (colour: string) => colour === 'transparent' || colour === 'rgba(0, 0, 0, 0)';
+            return {
+                value: sashes.map(sash => `sash ${sash.thickness} px in ${sash.background}; band ${sash.band.width} px in ${sash.band.background}, delay ${sash.band.delay || 'none'}; gap ${sash.gap ?? 'unread'}`).join('; '),
+                pass: sashes.every(sash => near(sash.thickness, 1, 0.5) && !clear(sash.background) && near(sash.band.width, SASH_BAND, 0.5) && clear(sash.band.background) && (sash.gap === undefined || near(sash.gap, sash.thickness, 0.5))),
+            };
         }
         case 'DS-ROW-6': {
             const width = facts.listPaneWidth;
@@ -3364,7 +3430,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (popupVerdict !== undefined) {
         return popupVerdict;
     }
-    const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
+    const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench, state) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
