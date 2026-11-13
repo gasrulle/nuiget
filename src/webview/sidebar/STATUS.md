@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8, `in-progress`: push 3, SB14)   commit 1ce4625 (push 3 follows it)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8 `done`)   commit 40abf19 (closed on run 43456752429)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -117,6 +117,15 @@ focus with the same command as before; the same two suites in CI order: `✔ the
 takes it (SB14, UX-P3.8)`, `13 passing`, `1 failing` the local-only parity case `Open Full Manager opens the main panel beside the
 sidebar` (`Timed out after 60000 ms waiting for two webviews`; `✔` on CI run 43454600679). Deviation: the remount precondition is
 added to the ruled steps (open, focus command, poll); the focus path itself is unchanged.
+
+**Push 3 closed on run 43456752429 (40abf19), green on every job** (`49 passing`, `94 passing`, classic `13 passing`),
+`captures/43456752429/ui-log/`: `✔ the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8) (3463ms)`;
+`[keys] sidebar` lines identical to run 43436877716 (`diff` empty), the ring line `a visible ring at every stop (hard)` among
+them; `✔ the sidebar search box rings in focusBorder at offset -1 (DS-FOCUS-1, UX-P2.4)`; every sidebar `[fringe]` line `0
+greyscale` in both looks; `[diff] summary: 96 compared, 96 at 0 px, 0 above tolerance, 0 without a golden, 0 refused` (the
+two-section cells did not move: nothing adopted, no `LIVE_SIDEBAR_CARET`, as ruled); `differs` 0 in both looks. No product pixel
+moved, so no `design-judge` run for push 3; the item's judge dispositions stand as recorded (wf_bd76cb75-079:
+`sidebar-browse-hover#D1` `fixed` by UX-P3.fix-5's row).
 
 ## Visual evidence (UI items)
 
@@ -239,12 +248,11 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
 - The Browse row's Uninstall button and Delete outside jsdom: no UI test presses them (the capture suite never writes, by rule); jsdom proves the
   `ops/remove` request and the busy status.
 - The H27 probe in the classic look: it ran in the `ui` lane's Modern UI pass only (removed by UX-P3.fix-4).
-- Push 3 on CI: the new UI case, the `[keys]` and `[fringe]` lines, the two-section cells' `[diff]` (Exact next step).
 
 ## Not started
 
-- Nothing of the item: push 3 (SB14) is landed locally and read on CI next (Exact next step). H27 was cured by UX-P3.fix-4
-  (DS-TYPE-10 hard), which unblocked it; the first-open focus is the proposed host row's.
+- Nothing of the item. H27 was cured by UX-P3.fix-4 (DS-TYPE-10 hard), which unblocked SB14; the first-open focus is the
+  proposed host row's.
 
 ## For the planning session (UX-P3.8 push 3; design-advisor SB14 rulings of 2026-11-13)
 
@@ -838,6 +846,4 @@ Brief: form 2 held the reload check, the first UI case failed, the activity-bar 
 
 ## Exact next step
 
-UX-P3.8: read push 3's CI run against the SB14 rulings' VERIFY (the new UI case passes; `[keys] sidebar` and the ring line
-unchanged from run 43436877716; every sidebar `[fringe]` line `0 greyscale`; `[diff] summary` 0 above tolerance, or a moved
-two-section cell with box-only evidence, then adopted `approved` with `LIVE_SIDEBAR_CARET`), then close the row.
+UX-P3.fix-5 (the next open row).
