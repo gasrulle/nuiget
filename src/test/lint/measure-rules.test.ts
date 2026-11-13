@@ -14,7 +14,7 @@ const noHeights: Heights = {
 const layout = (overrides: Partial<Layout> = {}, heights: Partial<Heights> = {}): Layout => ({
     root: true, height: 803, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined,
     sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined,
-    centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
+    centring: [], rowBadges: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 1200, rows: [], chrome: {}, firstRow: undefined,
     overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [],
     browsing: false, flatList: false, documentOverflow: undefined,
     endOfP0: {
@@ -52,7 +52,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('keeps the PF rules and MS-8\'s chrome hard and every other rule pending on its Appendix B item', () => {
         expect(RULES.map(rule => rule.id)).toEqual([
-            'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'PF-5',
+            'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'DS-ROW-7', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
@@ -218,7 +218,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-SCROLL-1')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, { pending: 'P3.9' }])));
         // Each rule's tolerance is one of D34's.
         expect(Object.fromEntries(RULES.map(rule => [rule.id, rule.tolerance]))).toEqual({
-            'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'PF-5': 1,
+            'PF-6': 1, 'DS-GRID-1': 0.5, 'DS-GRID-2a': 0.5, 'DS-GRID-2b': 2, 'DS-INSET-1': 1, 'DS-INSET-2': 1, 'PF-3b': 1, 'DS-ROW-7': 1, 'PF-5': 1,
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
@@ -1351,5 +1351,41 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const line = 'rgb(43, 43, 43)';
         expect(lineOf('main-installed-single', shell({ dividers: { key: line, header: line, tabStrips: [line], groupLines: [] } }), 'DS-DIVIDER-4@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: `header ${line}, tab strips ${line}, group lines none = settings.headerBorder ${line}` });
         expect(lineOf('main-installed-single', shell({ dividers: { key: line, header: 'rgb(49, 49, 49)', tabStrips: [line], groupLines: [] } }), 'DS-DIVIDER-4@main-installed-single')).toMatchObject({ pass: false });
+    });
+});
+
+describe('DS-ROW-7: a compact row\'s badge centred in its band (UX-P3.fix-5)', () => {
+    let bands = 0;
+    const badge = (top: number, bottom: number, count = false, name = 'Serilog') => ({ name, band: (bands += 22), count, top, bottom });
+    const read = (state: string, rowBadges: Layout['rowBadges'], compactRows = [22, 22]) =>
+        measureLines(state, layout({ rowBadges }, { compactRows }), 'modern', {}, undefined, 300).find(line => line.name === `DS-ROW-7@${state}`);
+
+    it('fails a badge 2 px under the band\'s top and flush with its bottom, and passes 1/1 and 2.5/2.5', () => {
+        expect(read('sidebar-browse-hover', [badge(2, 0)])).toMatchObject({ pass: false, status: { pending: 'P3.fix-5' }, value: 'label 2/0; count none (1 badges in 1 rows; first Serilog: top 2, bottom 0)' });
+        expect(read('sidebar-browse-hover', [badge(1, 1), badge(1, 1, false, 'Serilog.Sinks.Console')])).toMatchObject({ pass: true, value: 'label 1/1 ×2; count none (2 badges in 2 rows; first Serilog: top 1, bottom 1)' });
+        expect(read('sidebar-browse-hover', [badge(2.5, 2.5)])?.pass).toBe(true);
+    });
+
+    it('fails a badge that touches its band\'s edge, even when centred', () => {
+        expect(read('sidebar-browse-hover', [badge(0.5, 0.5)])?.pass).toBe(false);
+    });
+
+    it('reads count badges with the label badges', () => {
+        expect(read('sidebar-all-projects', [badge(1, 1), badge(3, 3, true, 'Gateway')])).toMatchObject({ pass: true, value: 'label 1/1; count 3/3 (2 badges in 2 rows; first Serilog: top 1, bottom 1)' });
+    });
+
+    it('is not measurable in a witness state without a label badge, and passes another sidebar cell whose rows carry none', () => {
+        expect(read('sidebar-browse-results', [])).toMatchObject({ pass: false, value: 'not measurable (no label badge in a compact row)' });
+        expect(read('sidebar-all-projects', [badge(1, 1, true)])).toMatchObject({ pass: false, value: 'not measurable (no label badge in a compact row)' });
+        expect(read('sidebar-sections', [])).toMatchObject({ pass: true, value: '0 badges in compact rows (2 rows)' });
+        expect(read('sidebar-sections', [], [])).toMatchObject({ pass: false, value: 'not measurable (no compact row)' });
+    });
+
+    it('measures the side bar only: no main state and no state without a badge or a row', () => {
+        expect(measureLines('main-installed-single', layout({ rowBadges: [badge(2, 0)] }), 'modern').some(line => line.name.startsWith('DS-ROW-7'))).toBe(false);
+        expect(read('sidebar-filter', [badge(2, 0)])).toBeUndefined();
+        expect(read('sidebar-browse-empty', [badge(2, 0)])).toBeUndefined();
+        expect(RULES.find(rule => rule.id === 'DS-ROW-7')).toMatchObject({ helper: 4, tolerance: 1, scopes: { sidebar: { pending: 'P3.fix-5' } } });
+        expect(RULES.find(rule => rule.id === 'DS-ROW-7')?.lanes).toBeUndefined();
     });
 });

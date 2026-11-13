@@ -710,6 +710,25 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(Object.values(collect().testIds).filter(entry => entry.current !== undefined)).toEqual([]);
     });
 
+    it('reads each compact row\'s badge against its band, the option or the group row, and leaves out a band the list cuts (DS-ROW-7, UX-P3.fix-5)', () => {
+        document.body.innerHTML = `
+<main data-testid="nuiget-sidebar" data-rect="0,0,300,400">
+  <div role="tree" data-testid="sidebar-installed-list" data-rect="0,50,300,120">
+    <div class="nuiget-row-group nuiget-row--compact" data-rect="0,50,300,72"><span class="nuiget-section-title" data-rect="28,52,120,70">Gateway</span><span class="nuiget-badge nuiget-badge--count" data-rect="270,51,290,71">3</span></div>
+    <div class="nuiget-row nuiget-row--compact" data-rect="0,72,300,94"><div class="nuiget-row-option" data-rect="0,72,300,94"><span class="nuiget-row-name" data-rect="28,74,90,92">Serilog</span><span class="nuiget-badge nuiget-badge--label" data-rect="230,74,280,94">Installed</span></div></div>
+    <div class="nuiget-row nuiget-row--compact" data-rect="0,110,300,132"><div class="nuiget-row-option" data-rect="0,110,300,132"><span class="nuiget-row-name" data-rect="28,112,90,130">Moq</span><span class="nuiget-badge nuiget-badge--label" data-rect="230,112,280,132">CPM</span></div></div>
+  </div>
+</main>`;
+        // jsdom lays nothing out: the list's client box is its rect (70 px high, no border).
+        const list = document.querySelector('[role="tree"]') as HTMLElement;
+        Object.defineProperty(list, 'clientTop', { value: 0 });
+        Object.defineProperty(list, 'clientHeight', { value: 70 });
+        expect(collect('nuiget-sidebar').rowBadges).toEqual([
+            { name: 'Gateway', band: 50, count: true, top: 1, bottom: 1 },
+            { name: 'Serilog', band: 72, count: false, top: 2, bottom: 0 },
+        ]);
+    });
+
     it('answers a missing root with an empty layout', () => {
         expect(collect('nuiget-sidebar')).toMatchObject({ root: false, sections: [], centring: [] });
     });

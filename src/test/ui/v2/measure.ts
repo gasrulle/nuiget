@@ -11,7 +11,7 @@
  * section toggle or an icon button, is a container and its content is measured. Helper 1 is gap membership
  * (DS-GRID-1, DS-GRID-2a, DS-GRID-2b), helper 2 shared insets (DS-INSET-1, DS-INSET-2, PF-6), helper 3 heights against
  * the Design System and the workbench measured in the same run (DS-HEIGHT-1..11, PF-5; UX-P0.11), helper 4 box centring
- * (PF-3b), helper 5 truncation of named text (PF-3a, DS-ROW-5; UX-P0.12), helper 6 overlap, containment, clipping and
+ * (PF-3b, DS-ROW-7), helper 5 truncation of named text (PF-3a, DS-ROW-5; UX-P0.12), helper 6 overlap, containment, clipping and
  * still chrome (PF-2, PF-4, MS-8, DS-INSET-3, DS-OVERFLOW-2); helper 7, the 24 px target, is DS-HEIGHT-8's hit check.
  *
  * Plain data and string scripts: the module needs no DOM types (tsconfig.test.json has none) and no ExTester import, so
@@ -273,6 +273,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
     rule('PF-3b', { helper: 4, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.centring, states: ['main-installed-single', 'main-updates'] }),
+    // UX-P3.fix-5 (design-advisor opening ruling of 2026-11-13): a compact row's badge centred in its band, both looks, every lane.
+    rule('DS-ROW-7', { helper: 4, scopes: { sidebar: { pending: 'P3.fix-5' } }, tolerance: TOLERANCES.centring, exceptStates: [...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('PF-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, states: ['main-installed-details'] }),
     // The tracker's state group for DS-HEIGHT-1 and -2 is the sidebar (P3.7a's files: the sidebar and the compact Row).
     rule('DS-HEIGHT-1', { helper: 3, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: SIDEBAR_BROWSE_STATES }),
@@ -627,6 +629,11 @@ export interface Layout {
     heights: Heights;
     /** Helper 4: the vertical centres of each Installed or Updates row wrapper and of its check box and icon. */
     centring: Array<{ name: string; row: number; check: number | undefined; icon: number | undefined }>;
+    /**
+     * Helper 4, DS-ROW-7 (UX-P3.fix-5): each visible badge of a compact row, its distances from the top and the bottom of
+     * its band (the closest option or group row), in rows wholly inside their list.
+     */
+    rowBadges: Array<{ name: string; band: number; count: boolean; top: number; bottom: number }>;
     /** PF-5: the details pane's Uninstall and Update buttons. */
     detailsButtons: { uninstall: { left: number; height: number } | undefined; update: { left: number; height: number } | undefined };
     /** The webview's width (PF-3a's 1200). */
@@ -886,7 +893,7 @@ const FONT_RAMP: readonly number[] = [10, 11, 12, 13, 18, 26];
 export const COLLECT_LAYOUT = `
 const [rootTestId, ramp, tolerance, containment = 0, cellList = 'installed'] = arguments;
 const root = document.querySelector('[data-testid="' + rootTestId + '"]');
-if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, detailsEmpty: undefined, split: undefined, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
+if (!root) return { root: false, scrollbar: { rootColor: '', slider: '', scrollers: [] }, examined: 0, offRamp: [], offRampCount: 0, blockGaps: [], sections: [], toolbars: [], mainHeader: undefined, sidebarHeader: undefined, mainLefts: {}, mainRegionLeft: undefined, details: undefined, sidebar: undefined, heights: { headers: [], compactRows: [], comfortableRows: [], comfortablePitches: [], tabStrip: undefined, detailsTabs: undefined, buttons: [], inputs: [], iconButtons: [], checkBoxes: [], checkSelect: { fill: '', border: '' }, badges: [], progress: [] }, centring: [], rowBadges: [], detailsButtons: { uninstall: undefined, update: undefined }, width: 0, rows: [], chrome: {}, firstRow: undefined, overflow: { containers: 0, collisions: [], outside: [], clipped: [], count: 0, badges: [] }, transitiveGap: undefined, primaryEdges: [], browsing: false, documentOverflow: undefined, endOfP0: { rows: [], listPaneWidth: undefined, detailsHeader: undefined, sideways: [], controlsOut: [], minContent: { toolbar: undefined, header: undefined }, detailsEmpty: undefined, split: undefined, factLefts: [], fonts: { root: '', others: [] }, textStyles: [], verifiedMarks: [], verifiedForeground: '', dataLook: undefined, lookTokens: {}, rootLineHeight: undefined, compactLineHeights: [], metaText: [], descriptionForeground: '', copyEnds: [], detailsLabels: [], focus: undefined, focusColours: { focusBorder: '', listFocusOutline: '', contrastActiveBorder: '' }, disabled: [] }, testIds: {} };
 const visible = el => {
     if (!el || !el.isConnected) return false;
     const style = getComputedStyle(el);
@@ -1241,6 +1248,21 @@ const centring = shown('[data-testid="installed-list"] .nuiget-row-option, [data
     const icon = option.querySelector('.nuiget-row-icon');
     const name = option.querySelector('.nuiget-row-name');
     return { name: name ? name.textContent : '', row: centreOf(row), check: visible(check) ? centreOf(check) : undefined, icon: visible(icon) ? centreOf(icon) : undefined };
+});
+// Helper 4, DS-ROW-7 (UX-P3.fix-5): each visible badge of a compact row against its band, the option or the group row; a band cut
+// by its list's scroller edge is not read.
+const rowBadges = shown('.nuiget-row--compact .nuiget-badge').flatMap(badge => {
+    const band = badge.closest('.nuiget-row-option, .nuiget-row-group');
+    if (!band) return [];
+    const bandBox = rectOf(band);
+    const list = band.closest('[role="listbox"], [role="tree"]');
+    if (list) {
+        const top = rectOf(list).top + list.clientTop;
+        if (bandBox.top < top - 0.5 || bandBox.bottom > top + list.clientHeight + 0.5) return [];
+    }
+    const badgeBox = rectOf(badge);
+    const named = band.querySelector('.nuiget-row-name, .nuiget-section-title') ?? band;
+    return [{ name: (named.textContent || '').trim().slice(0, 40), band: round(bandBox.top), count: badge.classList.contains('nuiget-badge--count'), top: round(badgeBox.top - bandBox.top), bottom: round(bandBox.bottom - badgeBox.bottom) }];
 });
 const buttonBox = id => { const el = scope.querySelector('[data-testid="' + id + '"]'); if (!visible(el)) return undefined; const rect = rectOf(el); return { left: round(rect.left), height: round(rect.height) }; };
 const detailsButtons = { uninstall: buttonBox('uninstall-button'), update: buttonBox('install-update-button') };
@@ -1727,7 +1749,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers };
-return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, rowBadges, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -1967,6 +1989,36 @@ const sameColour = (a: string, b: string): boolean => {
 
 /** A radius that makes a pill or a circle of its box. */
 const isRound = (radius: string, width: number, height: number): boolean => radius.endsWith('%') ? Number.parseFloat(radius) >= 50 : Number.parseFloat(radius) >= Math.min(width, height) / 2 - 0.5;
+
+/** The states where DS-ROW-7 must read at least one label badge of a compact row (UX-P3.fix-5, the ruling's witnesses). */
+export const ROW_BADGE_WITNESS_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-hover', 'sidebar-browse-revalidating', 'sidebar-all-projects'];
+
+/**
+ * Helper 4, DS-ROW-7 (UX-P3.fix-5): every badge of a compact row centred in its band, `|top − bottom| ≤ 1` and both at least 1;
+ * undefined for another rule.
+ */
+function evaluateRowBadges(definition: RuleDefinition, state: string, layout: Layout): { value: string; pass: boolean } | undefined {
+    if (definition.id !== 'DS-ROW-7') {
+        return undefined;
+    }
+    const badges = layout.rowBadges ?? [];
+    const labels = badges.filter(badge => !badge.count);
+    if (ROW_BADGE_WITNESS_STATES.includes(state) && labels.length === 0) {
+        return { value: `${NOT_MEASURABLE} (no label badge in a compact row)`, pass: false };
+    }
+    if (badges.length === 0) {
+        return layout.heights.compactRows.length === 0
+            ? { value: `${NOT_MEASURABLE} (no compact row)`, pass: false }
+            : { value: `0 badges in compact rows (${layout.heights.compactRows.length} rows)`, pass: true };
+    }
+    const centred = (badge: { top: number; bottom: number }): boolean => Math.abs(badge.top - badge.bottom) <= definition.tolerance && badge.top >= 1 && badge.bottom >= 1;
+    const offsets = (list: typeof badges): string => (list.length === 0 ? 'none' : tally(list.map(badge => `${tenth(badge.top)}/${tenth(badge.bottom)}`)));
+    const first = badges.find(badge => !centred(badge)) ?? badges[0];
+    return {
+        value: `label ${offsets(labels)}; count ${offsets(badges.filter(badge => badge.count))} (${badges.length} badges in ${new Set(badges.map(badge => badge.band)).size} rows; first ${first.name}: top ${tenth(first.top)}, bottom ${tenth(first.bottom)})`,
+        pass: badges.every(centred),
+    };
+}
 
 /** Helpers 3 and 4 (UX-P0.11): the value and the verdict of a height or centring rule, or undefined for another rule. */
 function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined): { value: string; pass: boolean } | undefined {
@@ -3311,7 +3363,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (popupVerdict !== undefined) {
         return popupVerdict;
     }
-    const heightVerdict = evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
+    const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
