@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The divider between the package list and the details is a thin line that highlights when you rest the pointer on it**
 - **The Refresh button uses VS Code's refresh icon**
 - **High contrast themes outline the selected and the hovered tab**
-- **A scrolled list shows a shadow under its header, as VS Code's views do**
 - **The sidebar shows its loading bar in the section that loads, and an empty or failed search says so in place**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**

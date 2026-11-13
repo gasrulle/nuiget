@@ -1296,8 +1296,28 @@ async function chromeProbes(state: string): Promise<string[]> {
     }
 }
 
-/** This pass's `[fringe] host` reading, read once at its first sidebar cell (UX-P3.fix-4, follow-up 3). */
+/**
+ * This pass's `[fringe] host` reading (UX-P3.fix-4, follow-up 3), read at its first sidebar cell, where the side bar's title
+ * label is not covered. A dialog cell judged before it waits in `deferredFringe` and prints its line once the pass has it, or
+ * at the pass's end (UX-P3.9 design-advisor follow-up 5, DO 5).
+ */
 let hostReading: HostReading | undefined;
+const deferredFringe: Array<{ state: string; width: number; theme: string; cell: string; png: string; lines: readonly TextLine[]; dpr: number }> = [];
+
+/** A cell's `[fringe]` line and its DS-TYPE-10 lines under the pass's host reading; a pending line joins the pending list, a red hard one `red`. */
+function judgeFringe(cell: { state: string; width: number; theme: string; cell: string; png: string; lines: readonly TextLine[]; dpr: number }, host: HostReading, red: string[]): void {
+    const fringe = fringeOf(cell.cell, cell.png, cell.lines, cell.dpr, host);
+    console.warn(fringe.text);
+    for (const line of pixelRuleLines(cell.state, cell.width, cell.theme, LANE, fringe.result === undefined ? {} : { 'DS-TYPE-10': fringe.result })) {
+        const text = formatLine(line);
+        console.warn(text);
+        if (line.status !== 'hard') {
+            pendingLines.push(text);
+        } else if (!line.pass) {
+            red.push(`${line.name}: ${line.value}`);
+        }
+    }
+}
 
 /** Prints the line verdicts of a crop (DS-TYPE-10, `fringe.ts`), read with the decoder of `scripts/crop-png.mjs`; JSON in on stdin. */
 const READ_FRINGE = 'const { decodePng } = await import(process.argv[1]); const { lineVerdicts } = await import(process.argv[2]); let input = \'\'; '
@@ -2197,10 +2217,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);
             if (textLines !== undefined) {
-                // Once per pass, before the first sidebar cell is judged: the side bar's own title in that cell's window
-                // screenshot (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red.
-                // A dialog cell, which runs before every sidebar cell, reads its own and leaves the sidebar's as it was
-                // (UX-P3.9 follow-up 4; its rule is pending, so its host reading guards nothing).
+                // Once per pass, at its first sidebar cell: the side bar's own title in that cell's window screenshot
+                // (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red. A dialog
+                // cell, whose scrim covers the label, takes no reading of its own and waits for this one (UX-P3.9 follow-up 5).
                 if (hostReading === undefined && state.surface === 'sidebar') {
                     hostReading = await hostFringe(shot.png, shot.dpr);
                     const guard = hostGuard(hostReading, process.platform, LANE);
@@ -2209,18 +2228,15 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                         red.push(guard);
                     }
                 }
-                const host: HostReading = state.surface === 'sidebar' ? hostReading ?? 'not read' : await hostFringe(shot.png, shot.dpr);
-                const cell = captureFile(state.name, capture);
-                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr, host);
-                console.warn(fringe.text);
-                for (const line of pixelRuleLines(state.name, capture.width, capture.theme, LANE, fringe.result === undefined ? {} : { 'DS-TYPE-10': fringe.result })) {
-                    const text = formatLine(line);
-                    console.warn(text);
-                    if (line.status !== 'hard') {
-                        pendingLines.push(text);
-                    } else if (!line.pass) {
-                        red.push(`${line.name}: ${line.value}`);
+                const file = captureFile(state.name, capture);
+                const judged = { state: state.name, width: capture.width, theme: capture.theme, cell: file.replace(/\.png$/, ''), png: path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), file), lines: textLines, dpr: shot.dpr };
+                if (hostReading === undefined) {
+                    deferredFringe.push(judged);
+                } else {
+                    for (const waiting of deferredFringe.splice(0)) {
+                        judgeFringe(waiting, hostReading, red);
                     }
+                    judgeFringe(judged, hostReading, red);
                 }
             }
             // Once per state in the `ui` lane, after the PNG and before the setup's layer closes.
@@ -2418,6 +2434,12 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
     }
 
     after(() => {
+        // Dialog cells still waiting when the pass had no sidebar cell (UX-P3.9 follow-up 5): judged `not read`, which the
+        // verdict reads as not measurable; their reds, if a later item makes the scope hard, fail the run after the pending list.
+        const deferredRed: string[] = [];
+        for (const waiting of deferredFringe.splice(0)) {
+            judgeFringe(waiting, hostReading ?? 'not read', deferredRed);
+        }
         if (!scrollbarProbed) {
             console.warn('[probe] scrollbar: no capture of this run had a list that scrolls');
         }
@@ -2425,6 +2447,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         console.warn(`[measure] pending list: ${pendingLines.length} lines`);
         for (const line of pendingLines) {
             console.warn(line);
+        }
+        if (deferredRed.length > 0) {
+            throw new Error(`hard measurement red: ${deferredRed.join('; ')}`);
         }
     });
 });

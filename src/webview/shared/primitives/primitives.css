@@ -71,26 +71,6 @@
     background-color: var(--nuiget-listbox-bg, transparent);
 }
 
-/*
- * The workbench's scroll shadow (DS-SCROLL-2, UX-P3.9): a list scrolled away from its start draws an inset 0 6px 6px -6px
- * shadow in scrollbar.shadow over its top edge. An overlay on the list's root, never a sticky child or the scroller's own
- * shadow: a sticky box inside the composited scroller cost a dialog over it its subpixel text (H27, follow-up 4). No z-index;
- * it takes no pointer and is no node of the accessibility tree.
- */
-.nuiget-listbox-root::after {
-    content: "";
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline: 0;
-    block-size: var(--nuiget-space-3);
-    pointer-events: none;
-    box-shadow: var(--nuiget-listbox-shadow, none);
-}
-
-.nuiget-listbox-root[data-scrolled="true"] {
-    --nuiget-listbox-shadow: var(--nuiget-color-scroll-shadow) 0 var(--nuiget-space-3) var(--nuiget-space-3) calc(var(--nuiget-space-3) * -1) inset;
-}
-
 /* As high as all rows together; the rows in view are placed inside it. */
 .nuiget-listbox-sizer {
     position: relative;

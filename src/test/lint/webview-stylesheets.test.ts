@@ -173,19 +173,13 @@ describe('2.0 webview stylesheets', () => {
         expect(setters).toEqual(['.nuiget-section-header[data-variant="pane"] { --nuiget-section-header-line: var(--nuiget-pane-header-line, transparent) }']);
     });
 
-    it('a scrolled list draws the workbench\'s scroll shadow over its top edge, in the scroll-shadow token (DS-SCROLL-2, UX-P3.9)', () => {
-        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
-        const declarationsOf = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
-        expect(declarationsOf('.nuiget-listbox-root[data-scrolled="true"]')).toEqual([
-            '--nuiget-listbox-shadow: var(--nuiget-color-scroll-shadow) 0 var(--nuiget-space-3) var(--nuiget-space-3) calc(var(--nuiget-space-3) * -1) inset',
-        ]);
-        // An overlay on the list's root (follow-up 4): no sticky box and no z-index inside the composited scroller (H27).
-        expect(declarationsOf('.nuiget-listbox-root::after')).toEqual([
-            'content: ""', 'position: absolute', 'inset-block-start: 0', 'inset-inline: 0', 'block-size: var(--nuiget-space-3)',
-            'pointer-events: none', 'box-shadow: var(--nuiget-listbox-shadow, none)',
-        ]);
-        expect(rules.filter(rule => rule.prelude.startsWith('.nuiget-listbox') && !rule.prelude.startsWith('.nuiget-listbox-root'))
-            .flatMap(rule => rule.declarations).filter(declaration => /^(position: sticky|z-index|box-shadow)/.test(declaration))).toEqual([]);
+    it('no rule reads the scrolled signal or draws a list\'s scroll shadow until P3.fix-6 adds one (DS-SCROLL-2, H27, UX-P3.9 follow-up 5)', () => {
+        // Both measured forms cost subpixel text somewhere (a sticky box in the scroller, an overlay on the list's root): the
+        // shadow is P3.fix-6's; Listbox keeps `data-scrolled` on its root as that item's starting point.
+        const hits = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8'))
+            .filter(rule => rule.prelude.includes('data-scrolled') || rule.declarations.some(declaration => declaration.includes('--nuiget-listbox-shadow')))
+            .map(rule => `${file} ${rule.prelude}`));
+        expect(hits).toEqual([]);
     });
 
     it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {

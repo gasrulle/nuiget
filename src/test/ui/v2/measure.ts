@@ -392,7 +392,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's.
     rule('DS-SCROLL-1', { helper: 3, scopes: on('P3.9', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
-    rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': { pending: 'P3.9' }, details: { pending: 'P3.9' }, sidebar: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
+    rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': { pending: 'P3.fix-6' }, details: { pending: 'P3.fix-6' }, sidebar: { pending: 'P3.fix-6' } }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
     // README; the details pane's headings set their weight since UX-P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
@@ -403,8 +403,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.fix-4 (H27; design-advisor opening ruling of 2026-11-13, DO 10): the side bar's text keeps its subpixel rendering,
     // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
-    // UX-P3.9 follow-up 4: the text of a dialog over the main panel, judged as the sidebar's (H27); pending until the closing.
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: { pending: 'P3.9' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
+    // UX-P3.9 follow-ups 4-5: the text of a dialog over the main panel, judged as the sidebar's (H27); pending on P3.fix-6, which owns the scroll shadow.
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: { pending: 'P3.fix-6' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
 ];
 
 /** The state group of a named state, by its name. */

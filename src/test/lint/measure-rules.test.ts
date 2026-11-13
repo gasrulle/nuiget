@@ -140,8 +140,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect((['ui', 'matrix', 'floor', 'macos'] as const).map(lane => appliesTo(spec!, 'main-installed-single', 932, 'dark-modern', lane))).toEqual([true, false, false, false]);
         expect(appliesTo(spec!, 'main-installed-single', 932, 'dark-modern')).toBe(true);
         expect(RULES.filter(rule => rule.lanes !== undefined).map(rule => rule.id)).toEqual(['SPEC', 'DS-TYPE-10']);
-        // UX-P3.9 follow-up 4: DS-TYPE-10 reads the bulk dialog's text too, pending until the closing.
-        expect(definition('DS-TYPE-10')?.scopes).toEqual({ sidebar: 'hard', dialogs: { pending: 'P3.9' } });
+        // UX-P3.9 follow-ups 4-5: DS-TYPE-10 reads the bulk dialog's text too, pending on P3.fix-6.
+        expect(definition('DS-TYPE-10')?.scopes).toEqual({ sidebar: 'hard', dialogs: { pending: 'P3.fix-6' } });
+        // UX-P3.9 follow-up 5: the scroll shadow moved to P3.fix-6 with its rule.
+        expect(definition('DS-SCROLL-2')?.scopes).toEqual({ 'main-installed': { pending: 'P3.fix-6' }, details: { pending: 'P3.fix-6' }, sidebar: { pending: 'P3.fix-6' } });
         expect(definition('DS-TYPE-10')?.scopeStates).toEqual({ dialogs: ['main-installed-bulk-dialog'] });
         const specLines = (lane: 'ui' | 'floor' | 'macos') => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 932, undefined, 'dark-modern', undefined, lane).filter(line => line.name.startsWith('SPEC@'));
         expect(specLines('ui').length).toBeGreaterThan(0);
@@ -1437,7 +1439,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         const scroller = (scrollTop: number, shadow: string) => ({ label: '[installed-list]', left: 0, top: 0, width: 300, height: 200, right: 300, size: 8, thumb: 50, backdrop: 'rgb(30, 30, 30)', scrollTop, shadow });
         const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers, shadowColour: 'rgb(0, 0, 0)' } });
         const token = 'rgb(0, 0, 0) 0px 6px 6px -6px inset';
-        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.9' }, value: `[installed-list] scrollTop 120, shadow none (token ${token})` });
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.fix-6' }, value: `[installed-list] scrollTop 120, shadow none (token ${token})` });
         expect(lineOf('main-transitive-expanded', bars(scroller(120, token)), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
         // Another colour or geometry is not the token's.
         expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(255, 0, 0) 0px 6px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);

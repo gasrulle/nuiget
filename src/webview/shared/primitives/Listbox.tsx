@@ -153,8 +153,8 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     const rootRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const emptyRef = useRef<HTMLDivElement>(null);
-    // Scrolled away from its start: the root carries the signal and the stylesheet draws the workbench's scroll shadow over the
-    // list's top edge (DS-SCROLL-2, UX-P3.9).
+    // Scrolled away from its start: the root carries the signal for the workbench's scroll shadow (DS-SCROLL-2), which no rule
+    // draws yet: P3.fix-6 owns its form (UX-P3.9 follow-up 5).
     // The scroller's own position: read again whenever the scroller comes or goes (an empty list renders none), and on scroll.
     const [scrolled, setScrolled] = useState(false);
     const hasScroller = items.length > 0;
