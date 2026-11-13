@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
-import { Banner, cssVars, LiveStatus, ProgressBar, Sash } from '../shared/primitives';
+import { Banner, cssVars, LiveStatus, Sash } from '../shared/primitives';
 import { parseSearchQuery } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useConfig } from '../shared/store/config';
@@ -150,7 +150,6 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                         }}
                     />
                 </div>
-                {installed.revalidating && mode !== 'browse' ? <ProgressBar label="Refreshing installed packages" /> : null}
             </div>
             {mode === 'browse' ? <BrowseResults announce={announce} /> : (
                 <>

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Uninstall from the sidebar's search results** — An installed package in the sidebar's search results has an Uninstall button, and Delete removes it from the selected project.
 - **The sidebar names the active package source** — A line above the search box shows the source the lists come from.
 - **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
 

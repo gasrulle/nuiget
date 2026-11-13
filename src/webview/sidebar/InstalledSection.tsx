@@ -3,7 +3,7 @@ import type React from 'react';
 import type { InstalledPackage, InstalledResult, ProjectInstalledChunk } from '../../protocol';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
-import { Badge, Banner, cssVars, EmptyState, Listbox, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
+import { Badge, Banner, cssVars, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useSession } from '../shared/store/session';
@@ -210,6 +210,9 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
         content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 
+    // The pane loads or revalidates: its 2 px bar over the list's top edge and the header's spinner (DS-STATE-2, UX-P3.8).
+    const loadingFirst = all.active ? all.status === 'loading' : installed.status === 'loading';
+    const busy = loadingFirst || (all.active ? all.revalidating : installed.revalidating);
     return (
         <section className={share ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share ? cssVars({ '--nuiget-sidebar-share': share }) : undefined}>
             <SectionHeader
@@ -221,12 +224,17 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count}
-                busy={all.active ? all.status === 'loading' || all.revalidating : installed.status === 'loading' || installed.revalidating}
+                busy={busy}
                 badges={!all.active && result?.fidelity === 'provisional'
                     ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="provisional" tone="info" /></span>
                     : undefined}
             />
-            {expanded ? <div className="nuiget-sidebar-section-content" id={contentId}>{content}</div> : null}
+            {expanded ? (
+                <div className="nuiget-sidebar-section-content" id={contentId}>
+                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="sidebar-installed-progress" /></div> : null}
+                    {content}
+                </div>
+            ) : null}
         </section>
     );
 }

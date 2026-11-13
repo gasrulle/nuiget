@@ -2,7 +2,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
+import { By, EditorView, Key, VSBrowser, type WebElement } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
@@ -99,7 +99,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable'];
 
@@ -324,6 +324,29 @@ async function parkSidebarPointer(): Promise<void> {
     await until('document.querySelector(\'.nuiget-sidebar .nuiget-row-option:hover\') === null', 'no sidebar row under the pointer', 10_000);
 }
 
+/**
+ * The side bar with Gateway selected and `text` typed and submitted with Enter in its box: a Browse search whose results
+ * take the place of the sections (UX-P3.8). The box's own debounced search may have gone first; Enter asks again at once.
+ */
+async function sidebarSearchWithEnter(text: string, state: string): Promise<void> {
+    await sidebarSections();
+    const search = await findByTestId('sidebar-search-input', 30_000);
+    await typeHeld(search, text, state);
+    await search.sendKeys(Key.ENTER);
+}
+
+/** Clears the sidebar box after a Browse cell, the hold ended first: the two sections come back (UX-P3.8). */
+async function leaveSidebarSearch(): Promise<void> {
+    await enterSidebarWebview();
+    const search = await findByTestId('sidebar-search-input', 30_000);
+    await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+    await findByTestId('sidebar-installed-list', 60_000);
+    await parkSidebarPointer();
+}
+
+/** The Serilog search of the sidebar's Browse cells: its installed row and a row that can be installed (UX-P3.8, SB9). */
+const SIDEBAR_SERILOG_LISTED = 'document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="package-row-serilog"] .nuiget-badge\')?.textContent === "Installed" && document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="row-action-install"]\') !== null && document.querySelector(\'[data-testid="sidebar-browse-list"]\')?.getAttribute("aria-busy") !== "true"';
+
 // ---- the states ------------------------------------------------------------------------------------------------------
 
 interface Reach {
@@ -369,7 +392,7 @@ const cancelDialog = async (): Promise<void> => {
 };
 
 /** The states whose subject is the pointer: the shot leaves it where it is. */
-const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover', 'sidebar-hover'];
+const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover', 'sidebar-hover', 'sidebar-browse-hover'];
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
@@ -972,6 +995,108 @@ const REACH: Record<string, Reach> = {
             await parkSidebarPointer();
         },
     },
+    // UX-P3.8 (design-advisor ruling of 2026-11-13, DO 9): no reach presses Delete, Enter on a row, Ctrl+Enter or a row action.
+    'sidebar-browse-results': {
+        reach: async () => {
+            await sidebarSearchWithEnter('Serilog', 'sidebar-browse-results');
+            await until(SIDEBAR_SERILOG_LISTED, 'the Serilog results, its installed row and an install action', 120_000);
+            await parkSidebarPointer();
+        },
+        leave: leaveSidebarSearch,
+    },
+    'sidebar-browse-hover': {
+        reach: async () => {
+            await REACH['sidebar-browse-results'].reach();
+            const option = await optionOf('package-row-serilog');
+            await driverOf().actions().move({ origin: option }).perform();
+            await until('document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="package-row-serilog"] .nuiget-row-option\').matches(":hover")', 'the Serilog Browse row under the pointer', 10_000);
+        },
+        leave: leaveSidebarSearch,
+    },
+    'sidebar-browse-loading': {
+        reach: async () => {
+            await sidebarSections();
+            await holdRequest('search/query');
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await typeHeld(search, 'Newtonsoft.Json', 'sidebar-browse-loading');
+            await search.sendKeys(Key.ENTER);
+            // The bar stands because the answer is held, not because nuget.org is slow (VERIFY: `[hold] … N held`, N ≥ 1).
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await until('document.querySelector(\'[data-testid="sidebar-browse-progress"]\') !== null && document.querySelector(\'[data-testid="sidebar-browse-list"]\') === null && document.querySelectorAll(".nuiget-skeleton-row").length === 0', 'the bar alone');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-browse-loading');
+            await leaveSidebarSearch();
+        },
+    },
+    'sidebar-browse-revalidating': {
+        reach: async () => {
+            await sidebarSearchWithEnter('Newtonsoft.Json', 'sidebar-browse-revalidating');
+            await until('document.querySelector(\'[data-testid="sidebar-browse-list"] .nuiget-row-option\') !== null && document.querySelector(\'[data-testid="sidebar-browse-progress"]\') === null', 'the Newtonsoft.Json results', 120_000);
+            await holdRequest('search/query');
+            await (await findByTestId('sidebar-search-input', 30_000)).sendKeys(Key.ENTER);
+            await until('document.querySelector(\'[data-testid="sidebar-browse-progress"]\') !== null && document.querySelector(\'[data-testid="sidebar-browse-list"]\')?.getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="sidebar-browse-list"] .nuiget-row-option\') !== null', 'the rows under the bar, the list busy');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-browse-revalidating');
+            await leaveSidebarSearch();
+        },
+    },
+    'sidebar-browse-empty': {
+        reach: async () => {
+            await sidebarSearchWithEnter('zz-no-such-package-nuiget', 'sidebar-browse-empty');
+            await until('document.querySelector(\'[data-testid="sidebar-browse-empty"]\')?.textContent === \'No results for "zz-no-such-package-nuiget".\'', 'the sidebar Browse empty state', 120_000);
+            await parkSidebarPointer();
+        },
+        leave: leaveSidebarSearch,
+    },
+    'sidebar-browse-error': {
+        reach: async () => {
+            await sidebarSections();
+            await holdRequest('search/query');
+            const search = await findByTestId('sidebar-search-input', 30_000);
+            await typeHeld(search, 'Newtonsoft.Json', 'sidebar-browse-error');
+            await search.sendKeys(Key.ENTER);
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await failHeld('sidebar-browse-error', 'The package source could not be read.');
+            await until('document.querySelector(\'[data-testid="sidebar-browse-error"] button\') !== null', 'the inline error with Retry');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await endHold();
+            await leaveSidebarSearch();
+        },
+    },
+    'sidebar-installed-loading': {
+        reach: async () => {
+            // The Installed pane alone, so no Updates row counts as a row of the cell (design-advisor DO 9).
+            await sidebarSections();
+            await typeHeld(await findByTestId('sidebar-search-input', 30_000), '@installed ', 'sidebar-installed-loading');
+            await findByTestId('sidebar-installed-list', 30_000);
+            await holdRequest('installed/get');
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Utility.csproj');
+            await leaveWebview();
+            await enterSidebarWebview();
+            await until('window.__nuigetHold.held.length > 0', 'the held Installed answer', 60_000);
+            await until('document.querySelector(\'[data-testid="sidebar-installed-progress"]\') !== null && document.querySelector(\'[data-testid="section-header-installed"] .nuiget-spinner\') !== null && document.querySelector(\'[data-testid="section-box-installed"] .nuiget-badge--count\') === null && document.querySelector(".nuiget-sidebar .nuiget-row-option") === null', 'the pane loading: its bar, the header spinner, no count, no row');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-installed-loading');
+            await leaveSidebarSearch();
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
+        },
+    },
     'sidebar-update-all-dialog': {
         reach: async () => {
             await sidebarSections();
@@ -1081,6 +1206,40 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     ], { stdio: 'pipe' });
     console.warn(`[capture] ${file}: iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr}), cropped ${capture.width}x${rect.height}, ${outer.text}`);
     return { png: path.join(dir, `${windowName}.png`), x: rect.x, y: rect.y, dpr };
+}
+
+/**
+ * One shot of the H27 probe (UX-P3.8, design-advisor follow-up 1, DO 2): what the sidebar document says about its box and
+ * layers, printed as a `[probe] h27` line, and the side bar's crop at its capture width under `probe/` beside the crops.
+ */
+async function h27ProbeShot(name: string): Promise<void> {
+    const facts = await script<{ popups: number; expanded: string | null; active: string; focus: boolean; animations: number }>(`
+const box = document.querySelector('[data-testid="sidebar-search-input"]');
+return {
+    popups: document.querySelectorAll('.nuiget-search-popup').length,
+    expanded: box ? box.getAttribute('aria-expanded') : null,
+    active: document.activeElement?.dataset?.testid || document.activeElement?.tagName.toLowerCase() || 'none',
+    focus: document.hasFocus(),
+    animations: document.getAnimations().length,
+};`);
+    console.warn(`[probe] h27 ${name}: popups ${facts.popups}, aria-expanded ${facts.expanded}, active ${facts.active}, hasFocus ${facts.focus}, animations ${facts.animations}`);
+    await leaveWebview();
+    await driverOf().actions().move({ x: 1, y: 1 }).perform();
+    const rect = await webviewRect('nuiget-sidebar');
+    const dpr = await script<number>('return window.devicePixelRatio;');
+    const windowName = `probe-h27-${name}.window`;
+    await VSBrowser.instance.takeScreenshot(windowName);
+    const dir = VSBrowser.instance.getScreenshotsDir();
+    const probeDir = path.join(path.dirname(dir), 'probe');
+    fs.mkdirSync(probeDir, { recursive: true });
+    execFileSync(process.execPath, [
+        path.resolve('scripts/crop-png.mjs'),
+        path.join(dir, `${windowName}.png`),
+        String(rect.x), String(rect.y), String(SIDEBAR_WIDTH), String(rect.height),
+        path.join(probeDir, `h27-${name}.png`),
+        String(dpr),
+    ], { stdio: 'pipe' });
+    console.warn(`[probe] h27 ${name}: probe/h27-${name}.png, iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr})`);
 }
 
 /** Prints the RGBA of one device pixel of a PNG, read with the decoder of `scripts/crop-png.mjs`. */
@@ -1969,6 +2128,39 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
             await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
+        });
+
+        // UX-P3.8 (design-advisor follow-up 1 of 2026-11-13, DO 2): which use of the sidebar box turns the pane greyscale (H27).
+        // Three shots under probe/, never states: no golden, no diff, no mask. No row is pressed; the box is left empty.
+        it('H27 probe: the sidebar box in use (UX-P3.8)', async function () {
+            this.timeout(300_000);
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
+            await sidebarSections();
+            const box = (): Promise<WebElement> => findByTestId('sidebar-search-input', 30_000);
+            const uses: Array<[string, () => Promise<void>]> = [
+                ['P-a', async () => (await box()).click()],
+                ['P-b', async () => {
+                    const search = await box();
+                    await search.click();
+                    await search.sendKeys('@');
+                    await search.sendKeys(Key.BACK_SPACE);
+                }],
+                ['P-c', async () => {
+                    const search = await box();
+                    await typeHeld(search, '@installed', 'h27 probe');
+                    await search.sendKeys(Key.ESCAPE);
+                }],
+            ];
+            for (const [name, use] of uses) {
+                await enterSidebarWebview();
+                await use();
+                await h27ProbeShot(name);
+                await enterSidebarWebview();
+                await (await box()).sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
+                await findByTestId('sidebar-installed-list', 30_000);
+            }
+            await parkSidebarPointer();
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state

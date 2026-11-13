@@ -221,6 +221,12 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-browse-empty': ['browse-empty'],
     'main-browse-error': ['browse-error'],
     'main-browse-unavailable': ['browse-unavailable-banner'],
+    // UX-P3.8: the sidebar's Browse cells and the Installed pane's first load (design-advisor ruling of 2026-11-13, DO 10).
+    'sidebar-browse-loading': ['sidebar-browse-progress'],
+    'sidebar-browse-revalidating': ['sidebar-browse-progress'],
+    'sidebar-browse-empty': ['sidebar-browse-empty'],
+    'sidebar-browse-error': ['sidebar-browse-error'],
+    'sidebar-installed-loading': ['sidebar-installed-progress'],
     'main-quicksearch-loading': ['search-suggestions-loading'],
     'main-quicksearch-error': ['search-suggestions-error'],
 };
@@ -401,7 +407,14 @@ export function stateGroup(state: string): StateGroup {
  * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
  * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
  */
-export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' {
+export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' {
+    // The sidebar's Browse results and Installed pane carry their own hooks (UX-P3.8).
+    if (state.startsWith('sidebar-browse-')) {
+        return 'sidebar-browse';
+    }
+    if (state.startsWith('sidebar-installed-')) {
+        return 'sidebar-installed';
+    }
     const group = stateGroup(state);
     if (group === 'sources') {
         return 'source-settings';
@@ -2964,7 +2977,7 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
     }
     const loading = state.includes('loading');
     // A first Browse search shows the bar alone: rows first under it, the enrichment after, are P5.9a's (D56, UX-P3.2).
-    const barAlone = stateGroup(state) === 'browse';
+    const barAlone = stateGroup(state) === 'browse' || state.startsWith('sidebar-browse-');
     switch (definition.id) {
         case 'DS-STATE-1': {
             const wanted = STATE_MARKERS[state] ?? [];
@@ -3340,10 +3353,18 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
             }
             if (scope === 'sidebar') {
                 const sidebar = layout.sidebar;
-                if (sidebar === undefined || (sidebar.titles.length === 0 && sidebar.names.length === 0)) {
+                if (sidebar === undefined) {
                     return { value: NOT_MEASURABLE, pass: false };
                 }
                 const expected = SIDEBAR_INSETS[look];
+                // A Browse cell without rows (loading, empty, error) shows no title and no name: the search row alone (UX-P3.8).
+                if (sidebar.titles.length === 0 && sidebar.names.length === 0) {
+                    if (sidebar.search === undefined || !state.startsWith('sidebar-browse-')) {
+                        return { value: NOT_MEASURABLE, pass: false };
+                    }
+                    const alone = tenth(sidebar.search - sidebar.rootLeft);
+                    return { value: `content none; search ${alone}`, pass: near(alone, expected.header, tolerance) };
+                }
                 const content = [...sidebar.titles, ...sidebar.names].map(x => tenth(x - sidebar.rootLeft));
                 const search = sidebar.search === undefined ? undefined : tenth(sidebar.search - sidebar.rootLeft);
                 const pass = content.every(inset => near(inset, expected.content, tolerance)) && (search === undefined || near(search, expected.header, tolerance));

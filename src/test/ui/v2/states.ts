@@ -111,6 +111,8 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
  */
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_SIDEBAR_CARET: Mask = { selector: '[data-testid="sidebar-search-input"]', reason: 'the caret blinks in the sidebar search box (UX-P3.7b)' };
+/** The side bar's Browse results: nuget.org search results change between runs (UX-P3.8). */
+const LIVE_SIDEBAR_RESULTS: Mask = { selector: '[data-testid="sidebar-browse-list"]', reason: 'nuget.org search results change between runs' };
 /** The main Updates list: the newest versions on nuget.org change between runs. */
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };
@@ -254,6 +256,21 @@ export const STATES: readonly NamedState[] = [
         '"Newtonsoft.Json" searched with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker browse-error, UX-P3.2).', [LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-browse-unavailable', 'main', [primary('main')],
         '"Newtonsoft.Json" searched with its held answer rewritten to the form the host gives when a source could not be checked: the banner over the rows of the ones that answered (UX-P3.2, moved from P3.10).', [LIVE_RESULTS, LIVE_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    // UX-P3.8 (design-advisor ruling of 2026-11-13, DO 9): the side bar's Browse cells and the Installed pane's first load.
+    { ...ready('sidebar-browse-results', 'sidebar', [primary('sidebar')],
+        'Gateway selected, "Serilog" searched with Enter in the sidebar box: the Browse results replace the sections; package-row-serilog carries the Installed badge and another row its install action (SB9).', [LIVE_SIDEBAR_RESULTS, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-hover', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
+        '"Serilog" searched in the sidebar box, the pointer on package-row-serilog: the hovered band and its Uninstall action (SB9, DS-ROW-3).', [LIVE_SIDEBAR_RESULTS, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-loading', 'sidebar', [primary('sidebar')],
+        '"Newtonsoft.Json" searched with Enter in the sidebar box, its answer held in the sidebar document: the 2 px bar alone (marker sidebar-browse-progress; rows first under it are P5.9a, D56); released after the capture.', [LIVE_MOTION, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-revalidating', 'sidebar', [primary('sidebar')],
+        '"Newtonsoft.Json" listed in the sidebar, its next answer held and Enter pressed again: the rows stay under the 2 px bar and the list is aria-busy; released after the capture.', [LIVE_MOTION, LIVE_SIDEBAR_RESULTS, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-empty', 'sidebar', [primary('sidebar')],
+        '"zz-no-such-package-nuiget" searched with Enter in the sidebar box: the welcome-style "No results for" sentence (marker sidebar-browse-empty).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-error', 'sidebar', [primary('sidebar')],
+        '"Newtonsoft.Json" searched in the sidebar box with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker sidebar-browse-error).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-installed-loading', 'sidebar', [primary('sidebar')],
+        '"@installed" typed in the sidebar box, the sidebar\'s Installed answers then held and Utility chosen in the main panel: the pane loading under its 2 px bar with its skeleton rows and the header spinner, no count beside it (marker sidebar-installed-progress, SB13); released after the capture.', [LIVE_MOTION, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),
     pending('sidebar-browse-unavailable', 'sidebar', 'P3.10', 'No source answered the search: the sidebar banner.'),
 ];

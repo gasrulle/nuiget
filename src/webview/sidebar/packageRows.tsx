@@ -79,6 +79,6 @@ export function usePackageRows(announce: (message: string) => void) {
         );
     };
 
-    return { uninstall, viewDetails, renderPackageRow };
+    return { uninstall, viewDetails, renderPackageRow, busyStatus };
 }
 

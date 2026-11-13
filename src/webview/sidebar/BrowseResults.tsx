@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import type { PackageSearchResult } from '../../protocol';
+import type { InstalledPackage, PackageSearchResult } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { allProjectsBrowseContext, browseRowContext, installedProjectsOf } from '../shared/installed/rules';
-import { Badge, Banner, EmptyState, IconButton, Listbox, openRowMenu, PlusIcon, ProgressBar, Row, Skeleton } from '../shared/primitives';
+import { allProjectsBrowseContext, browseRowContext, installedProjectsOf, whyNotRemovable } from '../shared/installed/rules';
+import { Badge, Banner, EmptyState, IconButton, Listbox, openRowMenu, PlusIcon, ProgressBar, Row, TrashIcon } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
+import { sentence } from '../shared/updates/sentence';
+import { usePackageRows } from './packageRows';
 import { useRowRequests } from './rowRequests';
 
 interface Item {
@@ -20,13 +22,19 @@ export interface BrowseResultsProps {
     announce: (message: string) => void;
 }
 
+/** The 2 px bar at the top of the results while a search runs or runs again; the list does not move under it (DS-STATE-2). */
+const bar = (label: string): React.JSX.Element => <div className="nuiget-sidebar-progress"><ProgressBar label={label} data-testid="sidebar-browse-progress" /></div>;
+
 /**
  * The flat browse results of the sidebar (interaction model §2): compact rows, Enter or the row's button installs the
- * version found into the selected project; a package installed already says so and offers nothing. Under All Projects,
- * Enter, the button and the menu open the row's actions (VS Code's `webview/context` menu), whose host command
- * picks the projects to install into, with where the package is installed already (interaction model §3). Into a
- * Central Package Management project the row first asks `cpm/preview`: a package that has a central entry already goes
- * through the actions menu, whose host modal lists the projects the central version reaches (ADR-004 tier 3, N77).
+ * version found into the selected project; a package installed already says so on Enter, and its row's button or Delete
+ * uninstalls it from that project, as an Installed row does (SB9, UX-P3.8). Under All Projects, Enter, the button and
+ * the menu open the row's actions (VS Code's `webview/context` menu), whose host command picks the projects, with where
+ * the package is installed already (interaction model §3): the button is Uninstall... on a package installed in every
+ * project, Install... otherwise, and Delete names the menu. Into a Central Package Management project the row first asks
+ * `cpm/preview`: a package that has a central entry already goes through the actions menu, whose host modal lists the
+ * projects the central version reaches (ADR-004 tier 3, N77). A first search shows the bar alone (rows first under it
+ * are D56's).
  */
 export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Element {
     const search = useSearch();
@@ -42,10 +50,15 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
     const projectPath = installed.projectPath;
     const all = useAllProjects();
     const { viewDetails } = useRowRequests(announce);
+    const { uninstall, busyStatus } = usePackageRows(announce);
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
-    const installedVersions = useMemo(
-        () => new Map((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry.resolvedVersion ?? entry.version])),
+    const installedEntries = useMemo(
+        () => new Map<string, InstalledPackage>((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry])),
         [installed.result],
+    );
+    const installedVersions = useMemo(
+        () => new Map([...installedEntries].map(([id, entry]) => [id, entry.resolvedVersion ?? entry.version])),
+        [installedEntries],
     );
 
     const { status, query, results } = search;
@@ -110,28 +123,47 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
         ).finally(() => asking.current.delete(key));
     };
 
+    /** Delete: an installed package of the selected project is uninstalled from it; under All Projects the menu does it. */
+    const remove = ({ result }: Item): void => {
+        if (all.active) {
+            if ((whereInstalled.get(result.id.toLowerCase()) ?? []).length > 0) {
+                announce(`Uninstall ${result.id} from the actions menu (Shift+F10), which asks for the projects.`);
+            }
+            return;
+        }
+        const entry = installedEntries.get(result.id.toLowerCase());
+        if (entry === undefined || projectPath === null || installed.result === undefined) {
+            return;
+        }
+        uninstall(projectPath, installed.result, entry);
+    };
+
     if (status === 'idle') {
         return <EmptyState message="Press Enter to search." />;
     }
     if (status === 'loading') {
-        return <Skeleton density="compact" />;
+        return <div className="nuiget-sidebar-browse">{bar('Searching')}</div>;
     }
     if (status === 'error') {
-        return <Banner severity="error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${search.error?.message ?? 'unknown error'}`}</Banner>;
+        return (
+            <div className="nuiget-sidebar-browse">
+                <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error?.message ?? 'unknown error')}`}</Banner>
+            </div>
+        );
     }
     return (
         <div className="nuiget-sidebar-browse">
-            {search.revalidating ? <ProgressBar label="Searching again" /> : null}
+            {search.revalidating ? bar('Searching again') : null}
             {search.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="sidebar-browse-unavailable" action={{ label: 'Retry', onClick: search.retry }}>Some package sources could not be searched.</Banner>
                 : null}
-            {search.error ? <Banner severity="error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${search.error.message}`}</Banner> : null}
+            {search.error ? <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error.message)}`}</Banner> : null}
             <Listbox
                 items={items}
                 label={`Search results for ${query}`}
                 hint={all.active
-                    ? 'Enter chooses what to do and the projects to install into.'
-                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
+                    ? 'Enter chooses what to do and the projects to install into or uninstall from; Delete names the actions menu (Shift+F10), which uninstalls.'
+                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Delete uninstalls an installed package from it; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
                 testId="sidebar-browse-list"
                 density="compact"
                 busy={search.revalidating}
@@ -139,16 +171,32 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                 onSelect={item => setSelectedId(item.id)}
                 onActivate={install}
                 onSecondaryActivate={({ result }) => viewDetails(result.id, result.version)}
-                empty={<EmptyState message={search.sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} />}
+                onDelete={remove}
+                empty={<EmptyState message={search.sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} data-testid={search.sourcesUnavailable ? undefined : 'sidebar-browse-empty'} />}
                 renderRow={(item, placement) => {
                     const { result } = item;
                     const installedVersion = all.active ? undefined : installedVersions.get(result.id.toLowerCase());
+                    const entry = all.active ? undefined : installedEntries.get(result.id.toLowerCase());
+                    const removable = entry !== undefined && installed.result !== undefined && whyNotRemovable(entry, installed.result) === undefined;
                     const busy = projectPath !== null && isPackageBusy(projectPath, result.id);
                     const where = all.active ? whereInstalled.get(result.id.toLowerCase()) ?? [] : [];
+                    const everywhere = where.length > 0 && where.length === listedCount;
+                    let action: React.ReactNode;
+                    if (all.active) {
+                        action = everywhere
+                            ? <IconButton label={`Uninstall ${result.id}...`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => openMenuOf(result)}><TrashIcon /></IconButton>
+                            : <IconButton label={`Install ${result.id} ${result.version}...`} tabIndex={-1} data-testid="row-action-install" onClick={() => install(item)}><PlusIcon /></IconButton>;
+                    } else if (entry !== undefined) {
+                        action = removable && projectPath !== null && installed.result !== undefined
+                            ? <IconButton label={`Uninstall ${result.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => remove(item)}><TrashIcon /></IconButton>
+                            : undefined;
+                    } else if (projectPath !== null) {
+                        action = <IconButton label={`Install ${result.id} ${result.version}`} tabIndex={-1} data-testid="row-action-install" onClick={() => install(item)}><PlusIcon /></IconButton>;
+                    }
                     let badge: React.ReactNode;
                     if (installedVersion !== undefined) {
                         badge = <Badge label="Installed" title={`Installed: ${installedVersion}`} />;
-                    } else if (where.length > 0 && where.length === listedCount) {
+                    } else if (everywhere) {
                         badge = <Badge label="Installed" title={`Installed in every project: ${where.map(entry => `${entry.projectName} ${entry.version}`).join(', ')}`} />;
                     } else if (where.length > 0) {
                         badge = <Badge label={`Installed in ${where.length} of ${listedCount}`} title={`Installed in ${where.length} of ${listedCount} projects: ${where.map(entry => `${entry.projectName} ${entry.version}`).join(', ')}`} />;
@@ -161,11 +209,9 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                             name={result.id}
                             version={result.version}
                             busy={busy}
-                            status={busy ? 'Installing' : undefined}
+                            status={busy && projectPath !== null ? busyStatus(projectPath, result.id) : undefined}
                             badges={badge}
-                            actions={installedVersion !== undefined || (projectPath === null && !all.active) ? undefined : (
-                                <IconButton label={`Install ${result.id} ${result.version}`} tabIndex={-1} data-testid="row-action-install" onClick={() => install(item)}><PlusIcon /></IconButton>
-                            )}
+                            actions={action}
                         />
                     );
                 }}

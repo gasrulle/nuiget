@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8)   commit b532959 (before the edit)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8)   commit fe63e13 (push 2 written on it; pushes 1 and 1b are 82cb616 and 853edd4)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -7,6 +7,29 @@ Item: **UX-P3.8 Sidebar Browse and states** (X22, X67; SB9, SB14; DS-STATE-1..4)
 ## Verified by running
 
 Baseline on 7e8f3d9 (this session, before UX-P3.fix-3; no source changed since): `npx tsc --noEmit` 0, `npm run check-types` 0, `npx eslint src` 0, `npx vitest run` `Test Files  178 passed (178)`, `Tests  2482 passed | 9 skipped (2491)`.
+
+After push 2's edits (on fe63e13, the review's fixes included):
+
+- `npx tsc --noEmit` → exit 0; `npm run check-types` → exit 0; `npx eslint src` → exit 0; `npm run lint` → exit 0
+- `npx vitest run --project frontend src/webview/sidebar` → `Tests  78 passed (78)`
+- `npx vitest run --project backend src/test/lint` → `Test Files  39 passed (39)`, `Tests  425 passed (425)`
+- `npm test` → `Test Files  178 passed (178)`, `Tests  2489 passed | 9 skipped (2498)`, `[axe-coverage] 73 files, 42 rules passed somewhere, 0 missing`, exit 0
+- `npm run bench` → exit 0
+- `node esbuild.mjs --production --analyze` → `dist/extension.js 299452 / 326720`, `dist/webview.js 587014 / 613761`, `dist/sidebar.js 360417 / 374532`
+- `npm run package:vsix` → exit 0, `DONE  Packaged: nuiget-v2.0.0.vsix (17 files, 611.08 KB)`; `npm run check:vsix` → `check:vsix: OK`
+- `npm run docs:check` → `docs:check — the documents agree with the tree.`, `docs:protocol:check — docs/protocol.md is up to date.`
+- `npm run check:matrix` → `check:matrix — 262 rows: 255 covered, 4 gap, 3 manual-credentials; 0 finding(s).`
+- `node scripts/check-css-baseline.mjs --item P3.8` → `check-css-baseline: 0 entries for P3.8`
+- `grep -n background src/webview/sidebar/sidebar.css` → `17:    background: var(--nuiget-color-bg-sidebar);` only (the view's own rule; nothing of 853edd4)
+- `precommit-review` (wf_1d0c1321-a20, `--cached`, the re-run): blocking 1, non-blocking 4, refuted 0, incomplete 0. The blocking finding (Delete on a
+  Browse row against ADR-013 Decision 2, a universal trigger) is closed by the architecture-advisor's ruling of 2026-11-13 (RUN-ux §4.4). Applied:
+  DS-INSET-1's search-alone branch only for `sidebar-browse-` states (a `sidebar-sections` case asserts not measurable); the Installed bar test
+  reads the revalidating bar inside the pane; README's Delete row "of the selected project"; R262 narrowed and R263 for All Projects.
+- `precommit-review` (wf_a177c213-464, `--cached`): blocking 2, non-blocking 7, refuted 0, incomplete 0. Fixed: the keys table's Delete row of
+  interaction model §5 (the ruled sidebar cell); this section's post-edit output and header. Applied: the Browse row's busy status from the
+  ops slice (`busyStatus` returned by `usePackageRows`; "Uninstalling" asserted after Delete, "Installing" in the install test);
+  `measure-rules.test.ts` covers `cellList`'s two sidebar prefixes and DS-INSET-1's search-alone reading; a CHANGELOG `### Added` entry;
+  the ARCHITECTURE sidebar paragraph; README's Delete row; matrix R262 and R61 narrowed; ADR-013 Decision 2 under Deviations.
 
 H27 counts owed by this item (design-advisor DO 1). Coloured-fringe pixels = channel spread > 8, per 11 px band of rows, columns 0-285 (scratch script, not evidence beyond these numbers); bands 55 and 66 are the Installed pane header:
 
@@ -37,9 +60,44 @@ Reading (the design-advisor's caret reading holds): a caret in the focused box g
 The opaque section changed no pixel. Form (2) next (DO 4): the surface moved to the search row `.nuiget-sidebar-search`, the
 section's background removed; one proving run, same criterion; if it fails too, stop and return with the band counts.
 
+**Push 1b, form (2), run 43344632890 on 853edd4: green on every job; the criterion does not hold.** The same `[diff]` lines as
+43342362387 (`sidebar-all-projects.dark-modern.300: 124 px … above`, `summary: 88 compared, 87 at 0 px, 1 above tolerance`),
+`differs` 0 in both looks. `sidebar-filter.dark-modern.300` bc89a8e8e26c again (1460; bands 55, 66 = 0),
+`sidebar-all-projects.dark-modern.300` 076db9717809 (byte-equal to 43314017322's; 26594; bands 55, 66 = 0),
+`sidebar-sections.dark-modern.300` 56224588abee (29222; 55:108 66:319). Neither form moved a pixel: returned to the
+design-advisor (DO 4); no browse golden adopted, SB14 not pushed.
+
 ## Done (tested)
 
-- Nothing yet.
+Push 2 (jsdom and the lint suite; the UI job is its test):
+
+- `BrowseResults.tsx` (SB9, first ruling DO 5-7): one project, an installed row without an obstacle gets `IconButton` "Uninstall <id>"
+  (`row-action-uninstall`, `TrashIcon`), the button and `onDelete` through `usePackageRows(announce).uninstall`; with an obstacle no
+  button, Delete says why; Delete on a row not installed writes nothing; Enter keeps its announcement. All Projects: "Uninstall <id>..."
+  where installed in every project, "Install <id> <version>..." otherwise, both opening the actions menu; Delete on a row installed
+  somewhere says the menu does it and writes nothing. Both `hint` sentences name Delete. States: the first search's bar alone
+  (`sidebar-browse-progress`, the Skeleton removed), the same bar over the kept rows while it asks again, `sidebar-browse-error` on
+  both banners with one full stop (`sentence` of `src/webview/shared/updates/sentence.ts`), `sidebar-browse-empty`.
+- `InstalledSection.tsx` (DO 8): the pane's bar `sidebar-installed-progress` over its list's top edge on a first load (above the
+  Skeleton) and while revalidating; `SidebarView.tsx`: the side bar header's bar removed.
+- `sidebar.css`: `.nuiget-sidebar-progress` (the overlay, as `main.css:88-93`), `position: relative` on the browse and section content
+  rules, `--nuiget-listbox-bg` on `.nuiget-sidebar-browse` (push 1); form 2's `.nuiget-sidebar-search` rule removed (follow-up 1 DO 1).
+- New tests in `BrowseResults.test.tsx` (no title rewritten): `an installed package of the selected project is uninstalled from it by
+  its row button or Delete; Delete on a package not installed writes nothing (UX-P3.8, SB9)`, `a package that cannot be uninstalled has
+  no Uninstall button and Delete says why (UX-P3.8, SB9)`, `under All Projects a package installed in every project offers
+  Uninstall..., which opens the actions menu; Delete names the menu and writes nothing (UX-P3.8, SB9)`, `a first search shows the 2 px
+  bar alone, a failure the inline error with one full stop, no result the empty state (UX-P3.8, DS-STATE-1, DS-STATE-2)`, `a search
+  that runs again keeps its rows under the bar, the list busy (UX-P3.8, DS-STATE-2)`, `the Installed pane loads and revalidates under
+  its own 2 px bar, never one in the side bar header (UX-P3.8, DS-STATE-2)`.
+- Harness: seven states in `states.ts` (`sidebar-browse-results`, `-hover` (modern and classic), `-loading`, `-revalidating`,
+  `-empty`, `-error`, `sidebar-installed-loading`; mask `LIVE_SIDEBAR_RESULTS`), their reaches in the capture suite (no reach presses
+  Delete, Enter on a row, Ctrl+Enter or a row action), `HELD_STATES` and `HOVER_STATES` entries, `measure.ts` DO 10 (`STATE_MARKERS`,
+  `cellList`, `barAlone`, DS-INSET-1's search-alone reading), the H27 probe (follow-up 1 DO 2, `h27ProbeShot`), matrix rows R255-R261.
+  `src/test/lint/named-states.test.ts`: the shard counts 175 → 196 and 166 → 187 and the floor's 78 → 85 (seven states, three widths
+  each; no title changed), as every earlier state item did.
+- Docs: interaction model §8 (`sidebar-installed-progress`, `sidebar-browse-progress`, `sidebar-browse-empty`, `sidebar-browse-error`
+  moved from §8.1; `sidebar-updates-progress` and `sidebar-updates-error` stay for P3.10), §5 Delete row; two DECISIONS rows;
+  `design-system.md` §9 in its own commit fe63e13; tracker hand-offs to P3.10 and P4.2b.
 
 ## Done (untested)
 
@@ -47,11 +105,32 @@ section's background removed; one proving run, same criterion; if it fails too, 
 
 ## Not started
 
-- Push 1 (H27 form 1), push 2 (SB9, the Browse and Installed state cells), push 3 (SB14), per the design-advisor ruling below.
+- Push 2's run, the adoption of its seven cells as `baseline`, the judge, and the P-a reading; SB14 (push 3) only if P-a is LCD.
+
+## For the planning session (H27 hand-off, design-advisor follow-up 1 DO 6)
+
+A fix row for H27 with the sidebar box in use, placed by the planning session. It carries: the four DO 1 counts above; form 1 (an opaque
+section, 82cb616, run 43342362387) and form 2 (an opaque search row, 853edd4, run 43344632890), both byte-identical in every sidebar
+crop; the probe lines and counts of push 2's run (below once read); the greyscale `baseline` cells to re-adopt when cured (below once
+read); as its first step a pixel rule for the coloured-fringe bands, landing `pending` on that row and failing on today's captures;
+and the candidates in order: P-b or P-c greyscale with P-a LCD: the quick-search popup's `will-change: transform`
+(`src/webview/shared/search/search.css:25-28`, a ruled UX-P3.7a probe), scoped or replaced with the main quick-search cells re-proved;
+P-a greyscale: the box itself (its focus ring or caret layer). `sidebar-all-projects.dark-modern.300` stays at 124 px as the witness.
+
+Proposed row (architecture-advisor ruling of 2026-11-13, DO 4; the worker does not create it): "⚑ ADR-013 Decision 2 and D31 name the sidebar's
+installed Browse row. Names `docs/adr/013-keyboard-and-menus.md` under the sentinel; one sentence; before or with P4.2b." The proposed sentence:
+"*Delete* (Cmd+Backspace on macOS) uninstalls an Installed or an Updates row, and in the sidebar a Browse row of a package installed in the
+selected project."
 
 ## Deviations from contract/ADR/decision
 
-- None yet.
+- `docs/adr/013-keyboard-and-menus.md:46-47` (Decision 2) and D31 (plan line 94) name Delete on Installed and Updates rows only;
+  `src/webview/sidebar/BrowseResults.tsx` (`onDelete={remove}`) also uninstalls an installed Browse row of one project, by the
+  design-advisor's B = b1 and the architecture-advisor's ruling of 2026-11-13 (option 2, narrowed: an incomplete enumeration, the ADR
+  amendment proposed as its own row below); for the planning session's ratification.
+- `src/webview/sidebar/packageRows.tsx` returns `busyStatus` (the Browse row reads its operation's status; precommit-review).
+- `BrowseResults.test.tsx` `Enter or the row button installs the version found into the selected project, with the source it came from`:
+  one assertion added (the row's status reads "Installing"); title unchanged.
 
 ## Advisor decisions
 
@@ -154,6 +233,120 @@ section's background removed; one proving run, same criterion; if it fails too, 
 > - src/webview/sidebar/BrowseResults.tsx:120,128 (no capture exists) DS-COPY-3 / DS-STATE-1 minor: the error sentence has no closing period and no marker; fixed by DO 7.
 >
 > Not checked: fringe counts (not runnable by me); the classic goldens and `sidebar-sections` golden were not opened; RUN-ux.md §4 was not read beyond its headings; `KEYS` walk start and the remaining hard sidebar rules on headerless cells were not traced, which is why DO 11, 14 and 16 return to me with lines.
+### 2026-11-13, design-advisor, follow-up 1: both forms failed (verbatim)
+
+> FOLLOW-UP 1 RULING, UX-P3.8 (H27 after two failed forms)
+>
+> DECISION: (b), amended. Push 2 goes now and carries one probe that tells the caret from the popup. Its new cells are adopted as `baseline` in the greyscale form they have. The H27 cure leaves P3.8 for a fix row the planning session places. SB14 is pushed only if the probe's caret-only crop is LCD; otherwise P3.8 ends `blocked` on SB14 alone. This replaces my DO 4 clause "no browse golden is adopted greyscale" and my DO 15. No third form in this item, and not (c) yet.
+>
+> Checked: commits 82cb616 and 853edd4 are on `labs/ux`. The six crop hashes you give match (bc89a8e8e26c twice, 0290fdcaa8e6, 076db9717809, 56224588abee twice). I did not open 0290fdcaa8e6; the other hashes are byte-equal to PNGs I opened in the first ruling. The fringe counts are yours; I cannot run the script. `search.css:25-28` and `SearchBox.tsx:134, 353` read as you say.
+>
+> WHY:
+> - Two forms each had their one proving run and moved no pixel, so painting a surface is not the lever. A third guess without a discriminating reading would be the P2.9b pattern (two red runs on a probe-less theory).
+> - Your four counts fit two causes equally. The selected-text PNGs come from a reach that typed nothing in that session, so they have neither a caret nor a popup that was ever mounted. The caret PNGs have both. No evidence in hand separates them.
+> - The popup lead cannot be tried here. `will-change: transform` on `.nuiget-search-popup` is a ruled H27 fix of UX-P3.7a, and removing it moves the main quick-search goldens. That needs the reading first and its own row.
+> - Adopting greyscale cells is now defensible where it was not in my first ruling. `sidebar-filter` was byte-equal (bc89a8e8…) on three runs under `typeHeld`, so a caret cell is deterministic. A greyscale `baseline` is a stable self-regression reference, the status the `sidebar-filter` golden already has by the P3.7c ruling. The defect is carried by the standing 124 px line and the fix row, not by a missing golden.
+> - SB14 with an unexplained cause is the real risk. If a caret alone turns the pane greyscale, focus on first render makes every user's sidebar greyscale from the start. The probe's caret-only crop is exactly SB14's condition (focused, empty box, nothing typed).
+>
+> DO:
+> 1. In push 2, as a forward commit, remove the `background-color` that 853edd4 added on `.nuiget-sidebar-search` (and the rule, if it holds nothing else). Keep `--nuiget-listbox-bg` on `.nuiget-sidebar-browse`: it is the P3.7c carrier applied to the third sidebar list. No revert of history, no force.
+> 2. Add one probe to the capture suite's `ui`-lane Modern UI pass, after the key walks, in the sidebar with Gateway and an empty box. It saves three shots under a `probe/` folder of the artifact. They are not states, have no golden and are never diffed.
+>    - P-a: the box clicked, nothing typed.
+>    - P-b: `@` typed, then Backspace, the caret still in the box.
+>    - P-c: `@installed` typed through `typeHeld`, then Escape.
+>    Print one `[probe] h27 <name>:` line per shot with: the count of `.nuiget-search-popup` in the DOM, the box's `aria-expanded`, the active element's test id, `document.hasFocus()` and `document.getAnimations().length`. The probe presses no row and leaves the box empty.
+> 3. Push 2 (SB9, the states, DO 5 to 12 of the first ruling, DO 11's local capture run first). After the run, paste the band counts (rows 55-77 and the row bands) of P-a, P-b, P-c and of each new browse cell and `sidebar-installed-loading`.
+> 4. Adopt the new cells as `baseline` from that run, with their ARIA snapshots, whatever their antialiasing. Write in the STATUS note which of them are greyscale, by band counts. Do not adopt `sidebar-all-projects.dark-modern.300`; its 124 px stays as the standing witness. Leave the `sidebar-filter` golden as it is.
+> 5. Read P-a:
+>    - LCD (header bands 55/66 non-zero, near `sidebar-sections`' 108/319): the caret alone is not the cause. Push SB14 (first ruling DO 13, 14, 16). The two-section cells must stay 0 px or differ inside the box only; a difference outside the box comes back to me.
+>    - Greyscale: do not push SB14. Mark P3.8 `blocked` with "SB14 waits on the H27 fix row" and stop; everything else of the item is landed.
+> 6. Tracker, in push 2's docs: move the H27 hand-off out of the P3.8 row into a hand-off for a new fix row (the planning session places it; do not self-place an item). It carries:
+>    - the four counts and the two failed forms with their run ids,
+>    - the probe lines and counts,
+>    - the list of greyscale `baseline` cells to re-adopt when cured,
+>    - a first step: a pixel rule for the coloured-fringe bands lands `pending` on that row and fails on today's captures,
+>    - the candidates in order: if P-b or P-c is greyscale and P-a is not, the popup's `will-change` (scope it or replace it, with the main quick-search cells re-proved); if P-a is greyscale, the box itself (its focus ring or caret layer).
+> 7. Add a DECISIONS row: "H27, sidebar with the box in use (UX-P3.8): an opaque section (run 43342362387) and an opaque search row (run 43344632890) moved no pixel; the cause is not a missing surface; cure in its own row after the probe of run <id>."
+>
+> DO NOT:
+> - Do not try a third form, touch `search.css`'s `will-change`, or add `will-change` anywhere in this item.
+> - Do not adopt `sidebar-all-projects.dark-modern.300`, and do not re-adopt `sidebar-filter`.
+> - Do not push SB14 before the P-a counts are pasted, or with P-a greyscale.
+> - Do not treat the probe shots as states: no entry in `states.ts`, no golden, no mask.
+> - Do not close P3.8 as `done` without SB14.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - Push 2's run: three `[probe] h27` lines and three PNGs under `probe/` in `ui-screenshots`; `[diff] sidebar-all-projects.dark-modern.300: 124 px`; every other existing sidebar cell 0 px; the first ruling's push 2 checks.
+> - `grep -n 'background' src/webview/sidebar/sidebar.css` shows no declaration from 853edd4.
+> - SB14 run, if pushed: the first ruling's push 3 checks, plus the two-section cells' band counts equal to the goldens'.
+> - Tracker: the P3.8 row no longer holds the H27 forms; the hand-off names the probe run and the cells to re-adopt.
+>
+> DEFECTS:
+> - captures/43344632890/sidebar-all-projects.dark-modern.300.png 0,55,300,24 NEW (as in the first ruling: coloured-fringe count per 11 px text band > 0 in every sidebar cell) major: pane header greyscale with the box in use; unchanged by both forms; owned by the fix row of DO 6.
+> - captures/43344632890/sidebar-filter.dark-modern.300.png 0,55,300,70 same rule major: header and both rows greyscale, as its golden; same owner.
+>
+> Not checked: capture 0290fdcaa8e6 was not opened; whether the popup is mounted in the caret cells is unverified by either of us, which is what the probe reads.
+
+### 2026-11-13, architecture-advisor, Delete on a Browse row against ADR-013 (verbatim)
+
+> UX-P3.8 (architecture-advisor, 2026-11-13): Delete on an installed sidebar Browse row against ADR-013 Decision 2
+>
+> DECISION: Option 2, narrowed. Keep `onDelete` as staged and change nothing under `docs/adr/**` in this item. This ruling is the architecture ruling the review found missing. The ADR amendment goes to the planning session as a proposed row, not to P4.2b as that row stands.
+>
+> WHY:
+> - **Brief correction first.** Option 3's premise is wrong: without `onDelete` the trash would still have a key. `package.json:333` and `:338` offer the Uninstall menu command on `webviewSection == 'browseRow' && nuiget.installed`, and the gotcha "Buttons inside `role="option"`" counts Shift+F10 as a key. Option 3 fails instead because it drops a named output: the plan row (`docs/plans/2026-10-23-nuiget-ux-execution-plan.md:517`) says "Uninstall and Delete on installed rows", and SB9's fix (`docs/plans/parity-audit-2026-10-16.md:1075`) says "pass `onDelete` to the Listbox for the same path".
+> - **The mismatch is an incomplete enumeration, not a contradiction.** `docs/adr/013-keyboard-and-menus.md:46-47` and D31 (plan line 94) both list "Installed and Updates rows". The plan row came in the same commit as the ADR (4fc363a), under the same owner approval. Decision 2 itself says (line 47-48) that the row's pointer action buttons "stay, mirrored by these keys", so a trash button on a Browse row calls for Delete under the ADR's own rule.
+> - **Option 1 is closed by D6.** A frozen file changes only in an item that names it, and I may not relax that. P3.8's files column reads "sidebar". A grep of the plan for `docs/adr` finds only the guard description (line 189): no UX row names ADR-013's file, P4.2b ("sidebar, MainPanelHost, details") and P4.1 (`src/protocol/**`, host, entries, package.json) included.
+> - **A deferral path exists.** Plan §2.3 makes a contract/ADR mismatch a universal trigger for the architecture-advisor, §2.5 gives the note a "Deviations from contract/ADR/decision" section, and RUN-ux §4.4 closes a blocking finding by "consult the advisor the item names and paste the ruling". The design-advisor disclaimed the wording, so no such ruling existed when the review ran.
+> - **The unconfirmed Delete is today's tree, not a new deviation.** The sidebar Installed rows uninstall at once on Delete (`src/webview/sidebar/ProjectPackages.tsx:49`, `InstalledSection.tsx:150`), and the staged Browse path calls the same `usePackageRows().uninstall` (`packageRows.tsx:36-50`: busy check, `whyNotRemovable`, then `run('ops/remove')`). Decision 3's confirmation is P4.2a/P4.2b's for every list. The interaction model's "asks first" describes that target for all rows already.
+>
+> DO:
+> 1. Paste this ruling verbatim into `src/webview/sidebar/STATUS.md` under "Advisor decisions".
+> 2. Rewrite the note's Deviations entry so it cites `docs/adr/013-keyboard-and-menus.md:46-47` and D31 (plan line 94), names this ruling next to the design-advisor's B = b1, and ends "for the planning session's ratification".
+> 3. Keep `onDelete={remove}`, the three staged SB9 tests and the staged interaction-model §5 cells as they are.
+> 4. In the note's section for the planning session, propose a row (the worker does not create it or edit a plan row): "⚑ ADR-013 Decision 2 and D31 name the sidebar's installed Browse row. Names `docs/adr/013-keyboard-and-menus.md` under the sentinel; one sentence; before or with P4.2b." Give the proposed sentence: "*Delete* (Cmd+Backspace on macOS) uninstalls an Installed or an Updates row, and in the sidebar a Browse row of a package installed in the selected project."
+> 5. Reword the P4.2b tracker hand-off: keep "the Delete confirmation covers the sidebar Browse row too", and replace "the architecture-advisor's wording to settle here" with "the ADR sentence is ruled (architecture-advisor, 2026-11-13, in the sidebar note) and waits for a row that names `docs/adr/013-keyboard-and-menus.md`; P4.2b does not name it".
+> 6. Record the review finding as closed by this ruling (RUN-ux §4.4), with the workflow id `wf_1d0c1321-a20`. A re-run of `precommit-review` is needed only if the staged code changes after this point.
+> 7. Before the commit, settle the working tree. `git diff --stat` showed five files modified after staging (`README.md`, `docs/plans/regression-matrix.md`, `src/test/lint/measure-rules.test.ts`, `src/test/ui/v2/measure.ts`, `src/webview/sidebar/BrowseResults.test.tsx`). Stage them by explicit path or drop them, then re-run the gates on what is staged.
+> 8. This ruling does not block P3.8's commit.
+>
+> DO NOT:
+> - Create `.claude/.contract-change` or edit `docs/adr/013-keyboard-and-menus.md` in P3.8.
+> - Edit D31 or any plan row.
+> - Drop `onDelete`, or weaken or delete the three SB9 tests, to make the finding go away.
+> - Add a confirmation to the Browse Delete here; it is P4.2b's, for all three sidebar lists at once.
+> - Make Delete write under All Projects (the design-advisor's A = a2 stands).
+> - Commit with unstaged edits left over the staged files.
+>
+> CONTRACT CHANGE: none in UX-P3.8. `docs/adr/013-keyboard-and-menus.md` (Decision 2, one sentence, DO 4) changes only in a row the planning session places that names the file, behind the sentinel. Until then the ADR sentence and D31 stay as they are and the deviation stands recorded.
+>
+> VERIFY:
+> - `git diff --cached --stat -- docs/adr src/protocol src/core/contracts.ts` → empty.
+> - `git diff --cached src/webview/sidebar/BrowseResults.tsx | grep -c 'onDelete={remove}'` → 1.
+> - `git diff --cached src/webview/sidebar/BrowseResults.test.tsx | grep -c "UX-P3.8, SB9"` → 3.
+> - `grep -c '013-keyboard-and-menus.md:46-47' src/webview/sidebar/STATUS.md` → 1 or more.
+> - `grep -n '^| P4\.2b ' docs/plans/STATUS-ux.md` shows the reworded hand-off of DO 5.
+> - `ls .claude/.contract-change` → no such file.
+> - `git diff --stat` → empty immediately before the commit.
+>
+> CHECKED:
+> - `git status --short` and `git diff --stat` at fe63e13; `git diff --cached` of `/Users/mattias/github/nuiget/src/webview/sidebar/BrowseResults.tsx`, of the staged tests' titles and of the interaction model's Delete lines; the frozen paths (no staged diff).
+> - `/Users/mattias/github/nuiget/docs/adr/013-keyboard-and-menus.md` in full (Decisions 1-8, Consequences) and its history (one commit, 4fc363a).
+> - The plan's §2.1, §2.3, D31, D39, and rows P3.8, P4.1, P4.2a, P4.2b; a grep of the plan for `docs/adr`.
+> - `/Users/mattias/github/nuiget/docs/plans/STATUS-ux.md` rows P3.8, P4.1, P4.2a, P4.2b.
+> - `/Users/mattias/github/nuiget/docs/plans/parity-audit-2026-10-16.md` 1066-1080 (SB9).
+> - `/Users/mattias/github/nuiget/docs/plans/RUN-ux.md` §4 and §4.4.
+> - `/Users/mattias/github/nuiget/package.json` 313-348 (the `webview/context` clauses).
+> - `/Users/mattias/github/nuiget/src/webview/sidebar/packageRows.tsx` 36-50 and the `onDelete` sites of the sidebar.
+> - `/Users/mattias/github/nuiget/src/webview/sidebar/STATUS.md` by grep (the design-advisor's ruling lines on A, B and the ADR wording).
+>
+> Not verified:
+> - The text of the precommit-review finding and its refuter: the workflow output is not in the repository, so I ruled on the brief's paraphrase.
+> - That the staged tests pass: I read their titles only, and the test file has unstaged edits on top.
+> - Which of lines 333 and 338 of `package.json` is the Uninstall command: both carry the installed Browse clause, and I did not read the command ids.
+
 ## Exact next step
 
-UX-P3.8 push 1: form (1) in `sidebar.css` (design-advisor DO 2), one proving run read by the band criterion.
+UX-P3.8: push 2's local capture tier (first ruling DO 11), then the push; read its run (probe, cells, `[diff]`), adopt, judge; SB14 by P-a.

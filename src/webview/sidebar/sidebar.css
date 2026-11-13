@@ -42,14 +42,6 @@ body {
     white-space: nowrap;
 }
 
-/*
- * The search row paints the side bar's surface: the layer that the box's blinking caret starts keeps the pane header
- * and rows below it in subpixel text (H27 form 2, UX-P3.8; form 1 on the section left run 43342362387 unchanged).
- */
-.nuiget-sidebar-search {
-    background-color: var(--nuiget-color-bg-sidebar);
-}
-
 /* The section takes the height that is left; its list scrolls inside it. */
 .nuiget-sidebar-section,
 .nuiget-sidebar-section-content {
@@ -62,6 +54,7 @@ body {
 /* The lists paint the side bar's surface, so their text keeps its subpixel antialiasing on a composited scroller (UX-P3.7c). */
 .nuiget-sidebar-section-content {
     --nuiget-listbox-bg: var(--nuiget-color-bg-sidebar);
+    position: relative;
 }
 
 .nuiget-sidebar-fidelity {
@@ -71,10 +64,19 @@ body {
 /* Browse results take the place of the sections; their list scrolls inside and paints the side bar's surface (H27, UX-P3.8). */
 .nuiget-sidebar-browse {
     --nuiget-listbox-bg: var(--nuiget-color-bg-sidebar);
+    position: relative;
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
+}
+
+/* The bar lies over the list's top edge, so the list does not move when it comes and goes. */
+.nuiget-sidebar-progress {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    z-index: 1;
 }
 
 /* Both sections open: the height left under the header is shared in the ratio the sash sets. */

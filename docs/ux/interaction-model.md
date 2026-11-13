@@ -129,7 +129,7 @@ in "..."; each surface writes counts one way.
 | Action | Where | Confirmation |
 |---|---|---|
 | Install / Update to version | Details panel button; the row's hover/focus action; Ctrl+Enter on a Browse or Updates row; the actions menu | None. Progress shows on the row and in the pane where it started; success shows in place (§4). |
-| Uninstall (single) | Details button, row action, the Delete key on an Installed or Updates row, the actions menu | The Delete key asks first, as the Explorer's Delete does: "Uninstall <id> from <project>?" with Uninstall, Cancel and "Do not ask me again". The button, the row action and the menu item name the action and do not ask. |
+| Uninstall (single) | Details button, row action, the Delete key on an Installed or Updates row and on an installed Browse row of one project in the sidebar (UX-P3.8), the actions menu | The Delete key asks first, as the Explorer's Delete does: "Uninstall <id> from <project>?" with Uninstall, Cancel and "Do not ask me again". The button, the row action and the menu item name the action and do not ask. |
 | Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update all) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. The sidebar keeps the in-panel dialog, the same body as the main panel's (UX-P3.7d); a central change stays the host's modal (ADR-013). |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project | Main panel details button and Ctrl+Enter: the pane asks `cpm/preview` first and opens the **Dialog** (`cpm-preview-dialog`) only when an entry exists, listing the projects the central version applies to; choice: *Update Central Version* / Cancel. The actions menu, on either surface: VS Code's modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no CPM confirmation (the central entry stays). |
 | Remove source | Source settings | **ConfirmDialog** (`alertdialog`) over the sources dialog: 'Remove <name>?', "Removes <name> from <file>. This cannot be undone."; Remove / Cancel, focus on Cancel. |
@@ -159,7 +159,7 @@ row; moving changes the active row, not the selection.
 | ArrowLeft | On an expanded group row: collapses it; on a package row or a collapsed group row: moves to its parent group row | The same |
 | Enter | Package row: selects it and shows its details (Installed, Updates, Browse and transitive rows); group row: expands or collapses it | Package row: opens it in the main panel (round 1, §6), never a write; group row: expands or collapses it |
 | Ctrl+Enter (Cmd+Enter on macOS) | Browse: installs the row's version (below); Updates: updates to the row's new version, or opens the preview dialog for a `central` row; Installed and transitive: nothing | Browse: installs the newest version; Updates: updates to the row's new version; on a `central` row it opens the actions menu instead; Installed: nothing |
-| Delete (Cmd+Backspace on macOS) | Installed and Updates rows: uninstall, after the confirmation above | The same |
+| Delete (Cmd+Backspace on macOS) | Installed and Updates rows: uninstall, after the confirmation above | The same, and an installed Browse row of one project: uninstall (UX-P3.8) |
 | Shift+F10, the ContextMenu key, right-click | The actions menu of the row | The same |
 | Ctrl+DownArrow (Cmd+DownArrow) in the search box | Focus moves to the active row of the visible list (the tab's list, or the Browse results) | Focus moves to the active row of the first visible pane's list |
 | Ctrl+UpArrow (Cmd+UpArrow) in a list | Focus returns to the search box | The same |
@@ -293,6 +293,8 @@ State markers (§4) and layer roots:
 |---|---|
 | `sidebar-installed-empty`, `sidebar-updates-empty` | Empty state of a sidebar list |
 | `sidebar-installed-error` | Error state of the sidebar's installed list |
+| `sidebar-installed-progress`, `sidebar-browse-progress` | The 2 px progress bar of the sidebar's Installed pane (over its list's top edge on a first load, above the skeleton rows, and while it revalidates) and of its Browse results (alone on a first search, over the rows while it asks again) (UX-P3.8) |
+| `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's Browse empty state ("No results for "x".") and inline error with Retry (UX-P3.8) |
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
 | `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
@@ -341,7 +343,7 @@ is a project or section name lower-cased, as above.
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Browse and details | `details-progress`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
-| Sidebar | `sidebar-installed-progress`, `sidebar-updates-progress`, `sidebar-browse-progress` | The 2 px progress bar of each sidebar list (loading and revalidating) |
-| Sidebar | `sidebar-updates-error`, `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's missing state markers: the Updates error and the Browse empty and error states |
+| Sidebar | `sidebar-updates-progress` | The 2 px progress bar of the sidebar's Updates pane (loading and revalidating) |
+| Sidebar | `sidebar-updates-error` | The sidebar's missing state marker: the Updates error |
 
 **Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The sidebar's Installed pane under All Projects has been one tree since UX-P3.7c (`group-row-folder-<folder>`, `group-row-project-<name>`, `section-header-project-<name>`; `sidebar-installed-list-<name>` left at UX-P3.7c); its Updates pane since UX-P3.7d (`group-row-updates-folder-<folder>`, `group-row-updates-project-<name>`, `section-header-updates-project-<name>`; `sidebar-updates-list-<name>` left at UX-P3.7d), so no per-project list id remains.

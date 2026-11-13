@@ -349,6 +349,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(classic).toMatchObject({ pass: false });
     });
 
+    it('reads the search row alone in a sidebar Browse cell without titles or names (UX-P3.8)', () => {
+        const alone = measureLines('sidebar-browse-empty', layout({ sidebar: { rootLeft: 0, titles: [], names: [], search: 8 } }), 'modern').find(line => line.name === 'DS-INSET-1@sidebar-browse-empty');
+        expect(alone).toMatchObject({ pass: true, value: 'content none; search 8' });
+        const none = measureLines('sidebar-browse-empty', layout({ sidebar: { rootLeft: 0, titles: [], names: [], search: undefined } }), 'modern').find(line => line.name === 'DS-INSET-1@sidebar-browse-empty');
+        expect(none).toMatchObject({ pass: false, value: 'not measurable' });
+        const sections = measureLines('sidebar-sections', layout({ sidebar: { rootLeft: 0, titles: [], names: [], search: 8 } }), 'modern').find(line => line.name === 'DS-INSET-1@sidebar-sections');
+        expect(sections).toMatchObject({ pass: false, value: 'not measurable' });
+    });
+
     it('PF-3b measures the check box alone where DS-ROW-6 hides the icon (UX-P2.2)', () => {
         const rows = layout({ centring: [{ name: 'Serilog', row: 100, check: 100, icon: undefined }, { name: 'Moq', row: 180, check: 180, icon: undefined }] });
         expect(lineOf('main-installed-single', rows, 'PF-3b@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
@@ -860,6 +869,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(cellList('main-updates-loading')).toBe('updates');
         expect(cellList('main-updates-all')).toBe('updates');
         expect(cellList('main-installed-loading')).toBe('installed');
+        expect(cellList('sidebar-browse-loading')).toBe('sidebar-browse');
+        expect(cellList('sidebar-installed-loading')).toBe('sidebar-installed');
         expect(COLLECT_LAYOUT).toContain('[data-testid="\' + cellList + \'-progress"]');
         expect(COLLECT_LAYOUT).toContain('[data-testid="\' + cellList + \'-list"]');
         expect(COLLECT_LAYOUT).not.toContain('installed-progress');

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ALL_PROJECTS, type InstalledPackage, type PackageSearchResult, type PackageUpdate, type SessionSnapshot } from '../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageSearchResult, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
@@ -131,6 +131,7 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Enter}');
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED }]);
         expect(within(row('Polly')).getByRole('option')).toHaveAttribute('aria-busy', 'true');
+        expect(within(row('Polly')).getByRole('option')).toHaveAccessibleDescription(/Installing/);
         // Busy: a second Enter starts nothing.
         await user.keyboard('{Enter}');
         expect(host.requests('ops/install')).toHaveLength(1);
@@ -211,6 +212,121 @@ describe('sidebar: search modes and browse', () => {
         expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.installed': false, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '4.0.0' }]);
         expect(host.requests('ops/install')).toHaveLength(0);
+    });
+
+    it('an installed package of the selected project is uninstalled from it by its row button or Delete; Delete on a package not installed writes nothing (UX-P3.8, SB9)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await searchFor(host, 'se', [result('Serilog', '4.0.0'), result('Seq', '1.0.0'), result('Moq', '4.20.72')]);
+        expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toHaveAccessibleName('Uninstall Serilog');
+        expect(within(row('Seq')).queryByTestId('row-action-uninstall')).toBeNull();
+        expect(within(row('Seq')).getByTestId('row-action-install')).toBeInTheDocument();
+
+        await user.click(within(row('Seq')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        expect(host.requests('ops/remove')).toHaveLength(0);
+
+        await user.click(within(row('Serilog')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
+        expect(within(row('Serilog')).getByRole('option')).toHaveAttribute('aria-busy', 'true');
+        expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Uninstalling/);
+
+        await user.click(within(row('Moq')).getByTestId('row-action-uninstall'));
+        expect(host.requests('ops/remove').map(request => request.payload.packageId)).toEqual(['Serilog', 'Moq']);
+        // Enter on an installed row still only says so (D31's key changes are P4's).
+        await user.click(within(row('Moq')).getByRole('option'));
+        await user.keyboard('{Enter}');
+        expect(host.requests('ops/install')).toHaveLength(0);
+    });
+
+    it('a package that cannot be uninstalled has no Uninstall button and Delete says why (UX-P3.8, SB9)', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')], unsupported: { reason: 'sdk-too-old', message: 'the project resolves .NET SDK 8.0.425' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [] }, 1));
+        await searchFor(host, 'serilog', [result('Serilog', '4.0.0')]);
+
+        expect(within(row('Serilog')).queryByTestId('row-action-uninstall')).toBeNull();
+        await user.click(within(row('Serilog')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        await waitFor(() => expect(said()).toBe('Serilog cannot be uninstalled: the project resolves .NET SDK 8.0.425'));
+        expect(host.requests('ops/remove')).toHaveLength(0);
+    });
+
+    it('under All Projects a package installed in every project offers Uninstall..., which opens the actions menu; Delete names the menu and writes nothing (UX-P3.8, SB9)', async () => {
+        const user = userEvent.setup();
+        const menus = recordRowMenus();
+        const host = await mountReady();
+        const B = '/w/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] } } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        await searchFor(host, 'se', [result('Serilog', '4.0.0'), result('Seq', '1.0.0')]);
+
+        expect(within(row('Serilog')).queryByTestId('row-action-install')).toBeNull();
+        expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toHaveAccessibleName('Uninstall Serilog...');
+        expect(within(row('Seq')).getByTestId('row-action-install')).toHaveAccessibleName('Install Seq 1.0.0...');
+
+        await user.click(within(row('Serilog')).getByTestId('row-action-uninstall'));
+        expect(menus.contexts.map(context => context.packageId)).toEqual(['Serilog']);
+        await user.click(within(row('Serilog')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        await waitFor(() => expect(said()).toBe('Uninstall Serilog from the actions menu (Shift+F10), which asks for the projects.'));
+        await user.click(within(row('Seq')).getByRole('option'));
+        await user.keyboard('{Delete}');
+        expect(menus.contexts).toHaveLength(1);
+        expect(host.requests('ops/remove')).toHaveLength(0);
+        expect(host.requests('ops/bulkRemove')).toHaveLength(0);
+    });
+
+    it('a first search shows the 2 px bar alone, a failure the inline error with one full stop, no result the empty state (UX-P3.8, DS-STATE-1, DS-STATE-2)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await user.type(box(), 'polly{Enter}');
+        expect(screen.getByTestId('sidebar-browse-progress')).toBeInTheDocument();
+        expect(document.querySelector('.nuiget-skeleton')).toBeNull();
+        expect(screen.queryByTestId('sidebar-browse-list')).toBeNull();
+        await hostSays(() => host.fail(queries(host)[0], 'failed', 'The package source could not be read.'));
+        expect(screen.getByTestId('sidebar-browse-error')).toHaveTextContent('The search failed: The package source could not be read.Retry');
+        expect(screen.queryByTestId('sidebar-browse-progress')).toBeNull();
+
+        await user.click(within(screen.getByTestId('sidebar-browse-error')).getByRole('button', { name: 'Retry' }));
+        await hostSays(() => host.respond(queries(host)[1], { query: 'polly', results: [] }));
+        expect(screen.getByTestId('sidebar-browse-empty')).toHaveTextContent('No results for "polly".');
+    });
+
+    it('a search that runs again keeps its rows under the bar, the list busy (UX-P3.8, DS-STATE-2)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await searchFor(host, 'polly', [result('Polly', '8.4.2')]);
+        expect(screen.queryByTestId('sidebar-browse-progress')).toBeNull();
+        await user.type(box(), '{Enter}');
+        expect(screen.getByTestId('sidebar-browse-progress')).toBeInTheDocument();
+        expect(list()).toHaveAttribute('aria-busy', 'true');
+        expect(row('Polly')).toBeInTheDocument();
+    });
+
+    it('the Installed pane loads and revalidates under its own 2 px bar, never one in the side bar header (UX-P3.8, DS-STATE-2)', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        expect(screen.getByTestId('sidebar-installed-progress').closest('.nuiget-sidebar-section-content')).not.toBeNull();
+        expect(screen.getByTestId('section-box-installed').querySelector('.nuiget-badge--count')).toBeNull();
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.0.0')] }, 1));
+        expect(screen.queryByTestId('sidebar-installed-progress')).toBeNull();
+
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        const bar = screen.getByTestId('sidebar-installed-progress');
+        expect(bar.closest('.nuiget-sidebar-section-content')).not.toBeNull();
+        expect(screen.getByRole('progressbar', { name: 'Refreshing installed packages' })).toBe(bar.querySelector('[role="progressbar"]') ?? bar);
+        expect(document.querySelector('.nuiget-sidebar-header .nuiget-progress')).toBeNull();
     });
 
     it('has no axe violations with results', async () => {
