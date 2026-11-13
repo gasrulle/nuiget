@@ -280,8 +280,10 @@ prints one `[probe] scrollbar` line per run: the bar's thickness in the first li
 the badge foreground, since the info, warning and error colours fall below 4.5:1 on the badge background; for the
 same reason the secondary text of a selected or current row (version, description, status) takes the row's
 foreground instead of the muted colour. Every
-rule that gives the pointer cursor sets `min-height: var(--nuiget-target-min)` (24 px, WCAG 2.5.8), and the sash,
-drawn 4 px thin, takes the pointer over a 24 px wide `::after` (`webview-stylesheets.test.ts`).
+rule that gives the pointer cursor sets `min-height: var(--nuiget-target-min)` (24 px, WCAG 2.5.8), and the sash, a 1 px
+line with a 4 px band (`::before`) that shows the sash hover colour after the workbench's delay, takes the pointer over an
+`::after`: 24 px wide on the vertical sash, from the band's list-side edge into the details pane, so the list keeps its
+scrollbar (`webview-stylesheets.test.ts`, DS-DIVIDER-6).
 `webview-css-baseline.test.ts` fails for a CSS feature that Chromium 122, the browser of VS Code 1.90, lacks: a
 denylist of 10 features, each with its key in MDN browser-compat-data and the Chromium version that key gives
 (finding N64: no CI job renders Chromium 122 until the floor lane of UX-P0.9); JavaScript APIs are held by the ES2022 `lib` of `tsconfig.json`. Contrast and target size are

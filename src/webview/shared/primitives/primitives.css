@@ -37,6 +37,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
+    border-radius: var(--nuiget-radius-scrollbar);
     background-color: var(--nuiget-color-scrollbar);
 }
 
@@ -551,7 +552,6 @@
 .nuiget-select-input:focus-visible,
 .nuiget-text-field:focus-visible,
 .nuiget-icon-button:focus-visible,
-.nuiget-sash:focus-visible,
 .nuiget-section-toggle:focus-visible,
 .nuiget-tab:focus,
 .nuiget-dialog:focus-visible {
@@ -704,9 +704,12 @@
 /*
  * The native pane header (UX-P3.7a; DS-HEIGHT-1, DS-TYPE-5, DS-INSET-1, DS-INSET-3 b, DS-DIVIDER-1): the box inset and its start padding
  * M 4 / C 0 each, the section-header colours, and a top line through the carrier --nuiget-pane-header-line, which a context sets
- * (transparent unless set). The 20 px button's 24 px hit stays inside the document (DS-OVERFLOW-6).
+ * (transparent unless set), drawn by the header's `::before` so it takes no layout (UX-P3.9: as a top border it set every part 1 px
+ * low). Only this rule hands the carrier to the line, so a level or group header inside a lined pane draws none. The 20 px
+ * button's 24 px hit stays inside the document (DS-OVERFLOW-6).
  */
 .nuiget-section-header[data-variant="pane"] {
+    --nuiget-section-header-line: var(--nuiget-pane-header-line, transparent);
     --nuiget-icon-button-size: var(--nuiget-action-size-compact);
     --nuiget-section-header-inset: 0;
     --nuiget-section-title-size: var(--nuiget-font-size-section-title);
@@ -716,9 +719,19 @@
     margin-inline: var(--nuiget-pane-header-margin-x);
     padding-inline-start: var(--nuiget-pane-header-padding-start);
     padding-inline-end: var(--nuiget-pane-header-padding-end);
-    border-block-start: var(--nuiget-line-width) solid var(--nuiget-pane-header-line, transparent);
     background: var(--nuiget-color-section-header-bg);
     color: var(--nuiget-color-section-header-fg);
+}
+
+/* A pane header's top line, from the carrier its variant hands on; transparent elsewhere, and no layout of its own (UX-P3.9). */
+.nuiget-section-header::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: var(--nuiget-line-width);
+    background: var(--nuiget-section-header-line, transparent);
+    pointer-events: none;
 }
 
 /* A main-list group header is a pane header (T-13, DECISIONS round 1). */
@@ -1171,40 +1184,73 @@
 
 /* ── Sash ── */
 
-/* A thin line to look at, a 24 px strip to grab. The owner sizes the panes from its own custom property. */
+/*
+ * The split between two panes (DS-DIVIDER-6, UX-P3.9): the box is the 1 px line; its `::before` the 4 px band centred on it,
+ * transparent at rest, in `sash.hoverBorder` after a 300 ms hover and at once while dragged (the carriers below); its `::after` the
+ * hit area. The owner sizes the panes from its own custom property; a context sets `--nuiget-sash-line` and its inset.
+ */
 .nuiget-sash {
     position: relative;
     flex: none;
-    background: var(--nuiget-color-border);
+    background: var(--nuiget-sash-line, var(--nuiget-color-split-border));
     touch-action: none;
 }
 
+.nuiget-sash::before,
 .nuiget-sash::after {
     content: "";
     position: absolute;
 }
 
+.nuiget-sash::before {
+    background: var(--nuiget-sash-band, transparent);
+    transition: background-color var(--nuiget-duration-fast) var(--nuiget-easing);
+    /* Unset at rest and while pressed: the declaration falls back to no delay. */
+    transition-delay: var(--nuiget-sash-delay);
+}
+
+.nuiget-sash:hover {
+    --nuiget-sash-band: var(--nuiget-color-sash-hover);
+    --nuiget-sash-delay: var(--nuiget-delay-sash-hover);
+}
+
+.nuiget-sash:active {
+    --nuiget-sash-band: var(--nuiget-color-sash-hover);
+    --nuiget-sash-delay: initial;
+}
+
+/* The keyboard ring around the line, the band unpainted (DECISIONS 2026-11-13, UX-P3.9). */
+.nuiget-sash:focus-visible {
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: 0;
+}
+
 .nuiget-sash--vertical {
-    width: var(--nuiget-space-2);
+    width: var(--nuiget-line-width);
     cursor: col-resize;
 }
 
+.nuiget-sash--vertical::before {
+    inset: 0 calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2);
+}
+
+/* One-sided: from the band's list-side edge into the trailing pane's padding, 24 px in all, so the list's scrollbar keeps its presses. */
 .nuiget-sash--vertical::after {
-    inset: 0 calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2);
+    inset: 0 calc(var(--nuiget-line-width) - var(--nuiget-target-min) - (var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0 calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2);
 }
 
 .nuiget-sash--horizontal {
-    height: var(--nuiget-space-2);
+    height: var(--nuiget-line-width);
+    margin-inline: var(--nuiget-sash-line-inset, 0);
     cursor: row-resize;
+}
+
+.nuiget-sash--horizontal::before {
+    inset: calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0;
 }
 
 .nuiget-sash--horizontal::after {
     inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0;
-}
-
-.nuiget-sash:hover,
-.nuiget-sash:focus-visible {
-    background: var(--nuiget-color-focus);
 }
 
 /* ── Dialog ── */
@@ -1317,8 +1363,9 @@
     border-block-end: var(--nuiget-line-width) solid var(--nuiget-color-divider);
 }
 
-/* The Extensions editor navbar's label: 11/400, uppercase, padding 10. No box in high contrast (DS-HC-1); its selected and hovered lines are P3.9's. */
+/* The Extensions editor navbar's label: 11/400, uppercase, padding 10. No box in high contrast (DS-HC-1); its selected and hovered lines are the `::before` below. */
 .nuiget-tab {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: var(--nuiget-space-3);
@@ -1350,11 +1397,24 @@
     flex: none;
 }
 
+/* High contrast's tab lines (DS-HC-1, UX-P3.9): a box of no layout, fed by carriers; the tab's own border and outline stay others'. */
+.nuiget-tab::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: var(--nuiget-line-width) var(--nuiget-tab-line-style, solid) var(--nuiget-tab-line, transparent);
+    pointer-events: none;
+}
+
 .nuiget-tab:hover {
+    --nuiget-tab-line: var(--nuiget-color-contrast-active-border);
+    --nuiget-tab-line-style: dashed;
     color: var(--nuiget-color-tab-active-fg);
 }
 
 .nuiget-tab[aria-selected="true"] {
+    --nuiget-tab-line: var(--nuiget-color-contrast-active-border);
+    --nuiget-tab-line-style: solid;
     border-block-end-color: var(--nuiget-color-tab-indicator);
     color: var(--nuiget-color-tab-active-fg);
 }

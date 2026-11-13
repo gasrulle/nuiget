@@ -11,6 +11,9 @@ body {
 
 .nuiget-sidebar {
     --nuiget-message-inset: var(--nuiget-inset-sidebar);
+    /* The sash between the sections is a pane line: the section header's colour, inset as the pane headers (DS-DIVIDER-1, UX-P3.9). */
+    --nuiget-sash-line: var(--nuiget-color-section-header-border);
+    --nuiget-sash-line-inset: var(--nuiget-pane-header-margin-x);
     display: flex;
     flex-direction: column;
     height: 100vh;

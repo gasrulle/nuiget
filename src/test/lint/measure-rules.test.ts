@@ -1170,6 +1170,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-browse-empty', bars('auto'), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ value: 'no scrolling list; :root scrollbar-color auto; slider #79797966', pass: true });
         expect(lineOf('main-browse-empty', bars('rgba(121, 121, 121, 0.4) rgb(30, 30, 30)'), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ pass: false });
         expect(lineOf('main-browse-empty', bars(''), 'DS-SCROLL-1@main-browse-empty', 'classic')).toMatchObject({ value: 'not measurable (no root scrollbar-color)', pass: false });
+        // Follow-up 1 (DO 7): the scroller-required clause on the `ui` lane only; on another lane the root clause alone (a taller window).
+        const onLane = (lane: 'ui' | 'matrix' | 'floor' | 'macos') => measureLines('main-installed-all', bars('auto'), 'classic', {}, undefined, 1200, undefined, 'dark-modern', undefined, lane).find(line => line.name === name);
+        expect(onLane('ui')).toMatchObject({ pass: false, value: 'no scrolling list (one expected); :root scrollbar-color auto; slider #79797966' });
+        expect(onLane('matrix')).toMatchObject({ pass: true, value: 'no scrolling list; :root scrollbar-color auto; slider #79797966' });
         // The `[probe] scrollbar` verdict: the slider's alpha over the backdrop, each channel within 2 of the thumb's pixel.
         expect(thumbVerdict('#79797966', 'rgb(30, 30, 30)', [66, 66, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
         expect(thumbVerdict('rgba(121, 121, 121, 0.4)', 'rgb(30, 30, 30)', [68, 64, 66])).toEqual({ expected: 'rgb(66, 66, 66)', match: true });
@@ -1308,12 +1312,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(divide(divider(false, false))).toMatchObject({ pass: false });
         expect(lineOf('main-updates', layout({ flatList: true }), 'DS-DIVIDER-1@main-updates/headers')).toMatchObject({ pass: true, value: 'no group header (flat list)' });
         // UX-P3.7a: the sidebar's panes, the first unlined and a later one lined once, by its own line or by the sash above it.
-        const panes = (first: boolean, second: boolean, sash: boolean) => layout({ sections: [
+        // UX-P3.9 (design-advisor follow-up 1, DO 3): the sash that lines a pane is read, 1 px in the pane line's colour, inset as the pane.
+        const sashLine = { height: 1, colour: 'rgb(43, 43, 43)', inset: 4, expectedColour: 'rgb(43, 43, 43)', expectedInset: 4 };
+        const panes = (first: boolean, second: boolean, sash: boolean, line = sashLine) => layout({ sections: [
             { id: 'installed', variant: 'pane', insets: undefined, above: undefined, below: undefined, lineAbove: first, afterSash: false },
-            { id: 'updates', variant: 'pane', insets: undefined, above: undefined, below: undefined, lineAbove: second, afterSash: sash },
+            { id: 'updates', variant: 'pane', insets: undefined, above: undefined, below: undefined, lineAbove: second, afterSash: sash, ...(sash ? { sashLine: line } : {}) },
         ] });
         const sidebarLine = (built: Layout) => lineOf('sidebar-sections', built, 'DS-DIVIDER-1@sidebar-sections');
-        expect(sidebarLine(panes(false, false, true))).toMatchObject({ pass: true, value: 'panes 2: first unlined, 1 lined (by the sash); rows 0 unlined' });
+        expect(sidebarLine(panes(false, false, true))).toMatchObject({ pass: true, value: 'panes 2: first unlined, 1 lined (by the sash); rows 0 unlined; sash 1 px in rgb(43, 43, 43), inset 4 (target rgb(43, 43, 43), 4)' });
+        // Today's 4 px sash in the border colour does not line a pane.
+        expect(sidebarLine(panes(false, false, true, { ...sashLine, height: 4, colour: 'rgb(49, 49, 49)', inset: 0 }))).toMatchObject({ pass: false });
         expect(sidebarLine(panes(false, true, false))).toMatchObject({ pass: true, value: 'panes 2: first unlined, 1 lined; rows 0 unlined' });
         expect(sidebarLine(panes(true, false, true))).toMatchObject({ pass: false });
         expect(sidebarLine(panes(false, true, true))).toMatchObject({ pass: false });
@@ -1398,15 +1406,19 @@ describe('DS-ROW-7: a compact row\'s badge centred in its band (UX-P3.fix-5)', (
 describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-advisor opening ruling of 2026-11-13, DO 1)', () => {
     type Sash = NonNullable<Layout['endOfP0']['sashes']>[number];
     const sash = (overrides: Partial<Sash> = {}): Sash => ({
-        thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false, ...overrides,
+        thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false,
+        hits: [{ name: 'line -1', hit: '.nuiget-sash', ok: true }, { name: 'list scrollbar', hit: '[installed-list]', ok: true }], ...overrides,
     });
     const withSashes = (sashes: Sash[]) => { const built = layout(); return { ...built, endOfP0: { ...built.endOfP0, sashes } }; };
 
     it('DS-DIVIDER-6 passes a 1 px line with a transparent band and fails today\'s 4 px band, pending P3.9', () => {
         expect(lineOf('main-transitive-details', withSashes([sash()]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({
-            pass: true, status: { pending: 'P3.9' }, value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1',
+            pass: true, status: { pending: 'P3.9' }, value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 2/2',
         });
         expect(lineOf('main-transitive-details', withSashes([sash({ thickness: 4, background: 'rgba(0, 0, 0, 0)', band: { width: 0, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4 })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
+        // The hit clause (follow-up 1): the sash taking the list scrollbar's press fails, as do unread hits.
+        expect(lineOf('main-transitive-details', withSashes([sash({ hits: [{ name: 'list scrollbar', hit: '.nuiget-sash', ok: false }] })]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({ pass: false, value: 'sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 0/1 (missed list scrollbar on .nuiget-sash)' });
+        expect(lineOf('main-transitive-details', withSashes([sash({ hits: [] })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
         // A 1 px line with no band: the 4 px band is part of the rule.
         expect(lineOf('main-transitive-details', withSashes([sash({ band: { width: 0, background: 'rgba(0, 0, 0, 0)', delay: '0s' } })]), 'DS-DIVIDER-6@main-transitive-details/sash')?.pass).toBe(false);
         expect(lineOf('main-transitive-details', withSashes([]), 'DS-DIVIDER-6@main-transitive-details/sash')).toMatchObject({ pass: false, value: 'not measurable (no sash)' });

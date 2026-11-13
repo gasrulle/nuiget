@@ -517,6 +517,8 @@ export interface SectionBox {
     title?: { fontSize: string; fontWeight: string; textTransform: string } | undefined;
     lineAbove?: boolean;
     afterSash?: boolean;
+    /** UX-P3.9: the sash above a pane that follows one: its thickness, colour and inset, against the pane line's colour and inset. */
+    sashLine?: { height: number; colour: string; inset: number; expectedColour: string; expectedInset: number };
     level?: number | undefined;
     posInSet?: number | undefined;
     /** DS-GRID-2b on border boxes: the previous block's bottom to the box's top, and the box's bottom to the first block it labels. */
@@ -775,7 +777,7 @@ export interface EndOfP0 {
      * (`::before`) width, background and transition delay, the gap between the panes either side, and whether it draws the
      * focus role's solid `focusBorder` outline (DO 1b reads the outline only, never a colour string).
      */
-    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean }>;
+    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<{ name: string; hit: string; ok: boolean }> }>;
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
     fonts: { root: string; others: string[] };
@@ -1036,11 +1038,18 @@ for (const el of [scope, ...scope.querySelectorAll('*')]) {
 const blockGaps = [];
 const containers = dialog ? [dialog] : rootTestId === 'nuiget-app' ? [...document.querySelectorAll('.nuiget-main, .nuiget-main-list, .nuiget-installed')] : [root];
 for (const container of containers) {
-    // A sash (role=separator) sits on the boundary of two blocks and is no block of the column (DS-GRID-2 a, UX-P3.7a).
-    const children = [...container.children].filter(visible).filter(el => getComputedStyle(el).position !== 'absolute' && getComputedStyle(el).position !== 'fixed' && el.getAttribute('role') !== 'separator');
+    // A sash (role=separator) sits on the boundary of two blocks and is no block of the column, and the space it fills
+    // between two panes is no gap: across a sash the gap is read only when the panes do not abut it (gap − the sash's
+    // thickness > 0.5), and then whole (DS-GRID-2 a, UX-P3.7a, UX-P3.9 design-advisor follow-up 2).
+    const flow = [...container.children].filter(visible).filter(el => getComputedStyle(el).position !== 'absolute' && getComputedStyle(el).position !== 'fixed');
+    const isSeparator = el => el.getAttribute('role') === 'separator';
+    const children = flow.filter(el => !isSeparator(el));
     for (let i = 1; i < children.length; i++) {
         // The space between content boxes, the facing borders not counted: a padded stack's rhythm (DS-GRID-2 a, UX-P2.7).
         const gap = children[i].getBoundingClientRect().top + px(getComputedStyle(children[i]).paddingTop) - children[i - 1].getBoundingClientRect().bottom + px(getComputedStyle(children[i - 1]).paddingBottom);
+        const between = flow.slice(flow.indexOf(children[i - 1]) + 1, flow.indexOf(children[i])).filter(isSeparator);
+        const sashes = between.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+        if (sashes > 0 && Math.abs(gap - sashes) <= 0.5) continue;
         if (gap >= -0.5) blockGaps.push(round(gap));
     }
 }
@@ -1096,7 +1105,20 @@ const headerFacts = box => {
     const before = group ? getComputedStyle(group, '::before') : undefined;
     // A border counts as a line only in a colour (a transparent carrier draws none, UX-P3.7a).
     const boxStyle = getComputedStyle(box);
-    const lineAbove = (parseFloat(boxStyle.borderTopWidth) > 0 && boxStyle.borderTopColor !== 'rgba(0, 0, 0, 0)' && boxStyle.borderTopColor !== 'transparent') || (before !== undefined && before.content !== 'none' && parseFloat(before.borderTopWidth) === 1 && before.borderTopColor !== 'rgba(0, 0, 0, 0)');
+    // UX-P3.9: a pane header's line is its own ::before, 1 px high in the carrier's colour (it takes no layout).
+    const own = getComputedStyle(box, '::before');
+    const ownLine = own.content !== 'none' && parseFloat(own.height) >= 1 && own.backgroundColor !== 'rgba(0, 0, 0, 0)' && own.backgroundColor !== 'transparent';
+    const lineAbove = (parseFloat(boxStyle.borderTopWidth) > 0 && boxStyle.borderTopColor !== 'rgba(0, 0, 0, 0)' && boxStyle.borderTopColor !== 'transparent') || ownLine || (before !== undefined && before.content !== 'none' && parseFloat(before.borderTopWidth) === 1 && before.borderTopColor !== 'rgba(0, 0, 0, 0)');
+    const sashAbove = box.closest('.nuiget-sidebar-section')?.previousElementSibling;
+    const sashLine = sashAbove && sashAbove.getAttribute('role') === 'separator' ? (() => {
+        const sashStyle = getComputedStyle(sashAbove);
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--nuiget-color-section-header-border)';
+        box.appendChild(probe);
+        const expectedColour = getComputedStyle(probe).color;
+        probe.remove();
+        return { height: round(sashAbove.getBoundingClientRect().height), colour: sashStyle.backgroundColor, inset: round(px(sashStyle.marginLeft)), expectedColour, expectedInset: round(px(boxStyle.marginLeft)) };
+    })() : undefined;
     return {
         paddingEnd: round(px(getComputedStyle(box).paddingInlineEnd || getComputedStyle(box).paddingRight)),
         inList: row !== null,
@@ -1105,8 +1127,9 @@ const headerFacts = box => {
         titleText: titleEl ? titleEl.textContent ?? '' : '',
         title: titleStyle ? { fontSize: titleStyle.fontSize, fontWeight: titleStyle.fontWeight, textTransform: titleStyle.textTransform } : undefined,
         lineAbove,
-        // A sidebar pane right below a sash: the sash is its line (DS-DIVIDER-1, UX-P3.7a).
+        // A sidebar pane right below a sash: the sash is its line (DS-DIVIDER-1, UX-P3.7a), read since UX-P3.9.
         afterSash: box.closest('.nuiget-sidebar-section')?.previousElementSibling?.getAttribute('role') === 'separator',
+        sashLine,
         level: group ? Number(group.getAttribute('aria-level')) : undefined,
         posInSet: group ? Number(group.getAttribute('aria-posinset')) : undefined,
     };
@@ -1505,7 +1528,31 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
     const band = getComputedStyle(sash, '::before');
     const before = sash.previousElementSibling, after = sash.nextElementSibling;
     const gap = before && after && visible(before) && visible(after) ? round(vertical ? rectOf(after).left - rectOf(before).right : rectOf(after).top - rectOf(before).bottom) : undefined;
-    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
+    // The hit clause (UX-P3.9, follow-up 1 DO 2): what the page shows at the points the rule names.
+    const at = (x, y) => (typeof document.elementFromPoint === 'function' ? document.elementFromPoint(x, y) : null);
+    const hits = [];
+    const read = (name, x, y, ok) => { const el = at(x, y); hits.push({ name, hit: el ? label(el) : 'nothing', ok: Boolean(el) && ok(el) }); };
+    const onSash = el => el.closest('.nuiget-sash') === sash;
+    if (vertical) {
+        const mid = box.top + box.height / 2;
+        read('line -1', box.left - 1, mid, onSash);
+        read('line +1', box.right + 1, mid, onSash);
+        if (after && visible(after)) read('details content +3', rectOf(after).left + 20 + 3, mid, el => !onSash(el));
+        const scroller = before ? [before, ...before.querySelectorAll('*')].find(el => visible(el) && /auto|scroll/.test(getComputedStyle(el).overflowY) && el.offsetWidth - el.clientWidth > 0) : undefined;
+        if (scroller) { const r = rectOf(scroller); const bar = scroller.offsetWidth - scroller.clientWidth; read('list scrollbar', r.right - bar / 2, r.top + r.height / 2, el => el === scroller || (scroller.contains(el) && !onSash(el))); }
+    } else {
+        const centre = box.left + box.width / 2;
+        read('line -1', centre, box.top - 1, onSash);
+        read('line +1', centre, box.bottom + 1, onSash);
+        const header = after ? after.querySelector('.nuiget-section-header') : null;
+        if (header && visible(header)) read('header +3', centre, rectOf(header).top + 3, el => header.contains(el));
+        const list = before ? before.querySelector('[role="listbox"], [role="tree"]') : null;
+        const listBox = list ? rectOf(list) : null;
+        const rows = before ? [...before.querySelectorAll('.nuiget-row-option')].filter(el => visible(el) && (!listBox || rectOf(el).bottom <= listBox.bottom + 0.5)) : [];
+        const last = rows[rows.length - 1];
+        if (last) read('last row -3', centre, rectOf(last).bottom - 3, el => last.contains(el) || el === last);
+    }
+    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
 });
 const splitFacts = splitEl && sashEl && visible(splitEl) ? (() => { const style = getComputedStyle(splitEl); return { width: round(splitEl.clientWidth), sash: round(sashEl.getBoundingClientRect().width), min: Number(sashEl.getAttribute('aria-valuemin')), max: Number(sashEl.getAttribute('aria-valuemax')), listMin: px(style.getPropertyValue('--nuiget-list-pane-min')), detailsMin: px(style.getPropertyValue('--nuiget-details-pane-min')) }; })() : undefined;
 // The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
@@ -2046,11 +2093,11 @@ function evaluateRowBadges(definition: RuleDefinition, state: string, layout: La
     };
 }
 
-/** UX-P3.9 (DO 1c): the states whose list scrolls in every cell of the `ui` lane: there a missing scroller is a failure. */
+/** UX-P3.9 (DO 1c): the states whose list scrolls in every cell of the `ui` lane: there, on that lane, a missing scroller is a failure. */
 export const SCROLLING_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-details', 'main-installed-focus', 'sidebar-all-projects'];
 
 /** Helpers 3 and 4 (UX-P0.11): the value and the verdict of a height or centring rule, or undefined for another rule. */
-function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined, state = ''): { value: string; pass: boolean } | undefined {
+function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, lane: WorkbenchHeights | undefined, state = '', captureLane: Lane = 'ui'): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     const heights = layout.heights;
     switch (definition.id) {
@@ -2060,9 +2107,10 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
             if (rootColor === '') {
                 return { value: `${NOT_MEASURABLE} (no root scrollbar-color)`, pass: false };
             }
-            // A cell where nothing scrolls is read on the root clause alone, except where a list must scroll (UX-P3.9, DO 1c).
+            // A cell where nothing scrolls is read on the root clause alone, except where a list must scroll (UX-P3.9, DO 1c), and
+            // that on the `ui` lane only: whether a list scrolls follows the window (follow-up 1, DO 7).
             if (scrollers.length === 0) {
-                return SCROLLING_STATES.includes(state)
+                return SCROLLING_STATES.includes(state) && captureLane === 'ui'
                     ? { value: `no scrolling list (one expected); :root scrollbar-color ${rootColor}; slider ${slider || 'unset'}`, pass: false }
                     : { value: `no scrolling list; :root scrollbar-color ${rootColor}; slider ${slider || 'unset'}`, pass: rootColor === 'auto' && slider !== '' };
             }
@@ -2629,9 +2677,13 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 const [first, ...later] = panes;
                 const linedBySash = later.filter(pane => pane.afterSash === true && pane.lineAbove !== true).length;
                 const rowsLined = facts.rows.filter(row => row.lineWidth > 0).length;
+                // UX-P3.9 (follow-up 1 of the design-advisor, DO 3): the sash that lines a pane is 1 px in the pane line's colour, inset as the pane.
+                const sashLines = later.filter(pane => pane.afterSash === true).map(pane => pane.sashLine);
+                const sashOk = (line: (typeof sashLines)[number]): boolean => line !== undefined && near(line.height, 1, 0.5) && line.colour === line.expectedColour && near(line.inset, line.expectedInset, TOLERANCES.coincide);
+                const sashText = sashLines.length === 0 ? '' : `; sash ${sashLines.map(line => (line === undefined ? 'unread' : `${line.height} px in ${line.colour}, inset ${line.inset} (target ${line.expectedColour}, ${line.expectedInset})`)).join(', ')}`;
                 return {
-                    value: `panes ${panes.length}: first ${first.lineAbove === true ? 'lined' : 'unlined'}, ${later.filter(pane => pane.lineAbove === true || pane.afterSash === true).length} lined${linedBySash > 0 ? ' (by the sash)' : ''}; rows ${facts.rows.length} ${rowsLined === 0 ? 'unlined' : `${rowsLined} lined`}`,
-                    pass: first.lineAbove !== true && later.every(pane => (pane.lineAbove === true) !== (pane.afterSash === true)) && rowsLined === 0,
+                    value: `panes ${panes.length}: first ${first.lineAbove === true ? 'lined' : 'unlined'}, ${later.filter(pane => pane.lineAbove === true || pane.afterSash === true).length} lined${linedBySash > 0 ? ' (by the sash)' : ''}; rows ${facts.rows.length} ${rowsLined === 0 ? 'unlined' : `${rowsLined} lined`}${sashText}`,
+                    pass: first.lineAbove !== true && later.every(pane => (pane.lineAbove === true) !== (pane.afterSash === true)) && rowsLined === 0 && sashLines.every(sashOk),
                 };
             }
             if (scope === 'headers') {
@@ -2710,9 +2762,15 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return notMeasurable('no sash');
             }
             const clear = (colour: string) => colour === 'transparent' || colour === 'rgba(0, 0, 0, 0)';
+            // The hit clause (follow-up 1, DO 2): every point the rule names reads as it says.
+            const hitText = (sash: (typeof sashes)[number]): string => {
+                const hits = sash.hits ?? [];
+                const missed = hits.filter(hit => !hit.ok);
+                return hits.length === 0 ? '; hits unread' : `; hits ${hits.length - missed.length}/${hits.length}${missed.length === 0 ? '' : ` (missed ${missed.map(hit => `${hit.name} on ${hit.hit}`).join(', ')})`}`;
+            };
             return {
-                value: sashes.map(sash => `sash ${sash.thickness} px in ${sash.background}; band ${sash.band.width} px in ${sash.band.background}, delay ${sash.band.delay || 'none'}; gap ${sash.gap ?? 'unread'}`).join('; '),
-                pass: sashes.every(sash => near(sash.thickness, 1, 0.5) && !clear(sash.background) && near(sash.band.width, SASH_BAND, 0.5) && clear(sash.band.background) && (sash.gap === undefined || near(sash.gap, sash.thickness, 0.5))),
+                value: sashes.map(sash => `sash ${sash.thickness} px in ${sash.background}; band ${sash.band.width} px in ${sash.band.background}, delay ${sash.band.delay || 'none'}; gap ${sash.gap ?? 'unread'}${hitText(sash)}`).join('; '),
+                pass: sashes.every(sash => near(sash.thickness, 1, 0.5) && !clear(sash.background) && near(sash.band.width, SASH_BAND, 0.5) && clear(sash.band.background) && (sash.gap === undefined || near(sash.gap, sash.thickness, 0.5)) && (sash.hits ?? []).length > 0 && (sash.hits ?? []).every(hit => hit.ok)),
             };
         }
         case 'DS-ROW-6': {
@@ -3418,7 +3476,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
 }
 
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
-function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined, laneWorkbench: WorkbenchHeights | undefined): { value: string; pass: boolean } | undefined {
+function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined, laneWorkbench: WorkbenchHeights | undefined, lane: Lane = 'ui'): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
         return { value: `${NOT_MEASURABLE} (no root)`, pass: false };
@@ -3430,7 +3488,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (popupVerdict !== undefined) {
         return popupVerdict;
     }
-    const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench, state) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
+    const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench, state, lane) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         return heightVerdict;
@@ -3623,7 +3681,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width ?? layout.width);
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
-            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec, laneWorkbench) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
+            const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec, laneWorkbench, lane) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
             // A spec scope keeps its name in every state group (a state whose group is `details`; UX-P2.fix-8).
             const name = scope === group && definition.helper !== 8 ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, Sash, Select, SyncIcon } from '../shared/primitives';
+import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, Sash, Select, RefreshIcon } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useDetailsActions } from '../shared/store/details';
@@ -214,7 +214,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                             {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                             {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                         </Select>
-                        <SourcesControl announce={announce} end={<IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh}>{refreshing ? <LoadingIcon /> : <SyncIcon />}</IconButton>} />
+                        <SourcesControl announce={announce} end={<IconButton label="Refresh" data-testid="refresh-button" disabled={refreshing} onClick={refresh}>{refreshing ? <LoadingIcon /> : <RefreshIcon />}</IconButton>} />
                     </div>
                 </div>
                 <div className="nuiget-main-search" role="search">

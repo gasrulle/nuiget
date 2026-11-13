@@ -342,34 +342,49 @@ describe('2.0 theme pass', () => {
             return { contrast, button: line('.nuiget-button'), select: line('.nuiget-select-input'), checkbox: line('.nuiget-main-toggle input') };
         `);
         expect(lines.contrast, `${where}: the contrast border`).to.not.equal('rgba(0, 0, 0, 0)');
-        // Tabs draw no box in high contrast (DS-HC-1); the selected tab's solid and the hovered tab's dashed lines are checked at P3.9.
+        // Tabs draw no box in high contrast (DS-HC-1); the selected tab's solid and a hovered tab's dashed lines: expectTabLines.
         for (const control of ['button', 'select', 'checkbox']) {
             expect(lines[control], `${where}: ${control} border`).to.equal(lines.contrast);
         }
-        await printTabEdges(where);
+        await expectTabLines(where);
     }
 
     /**
-     * UX-P3.9 push 1 (design-advisor opening ruling, DO 1h): the selected tab's and a hovered unselected tab's four edge lines
-     * and outline in a high-contrast theme, printed. Informational: never throws, and the pointer is parked on the main
-     * header afterwards, so no tab keeps a hover into a later reading.
+     * UX-P3.9 (design-advisor follow-up 1, DO 6; DS-HC-1): in a high-contrast theme the selected tab draws a solid and a hovered
+     * unselected tab a dashed 1 px `contrastActiveBorder` line, on the tab's `::before` (never its border or `outline`); a resting
+     * unselected tab draws none. Printed as `[probe] hc tabs`, then asserted; the pointer is parked on the main header afterwards,
+     * so no tab keeps a hover into a later reading.
      */
-    async function printTabEdges(where: string): Promise<void> {
-        const EDGES = `
-            const edges = el => { if (!el) return 'none'; const s = getComputedStyle(el); return ['Top', 'Right', 'Bottom', 'Left'].map(side => side.toLowerCase() + ' ' + s['border' + side + 'Width'] + ' ' + s['border' + side + 'Style'] + ' ' + s['border' + side + 'Color']).join('; ') + '; outline ' + s.outlineWidth + ' ' + s.outlineStyle + ' ' + s.outlineColor; };
-            return edges(document.querySelector('[data-testid="' + arguments[0] + '"]'));`;
+    async function expectTabLines(where: string): Promise<void> {
+        const LINE = `
+            const tab = document.querySelector('[data-testid="' + arguments[0] + '"]');
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--vscode-contrastActiveBorder)';
+            document.body.appendChild(probe);
+            const contrast = getComputedStyle(probe).color;
+            probe.remove();
+            if (!tab) return { contrast, sides: [] };
+            const line = getComputedStyle(tab, '::before');
+            return { contrast, sides: ['Top', 'Right', 'Bottom', 'Left'].map(side => line['border' + side + 'Width'] + ' ' + line['border' + side + 'Style'] + ' ' + line['border' + side + 'Color']) };`;
+        type Line = { contrast: string; sides: string[] };
+        const read = (id: string): Promise<Line> => driverOf().executeScript<Line>(LINE, id);
+        let selected: Line | undefined;
+        let resting: Line | undefined;
+        let hovered: Line | undefined;
         try {
-            const selected = await driverOf().executeScript<string>(EDGES, 'installed-tab');
+            selected = await read('installed-tab');
+            resting = await read('updates-tab');
             await driverOf().actions().move({ origin: await findByTestId('updates-tab', 10_000) }).perform();
-            const hovered = await poll(async () => driverOf().executeScript<string>(`return document.querySelector('[data-testid="updates-tab"]').matches(':hover') ? 'hovered' : undefined;`), 'the Updates tab hovered', 5_000)
-                .then(() => driverOf().executeScript<string>(EDGES, 'updates-tab'), () => 'not hovered');
-            console.warn(`[probe] hc tabs ${where}: selected [installed-tab] ${selected}`);
-            console.warn(`[probe] hc tabs ${where}: hovered [updates-tab] ${hovered}`);
-        } catch (error) {
-            console.warn(`[probe] hc tabs ${where}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+            await poll(async () => driverOf().executeScript<string>(`return document.querySelector('[data-testid="updates-tab"]').matches(':hover') ? 'hovered' : undefined;`), 'the Updates tab hovered', 5_000);
+            hovered = await read('updates-tab');
         } finally {
             await findByTestId('main-header', 10_000).then(header => driverOf().actions().move({ origin: header }).perform()).catch(() => undefined);
         }
+        console.warn(`[probe] hc tabs ${where}: selected [installed-tab] ${selected.sides.join('; ')}; resting [updates-tab] ${resting.sides.join('; ')}; hovered [updates-tab] ${hovered.sides.join('; ')} (contrastActiveBorder ${selected.contrast})`);
+        const line = (style: string): string => `1px ${style} ${selected?.contrast}`;
+        expect(selected.sides, `${where}: the selected tab's line`).to.deep.equal(Array(4).fill(line('solid')));
+        expect(hovered.sides, `${where}: a hovered tab's line`).to.deep.equal(Array(4).fill(line('dashed')));
+        expect(resting.sides.every(side => side.endsWith('rgba(0, 0, 0, 0)')), `${where}: a resting tab draws no line: ${resting.sides.join('; ')}`).to.equal(true);
     }
 
     for (const theme of THEMES) {

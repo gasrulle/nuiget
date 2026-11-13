@@ -125,7 +125,8 @@ describe('2.0 webview stylesheets', () => {
         // The sash is drawn thin; its ::after is the target, widened to the target size on both sides of the line.
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const hitArea = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
-        expect(hitArea('.nuiget-sash--vertical::after')).toContain('inset: 0 calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2)');
+        // UX-P3.9 (design-advisor follow-up 1, DO 3): one-sided, from the band's list-side edge into the trailing pane, 24 px in all.
+        expect(hitArea('.nuiget-sash--vertical::after')).toContain('inset: 0 calc(var(--nuiget-line-width) - var(--nuiget-target-min) - (var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0 calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2)');
         expect(hitArea('.nuiget-sash--horizontal::after')).toContain('inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0');
         // The check has something to look at.
         expect(rules.filter(rule => rule.declarations.includes('cursor: pointer')).length).toBeGreaterThanOrEqual(3);
@@ -155,9 +156,21 @@ describe('2.0 webview stylesheets', () => {
             .map(declaration => `${file} ${rule.prelude} { ${declaration} }`)))).toEqual([`${PRIMITIVES} :root { scrollbar-color: auto }`]);
         expect(declarationsOf('::-webkit-scrollbar')).toEqual(['width: var(--nuiget-scrollbar-size)', 'height: var(--nuiget-scrollbar-size)']);
         expect(declarationsOf('::-webkit-scrollbar-corner')).toEqual(['background-color: var(--nuiget-color-bg)']);
-        expect(declarationsOf('::-webkit-scrollbar-thumb')).toEqual(['background-color: var(--nuiget-color-scrollbar)']);
+        // DS-SCROLL-1: the thumb's radius, M 4 / C 0 through the look token (UX-P3.9, the stylesheet lint asserts it).
+        expect(declarationsOf('::-webkit-scrollbar-thumb')).toEqual(['border-radius: var(--nuiget-radius-scrollbar)', 'background-color: var(--nuiget-color-scrollbar)']);
         expect(declarationsOf('::-webkit-scrollbar-thumb:hover')).toEqual(['background-color: var(--nuiget-color-scrollbar-hover)']);
         expect(declarationsOf('::-webkit-scrollbar-thumb:active')).toEqual(['background-color: var(--nuiget-color-scrollbar-active)']);
+    });
+
+    it('draws the pane line on a pane header only, never on a level or group header inside a lined pane (DS-DIVIDER-1, UX-P3.9)', () => {
+        const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const declarationsOf = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
+        expect(declarationsOf('.nuiget-section-header::before')).toContain('background: var(--nuiget-section-header-line, transparent)');
+        // The context's carrier inherits into the pane's content; only the pane rule hands it to the line.
+        const setters = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8')).flatMap(rule => rule.declarations
+            .filter(declaration => declaration.startsWith('--nuiget-section-header-line:') || declaration.includes('var(--nuiget-pane-header-line'))
+            .map(declaration => `${rule.prelude} { ${declaration} }`)));
+        expect(setters).toEqual(['.nuiget-section-header[data-variant="pane"] { --nuiget-section-header-line: var(--nuiget-pane-header-line, transparent) }']);
     });
 
     it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {
@@ -207,12 +220,8 @@ describe('2.0 webview stylesheets', () => {
         const elsewhere = files.flatMap(file => parseRules(readFileSync(file, 'utf8')))
             .filter(rule => rule.declarations.some(declaration => declaration.includes('--nuiget-color-focus') && !/^outline/.test(declaration)))
             .map(rule => rule.prelude.replace(/\s+/g, ' '));
-        expect(elsewhere).toEqual(['.nuiget-sash:hover, .nuiget-sash:focus-visible']);
-        // Each use names its owner; when the owner is done the use must be gone.
-        const tracker = readFileSync('docs/plans/STATUS-ux.md', 'utf8');
-        for (const owner of ['P3.9']) {
-            expect(new RegExp(`^\\| ${owner.replace('.', '\\.')} \\|[^|]*\\|[^|]*\\| done \\|`, 'm').test(tracker), `${owner} is done: remove its use of the focus colour`).toBe(false);
-        }
+        // UX-P3.9 removed the last use: the sash paints `sash.hoverBorder`, and its keyboard ring is an outline.
+        expect(elsewhere).toEqual([]);
     });
 
     it('a tab rings after a click, inside, as the main panel\'s rows do (DS-FOCUS-3)', () => {

@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as primitives from './index';
-import { Badge, Banner, ConfirmDialog, Dialog, IconButton, Listbox, LiveStatus, Row, SectionHeader, SyncIcon, Tabs, Toolbar, TrashIcon } from './index';
+import { Badge, Banner, ConfirmDialog, Dialog, IconButton, Listbox, LiveStatus, Row, SectionHeader, RefreshIcon, Tabs, Toolbar, TrashIcon } from './index';
 import { axeRuleOutcome, installFakeLayout } from './testSupport';
 
 const packages = [{ id: 'Serilog', version: '3.0.0' }, { id: 'Newtonsoft.Json', version: '13.0.3', central: true }, { id: 'xunit', version: '2.9.0' }];
@@ -22,7 +22,7 @@ function Section() {
                 contentId="installed-content"
                 testKey="installed"
                 count={packages.length}
-                actions={<IconButton label="Refresh installed packages"><SyncIcon /></IconButton>}
+                actions={<IconButton label="Refresh installed packages"><RefreshIcon /></IconButton>}
             />
             <div id="installed-content">
                 <Listbox

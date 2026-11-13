@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { IconButton } from './IconButton';
-import { SyncIcon } from './icons';
+import { RefreshIcon } from './icons';
 import { SectionHeader, type SectionHeaderProps } from './SectionHeader';
 import { axeRuleOutcome, installStylesheet } from './testSupport';
 
@@ -50,7 +50,7 @@ describe('SectionHeader', () => {
     it('actions are outside the button', async () => {
         const onRefresh = vi.fn();
         const onToggle = vi.fn();
-        renderHeader({ onToggle, actions: <IconButton label="Refresh installed packages" onClick={onRefresh}><SyncIcon /></IconButton> });
+        renderHeader({ onToggle, actions: <IconButton label="Refresh installed packages" onClick={onRefresh}><RefreshIcon /></IconButton> });
         const toggle = screen.getByTestId('section-header-installed');
         const refresh = screen.getByRole('button', { name: 'Refresh installed packages' });
         expect(toggle).not.toContainElement(refresh);
@@ -114,7 +114,7 @@ describe('SectionHeader', () => {
     });
 
     it('has no axe violations', async () => {
-        const { container } = renderHeader({ count: 3, busy: true, actions: <IconButton label="Refresh installed packages"><SyncIcon /></IconButton> });
+        const { container } = renderHeader({ count: 3, busy: true, actions: <IconButton label="Refresh installed packages"><RefreshIcon /></IconButton> });
         const results = await axe(container);
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'nested-interactive')).toBe('passes');

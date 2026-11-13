@@ -738,8 +738,85 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
     <div data-testid="package-details-panel" data-rect="424,77,1200,800">details</div>
   </div>
 </main>`;
-        // jsdom has no pseudo-element styles: the stub answers the element's own style for ::before.
-        expect(collect().endOfP0.sashes).toEqual([{ thickness: 4, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4, focused: false, outlineFocus: false }]);
+        // jsdom has no pseudo-element styles (the stub answers the element's own style for ::before) and no elementFromPoint:
+        // without one every hit reads nothing; with one standing in for the page, the hit points read what it answers.
+        expect(collect().endOfP0.sashes).toEqual([{ thickness: 4, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4, focused: false, outlineFocus: false, hits: [
+            { name: 'line -1', hit: 'nothing', ok: false }, { name: 'line +1', hit: 'nothing', ok: false }, { name: 'details content +3', hit: 'nothing', ok: false },
+        ] }]);
+        const sash = document.querySelector('.nuiget-sash') as Element;
+        const details = document.querySelector('[data-testid="package-details-panel"]') as Element;
+        (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = x => (x < 430 ? sash : details);
+        try {
+            expect(collect().endOfP0.sashes?.[0].hits).toEqual([
+                { name: 'line -1', hit: '.nuiget-sash', ok: true }, { name: 'line +1', hit: '.nuiget-sash', ok: true }, { name: 'details content +3', hit: '[package-details-panel]', ok: true },
+            ]);
+        } finally {
+            delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+        }
+    });
+
+    it('reads the list scrollbar\'s centre beside the vertical sash: the list keeps its presses (DS-DIVIDER-6, UX-P3.9)', () => {
+        document.body.innerHTML = `
+<main data-testid="nuiget-app" data-rect="0,0,1200,800">
+  <div class="nuiget-main-split" data-rect="0,77,1200,800">
+    <div data-testid="installed-pane" data-rect="0,77,420,800"><div class="nuiget-list" data-testid="installed-list" data-rect="0,111,420,800">rows</div></div>
+    <div class="nuiget-sash" role="separator" aria-valuemin="20" aria-valuemax="80" data-rect="420,77,421,800" style="background-color: rgb(43, 43, 43); width: 1px"></div>
+    <div data-testid="package-details-panel" data-rect="421,77,1200,800">details</div>
+  </div>
+</main>`;
+        const list = document.querySelector('[data-testid="installed-list"]') as HTMLElement;
+        Object.defineProperty(list, 'offsetWidth', { configurable: true, value: 420 });
+        Object.defineProperty(list, 'clientWidth', { configurable: true, value: 412 });
+        const sash = document.querySelector('.nuiget-sash') as Element;
+        const details = document.querySelector('[data-testid="package-details-panel"]') as Element;
+        // The bar's centre (x 416) is the list's; the sash takes only the line and the details pane's padding.
+        (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = x => (x < 419 ? list : x < 430 ? sash : details);
+        try {
+            expect(collect().endOfP0.sashes?.[0].hits).toEqual([
+                { name: 'line -1', hit: '.nuiget-sash', ok: true }, { name: 'line +1', hit: '.nuiget-sash', ok: true }, { name: 'details content +3', hit: '[package-details-panel]', ok: true },
+                { name: 'list scrollbar', hit: '[installed-list]', ok: true },
+            ]);
+            // A sash that takes the bar's presses fails the point.
+            (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = x => (x < 430 ? sash : details);
+            expect(collect().endOfP0.sashes?.[0]?.hits?.at(-1)).toEqual({ name: 'list scrollbar', hit: '.nuiget-sash', ok: false });
+        } finally {
+            delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+        }
+    });
+
+    it('reads the sidebar sash: its hit points, and the line it draws above the later pane (DS-DIVIDER-6, DS-DIVIDER-1, UX-P3.9)', () => {
+        document.body.innerHTML = `
+<div data-testid="nuiget-sidebar" data-rect="0,0,300,800">
+  <section class="nuiget-sidebar-section" data-rect="0,40,300,400">
+    <div class="nuiget-section-header" data-testid="section-box-installed" data-variant="pane" style="margin-left: 4px" data-rect="4,40,296,62"><span class="nuiget-section-title" data-rect="20,44,100,58" data-text="20,44,100,58">Installed</span></div>
+    <div role="tree" data-rect="0,62,300,400">
+      <div class="nuiget-row-option" role="treeitem" data-rect="0,62,300,84">Dapper</div>
+      <div class="nuiget-row-option" role="treeitem" data-rect="0,84,300,106">Polly</div>
+      <div class="nuiget-row-option" role="treeitem" data-rect="0,400,300,422">below the list</div>
+    </div>
+  </section>
+  <div class="nuiget-sash nuiget-sash--horizontal" role="separator" style="background-color: rgb(43, 43, 43); margin-left: 4px" data-rect="4,400,296,401"></div>
+  <section class="nuiget-sidebar-section" data-rect="0,401,300,800">
+    <div class="nuiget-section-header" data-testid="section-box-updates" data-variant="pane" style="margin-left: 4px" data-rect="4,401,296,423"><span class="nuiget-section-title" data-rect="20,405,100,419" data-text="20,405,100,419">Updates</span></div>
+  </section>
+</div>`;
+        const sash = document.querySelector('.nuiget-sash') as Element;
+        const header = document.querySelector('[data-testid="section-box-updates"]') as Element;
+        const polly = [...document.querySelectorAll('.nuiget-row-option')][1];
+        // The page: 1 px either side of the line is the sash, below it the Updates header, above it the last row inside the list.
+        (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = (_x, y) => (y >= 399 && y <= 402 ? sash : y > 402 ? header : polly);
+        try {
+            const layout = collect('nuiget-sidebar');
+            expect(layout.endOfP0.sashes?.[0]).toMatchObject({ thickness: 1, background: 'rgb(43, 43, 43)', hits: [
+                { name: 'line -1', hit: '.nuiget-sash', ok: true }, { name: 'line +1', hit: '.nuiget-sash', ok: true },
+                { name: 'header +3', hit: '[section-box-updates]', ok: true }, { name: 'last row -3', hit: '.nuiget-row-option', ok: true },
+            ] });
+            // The later pane reads the sash as its line: 1 px, the sash's colour and inset beside the header's own.
+            expect(layout.sections.find(section => section.id === 'updates')?.sashLine).toMatchObject({ height: 1, colour: 'rgb(43, 43, 43)', inset: 4, expectedInset: 4 });
+            expect(layout.sections.find(section => section.id === 'installed')?.sashLine).toBeUndefined();
+        } finally {
+            delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+        }
     });
 
     it('answers a missing root with an empty layout', () => {
@@ -803,6 +880,21 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         const hovered = collect();
         expect(hovered.heights.iconButtons.map(button => button.hovered)).toEqual([true, false]);
         expect(Object.keys(hovered.endOfP0.iconColours)).toContain('hoverBg');
+    });
+
+    it('reads no gap across a sash the panes abut, and the whole gap when they do not (DS-GRID-2 a, UX-P3.9 follow-up 2)', () => {
+        const column = (upperBottom: number, sash: string, lowerTop: number): number[] => {
+            document.body.innerHTML = `<main class="nuiget-main" data-testid="nuiget-app" data-rect="0,0,300,600">
+              <section data-rect="0,0,300,${upperBottom}"></section>${sash}<section data-rect="0,${lowerTop},300,600"></section>
+            </main>`;
+            return collect().blockGaps;
+        };
+        // Two blocks abutting a 1 px separator: the sash's line is no gap.
+        expect(column(200, '<div class="nuiget-sash" role="separator" data-rect="0,200,300,201"></div>', 201)).toEqual([]);
+        // 4 px between the separator and the next block: the whole gap is read.
+        expect(column(200, '<div class="nuiget-sash" role="separator" data-rect="0,200,300,201"></div>', 205)).toEqual([5]);
+        // No separator: the gap is read as before.
+        expect(column(200, '', 204)).toEqual([4]);
     });
 
     it('reads a gap between content boxes, a select slot, a classic count badge and the rows of the main header (UX-P2.7a)', () => {

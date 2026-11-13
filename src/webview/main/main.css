@@ -112,7 +112,7 @@ body {
     flex: none;
     flex-direction: column;
     /* The sash's share, clamped in px: the list keeps 170, the details 220 (UX-P3.3b); when both cannot fit, the list keeps its 170. */
-    width: clamp(var(--nuiget-list-pane-min), var(--nuiget-split, 50%), calc(100% - var(--nuiget-details-pane-min) - var(--nuiget-sash-size)));
+    width: clamp(var(--nuiget-list-pane-min), var(--nuiget-split, 50%), calc(100% - var(--nuiget-details-pane-min) - var(--nuiget-line-width)));
     min-width: 0;
     min-inline-size: var(--nuiget-list-pane-min);
     background: var(--nuiget-color-bg-sidebar);
