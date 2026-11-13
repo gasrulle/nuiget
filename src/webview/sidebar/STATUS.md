@@ -99,6 +99,17 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
   moved from §8.1; `sidebar-updates-progress` and `sidebar-updates-error` stay for P3.10), §5 Delete row; two DECISIONS rows;
   `design-system.md` §9 in its own commit fe63e13; tracker hand-offs to P3.10 and P4.2b.
 
+- Local capture tier (first ruling DO 11; macOS DPR 2, never evidence): `node scripts/ui-harness.mjs --build-sha d136c89 --states
+  sidebar-browse-results,sidebar-browse-hover,sidebar-browse-empty` and the earlier run on 0343ba5: every crop throws locally at the crop step
+  ("the webview is 299 px wide"); the five reachable cells measured; the hard reds were 54 `not measurable` lines, sent to the design-advisor
+  (follow-up 2) and settled by its four lists. The first local run found the results predicate reading the badge's hidden title (fixed in d136c89).
+- Measurement notes (follow-up 2 DO 5): a sidebar Browse cell does not exercise the pane-header rules (DS-COPY-5, DS-HEIGHT-1, DS-TYPE-9,
+  DS-GRID-2b, DS-OVERFLOW-2; DS-TYPE-5 and DS-DIVIDER-1 in its rowless cells), because the results replace the sections in browse mode; a
+  rowless sidebar cell (Browse loading, empty, error; the Installed pane's first load) does not exercise the row and badge rules (DS-DENSITY-1,
+  DS-ROW-4, DS-ROW-5, DS-TYPE-6, DS-HEIGHT-10, DS-TYPE-8, DS-HC-1, and DS-HEIGHT-2's sidebar scope), because it shows neither; DS-INSET-3's
+  sidebar scope skips the cells with nothing trailing at rest. DS-DIVIDER-1 reads the Browse rows alone (`no pane header (browse); rows <n>
+  unlined`).
+
 ## Done (untested)
 
 - Nothing yet.
@@ -128,6 +139,10 @@ selected project."
   `src/webview/sidebar/BrowseResults.tsx` (`onDelete={remove}`) also uninstalls an installed Browse row of one project, by the
   design-advisor's B = b1 and the architecture-advisor's ruling of 2026-11-13 (option 2, narrowed: an incomplete enumeration, the ADR
   amendment proposed as its own row below); for the planning session's ratification.
+- `src/test/ui/v2/measure.ts`: `SIDEBAR_NO_ROW_STATES` also on DS-HEIGHT-3, DS-ROW-1, DS-ROW-6 and DS-ICON-3, which have no sidebar
+  scope (a no-op), so `measure-rules.test.ts`'s pin "these six share DS-ROW-4's exceptions" holds unchanged; the pins of DS-HEIGHT-10,
+  DS-TYPE-8, DS-HC-1, DS-OVERFLOW-2, DS-GRID-2b, DS-TYPE-6/DS-ROW-4 extended with the ruled lists, and DS-INSET-3's `scopeExceptStates`
+  pinned (follow-up 2).
 - `src/webview/sidebar/packageRows.tsx` returns `busyStatus` (the Browse row reads its operation's status; precommit-review).
 - `BrowseResults.test.tsx` `Enter or the row button installs the version found into the selected project, with the source it came from`:
   one assertion added (the row's status reads "Installing"); title unchanged.
@@ -346,6 +361,63 @@ selected project."
 > - The text of the precommit-review finding and its refuter: the workflow output is not in the repository, so I ruled on the brief's paraphrase.
 > - That the staged tests pass: I read their titles only, and the test file has unstaged edits on top.
 > - Which of lines 333 and 338 of `package.json` is the Uninstall command: both carry the installed Browse clause, and I did not read the command ids.
+
+### 2026-11-13, design-advisor, follow-up 2: the local reds (verbatim)
+
+> FOLLOW-UP 2 RULING, UX-P3.8 (the 54 red lines of the local capture tier)
+>
+> DECISION: Option 3: option 1's mechanism (exception lists by fact), but with four precise lists instead of joining `NO_LIST_STATES` / `NO_ROW_STATES`, plus one in-helper reading for DS-DIVIDER-1 so the new flat list keeps its "no line between rows" check. None of the reds is a CSS defect.
+>
+> Checked: commits 0343ba5 and d136c89 exist locally; `measure.ts:176-196` (the lists), the sixteen rule definitions (`:256-345`), the evaluators of DS-INSET-3 (`:2208-2242`), DS-OVERFLOW-2 (`:2258`), DS-DIVIDER-1 (`:2500-2514`), DS-TYPE-9 (`:2797`), the header collector's `trailingEnd` (`:1084-1087`) and `SectionHeader.tsx:88-101`. The local values are yours (DPR 2, not evidence); `-revalidating` and `-error` are unmeasured by anyone.
+>
+> WHY:
+> - Every red is "nothing to read", not a wrong value. Browse mode has no pane header (interaction model §2), and three browse cells and the loading cell have no row and no badge.
+> - Joining the main lists wholesale would over-exempt. `NO_LIST_STATES` also switches off DS-GRID-2b and DS-OVERFLOW-2, and `NO_ROW_STATES` switches off DS-DIVIDER-1. All three read green today on `sidebar-installed-loading`, whose two pane headers exist. Removing a green hard line is a weakening.
+> - DS-DIVIDER-1's sidebar helper returns "no pane header" before it reads rows (`:2504`). Exempting the cells with rows would drop the row-line half of the rule on the one new list this item builds. DS-TYPE-5's "no group header (flat list)" answer is the precedent for reading what exists.
+> - DS-INSET-3 on `-results` is correct as not measurable. The sidebar helper reads pane-header trailers, visible row actions and group-row counts. At rest there is no header and no visible action (your `DS-ROW-4@…-hover: visible actions per row 0 ×19, 1`); `-hover` reads `row actions 6` and stays measured.
+> - DS-INSET-3 on `sidebar-installed-loading` is also by design. SB13 removes the badge, the headers have no visible action, and the spinner sits beside the title inside the toggle, not at the header's end.
+>
+> DO:
+> 1. Add four constants to `measure.ts`, each with a one-line comment giving the fact:
+>    - `SIDEBAR_BROWSE_STATES`: `sidebar-browse-results`, `-hover`, `-revalidating`, `-empty`, `-loading`, `-error` (no pane header).
+>    - `SIDEBAR_BROWSE_NO_LIST_STATES`: `sidebar-browse-loading`, `-empty`, `-error` (no list).
+>    - `SIDEBAR_NO_ROW_STATES`: the three above and `sidebar-installed-loading` (no row, no badge).
+>    - `SIDEBAR_NO_TRAILER_STATES`: `sidebar-browse-results`, `-revalidating`, `-empty`, `-loading`, `-error`, `sidebar-installed-loading` (nothing trailing visible at rest).
+> 2. Apply them, appended to what each rule already has:
+>
+> | Rule | Exception | List |
+> |---|---|---|
+> | DS-COPY-5, DS-HEIGHT-1, DS-TYPE-9, DS-GRID-2b, DS-OVERFLOW-2 | `exceptStates` | `SIDEBAR_BROWSE_STATES` |
+> | DS-TYPE-5, DS-DIVIDER-1 | `exceptStates` | `SIDEBAR_BROWSE_NO_LIST_STATES` |
+> | DS-DENSITY-1, DS-ROW-4, DS-ROW-5, DS-TYPE-6, DS-HEIGHT-10, DS-TYPE-8, DS-HC-1 | `exceptStates` | `SIDEBAR_NO_ROW_STATES` |
+> | DS-HEIGHT-2 | `scopeExceptStates: { sidebar: … }` (the popup scope untouched) | `SIDEBAR_NO_ROW_STATES` |
+> | DS-INSET-3 | `scopeExceptStates: { sidebar: … }` | `SIDEBAR_NO_TRAILER_STATES` |
+>
+> 3. DS-DIVIDER-1, sidebar scope: when there is no pane and `facts.rows.length > 0`, judge the rows alone. Value `no pane header (browse); rows <n> unlined|lined <k>`, pass when no row has a line. This covers `-results`, `-hover` and `-revalidating`. With no pane and no row it stays not measurable.
+> 4. Leave `NO_LIST_STATES`, `NO_ROW_STATES` and `NO_BADGE_STATES` unchanged. No scope status and no tolerance changes.
+> 5. Add one sentence each to the measurement notes in the STATUS note: which rules a sidebar Browse cell does not exercise and why (no pane header in browse mode; no row or badge in a rowless cell). The Design System text itself is not edited here.
+> 6. Push 2. On its CI run, any hard red on the seven cells that this table does not cover comes back to me with its line; `-revalidating` and `-error` are first measured there. A red on `-revalidating` that `-results` does not have is not covered by this ruling.
+> 7. Add a tracker hand-off, not this item's work: a held cell whose crop throws never runs its leave, so its hold swallows the next cells' answers (your local cascade). Name the capture suite's hold and leave as the place; the main panel's held reaches share it.
+>
+> DO NOT:
+> - Do not add any of the seven states to `NO_LIST_STATES`, `NO_ROW_STATES` or `NO_BADGE_STATES`.
+> - Do not exempt `sidebar-browse-hover` from DS-INSET-3 or DS-ROW-4, or `sidebar-installed-loading` from DS-DIVIDER-1, DS-GRID-2b, DS-OVERFLOW-2, DS-HEIGHT-1, DS-COPY-5, DS-TYPE-5 or DS-TYPE-9: it has its headers.
+> - Do not make a helper answer pass for a missing header (option 2) beyond DO 3.
+> - Do not change `sidebar.css` for any of these lines.
+> - Do not treat the local 299 px crop failure as a finding, or adopt anything from the local run.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - On push 2's run: `grep -c 'not measurable' ui-output.txt` restricted to the seven cells → 0 hard lines.
+> - `[measure] DS-DIVIDER-1@sidebar-browse-results: no pane header (browse); rows <n> unlined (hard)`, and the same on `-hover` and `-revalidating`.
+> - `[measure] DS-INSET-3@sidebar-browse-hover: row actions 6 (target 6) (hard)`, both looks.
+> - `[measure] DS-DIVIDER-1@sidebar-installed-loading` and `DS-GRID-2b@sidebar-installed-loading` still printed and green.
+> - `git diff 0343ba5 -- src/test/ui/v2/measure.ts` shows the three old lists untouched.
+>
+> DEFECTS: none.
+>
+> Not checked: I did not trace DS-ROW-5, DS-TYPE-6, DS-DENSITY-1, DS-HC-1 or DS-HEIGHT-10 inside their helpers; I took "no row / no badge" from your lines and the rule texts. I did not read the diff of 0343ba5 beyond its file list.
 
 ## Exact next step
 

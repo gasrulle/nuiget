@@ -194,7 +194,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped'];
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
+            // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar cells with no row.
+            'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
@@ -706,6 +708,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const tokens = { lookTokens: { '--nuiget-radius-row': '4px' } };
         expect(value('main-installed-single', facts({ rows: [rest] }), 'DS-DIVIDER-1@main-installed-single/rows')).toMatchObject({ pass: true, value: '0 of 1 rows with a line' });
         expect(value('main-installed-single', facts({ rows: [{ ...rest, lineWidth: 1 }] }), 'DS-DIVIDER-1@main-installed-single/rows')).toMatchObject({ pass: false });
+        // UX-P3.8: a sidebar Browse list has no pane header; its rows alone keep "no line between rows".
+        expect(value('sidebar-browse-results', facts({ rows: [rest, rest] }), 'DS-DIVIDER-1@sidebar-browse-results')).toMatchObject({ pass: true, value: 'no pane header (browse); rows 2 unlined' });
+        expect(value('sidebar-browse-results', facts({ rows: [rest, { ...rest, lineWidth: 1 }] }), 'DS-DIVIDER-1@sidebar-browse-results')).toMatchObject({ pass: false, value: 'no pane header (browse); rows 2 lined 1' });
+        expect(value('sidebar-sections', facts({ rows: [] }), 'DS-DIVIDER-1@sidebar-sections')).toMatchObject({ pass: false, value: 'not measurable (no pane header)' });
         expect(value('main-installed-single', facts({ rows: [rest], ...tokens }), 'DS-RADIUS-2@main-installed-single/rows')).toMatchObject({ pass: true });
         expect(value('main-installed-single', facts({ rows: [{ ...rest, radius: '0px' }], ...tokens }), 'DS-RADIUS-2@main-installed-single/rows')).toMatchObject({ pass: false });
         expect(value('main-installed-single', facts({ rows: [{ ...rest, icon: { left: 46, right: 82, w: 36, h: 36, centre: 136, radius: '4px' } }], ...tokens }), 'DS-RADIUS-2@main-installed-single/rows')).toMatchObject({ pass: false });
@@ -838,9 +844,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('leaves the group header unread in the cells with no list (UX-P2.8b; the Updates cells without a row, UX-P3.1b)', () => {
         const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error'];
+        // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar's Browse cells have no pane header, three of them and the Installed pane's first load no row.
+        const sidebarBrowse = ['sidebar-browse-results', 'sidebar-browse-hover', 'sidebar-browse-revalidating', 'sidebar-browse-empty', 'sidebar-browse-loading', 'sidebar-browse-error'];
+        const sidebarNoRow = ['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
-            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList, 'sidebar-filter']); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3)
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList, 'sidebar-filter', ...sidebarNoRow]); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3); UX-P3.8: the sidebar cells with no row and no badge
             expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
         }
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
@@ -849,9 +858,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
-        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList]);
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, ...sidebarBrowse]);
         // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
-        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, 'main-browse-details']);
+        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse]);
+        expect(inset.scopeExceptStates).toEqual({ sidebar: ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading'] });
         // A list with no row and only its empty sentence has no group header either (the Updates tab of one project, UX-P3.1b).
         const empties = [{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 }];
         expect(lineOf('main-updates-empty', cells({ empties }), 'DS-INSET-3@main-updates-empty/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
