@@ -131,6 +131,11 @@ export interface RuleDefinition {
     /** SPEC: the ids a later item owns, printed and left out of the verdict (UX-P2.8a). */
     pendingIds?: Readonly<Record<string, string>>;
     /**
+     * Read from the capture's pixels after the shot (`pixelRuleLines`, the capture suite), not from the collected layout:
+     * `measureLines` leaves it out (DS-TYPE-10, UX-P3.fix-4).
+     */
+    pixels?: true;
+    /**
      * States the rule has no subject in by design (an empty list, a popup over the list), so it prints nothing there
      * instead of `not measurable`; never a state the rule fails in (design-advisor ruling of 2026-10-24, UX-P0.18).
      */
@@ -386,6 +391,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P1.4b: the Verified mark in the states whose readiness holds it; a row list of another state may still be provisional.
     rule('DS-ICON-4', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-transitive-details'] }),
     rule('DS-LOOK-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
+    // UX-P3.fix-4 (H27; design-advisor opening ruling of 2026-11-13, DO 10): the side bar's text keeps its subpixel rendering,
+    // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: { pending: 'P3.fix-4' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -3482,8 +3490,8 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
     const group = stateGroup(state);
     const lines: MeasureLine[] = [];
     for (const definition of RULES) {
-        // The capture's own width when given (PF-3a at 1200), else the webview's.
-        if (!appliesTo(definition, state, width ?? layout.width, theme, lane)) {
+        // The capture's own width when given (PF-3a at 1200), else the webview's; a pixel rule prints after the shot.
+        if (definition.pixels || !appliesTo(definition, state, width ?? layout.width, theme, lane)) {
             continue;
         }
         for (const scope of (definition.helper === 8 ? Object.keys(definition.scopes) : [group, ...elementGroups(group, state)]) as Scope[]) {
@@ -3500,6 +3508,29 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
             const name = scope === group && definition.helper !== 8 ? `${definition.id}@${state}` : `${definition.id}@${state}/${scope}`;
             lines.push({ name, value: result.value, status, pass: result.pass });
         }
+    }
+    return lines;
+}
+
+/**
+ * The `[measure]` lines of the pixel rules (DS-TYPE-10, UX-P3.fix-4) for a capture, from what the suite read in its PNG:
+ * `results` by rule id; a rule that applies and has no result prints `not measurable (no pixels)`, and a hard one fails.
+ */
+export function pixelRuleLines(state: string, width: number, theme: string, lane: Lane, results: Readonly<Record<string, { value: string; pass: boolean }>>): MeasureLine[] {
+    const group = stateGroup(state);
+    const lines: MeasureLine[] = [];
+    for (const definition of RULES) {
+        if (!definition.pixels || !appliesTo(definition, state, width, theme, lane)) {
+            continue;
+        }
+        const declared = definition.scopes[group];
+        if (declared === undefined || definition.scopeStates?.[group]?.includes(state) === false || definition.scopeExceptStates?.[group]?.includes(state) === true) {
+            continue;
+        }
+        const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width);
+        const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
+        const result = results[definition.id] ?? { value: `${NOT_MEASURABLE} (no pixels)`, pass: false };
+        lines.push({ name: `${definition.id}@${state}`, value: result.value, status, pass: result.pass });
     }
     return lines;
 }

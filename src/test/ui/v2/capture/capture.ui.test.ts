@@ -4,7 +4,8 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { By, EditorView, Key, VSBrowser, type WebElement } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { COLLECT_TEXT_LINES, fringeLine, fringeValue, type LineVerdict, summarize, type TextLine } from '../fringe';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
@@ -1210,11 +1211,14 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
 }
 
 /**
- * One shot of the H27 probe (UX-P3.8, design-advisor follow-up 1, DO 2): what the sidebar document says about its box and
- * layers, printed as a `[probe] h27` line, and the side bar's crop at its capture width under `probe/` beside the crops.
+ * One shot of the H27 probe (UX-P3.8, design-advisor follow-up 1, DO 2; UX-P3.fix-4, opening ruling DO 2-5): what the
+ * sidebar document says about its box and layers, printed as a `[probe] h27` line after the shot's last action, the side
+ * bar's crop at its capture width under `probe/` beside the crops, and its `[fringe] h27` line (DS-TYPE-10's reader).
+ * Called in the sidebar frame; `applied` names what the shot changed beyond the box (`none` otherwise). Returns the window
+ * PNG and the device pixel ratio, for the host line.
  */
-async function h27ProbeShot(name: string): Promise<void> {
-    const facts = await script<{ popups: number; expanded: string | null; active: string; focus: boolean; animations: number }>(`
+async function h27ProbeShot(name: string, applied: string): Promise<{ windowPng: string; dpr: number }> {
+    const facts = await script<{ popups: number; expanded: string | null; active: string; focus: boolean; animations: number; selection: string; readOnly: boolean | null; focusVisible: boolean | null }>(`
 const box = document.querySelector('[data-testid="sidebar-search-input"]');
 return {
     popups: document.querySelectorAll('.nuiget-search-popup').length,
@@ -1222,8 +1226,15 @@ return {
     active: document.activeElement?.dataset?.testid || document.activeElement?.tagName.toLowerCase() || 'none',
     focus: document.hasFocus(),
     animations: document.getAnimations().length,
+    selection: box ? box.selectionStart + '-' + box.selectionEnd : 'none',
+    readOnly: box ? box.readOnly : null,
+    focusVisible: box ? box.matches(':focus-visible') : null,
 };`);
-    console.warn(`[probe] h27 ${name}: popups ${facts.popups}, aria-expanded ${facts.expanded}, active ${facts.active}, hasFocus ${facts.focus}, animations ${facts.animations}`);
+    // P-f judges nothing when the frame kept its focus (opening ruling, DO 2).
+    const blurred = name === 'P-f' && facts.focus ? ', not blurred' : '';
+    console.warn(`[probe] h27 ${name}: popups ${facts.popups}, aria-expanded ${facts.expanded}, active ${facts.active}, hasFocus ${facts.focus}, animations ${facts.animations}, `
+        + `selection ${facts.selection}, readOnly ${facts.readOnly}, focus-visible ${facts.focusVisible}, applied ${applied}${blurred}`);
+    const lines = await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar');
     await leaveWebview();
     await driverOf().actions().move({ x: 1, y: 1 }).perform();
     const rect = await webviewRect('nuiget-sidebar');
@@ -1233,14 +1244,71 @@ return {
     const dir = VSBrowser.instance.getScreenshotsDir();
     const probeDir = path.join(path.dirname(dir), 'probe');
     fs.mkdirSync(probeDir, { recursive: true });
+    const crop = path.join(probeDir, `h27-${name}.png`);
     execFileSync(process.execPath, [
         path.resolve('scripts/crop-png.mjs'),
         path.join(dir, `${windowName}.png`),
         String(rect.x), String(rect.y), String(SIDEBAR_WIDTH), String(rect.height),
-        path.join(probeDir, `h27-${name}.png`),
+        crop,
         String(dpr),
     ], { stdio: 'pipe' });
     console.warn(`[probe] h27 ${name}: probe/h27-${name}.png, iframe.webview ${rect.x},${rect.y} ${rect.width}x${rect.height} (dpr ${dpr})`);
+    console.warn(fringeOf(`h27 ${name}`, crop, lines, dpr).text);
+    return { windowPng: path.join(dir, `${windowName}.png`), dpr };
+}
+
+/** Prints the line verdicts of a crop (DS-TYPE-10, `fringe.ts`), read with the decoder of `scripts/crop-png.mjs`; JSON in on stdin. */
+const READ_FRINGE = 'const { decodePng } = await import(process.argv[1]); const { lineVerdicts } = await import(process.argv[2]); let input = \'\'; '
+    + 'for await (const chunk of process.stdin) { input += chunk; } const { file, lines, dpr } = JSON.parse(input); '
+    + 'console.log(JSON.stringify(lineVerdicts(decodePng(file), lines, dpr)));';
+
+/** The verdict of every text line of a PNG taken at `dpr` (UX-P3.fix-4). */
+function lineVerdictsOf(png: string, lines: readonly TextLine[], dpr: number): LineVerdict[] {
+    const decoder = pathToFileURL(path.resolve('scripts/crop-png.mjs')).href;
+    const reader = pathToFileURL(path.join(__dirname, '..', 'fringe.js')).href;
+    return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', READ_FRINGE, decoder, reader], { encoding: 'utf8', input: JSON.stringify({ file: png, lines, dpr }) })) as LineVerdict[];
+}
+
+/**
+ * A crop's `[fringe]` line and DS-TYPE-10's result (UX-P3.fix-4): a reading that throws prints `not read` and leaves the
+ * rule without a result, which prints `not measurable (no pixels)`.
+ */
+function fringeOf(name: string, png: string, lines: readonly TextLine[], dpr: number): { text: string; result?: { value: string; pass: boolean } } {
+    try {
+        const summary = summarize(lineVerdictsOf(png, lines, dpr));
+        return { text: fringeLine(name, summary), result: { value: fringeValue(summary), pass: summary.pass } };
+    } catch (error) {
+        return { text: `[fringe] ${name}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})` };
+    }
+}
+
+/**
+ * `[fringe] host` (opening ruling, DO 9): the side bar's own title label in a window screenshot, read as one text line in
+ * the top document; informational, the exemplar of DS-TYPE-10. Never throws.
+ */
+async function hostFringe(windowPng: string, dpr: number): Promise<void> {
+    try {
+        await leaveWebview();
+        const label = await script<TextLine | null>(`
+const element = document.querySelector('.part.sidebar .composite.title .title-label h2') || document.querySelector('.part.sidebar .title-label');
+const node = element ? [...element.childNodes].find(child => child.nodeType === Node.TEXT_NODE && child.textContent.trim()) : undefined;
+if (!element || !node) { return null; }
+const range = document.createRange();
+range.selectNodeContents(node);
+const rect = range.getBoundingClientRect();
+const m = /rgba?\\(([^)]+)\\)/.exec(getComputedStyle(element).color) || ['', '0,0,0'];
+const p = m[1].split(',').map(Number);
+const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+return { x: rect.left, y: rect.top, width: rect.width, height: rect.height, label: element.textContent.trim().slice(0, 20), color: [p[0], p[1], p[2]], visible: hit !== null && (hit === element || element.contains(hit)) };`);
+        if (label === null) {
+            console.warn('[fringe] host: not read (no side bar title label)');
+            return;
+        }
+        const [verdict] = lineVerdictsOf(windowPng, [label], dpr);
+        console.warn(`[fringe] host: ${verdict.fringe}/${verdict.ink} (${verdict.skipped !== undefined ? `not read: ${verdict.skipped}` : verdict.greyscale ? 'greyscale' : 'lcd'}) "${label.label}"`);
+    } catch (error) {
+        console.warn(`[fringe] host: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+    }
 }
 
 /** Prints the RGBA of one device pixel of a PNG, read with the decoder of `scripts/crop-png.mjs`. */
@@ -2066,9 +2134,25 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             if (virtual !== null) {
                 console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}, scrollTop ${virtual.scrollTop}, clip y ${virtual.clip}, direct header y ${virtual.direct}`);
             }
+            // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot.
+            const textLines = state.surface === 'sidebar' && LANE === 'ui' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar') : undefined;
             const shot = await shoot(state, capture);
             writeSidecar(state, capture, facts);
             probeScrollbar(state, capture, layout, shot);
+            if (textLines !== undefined) {
+                const cell = captureFile(state.name, capture);
+                const fringe = fringeOf(cell.replace(/\.png$/, ''), path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), cell), textLines, shot.dpr);
+                console.warn(fringe.text);
+                for (const line of pixelRuleLines(state.name, capture.width, capture.theme, LANE, fringe.result === undefined ? {} : { 'DS-TYPE-10': fringe.result })) {
+                    const text = formatLine(line);
+                    console.warn(text);
+                    if (line.status !== 'hard') {
+                        pendingLines.push(text);
+                    } else if (!line.pass) {
+                        red.push(`${line.name}: ${line.value}`);
+                    }
+                }
+            }
             // Once per state in the `ui` lane, after the PNG and before the setup's layer closes.
             const inaccessible = LANE === 'ui' && !audited.has(state.name) ? await auditSafely(state) : [];
             audited.add(state.name);
@@ -2131,33 +2215,80 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
         });
 
-        // UX-P3.8 (design-advisor follow-up 1 of 2026-11-13, DO 2): which use of the sidebar box turns the pane greyscale (H27).
-        // Three shots under probe/, never states: no golden, no diff, no mask. No row is pressed; the box is left empty.
+        // UX-P3.8 (design-advisor follow-up 1 of 2026-11-13, DO 2) and UX-P3.fix-4 (opening ruling of 2026-11-13, DO 2-4): which
+        // use of the sidebar box turns the pane greyscale (H27). Seven shots under probe/, never states: no golden, no diff, no
+        // mask. No row is pressed with Enter or Delete; the box is left empty. What P-i and P-x set by script is the probe's
+        // instrument, undone after the shot, never product code.
         it('H27 probe: the sidebar box in use (UX-P3.8)', async function () {
-            this.timeout(300_000);
+            this.timeout(600_000);
             await applyTheme('dark-modern');
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
             const box = (): Promise<WebElement> => findByTestId('sidebar-search-input', 30_000);
-            const uses: Array<[string, () => Promise<void>]> = [
-                ['P-a', async () => (await box()).click()],
-                ['P-b', async () => {
-                    const search = await box();
-                    await search.click();
-                    await search.sendKeys('@');
-                    await search.sendKeys(Key.BACK_SPACE);
-                }],
-                ['P-c', async () => {
-                    const search = await box();
-                    await typeHeld(search, '@installed', 'h27 probe');
-                    await search.sendKeys(Key.ESCAPE);
-                }],
+            const setOnBox = (code: string): Promise<unknown> => script(`const box = document.querySelector('[data-testid="sidebar-search-input"]'); ${code}`);
+            const onHeader = (code: string): Promise<unknown> => script(`const header = document.querySelector('.nuiget-sidebar-header'); ${code}`);
+            type Use = { name: string; use: () => Promise<string>; undo?: () => Promise<unknown> };
+            const uses: Use[] = [
+                // P-0, the control: the two-section view untouched, the box not focused.
+                { name: 'P-0', use: async () => 'none' },
+                // P-a, the reproduction: the box clicked, nothing typed.
+                { name: 'P-a', use: async () => { await (await box()).click(); return 'none'; } },
+                // P-i, no caret: the box clicked, then read-only (focus stays in the box).
+                {
+                    name: 'P-i',
+                    use: async () => { await (await box()).click(); await setOnBox('box.readOnly = true;'); return 'readOnly on the box'; },
+                    undo: () => setOnBox('box.readOnly = false;'),
+                },
+                // P-d, a row focused: Tab from the box until the active element is inside the Installed list (no click).
+                {
+                    name: 'P-d',
+                    use: async () => {
+                        await (await box()).click();
+                        let presses = 0;
+                        let inList = false;
+                        while (!inList && presses < 12) {
+                            await (await driverOf().switchTo().activeElement()).sendKeys(Key.TAB);
+                            presses += 1;
+                            inList = await script<boolean>('return document.hasFocus() && document.activeElement !== null && document.activeElement.closest(\'[data-testid="sidebar-installed-list"]\') !== null;');
+                        }
+                        return `Tab x${presses}${inList ? '' : ' (the Installed list not reached)'}`;
+                    },
+                },
+                // P-g, nothing focused: the box clicked, then blurred by script (the document focused, the active element body).
+                { name: 'P-g', use: async () => { await (await box()).click(); await setOnBox('box.blur();'); return 'blur() on the box'; } },
+                // P-f, the document blurred: the box clicked, then the workbench's focus moved to the first editor group by its
+                // key binding, forwarded from the webview; back into the frame by a driver switch only.
+                {
+                    name: 'P-f',
+                    use: async () => {
+                        const search = await box();
+                        await search.click();
+                        await search.sendKeys(Key.chord(MODIFIER, '1'));
+                        await leaveWebview();
+                        await enterSidebarWebview();
+                        return 'the first editor group focused by its key binding';
+                    },
+                },
+                // P-x, the candidate: the box clicked, the header lifted into its own stacking context.
+                {
+                    name: 'P-x',
+                    use: async () => {
+                        await (await box()).click();
+                        await onHeader('header.style.setProperty(\'position\', \'relative\'); header.style.setProperty(\'z-index\', \'1\');');
+                        return 'position: relative; z-index: 1 on .nuiget-sidebar-header';
+                    },
+                    undo: () => onHeader('header.style.removeProperty(\'position\'); header.style.removeProperty(\'z-index\');'),
+                },
             ];
-            for (const [name, use] of uses) {
+            for (const { name, use, undo } of uses) {
                 await enterSidebarWebview();
-                await use();
-                await h27ProbeShot(name);
+                const applied = await use();
+                const shot = await h27ProbeShot(name, applied);
+                if (name === 'P-0') {
+                    await hostFringe(shot.windowPng, shot.dpr);
+                }
                 await enterSidebarWebview();
+                await undo?.();
                 await (await box()).sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
                 await findByTestId('sidebar-installed-list', 30_000);
             }
