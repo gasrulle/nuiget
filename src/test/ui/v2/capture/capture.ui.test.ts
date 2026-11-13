@@ -345,7 +345,8 @@ async function leaveSidebarSearch(): Promise<void> {
 }
 
 /** The Serilog search of the sidebar's Browse cells: its installed row and a row that can be installed (UX-P3.8, SB9). */
-const SIDEBAR_SERILOG_LISTED = 'document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="package-row-serilog"] .nuiget-badge\')?.textContent === "Installed" && document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="row-action-install"]\') !== null && document.querySelector(\'[data-testid="sidebar-browse-list"]\')?.getAttribute("aria-busy") !== "true"';
+// A badge with a title reads its label first and the title in a visually hidden span: the label is the first text node.
+const SIDEBAR_SERILOG_LISTED = 'document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="package-row-serilog"] .nuiget-badge\')?.firstChild?.textContent === "Installed" && document.querySelector(\'[data-testid="sidebar-browse-list"] [data-testid="row-action-install"]\') !== null && document.querySelector(\'[data-testid="sidebar-browse-list"]\')?.getAttribute("aria-busy") !== "true"';
 
 // ---- the states ------------------------------------------------------------------------------------------------------
 
