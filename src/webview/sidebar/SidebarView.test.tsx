@@ -3,7 +3,7 @@ import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../shared/primitives/testSupport';
@@ -483,6 +483,75 @@ describe('sidebar: Installed section', () => {
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
+    });
+
+    // SB14 (UX-P3.8, design-advisor ruling of 2026-11-13): the box claims the focus once, only while the side bar's document
+    // has the focus and nothing in it does; `document.hasFocus` is stubbed, jsdom having no window focus of its own.
+    it('SB14: the box takes the focus at mount when the sidebar document has the focus and nothing in it does', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+        try {
+            mount();
+            expect(document.activeElement).toBe(screen.getByTestId('sidebar-search-input'));
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: a document without the focus at mount leaves the body active, and its first focus gain moves the focus to the box', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+        try {
+            mount();
+            expect(document.activeElement).toBe(document.body);
+            hasFocus.mockReturnValue(true);
+            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(screen.getByTestId('sidebar-search-input'));
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: a focus gain while another element holds the focus leaves it there', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+        try {
+            mount();
+            const toggle = screen.getByTestId('section-header-installed');
+            toggle.focus();
+            hasFocus.mockReturnValue(true);
+            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(toggle);
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: under StrictMode the box claims once, and a later focus gain leaves the focus where it is', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+        try {
+            const host = createFakeHost();
+            render(<StrictMode><StoreProvider bus={host.bus}><SidebarView /></StoreProvider></StrictMode>);
+            const search = screen.getByTestId('sidebar-search-input');
+            expect(document.activeElement).toBe(search);
+            search.blur();
+            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(document.body);
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: after the first claim a later focus gain leaves the focus where it is', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+        try {
+            mount();
+            const search = screen.getByTestId('sidebar-search-input');
+            expect(document.activeElement).toBe(search);
+            search.blur();
+            expect(document.activeElement).toBe(document.body);
+            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(document.body);
+        } finally {
+            hasFocus.mockRestore();
+        }
     });
 
     it('the search box filters the installed packages by id, and the host can ask for the focus to be there', async () => {

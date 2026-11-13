@@ -69,6 +69,32 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const { search: runSearch, clear: clearSearch } = useSearch();
     const [query, setQuery] = useState('');
     const { announce, live, searchRef } = useShellChrome();
+    // SB14 (UX-P3.8): the search box claims the focus once, when the side bar's own document has the focus and nothing in it
+    // holds it: at mount, else at the document's first focus gain. The Extensions view focuses its box when the view takes
+    // the focus; a mount while the user types in an editor leaves the editor focused. The ref keeps the claim to one under
+    // StrictMode's second effect run.
+    const claimed = useRef(false);
+    useEffect(() => {
+        const claim = (): boolean => {
+            const active = document.activeElement;
+            if (!document.hasFocus() || (active !== null && active !== document.body)) {
+                return false;
+            }
+            claimed.current = true;
+            searchRef.current?.focus();
+            return true;
+        };
+        if (claimed.current || claim()) {
+            return undefined;
+        }
+        const onFocus = (): void => {
+            if (claim()) {
+                window.removeEventListener('focus', onFocus);
+            }
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [searchRef]);
     const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [layout, setLayout] = useState<SidebarLayout>(() => readLayout(viewState));
 

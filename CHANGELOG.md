@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Works with the .NET 11 SDK** — Installing and updating packages in a Central Package Management project works on the .NET 11 SDK as it does on SDK 10.
 
 ### Changed
+- **The sidebar's search box has the focus when you first move to the sidebar view**
 - **The sidebar shows its loading bar in the section that loads, and an empty or failed search says so in place**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**

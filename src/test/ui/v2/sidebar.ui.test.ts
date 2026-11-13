@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, Key, Origin, type WebElement } from 'vscode-extension-tester';
+import { By, Key, Origin, type WebElement, Workbench } from 'vscode-extension-tester';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, tokenPx, typeHeld, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
@@ -28,6 +28,28 @@ describe('2.0 sidebar', () => {
 
     afterEach(async () => {
         await leaveWebview();
+    });
+
+    // SB14 (UX-P3.8, design-advisor ruling of 2026-11-13): the box takes the focus when the view takes it, as the Extensions
+    // view's box does; the view's own focus command gives the view the focus (an activity-bar open leaves it nowhere).
+    it('the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)', async function () {
+        this.timeout(120_000);
+        await openSidebarView();
+        await enterSidebarWebview();
+        await findByTestId('sidebar-search-input', 60_000);
+        // The command is held inside the wait (re-run while the box is not the focused view's active element), as a tab
+        // click whose effect a wait depends on is (the gotcha row "An attribute read once right after a click in a UI test").
+        let probes = 0;
+        const active = await poll(async () => {
+            if (probes++ % 8 === 0) {
+                await leaveWebview();
+                await new Workbench().executeCommand('nuiget.sidebarView.focus');
+                await enterSidebarWebview();
+            }
+            const id = await driverOf().executeScript<string | null>('return document.hasFocus() && document.activeElement ? document.activeElement.getAttribute("data-testid") : null;');
+            return id === 'sidebar-search-input' ? id : undefined;
+        }, 'the sidebar search box as the active element of the focused view', 30_000);
+        expect(active).to.equal('sidebar-search-input');
     });
 
     it('the sidebar search box rings in focusBorder at offset -1 (DS-FOCUS-1, UX-P2.4)', async function () {

@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8, `open` after P3.fix-4; SB14 is push 3)   commit 57b28d9 (closing commit of push 2; released by the planning session on 2026-11-13)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8, `in-progress`: push 3, SB14)   commit 1ce4625 (push 3 follows it)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -53,6 +53,59 @@ H27 counts owed by this item (design-advisor DO 1). Coloured-fringe pixels = cha
 | `captures/43314017322/sidebar-all-projects.dark-modern.300.png` | 076db9717809 | caret | 26594 | 0 | 0 |
 
 Reading (the design-advisor's caret reading holds): a caret in the focused box goes with a greyscale Installed pane header (and, in filter mode, its rows); a selection, which has no caret, keeps it LCD. The `sidebar-all-projects` golden holds a selected box, which `typeHeld` (4ca9b68) no longer produces: the 124 px of every run since UX-P3.7d. `sidebar-filter` read 0 px on runs 43314017322 and 43337212840 (both caret, both greyscale).
+
+## Push 3 (SB14), 2026-11-13
+
+SB14 as delivered, to the exemplar's condition (design-advisor rulings of 2026-11-13 below, "SB14 forms 1-3"): the box claims the
+focus once, when the side bar's own document has the focus and nothing in it holds it: at mount, else at the document's first
+focus gain (`SidebarView.tsx`, one effect, a window `focus` listener removed after the first claim and on unmount). The
+Extensions view puts the focus in its box whenever the view takes the focus (research X35, line 992). **Gap, named:** after the
+view is opened from the activity bar the workbench gives the view no focus, so the box is not focused then; a host row is
+proposed (below). An unconditional `focus()` at mount (form 1) was refused on the local readings: it took the focus from an
+editor when the webviews were reloaded.
+
+Verified by running (local, macOS, VS Code 1.140.0; never pixel evidence):
+
+- `npx vitest run --project frontend src/webview/sidebar` → `Test Files  7 passed (7)`, `Tests  82 passed (82)`; the four SB14
+  cases (new): "SB14: the box takes the focus at mount when the sidebar document has the focus and nothing in it does", "SB14: a
+  document without the focus at mount leaves the body active, and its first focus gain moves the focus to the box", "SB14: a focus
+  gain while another element holds the focus leaves it there", "SB14: after the first claim a later focus gain leaves the focus
+  where it is" (the form-1 case "the search box has the focus when the view first renders, before any list has arrived (SB14,
+  UX-P3.8)" was never committed and is replaced by them).
+- `sidebar.ui.test.ts` "the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)" (the view opened, the
+  command `nuiget.sidebarView.focus` held inside the wait): on a VSIX built from this working tree `✔` 3 of 3 runs; on a VSIX
+  built with `SidebarView.tsx` and its test stashed `Error: Timed out after 30000 ms waiting for the sidebar search box as the
+  active element of the focused view`. One run of an earlier draft (the command run once, a 10 s wait) failed with the effect,
+  hence the command held inside the wait. A reading after the command: `top iframe.webview`, the sidebar `hasFocus false, active
+  body` at once, then the box active within the wait.
+- Reload Webviews check (the editor focused, `Developer: Reload Webviews`), with this form: `[sb14] before: top
+  div.native-edit-context, in editor true …; sidebar hasFocus false, active body`; `webviews reloaded, sidebar up: top
+  div.native-edit-context, in editor true …; sidebar hasFocus false, active body`; `+5 s:` the same. Form 1 on the same check:
+  `webviews reloaded, sidebar up: top iframe.webview.ready, in editor false …; sidebar hasFocus true, active
+  sidebar-search-input` (and +5 s the same); without SB14: `in editor true` at both readings.
+- Activity-bar open (scratch `[sb14-open]`): `+0/1000/3000/6000 ms: top body., in side bar false; sidebar hasFocus false,
+  active body` (the gap); after the command `nuiget.sidebarView.focus`: `top iframe.webview …; sidebar hasFocus true, active
+  sidebar-search-input` at +0, 1000 and 3000 ms.
+- Cmd+B proxy (the host observation): the editor focused, the side bar hidden and shown: `side bar shown, webview up: sidebar
+  hasFocus true, active sidebar-search-input; top iframe.webview.ready, in editor false`, identical with and without SB14 (the
+  host's `ui/focusSearch` on every change to visible, `src/host/SidebarHost.ts:57-61`).
+- Tier A (`node scripts/ui-harness.mjs --installed --tier A` on this form, a temporary `[debug-sb14]` print removed since): the
+  two-section states `sidebar-sections: hasFocus false, active body` (×5), `sidebar-hover: hasFocus false, active body`,
+  `sidebar-narrow-200px: hasFocus false, active body`; `[keys] sidebar` lines identical to CI run 43436877716 (`diff` empty);
+  `88 passing`, `6 failing`, this Mac's known reds (SPEC `project-selector Δx 11` on five states, the artboard colour profile).
+- The scratch checks live in the session scratchpad and are never committed.
+- `precommit-review` wf_f3f154cd-a2d (`--cached`, P3.8): blocking 0, non-blocking 7, all applied: a ref keeps the claim to one
+  under StrictMode (development builds run the effect twice; the second run would have kept the listener), with the case "SB14:
+  under StrictMode the box claims once, and a later focus gain leaves the focus where it is" (fails without the ref, passes with
+  it; sidebar frontend `83 passed`); the CHANGELOG headline narrowed to "The sidebar's search box has the focus when you first
+  move to the sidebar view"; regression-matrix row R265; a DECISIONS row; the gotcha row "A webview focusing an element at
+  mount". The local readings above ran on the VSIX before the ref, whose production behaviour (one effect run) is the same.
+- Gates on the working tree: `npx tsc --noEmit` 0, `npm run check-types` 0, `npx eslint src` 0, `npm run lint` 0; `npm test` →
+  `Test Files  179 passed (179)`, `Tests  2506 passed | 9 skipped (2515)`, `[axe-coverage] 73 files, 42 rules passed somewhere, 0
+  missing`; `npm run bench` → `Tests  75 passed (75)`; `npm run docs:check` → agree; `npm run check:matrix` → 0 findings;
+  `node scripts/check-css-baseline.mjs --item P3.8` → `0 entries`; `node esbuild.mjs --production --analyze` → `dist/extension.js
+  299460 / 326720`, `dist/webview.js 587014 / 613761`, `dist/sidebar.js 360726 / 374532` (+309 bytes); `npm run package:vsix` →
+  exit 0 (the VSIX the local readings ran on).
 
 ## Visual evidence (UI items)
 
@@ -174,12 +227,23 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
   `tier=B` dispatch (the P3 gate) reads them.
 - The Browse row's Uninstall button and Delete outside jsdom: no UI test presses them (the capture suite never writes, by rule); jsdom proves the
   `ops/remove` request and the busy status.
-- The H27 probe in the classic look: it runs in the `ui` lane's Modern UI pass only.
+- The H27 probe in the classic look: it ran in the `ui` lane's Modern UI pass only (removed by UX-P3.fix-4).
+- Push 3 on CI: the new UI case, the `[keys]` and `[fringe]` lines, the two-section cells' `[diff]` (Exact next step).
 
 ## Not started
 
-- SB14 (focus the box on first render, push 3): **blocked**: the probe's P-a is greyscale, so focus on first render would turn every user's
-  side bar greyscale; it waits on the H27 fix row (follow-up 1 DO 5).
+- Nothing of the item: push 3 (SB14) is landed locally and read on CI next (Exact next step). H27 was cured by UX-P3.fix-4
+  (DS-TYPE-10 hard), which unblocked it; the first-open focus is the proposed host row's.
+
+## For the planning session (UX-P3.8 push 3; design-advisor SB14 rulings of 2026-11-13)
+
+One proposed row (the worker creates none): "⚑ Host: the side bar's box on a first open. After the view is opened from the
+activity bar the workbench focus is nowhere (`[sb14-open]` lines above) and the webview never gains it; the Extensions view has
+the focus in its box. Question for the `architecture-advisor`: can `SidebarHost` give the view the focus on a first resolve the
+user caused without taking it at window start. Names `src/host/SidebarHost.ts`." With it, the observation: the host sends
+`ui/focusSearch` on every change to visible (`SidebarHost.ts:57-61`), so showing the side bar with Cmd+B moves the focus from the
+editor to the box (the Cmd+B readings above); whether the Extensions view does the same is not probed (a probe first, then the
+advisor only if the exemplar keeps the editor focused).
 
 ## For the planning session (H27 hand-off, design-advisor follow-up 1 DO 6)
 
@@ -607,16 +671,162 @@ badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact r
 >
 > Not checked: I measured no pixel rows myself; the 2/0 numbers are the judge's, and my crops confirm only the direction. I did not open the classic hover cell or `sidebar-browse-results`, and did not check whether a popup row or the Updates tree shows a badge in a compact row.
 
+### 2026-11-13, design-advisor, SB14 form 1: DO 17 by Reload Webviews (verbatim)
+
+Brief: DO 14's readings, DO 17 by the Cmd+B proxy (the editor lost the focus with and without SB14), options 1) push, 2) hold,
+3) the host half. Answer verbatim:
+
+> DECISION: Option 1, after one more local check in a different form. The Cmd+B comparison does not meet DO 17: it shows SB14 adds nothing on that path, but it never exercises SB14's own effect (a mount with no visibility change while an editor has the focus). Not option 2 or 3: the host's behaviour is pre-existing, outside this item, and not shown to be a defect.
+>
+> Checked:
+> - `src/host/SidebarHost.ts:57-61` sends `ui/focusSearch` on every change to visible; `src/webview/shared/shellChrome.ts:27` answers it with `searchRef.current?.focus()`. Both as you quote.
+> - The first ruling's DO 13 to 17 and VERIFY are at `src/webview/sidebar/STATUS.md:304-307, 324`.
+> - UX-P3.fix-4 is `done` with 5daf711 in its row.
+> - Not verified: every local reading in the brief (local macOS, illustrative only), and the working-tree diff, which I did not open.
+>
+> WHY:
+> - **The Cmd+B proxy measures the workbench, not SB14.** With and without SB14 the editor loses the focus identically, so the cause is on the show path: the host event you found, and possibly the workbench itself. From memory of VS Code, unverified: showing the side bar re-opens its view container with focus, and the Extensions view's `focus()` puts the focus in its search box. If so, the host's event matches the exemplar (D22) on that path and is no defect.
+> - **What DO 17 was written to catch is still unproven.** SB14 calls `focus()` at mount. The risk is a mount that happens while the user is in an editor (window start with the side bar restored, or the webview loading late). Cmd+B always comes with a visibility change, so it cannot separate the two.
+> - **A mount without a visibility change can be produced under ExTester.** Reloading the webviews remounts the sidebar document while the view stays visible and the editor keeps the focus; no `ui/focusSearch` is sent.
+> - **The capture readings are reassuring but not decisive.** The two-section cells read `hasFocus false, active body` locally, so no caret is expected in them; the hard `[keys]` and ring lines are unchanged.
+>
+> DO:
+> 1. Run this local check twice, with SB14 and with it stashed (scratch only, never committed):
+>    - nUIget's view visible in the side bar, `TestProject.csproj` open, the editor clicked; confirm the top document's active element is in the editor.
+>    - Run the command `Developer: Reload Webviews`. Wait until the sidebar webview is up again.
+>    - Read, at once and again 5 s later: whether the top document's active element is still in the editor, and inside the sidebar frame `document.hasFocus()` and the active element's test id.
+> 2. Paste the four reading sets in the STATUS note as local readings (macOS, not pixel evidence).
+> 3. If the editor keeps the focus with SB14: DO 17 is met. Push SB14 as prepared (`SidebarView.tsx`, its jsdom case, the `sidebar.ui.test.ts` case).
+> 4. If the editor loses the focus with SB14 and keeps it without: do not push. Return to me with the lines; the mount effect needs a different form and I will not pre-rule it.
+> 5. If the editor loses the focus in both: the reload itself moves the focus and the proxy is void. Return with the lines.
+> 6. On the CI run, DO 15's second condition is replaced: instead of band counts, every sidebar cell reads `[fringe] … 0 greyscale` (`DS-TYPE-10`, hard). The first condition stands: a two-section cell that moves may differ only inside the box (8,25,284,26 at 300 px). Anything else comes back.
+> 7. Record in the note, for the planning session, one proposed observation row; do not create it: the host sends `ui/focusSearch` on every change to visible (`SidebarHost.ts:57-61`), so showing the side bar with Cmd+B moves the focus from the editor to the box. Whether the Extensions view does the same is not probed. The row is a probe first (the same Cmd+B steps on the Extensions view), then an architecture-advisor question only if the exemplar keeps the editor focused.
+>
+> DO NOT:
+> - Do not edit `SidebarHost.ts` or `shellChrome.ts` in this item.
+> - Do not mark the item `blocked` on the host observation.
+> - Do not count the Cmd+B comparison as DO 17's result; keep it in the note as the evidence for DO 7.
+> - Do not commit the scratch check or a `[debug-sb14]` print.
+> - Do not add `LIVE_SIDEBAR_CARET` to a two-section cell unless it moved on CI under DO 6's conditions.
+>
+> CONTRACT CHANGE: none. The host half, if the probe of DO 7 shows a difference from the exemplar, needs the `architecture-advisor` and its own row.
+>
+> VERIFY:
+> - The note holds the four reading sets of DO 1 with the editor's active element named in each.
+> - `git diff --stat` of the push: `src/webview/sidebar/SidebarView.tsx`, `SidebarView.test.tsx`, `src/test/ui/v2/sidebar.ui.test.ts` and the docs duties only.
+> - CI run: the new `sidebar.ui.test.ts` case passes; `[keys] sidebar` and the ring line unchanged from run 43436877716; every sidebar `[fringe]` line `0 greyscale`; `[diff] summary` with 0 above tolerance, or the moved two-section cells pasted with the box-only evidence.
+>
+> DEFECTS: none.
+>
+> Files: /Users/mattias/github/nuiget/src/host/SidebarHost.ts (57-61), /Users/mattias/github/nuiget/src/webview/shared/shellChrome.ts (27), /Users/mattias/github/nuiget/src/webview/sidebar/SidebarView.tsx, /Users/mattias/github/nuiget/src/webview/sidebar/STATUS.md (304-307, 324), /Users/mattias/github/nuiget/docs/plans/STATUS-ux.md (row P3.8, line 112).
+
+### 2026-11-13, design-advisor, SB14 form 2: the claim (verbatim)
+
+Brief: form 1 took the focus from the editor on Reload Webviews (without SB14 the editor kept it). Answer verbatim:
+
+> DECISION: A form between a) and b): the box claims the focus once, only when the sidebar's own document has the focus and nothing in it holds it; if that is not true at mount, it waits for the document's first focus gain. SB14 stays in UX-P3.8 as push 3 in this form. The row is not `blocked` and SB14 is not cut.
+>
+> Checked:
+> - Your six `[sb14]` lines are a clean DO 4 result: without SB14 the editor keeps the focus through the reload; with it the top document's active element becomes `iframe.webview.ready` and stays there 5 s later.
+> - `src/host/SidebarHost.ts:57-61` sends `ui/focusSearch` only on a visibility change, so it does not fire when the view is first resolved visible.
+> - Not verified: the readings themselves (local macOS, illustrative), and the uncommitted working tree.
+>
+> WHY:
+> - **The unconditional mount focus is a real defect, not a test artefact.** A `focus()` inside the webview pulls the workbench focus into the frame. At window start with the side bar restored, the user typing in an editor would lose the keyboard to the search box. That is worse than the finding SB14 fixes.
+> - **Option b does not deliver SB14.** The host event is sent on a change to visible, not on the first resolve, so a first open would leave the box unfocused, which is the finding.
+> - **Option a alone depends on an order nobody has measured.** If the frame gains the focus after React mounts, `document.hasFocus()` is false at mount and the box is never focused on a first open. Waiting for the first focus gain covers both orders.
+> - **It matches the exemplar (D22).** The Extensions view puts the focus in its search box when the view takes the focus, not when it merely appears (from memory of VS Code, unverified). "The view has the focus and nothing in it does" is the same condition, read from inside the webview.
+> - **Once is enough.** After the first claim the document keeps its own active element across later blurs, so no standing listener is needed, and a later click on the pane's empty area is left alone.
+>
+> DO:
+> 1. In `src/webview/sidebar/SidebarView.tsx`, replace the mount effect with one effect that:
+>    - defines a claim: when `document.hasFocus()` is true and `document.activeElement` is the body (or null), focus the search box and stop listening;
+>    - runs the claim at mount;
+>    - if it did not focus, listens for the window's `focus` event and runs the claim again; removes the listener after the first successful claim and on unmount.
+>    Nothing else: no timer, no host message, no change to `useShellChrome`.
+> 2. Rewrite the jsdom case in place and add the others, with `document.hasFocus` stubbed (name the titles in the note):
+>    - document focused at mount → the box is the active element;
+>    - document not focused at mount → the body stays active; after a window `focus` event with the document focused → the box is active;
+>    - a window `focus` event while another element holds the focus → the focus does not move;
+>    - after the first claim, a later window `focus` event with the body active → the focus does not move.
+> 3. Keep the `sidebar.ui.test.ts` case as written (the box is the active element once the view is opened).
+> 4. Before the push, three local readings, pasted in the note:
+>    - the `Developer: Reload Webviews` check of the last ruling with the new form: the editor keeps the focus at both readings, and the sidebar reads `hasFocus false, active body`;
+>    - the `sidebar.ui.test.ts` case passes on a VSIX built from the working tree;
+>    - the Tier A readings of DO 14 again: the two-section states' `hasFocus` and active element, and the `[keys] sidebar` lines unchanged.
+> 5. If the reload check still loses the editor's focus, or the UI case fails (the view opened and the box not focused), stop and return with the lines. Do not try a third form.
+> 6. If all three hold, push. The CI conditions of the last ruling's DO 6 apply unchanged.
+> 7. Docs duties as the item requires; if `docs/ux/interaction-model.md` states where the focus lands when the side bar view opens, its sentence takes this condition.
+> 8. Keep the proposed observation row about `ui/focusSearch` on every visibility change (last ruling's DO 7); the Cmd+B readings are its evidence.
+>
+> DO NOT:
+> - Do not push the unconditional `focus()` at mount.
+> - Do not keep the listener alive after the first claim, and do not claim when any element other than the body holds the focus (a dialog's focus trap, a row).
+> - Do not edit `SidebarHost.ts` or `shellChrome.ts`.
+> - Do not weaken the `sidebar.ui.test.ts` case to make the new form pass.
+> - Do not mark the row `done` without SB14 or `blocked` on it.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - `npx vitest run src/webview/sidebar/SidebarView.test.tsx` → green with the four cases.
+> - The note holds the three local readings of DO 4, the reload check showing `in editor true` twice.
+> - `git diff --stat` of the push: `SidebarView.tsx`, `SidebarView.test.tsx`, `src/test/ui/v2/sidebar.ui.test.ts` and the docs duties only.
+> - CI run: the new UI case passes; `[keys] sidebar` and the ring line unchanged from run 43436877716; every sidebar `[fringe]` line `0 greyscale`; `[diff] summary` 0 above tolerance, or a moved two-section cell pasted with the box-only evidence.
+>
+> DEFECTS: none in a capture. The unconditional mount focus is refused here on the local readings and never reached CI.
+>
+> Files: /Users/mattias/github/nuiget/src/webview/sidebar/SidebarView.tsx, /Users/mattias/github/nuiget/src/webview/sidebar/SidebarView.test.tsx, /Users/mattias/github/nuiget/src/test/ui/v2/sidebar.ui.test.ts, /Users/mattias/github/nuiget/src/host/SidebarHost.ts (57-61), /Users/mattias/github/nuiget/docs/plans/STATUS-ux.md (row P3.8, line 112).
+
+### 2026-11-13, design-advisor, SB14 form 2 delivered to the exemplar's condition (verbatim)
+
+Brief: form 2 held the reload check, the first UI case failed, the activity-bar open gives the view no focus. Answer verbatim:
+
+> DECISION: Option b, as a ruling and not as a weakening. SB14 ships in the form now in the working tree, and the UI case is rewritten to the condition the exemplar actually states: the box takes the focus when the view takes the focus. The first-open gap you measured goes to its own host row behind the `architecture-advisor`. Not `OWNER MUST DECIDE`: the exemplar settles it.
+>
+> Checked:
+> - SB14's own source, `docs/research/2026-10-23-ux-research.md:992`: "The Extensions view focuses its search box whenever the view takes focus." X35 (line 594) says the same, verified there against the VS Code source.
+> - The sidebar view's id is `nuiget.sidebarView` (`package.json:73-74`), so the workbench provides the command `nuiget.sidebarView.focus`.
+> - Not verified: the local readings (macOS, illustrative), the uncommitted working tree, and whether that focus command moves the focus into the webview frame; DO 2 measures it.
+>
+> WHY:
+> - **The form matches the exemplar as the finding states it.** SB14's benchmark is "whenever the view takes focus", and the claim form does exactly that from inside the webview. My last ruling's UI case asked for more than the exemplar: focus after an open in which the workbench never gave the view the focus.
+> - **Your diagnostic shows the gap is not the webview's.** After the activity-bar open the top document's active element is `body` for 6 s and the sidebar document never gains the focus. No code inside the webview can tell that case from "the user is typing in an editor" except by taking the focus, which is the defect the last check refused.
+> - **The UI case was never committed**, so rewriting it removes no landed test. The four jsdom cases are the form's proof; the UI case proves the one path a real page adds.
+> - **The remaining half is a host question.** Whether the host can focus the view on a first resolve the user caused, without doing so at window start, depends on what the extension API can know. That is not a design call and not this item's file.
+> - **One known difference from the exemplar, accepted:** the claim runs once, so a user who left the focus on a row and returns finds it on the row, where the Extensions view would return to its box. It was ruled in the last answer and stays.
+>
+> DO:
+> 1. Keep `SidebarView.tsx` and the four jsdom cases as they are.
+> 2. Rewrite the new `sidebar.ui.test.ts` case, retitled to the condition (for example "the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)"): open the view as today, run the command `nuiget.sidebarView.focus` through the workbench, then poll, with the file's `poll`, that `sidebar-search-input` is the sidebar document's active element.
+> 3. Run it locally on a VSIX built from the working tree and paste the result with one reading line (top active element, sidebar `hasFocus`, sidebar active element) taken after the command.
+> 4. If the command does not move the focus into the frame (sidebar `hasFocus false` after it), stop and return with the lines. Do not substitute a click or another path without a ruling.
+> 5. Run the Tier A readings still owed (last ruling's DO 4, third bullet): the two-section states' `hasFocus` and active element, and the `[keys] sidebar` lines unchanged from run 43436877716. Paste them.
+> 6. Keep the reload-webviews reading already pasted (the editor keeps the focus at both readings) in the note as the proof that the form never takes the focus.
+> 7. If DO 3 and DO 5 hold, push. CI conditions as ruled before: every sidebar `[fringe]` line `0 greyscale`; `[diff]` 0 above tolerance, or a moved two-section cell pasted with box-only evidence; hard `[keys]` and ring lines unchanged.
+> 8. Record in the note, for the planning session, one proposed row; do not create it: "⚑ Host: the side bar's box on a first open. After the view is opened from the activity bar the workbench focus is nowhere (`[sb14-open]` lines) and the webview never gains it; the Extensions view has the focus in its box. Question for the `architecture-advisor`: can `SidebarHost` give the view the focus on a first resolve the user caused without taking it at window start. Names `src/host/SidebarHost.ts`." Fold the earlier Cmd+B observation (`ui/focusSearch` on every change to visible) into the same row.
+> 9. In the note and the docs duties, describe SB14 as delivered to the exemplar's condition, with the first-open gap named and its proposed row. The CHANGELOG headline must not promise focus on open.
+>
+> DO NOT:
+> - Do not return to an unconditional `focus()` at mount, a timer, or a retry that takes the focus.
+> - Do not edit `SidebarHost.ts` or `shellChrome.ts`, or send a new host message, in this item.
+> - Do not mark the row `blocked`, and do not close it by cutting SB14.
+> - Do not write the UI case so that it passes without the claim effect (check once that it fails with the effect stashed, and say so in the note).
+>
+> CONTRACT CHANGE: none in this item. The proposed host row needs the `architecture-advisor`.
+>
+> VERIFY:
+> - `npx vitest run src/webview/sidebar/SidebarView.test.tsx` → green, four SB14 cases.
+> - Local: the rewritten UI case passes with the effect and fails with it stashed; both results in the note.
+> - `git diff --stat` of the push: `SidebarView.tsx`, `SidebarView.test.tsx`, `src/test/ui/v2/sidebar.ui.test.ts` and the docs duties only.
+> - CI run: the new UI case passes; `[keys] sidebar` and the ring line unchanged; every sidebar `[fringe]` line `0 greyscale`; `[diff] summary` 0 above tolerance or the box-only evidence pasted.
+>
+> DEFECTS: none in a capture.
+>
+> Files: /Users/mattias/github/nuiget/src/webview/sidebar/SidebarView.tsx, /Users/mattias/github/nuiget/src/webview/sidebar/SidebarView.test.tsx, /Users/mattias/github/nuiget/src/test/ui/v2/sidebar.ui.test.ts, /Users/mattias/github/nuiget/src/host/SidebarHost.ts (57-61), /Users/mattias/github/nuiget/docs/research/2026-10-23-ux-research.md (594, 992), /Users/mattias/github/nuiget/package.json (73-74).
+
 ## Exact next step
 
-**UX-P3.8 is `open`, `after P3.fix-4`** (released 2026-11-13 by the planning session under the owner's delegation; the
-tracker row holds the rulings and the ratified deviations). The three proposed rows are placed: UX-P3.fix-4 (the H27 cure
-with the search box focused; the probe is its instrument; above this row), UX-P3.fix-5 (the compact-row badge centring,
-after this row and after P3.fix-4) and UX-P4.fix-1 (the ADR-013 Decision 2 and D31 sentence, before P4.2b). Pushes 1 and 2
-of this item are landed and are not repeated. Once P3.fix-4 is `done`, this row resumes at push 3, SB14, under the first
-design-advisor ruling's DO 13, 14, 15 and 16 (above, verbatim): `SidebarView.tsx` focuses the box once at mount with its
-jsdom test; the DO 14 local readings pasted before the push; on CI the two-section cells 0 px or differing inside the box
-only, with P3.fix-4's fringe rule green on them, adopted `approved` under DO 15 with `LIVE_SIDEBAR_CARET`; a `[keys]` or
-hard DS-FOCUS change goes back to the design-advisor (DO 16); the host half is a stop-and-ask only if the UI test shows
-the box unfocused at first reveal. Then `done`. If P3.fix-4 ends without a cure, this row waits on the owner-action row
-it leaves. No other row of this item starts while P3.fix-4 is not `done` (RUN-ux §3.2 `after`).
+UX-P3.8: read push 3's CI run against the SB14 rulings' VERIFY (the new UI case passes; `[keys] sidebar` and the ring line
+unchanged from run 43436877716; every sidebar `[fringe]` line `0 greyscale`; `[diff] summary` 0 above tolerance, or a moved
+two-section cell with box-only evidence, then adopted `approved` with `LIVE_SIDEBAR_CARET`), then close the row.
