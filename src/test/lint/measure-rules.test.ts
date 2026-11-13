@@ -861,6 +861,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, ...sidebarBrowse]);
         // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
         expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse]);
+        // UX-P3.8 follow-up 2: the remaining ruled lists, pinned so none widens (never sidebar-installed-loading where it has headers).
+        const except = (id: string) => RULES.find(rule => rule.id === id)?.exceptStates;
+        for (const id of ['DS-COPY-5', 'DS-HEIGHT-1', 'DS-TYPE-9']) {
+            expect(except(id), id).toEqual(sidebarBrowse);
+        }
+        expect(except('DS-TYPE-5')).toEqual(['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error']);
+        expect(except('DS-DIVIDER-1')?.slice(-3)).toEqual(['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error']);
+        expect(except('DS-DIVIDER-1')).not.toContain('sidebar-installed-loading');
+        expect(except('DS-DENSITY-1')?.slice(-4)).toEqual(sidebarNoRow);
+        expect(except('DS-ROW-5')?.slice(-4)).toEqual(sidebarNoRow);
+        expect(RULES.find(rule => rule.id === 'DS-HEIGHT-2')?.scopeExceptStates).toEqual({ sidebar: sidebarNoRow });
         expect(inset.scopeExceptStates).toEqual({ sidebar: ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading'] });
         // A list with no row and only its empty sentence has no group header either (the Updates tab of one project, UX-P3.1b).
         const empties = [{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 }];

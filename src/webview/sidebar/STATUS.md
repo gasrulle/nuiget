@@ -1,4 +1,4 @@
-# STATUS — src/webview/sidebar (UX-P3.8)   commit e3f3574 (push 2; read on run 43353120809; the closing commit adopts its cells)   2026-11-13
+# STATUS — src/webview/sidebar (UX-P3.8, blocked on SB14)   commit 57b28d9 (closing commit; this note completed after it)   2026-11-13
 
 git status --short src/webview/sidebar: clean before the edit.
 
@@ -30,6 +30,18 @@ After push 2's edits (on fe63e13, the review's fixes included):
   ops slice (`busyStatus` returned by `usePackageRows`; "Uninstalling" asserted after Delete, "Installing" in the install test);
   `measure-rules.test.ts` covers `cellList`'s two sidebar prefixes and DS-INSET-1's search-alone reading; a CHANGELOG `### Added` entry;
   the ARCHITECTURE sidebar paragraph; README's Delete row; matrix R262 and R61 narrowed; ADR-013 Decision 2 under Deviations.
+
+On 57b28d9 (after d136c89 and e3f3574, the gates of the tree as committed; precommit-review of the range below):
+
+- `npx tsc --noEmit` → exit 0; `npm run check-types` → exit 0; `npx eslint src` → exit 0
+- `npm test` → `Test Files  178 passed (178)`, `Tests  2489 passed | 9 skipped (2498)`, `[axe-coverage] 73 files, 42 rules passed somewhere, 0 missing`, exit 0
+- `npm run bench` → exit 0; `npx vitest run --project backend src/test/lint` → `Tests  425 passed (425)` (with the follow-up pins); `npm run docs:check` → agree
+- `precommit-review` (wf_9681c613-343, range `0343ba5..HEAD`): blocking 0, non-blocking 8, refuted 0, incomplete 0. Applied in the follow-up commit:
+  the remaining ruled exception lists pinned in `measure-rules.test.ts`; two DECISIONS rows (badge centring, DS-DIVIDER-1's browse reading);
+  the tracker row names the badge box, cause and rule; these gate lines; the placeholders below; a CHANGELOG `### Changed` bullet; a gotcha
+  row for a titled `Badge` read by `textContent`. Not applied: dropping `SIDEBAR_NO_ROW_STATES` from DS-HEIGHT-3, DS-ROW-1, DS-ROW-6 and
+  DS-ICON-3 (a no-op on rules without a sidebar scope, kept so the existing pin "these six share DS-ROW-4's exceptions" stays unchanged;
+  recorded under Deviations).
 
 H27 counts owed by this item (design-advisor DO 1). Coloured-fringe pixels = channel spread > 8, per 11 px band of rows, columns 0-285 (scratch script, not evidence beyond these numbers); bands 55 and 66 are the Installed pane header:
 
@@ -158,7 +170,11 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
 
 ## Done (untested)
 
-- Nothing yet.
+- The seven new cells on the Tier B lanes (the matrix themes at 200/300/400, the 1.90.0 floor in classic, macOS): no push runs them; the next
+  `tier=B` dispatch (the P3 gate) reads them.
+- The Browse row's Uninstall button and Delete outside jsdom: no UI test presses them (the capture suite never writes, by rule); jsdom proves the
+  `ops/remove` request and the busy status.
+- The H27 probe in the classic look: it runs in the `ui` lane's Modern UI pass only.
 
 ## Not started
 
@@ -169,8 +185,7 @@ Push 2 (jsdom and the lint suite; the UI job is its test):
 
 A fix row for H27 with the sidebar box in use, placed by the planning session. It carries: the four DO 1 counts above; form 1 (an opaque
 section, 82cb616, run 43342362387) and form 2 (an opaque search row, 853edd4, run 43344632890), both byte-identical in every sidebar
-crop; the probe lines and counts of push 2's run (below once read); the greyscale `baseline` cells to re-adopt when cured (below once
-read); as its first step a pixel rule for the coloured-fringe bands, landing `pending` on that row and failing on today's captures;
+crop; the probe lines and counts of push 2's run and the greyscale `baseline` cells to re-adopt when cured (both in the additions below); as its first step a pixel rule for the coloured-fringe bands, landing `pending` on that row and failing on today's captures;
 and the candidates in order: P-b or P-c greyscale with P-a LCD: the quick-search popup's `will-change: transform`
 (`src/webview/shared/search/search.css:25-28`, a ruled UX-P3.7a probe), scoped or replaced with the main quick-search cells re-proved;
 P-a greyscale: the box itself (its focus ring or caret layer). `sidebar-all-projects.dark-modern.300` stays at 124 px as the witness.
@@ -186,7 +201,12 @@ candidate is the box itself (its focus ring or caret layer). The lead: with the 
 pane rows, the empty sentence and the error banner are greyscale; both lists paint the carrier and neither overflows, so the first comparison is
 what differs between the two-section tree and the plain browse wrapper. Greyscale `baseline` cells to re-adopt when cured: `sidebar-filter`
 (its golden), `sidebar-browse-empty`, `sidebar-browse-error`, `sidebar-installed-loading`; `sidebar-all-projects.dark-modern.300` (124 px) is
-the witness. The probe stays in the suite as that row's instrument and is removed by it. SB14 waits on that row.
+the witness. The probe stays in the suite as that row's instrument and is removed by it. SB14 waits on that row. Not separated by any shot:
+"box focused" and "webview document focused" (every greyscale shot had both; no capture has the focus elsewhere in the side bar, and the first
+ruling's DO 14 was never read on CI): the fix row's first probe shot should put the focus on a row.
+
+Closing run 43356657101 on 57b28d9: green on every job; `[diff] summary: 96 compared, 95 at 0 px, 1 above tolerance, 0 without a golden, 0
+refused` (the eight new cells 0 px; `sidebar-all-projects.dark-modern.300: 124 px`, the witness); `differs` 0 in both looks.
 
 Second proposed row (follow-up 4; different cause, its own proving run): **compact row badge centring.** Box `sidebar-browse-hover.dark-modern.300`
 208,54,56,22 (run 43353120809, 6f160e53…); cause `primitives.css:490-494, 511-514, 623-649` (`.nuiget-row--compact .nuiget-row-body` is

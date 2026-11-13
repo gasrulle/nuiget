@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
 
 ### Changed
+- **The sidebar shows its loading bar in the section that loads, and an empty or failed search says so in place**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**
 - **Installed packages are listed alphabetically**
