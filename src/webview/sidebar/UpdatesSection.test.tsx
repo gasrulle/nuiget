@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ALL_PROJECTS, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
@@ -114,11 +114,51 @@ describe('sidebar: Updates section', () => {
         expect(updateOption('Moq')).toHaveAccessibleDescription(/Centrally managed/);
     });
 
-    it('an unreachable source is a banner with Retry, never "No updates available", and the header shows no count', async () => {
+    it('loads and revalidates under the pane\'s 2 px bar (UX-P3.10)', async () => {
+        const host = await mountWith();
+        // The first load: the bar over the skeleton.
+        expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Loading updates');
+        expect(skeletonRows().length).toBeGreaterThan(0);
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '4.0.0')] }, 1));
+        expect(screen.queryByTestId('sidebar-updates-progress')).toBeNull();
+        // A revalidation: the rows stay under the bar.
+        await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
+        expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Refreshing updates');
+        expect(updateOption('Serilog')).toBeInTheDocument();
+    });
+
+    it('a failed check with nothing listed is its error banner with Retry alone, never "No updates available" (UX-P3.10)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await hostSays(() => host.fail(host.requests('updates/get')[0], 'failed', 'the feed is down'));
+        const error = screen.getByTestId('sidebar-updates-error');
+        expect(error).toHaveTextContent('Updates could not be checked: the feed is down.');
+        expect(screen.queryByTestId('sidebar-updates-empty')).toBeNull();
+        expect(screen.queryByTestId('sidebar-updates-progress')).toBeNull();
+        await user.click(within(error).getByRole('button', { name: 'Retry' }));
+        expect(host.requests('updates/get')).toHaveLength(2);
+    });
+
+    it('an unsupported project shows its banner above its read-only rows, and no Update all (UX-P3.10)', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: PACKAGES, unsupported: { reason: 'sdk-too-old', message: 'needs SDK 10' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '4.0.0')] }, 1));
+        expect(screen.getByTestId('sidebar-updates-unsupported')).toHaveTextContent('Unsupported project: needs SDK 10.');
+        // Both panes open: the view's banner too, one full stop (DS-COPY-3); in @updates mode the pane's banner is the one message.
+        expect(screen.getByTestId('sidebar-unsupported')).toHaveTextContent(/Unsupported project: needs SDK 10\.$/);
+        expect(updateOption('Serilog')).toBeInTheDocument();
+        expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
+    });
+
+    it('an unreachable source is its banner with Retry alone, never an empty list, and the header shows no count (UX-P3.10)', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [], sourcesUnavailable: true });
         expect(screen.getByTestId('sidebar-updates-unavailable')).toHaveTextContent('could not be checked');
-        expect(screen.getByTestId('sidebar-updates-empty')).toHaveTextContent('Updates could not be checked.');
+        // The banner is the one message: no empty state marks an unknown as empty (design-advisor follow-up 1, F1).
+        expect(screen.queryByTestId('sidebar-updates-empty')).toBeNull();
         expect(screen.queryByText('No updates available.')).toBeNull();
         expect(header()).toHaveAccessibleName('Updates');
         await user.click(within(screen.getByTestId('sidebar-updates-unavailable')).getByRole('button', { name: 'Retry' }));

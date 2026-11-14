@@ -294,6 +294,9 @@ State markers (§4) and layer roots:
 | `sidebar-installed-empty`, `sidebar-updates-empty` | Empty state of a sidebar list |
 | `sidebar-installed-error` | Error state of the sidebar's installed list |
 | `sidebar-installed-progress`, `sidebar-browse-progress` | The 2 px progress bar of the sidebar's Installed pane (over its list's top edge on a first load, above the skeleton rows, and while it revalidates) and of its Browse results (alone on a first search, over the rows while it asks again) (UX-P3.8) |
+| `sidebar-updates-progress` | The 2 px progress bar of the sidebar's Updates pane, over its list's top edge on a first load and while it revalidates (UX-P3.10) |
+| `sidebar-updates-error` | The sidebar Updates pane's inline error with Retry; with nothing listed it is the one message (UX-P3.10) |
+| `sidebar-updates-unsupported` | Banner of a single unsupported project above its read-only update rows (UX-P3.10) |
 | `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's Browse empty state ("No results for "x".") and inline error with Retry (UX-P3.8) |
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
@@ -343,7 +346,5 @@ is a project or section name lower-cased, as above.
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 | Browse and details | `details-progress`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
-| Sidebar | `sidebar-updates-progress` | The 2 px progress bar of the sidebar's Updates pane (loading and revalidating) |
-| Sidebar | `sidebar-updates-error` | The sidebar's missing state marker: the Updates error |
 
 **Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The sidebar's Installed pane under All Projects has been one tree since UX-P3.7c (`group-row-folder-<folder>`, `group-row-project-<name>`, `section-header-project-<name>`; `sidebar-installed-list-<name>` left at UX-P3.7c); its Updates pane since UX-P3.7d (`group-row-updates-folder-<folder>`, `group-row-updates-project-<name>`, `section-header-updates-project-<name>`; `sidebar-updates-list-<name>` left at UX-P3.7d), so no per-project list id remains.

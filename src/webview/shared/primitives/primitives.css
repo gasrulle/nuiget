@@ -198,6 +198,13 @@
 
 .nuiget-row-message--compact {
     --nuiget-message-inset: calc(var(--nuiget-row-inset-x) + var(--nuiget-pane-header-padding-start));
+    /*
+     * A wrapped sentence is body text: its lines take the body line height, and the block padding keeps a one-line leaf at the
+     * compact row's height (DS-TYPE-4; UX-P3.10, design-advisor follow-up 1, F3).
+     */
+    box-sizing: border-box;
+    line-height: var(--nuiget-line-height);
+    padding-block: calc((var(--nuiget-row-height-compact) - var(--nuiget-line-height) * var(--nuiget-font-size-md)) / 2);
 }
 
 .nuiget-row--compact[data-level="2"] {
@@ -1076,7 +1083,8 @@
     content: '';
     position: absolute;
     inset-block-start: calc(50% - var(--nuiget-space-4) / 2);
-    inset-inline-start: var(--nuiget-inset-sidebar);
+    /* The bar starts where a level-1 compact row's name does (DS-INSET-1; UX-P3.10, design-advisor follow-up 1, F3). */
+    inset-inline-start: calc(var(--nuiget-row-inset-x) + var(--nuiget-pane-header-padding-start) + var(--nuiget-icon-size-md) + var(--nuiget-space-2));
     inline-size: 60%;
     block-size: var(--nuiget-space-4);
     border-radius: var(--nuiget-radius-xs);

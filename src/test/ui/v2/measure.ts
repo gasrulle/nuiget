@@ -211,9 +211,9 @@ const SIDEBAR_BROWSE_NO_LIST_STATES: readonly string[] = ['sidebar-browse-loadin
  * The sidebar cells with no row and no badge: the three above, the Installed pane's first load (SB13: no count) and the
  * Updates pane filtered to no row ('@updates' hides Installed; UX-P3.10 push A, red run 43603128771).
  */
-const SIDEBAR_NO_ROW_STATES: readonly string[] = [...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-nomatch'];
+const SIDEBAR_NO_ROW_STATES: readonly string[] = [...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
 /** The sidebar cells with nothing trailing visible at rest: no header end, no hovered row action, no group count. */
-const SIDEBAR_NO_TRAILER_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', ...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading'];
+const SIDEBAR_NO_TRAILER_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', ...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-loading'];
 /** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     // UX-P3.6: the sources dialog's cells (design-advisor ruling of 2026-11-07, DO 8).
@@ -254,6 +254,11 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'sidebar-browse-unavailable': ['sidebar-browse-unavailable'],
     'sidebar-installed-revalidating': ['sidebar-installed-progress'],
     'sidebar-all-projects-tools': ['sidebar-installed-empty-empty.csproj', 'sidebar-installed-unsupported-unsupported.csproj'],
+    // UX-P3.10 push B (opening ruling DO 6-7, 10).
+    'sidebar-updates-loading': ['sidebar-updates-progress'],
+    'sidebar-updates-revalidating': ['sidebar-updates-progress'],
+    'sidebar-updates-error': ['sidebar-updates-error'],
+    'sidebar-updates-unsupported': ['sidebar-updates-unsupported'],
     'main-quicksearch-loading': ['search-suggestions-loading'],
     'main-quicksearch-error': ['search-suggestions-error'],
 };
@@ -329,7 +334,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `icon-buttons` read in the side bar too, and `labels`, the disabled-label clause (design trigger 6).
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' }, labels: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, labels: ['main-browse-multi-install-dialog', 'sidebar-updates-nomatch'] } }),
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' }, labels: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -381,7 +386,8 @@ export const RULES: readonly RuleDefinition[] = [
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
         helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' },
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES,
+        // UX-P3.10 (design-advisor follow-up 1, F3): the side bar's All Projects trees read their message leaves too.
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$|^sidebar-all-projects/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
@@ -449,13 +455,17 @@ export function stateGroup(state: string): StateGroup {
  * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
  * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
  */
-export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' {
+export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' | 'sidebar-updates' {
     // The sidebar's Browse results and Installed pane carry their own hooks (UX-P3.8).
     if (state.startsWith('sidebar-browse-')) {
         return 'sidebar-browse';
     }
     if (state.startsWith('sidebar-installed-')) {
         return 'sidebar-installed';
+    }
+    // UX-P3.10 push B: the Updates pane's bar and list (`sidebar-updates-progress`, `sidebar-updates-list`).
+    if (state.startsWith('sidebar-updates-')) {
+        return 'sidebar-updates';
     }
     const group = stateGroup(state);
     if (group === 'sources') {
@@ -1712,9 +1722,18 @@ const stateCells = {
                     const lines = lineHeight > 0 ? Math.max(1, Math.round(range.getBoundingClientRect().height / lineHeight)) : 1;
                     return { lineHeight, height: round(rectOf(el.closest('.nuiget-row') || el).height), lines };
                 }),
-                disabledLabels: shown('[aria-disabled="true"], :disabled').filter(el => !el.closest('.nuiget-button, .nuiget-icon-button')).map(el => {
+                // The text that names a disabled thing (design-advisor follow-up 1, F2): a check box or radio paints no text of its own,
+                // so its label[for] or aria-labelledby element; any other disabled element with text, itself. Buttons stay out.
+                disabledLabels: [...new Set(shown('[aria-disabled="true"], :disabled').filter(el => !el.closest('.nuiget-button, .nuiget-icon-button')).flatMap(el => {
+                    const textless = el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
+                    if (!textless) {
+                        return el.textContent.trim() === '' ? [] : [el];
+                    }
+                    const named = [...(el.id ? document.querySelectorAll('label[for="' + CSS.escape(el.id) + '"]') : []), ...(el.getAttribute('aria-labelledby') || '').split(/\\s+/).filter(Boolean).map(id => document.getElementById(id))];
+                    return named.filter(label => label !== null && visible(label));
+                }))].map(el => {
                     const style = getComputedStyle(el);
-                    return { label: (el.dataset.testid || el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 40), colour: style.color, opacity: style.opacity };
+                    return { label: el.textContent.trim().slice(0, 40), colour: style.color, opacity: style.opacity };
                 }),
             };
         } catch (error) {
@@ -3543,7 +3562,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         }
         const target = layout.endOfP0.iconColours.disabled;
         return {
-            value: `disabled labels ${labels.length}: colour ${tally(labels.map(label => label.colour))}, opacity ${tally(labels.map(label => label.opacity))} (target ${target}, 1)`,
+            value: `disabled labels ${labels.length}: colour ${tally(labels.map(label => label.colour))}, opacity ${tally(labels.map(label => label.opacity))} (target ${target}, 1): ${labels.map(label => label.label).join(', ')}`,
             pass: labels.every(label => label.colour === target && label.opacity === '1'),
         };
     }

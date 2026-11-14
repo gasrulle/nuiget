@@ -3,6 +3,7 @@ import type React from 'react';
 import type { InstalledPackage, InstalledResult, ProjectInstalledChunk } from '../../protocol';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
+import { sentence } from '../shared/updates/sentence';
 import { Badge, Banner, cssVars, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
@@ -60,7 +61,7 @@ function AllProjectsTree({ chunks, filter, announce, revalidating, labelledBy, o
                 return;
             }
             if (result.unsupported !== undefined) {
-                list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'unsupported', marker, text: `Unsupported project: ${result.unsupported.message}` });
+                list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'unsupported', marker, text: `Unsupported project: ${sentence(result.unsupported.message)}` });
             } else if (result.packages.length === 0 && filter.trim() === '') {
                 list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'empty', marker, text: 'No packages installed.' });
             }

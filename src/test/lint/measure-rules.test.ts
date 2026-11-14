@@ -204,7 +204,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
         const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
             // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar cells with no row; UX-P3.10: the Updates pane filtered to none.
-            'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch'];
+            'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(noRow);
@@ -858,7 +858,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const updatesNoList = ['main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error'];
         // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar's Browse cells have no pane header, three of them and the Installed pane's first load no row.
         const sidebarBrowse = ['sidebar-browse-results', 'sidebar-browse-hover', 'sidebar-browse-revalidating', 'sidebar-browse-empty', 'sidebar-browse-loading', 'sidebar-browse-error', 'sidebar-browse-unavailable'];
-        const sidebarNoRow = ['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch'];
+        const sidebarNoRow = ['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
             expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList, 'sidebar-filter', ...sidebarNoRow]); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3); UX-P3.8: the sidebar cells with no row and no badge
@@ -881,10 +881,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(except('DS-TYPE-5')).toEqual(['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error']);
         expect(except('DS-DIVIDER-1')?.slice(-3)).toEqual(['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error']);
         expect(except('DS-DIVIDER-1')).not.toContain('sidebar-installed-loading');
-        expect(except('DS-DENSITY-1')?.slice(-5)).toEqual(sidebarNoRow);
-        expect(except('DS-ROW-5')?.slice(-5)).toEqual(sidebarNoRow);
+        expect(except('DS-DENSITY-1')?.slice(-6)).toEqual(sidebarNoRow);
+        expect(except('DS-ROW-5')?.slice(-6)).toEqual(sidebarNoRow);
         expect(RULES.find(rule => rule.id === 'DS-HEIGHT-2')?.scopeExceptStates).toEqual({ sidebar: sidebarNoRow });
-        expect(inset.scopeExceptStates).toEqual({ sidebar: ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', 'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading'] });
+        expect(inset.scopeExceptStates).toEqual({ sidebar: ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', 'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-loading'] });
         // A list with no row and only its empty sentence has no group header either (the Updates tab of one project, UX-P3.1b).
         const empties = [{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 }];
         expect(lineOf('main-updates-empty', cells({ empties }), 'DS-INSET-3@main-updates-empty/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
@@ -901,6 +901,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(cellList('main-quicksearch-open')).toBe('browse');
         expect(cellList('main-updates-loading')).toBe('updates');
         expect(cellList('main-updates-all')).toBe('updates');
+        // UX-P3.10 push B: the side bar's Updates pane.
+        expect(cellList('sidebar-updates-loading')).toBe('sidebar-updates');
         expect(cellList('main-installed-loading')).toBe('installed');
         expect(cellList('sidebar-browse-loading')).toBe('sidebar-browse');
         expect(cellList('sidebar-installed-loading')).toBe('sidebar-installed');
@@ -1463,14 +1465,14 @@ describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor 
     const withCells = (cells: Record<string, unknown>, heights: Partial<Heights> = {}) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] }, heights);
 
     it('reads disabled labels against disabledForeground at opacity 1, and the side bar\'s disabled icon buttons (DS-COLOR-6)', () => {
-        const name = 'DS-COLOR-6@sidebar-updates-nomatch/labels';
-        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [{ label: 'Serilog', colour: 'rgb(90, 90, 90)', opacity: '1' }] }), name))
-            .toMatchObject({ pass: true, status: { pending: 'P3.10' }, value: 'disabled labels 1: colour rgb(90, 90, 90), opacity 1 (target rgb(90, 90, 90), 1)' });
-        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [{ label: 'Serilog', colour: 'rgb(204, 204, 204)', opacity: '0.4' }] }), name)?.pass).toBe(false);
-        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no disabled label)' });
-        expect(lineOf('sidebar-updates-nomatch', withCells({ clauseError: 'TypeError: x' }), name)).toMatchObject({ pass: false, value: 'not measurable (collector: TypeError: x)' });
-        // Only the two states that show one; no other side bar cell prints the clause.
-        expect(lineOf('sidebar-sections', withCells({ disabledLabels: [] }), 'DS-COLOR-6@sidebar-sections/labels')).toBeUndefined();
+        const name = 'DS-COLOR-6@main-browse-multi-install-dialog/labels';
+        expect(lineOf('main-browse-multi-install-dialog', withCells({ disabledLabels: [{ label: 'Unsupported.csproj', colour: 'rgb(90, 90, 90)', opacity: '1' }] }), name))
+            .toMatchObject({ pass: true, status: { pending: 'P3.10' }, value: 'disabled labels 1: colour rgb(90, 90, 90), opacity 1 (target rgb(90, 90, 90), 1): Unsupported.csproj' });
+        expect(lineOf('main-browse-multi-install-dialog', withCells({ disabledLabels: [{ label: 'Unsupported.csproj', colour: 'rgb(204, 204, 204)', opacity: '0.4' }] }), name)?.pass).toBe(false);
+        expect(lineOf('main-browse-multi-install-dialog', withCells({ disabledLabels: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no disabled label)' });
+        expect(lineOf('main-browse-multi-install-dialog', withCells({ clauseError: 'TypeError: x' }), name)).toMatchObject({ pass: false, value: 'not measurable (collector: TypeError: x)' });
+        // The dialog only (follow-up 1, F2): the side bar's no-match cell has no disabled label, only the icon button.
+        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [] }), 'DS-COLOR-6@sidebar-updates-nomatch/labels')).toBeUndefined();
         const button: Heights['iconButtons'][number] = { inHeader: true, width: 22, height: 22, hit: { width: 24, height: 24 }, label: 'Update all (0)', glyph: { w: 16, h: 16 }, colour: 'rgb(90, 90, 90)', background: 'rgba(0, 0, 0, 0)', radius: '5px', disabled: true, hovered: false, band: undefined, listFocused: false, multi: false, severity: false };
         expect(lineOf('sidebar-updates-nomatch', layout({}, { iconButtons: [button] }), 'DS-COLOR-6@sidebar-updates-nomatch/icon-buttons'))
             .toMatchObject({ pass: true, status: { pending: 'P3.10' }, value: 'disabled 1: colour rgb(90, 90, 90) (target disabledForeground)' });

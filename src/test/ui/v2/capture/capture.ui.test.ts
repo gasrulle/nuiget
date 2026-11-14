@@ -127,9 +127,9 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
-const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch'];
+const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error'];
 
 /**
  * Holds every envelope of one request type (`installed/get`, or `updates/get` since UX-P3.1b; one type per hold, never two)
@@ -1231,6 +1231,77 @@ const REACH: Record<string, Reach> = {
         settled: () => SIDEBAR_INSTALLED_TOOLS_SETTLED(),
         leave: async () => {
             await REACH['sidebar-all-projects'].leave?.();
+        },
+    },
+    // UX-P3.10 push B (opening ruling DO 6-7, 10): the Updates pane's bar, error and unsupported cells.
+    'sidebar-updates-loading': {
+        reach: async () => {
+            // The Updates pane alone, so no Installed row counts as a row of the cell (as sidebar-installed-loading).
+            await sidebarSections();
+            await typeHeld(await findByTestId('sidebar-search-input', 30_000), '@updates ', 'sidebar-updates-loading');
+            await findByTestId('sidebar-updates-list', 30_000);
+            await holdRequest('updates/get');
+            await sidebarChooses('Utility.csproj');
+            await until('window.__nuigetHold.held.length > 0', 'the held update check', 60_000);
+            await until('document.querySelector(\'[data-testid="sidebar-updates-progress"]\') !== null && document.querySelectorAll(".nuiget-skeleton-row").length > 0 && document.querySelector(".nuiget-sidebar .nuiget-row-option") === null', 'the pane loading: its bar and skeleton, no row');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-updates-loading');
+            await leaveSidebarSearch();
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
+        },
+    },
+    'sidebar-updates-revalidating': {
+        reach: async () => {
+            await sidebarSections();
+            await typeHeld(await findByTestId('sidebar-search-input', 30_000), '@updates ', 'sidebar-updates-revalidating');
+            await poll(async () => ((await driverOf().findElements(By.css('[data-testid="sidebar-updates-list"] .nuiget-row-option'))).length > 0 ? true : undefined), 'an update row in the sidebar', 120_000);
+            await holdRequest('updates/get');
+            await leaveWebview();
+            await enterMainWebview();
+            await clickVisible('refresh-button');
+            await leaveWebview();
+            await enterSidebarWebview();
+            await until('window.__nuigetHold.held.length > 0', 'the held update check', 60_000);
+            await until('document.querySelector(\'[data-testid="sidebar-updates-progress"]\') !== null && document.querySelector(\'[data-testid="sidebar-updates-list"]\')?.getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="sidebar-updates-list"] .nuiget-row-option\') !== null', 'the rows under the bar, the list busy');
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-updates-revalidating');
+            await leaveSidebarSearch();
+        },
+    },
+    'sidebar-updates-error': {
+        reach: async () => {
+            // Both panes, as sidebar-updates-unavailable: Utility's check held in the sidebar document and failed.
+            await sidebarSections();
+            await holdRequest('updates/get');
+            await sidebarChooses('Utility.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer');
+            await failHeld('sidebar-updates-error', 'The package sources could not be read.');
+            await until('document.querySelector(\'[data-testid="sidebar-updates-error"] button\') !== null && document.querySelector(\'[data-testid="sidebar-updates-empty"]\') === null', 'the inline error with Retry, alone');
+            await parkSidebarPointer();
+        },
+        leave: leaveSidebarHold,
+    },
+    'sidebar-updates-unsupported': {
+        reach: async () => {
+            await sidebarSections();
+            await sidebarChooses('Unsupported.csproj');
+            await typeHeld(await findByTestId('sidebar-search-input', 30_000), '@updates ', 'sidebar-updates-unsupported');
+            await until('document.querySelector(\'[data-testid="sidebar-updates-unsupported"]\') !== null && document.querySelector(\'[data-testid="sidebar-updates-list"] .nuiget-row-option\') !== null && document.querySelector(\'[data-testid="sidebar-updates-progress"]\') === null && document.querySelector(\'[data-testid="sidebar-update-all-button"]\') === null', 'the banner above the read-only update rows, no Update all', 120_000);
+            await parkSidebarPointer();
+        },
+        leave: async () => {
+            await leaveSidebarSearch();
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
         },
     },
     'sidebar-update-all-dialog': {

@@ -4,7 +4,7 @@ import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
 import { updateCandidates } from '../shared/installed/rules';
-import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, Listbox, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
+import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
@@ -27,10 +27,8 @@ export interface UpdatesSectionProps {
     share?: string;
 }
 
-function emptyMessage(sourcesUnavailable: boolean, total: number, filter: string): string {
-    if (sourcesUnavailable && total === 0) {
-        return 'Updates could not be checked.';
-    }
+/** The empty sentence of one project's list. A check that could not be made is its banner alone, never an empty list (UX-P3.10). */
+function emptyMessage(total: number, filter: string): string {
     return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
 }
 
@@ -214,7 +212,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 {stream.sourcesUnavailable
                     ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>Some package sources could not be checked.</Banner>
                     : null}
-                {stream.error ? <Banner severity="error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates could not be checked: ${stream.error.message}`}</Banner> : null}
+                {stream.error ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates could not be checked: ${sentence(stream.error.message)}`}</Banner> : null}
                 {chunks.filter(chunk => chunk.error !== undefined).map(chunk => (
                     <Fragment key={chunk.projectPath}>
                         <Banner severity="error" data-testid={`sidebar-updates-error-${(projectGroups.get(chunk.projectPath) ?? `${PROJECT_GROUP}${chunk.projectPath.toLowerCase()}`).slice(PROJECT_GROUP.length)}`} action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates of ${chunk.projectName} could not be checked: ${sentence(chunk.error ?? 'unknown error')}`}</Banner>
@@ -238,15 +236,21 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
         }
         const single = updateCandidates(visibleUpdates(rows, filter), installed.result, id => isPackageBusy(projectPath, id));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
+        // A check that could not be made, or failed, with nothing to list: its banner is the one message (UX-P3.10 follow-up 1, F1).
+        const bannerAlone = rows.length === 0 && (updates.sourcesUnavailable || updates.error !== undefined);
+        const unsupported = installed.result?.unsupported;
         content = (
             <>
+                {unsupported !== undefined
+                    ? <Banner severity="warning" data-testid="sidebar-updates-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner>
+                    : null}
                 {updates.sourcesUnavailable
                     ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked.</Banner>
                     : null}
                 {updates.error
-                    ? <Banner severity="error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${updates.error.message}`}</Banner>
+                    ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${sentence(updates.error.message)}`}</Banner>
                     : null}
-                <ProjectUpdates
+                {bannerAlone ? null : <ProjectUpdates
                     projectPath={projectPath}
                     rows={rows}
                     installed={installed.result}
@@ -255,15 +259,17 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                     labelledBy={titleId}
                     testId="sidebar-updates-list"
                     busy={updates.revalidating}
-                    empty={emptyMessage(updates.sourcesUnavailable, rows.length, filter.trim())}
+                    empty={emptyMessage(rows.length, filter.trim())}
                     selectedId={selectedId}
                     onSelectedChange={setSelectedId}
-                />
+                />}
             </>
         );
     }
 
     const candidates = groups.flatMap(group => group.updates);
+    // The pane loads or revalidates: its 2 px bar over the list's top edge, as the Installed pane's (DS-STATE-2, UX-P3.10).
+    const loadingFirst = all.active ? all.updates.status === 'loading' : updates.status === 'loading';
     const confirm = (): void => {
         setConfirming(false);
         const failed = (error: unknown): void => announce(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -298,7 +304,12 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                     </IconButton>
                 ) : undefined}
             />
-            {expanded ? <div className="nuiget-sidebar-section-content" id={contentId}>{content}</div> : null}
+            {expanded ? (
+                <div className="nuiget-sidebar-section-content" id={contentId}>
+                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? 'Loading updates' : 'Refreshing updates'} data-testid="sidebar-updates-progress" /></div> : null}
+                    {content}
+                </div>
+            ) : null}
             <UpdateAllDialog
                 open={confirming && candidates.length > 0}
                 updates={candidates}

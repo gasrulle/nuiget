@@ -309,7 +309,8 @@ describe('sidebar: Installed section', () => {
 
     it('revalidate without blanking: the rows stay, the list is busy and a progress bar shows until the new list is there', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
-        expect(screen.queryByRole('progressbar')).toBeNull();
+        // The Installed pane's bar; the Updates pane has its own while its check is unanswered (UX-P3.10).
+        expect(screen.queryByRole('progressbar', { name: /installed packages/ })).toBeNull();
         // Something else was said since the first load, so that a second "Loading" would show.
         await hostSays(() => host.event('ops/completed', removed('op-main', 'xunit')));
         await waitFor(() => expect(said()).toBe('Uninstalled xunit'));
@@ -330,7 +331,8 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, [pkg('Serilog'), pkg('Moq'), pkg('xunit')]), 2));
         expect(names()).toEqual(['Moq', 'Serilog', 'xunit']);
         expect(list()).not.toHaveAttribute('aria-busy');
-        expect(screen.queryByRole('progressbar')).toBeNull();
+        // The Installed pane's bar; the Updates pane has its own while its check is unanswered (UX-P3.10).
+        expect(screen.queryByRole('progressbar', { name: /installed packages/ })).toBeNull();
     });
 
     it('another project: its packages replace the list after skeleton rows, never mixed', async () => {
