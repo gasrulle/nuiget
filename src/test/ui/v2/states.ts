@@ -276,8 +276,31 @@ export const STATES: readonly NamedState[] = [
         '"Newtonsoft.Json" searched in the sidebar box with its held answer released as a failure, one fixed sentence: the inline error with Retry (marker sidebar-browse-error).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-installed-loading', 'sidebar', [primary('sidebar')],
         '"@installed" typed in the sidebar box, the sidebar\'s Installed answers then held and Utility chosen in the main panel: the pane loading under its 2 px bar with its skeleton rows and the header spinner, no count beside it (marker sidebar-installed-progress, SB13); released after the capture.', [LIVE_MOTION, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
-    pending('sidebar-updates-unavailable', 'sidebar', 'P3.10', 'No source answered the update check: the sidebar banner.'),
-    pending('sidebar-browse-unavailable', 'sidebar', 'P3.10', 'No source answered the search: the sidebar banner.'),
+    // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 2-3): the sidebar cells today's markers show, and the
+    // cells that wait for their markers (pushes B to D).
+    { ...ready('sidebar-updates-unavailable', 'sidebar', [primary('sidebar')],
+        'Gateway listed, Utility chosen in the main panel with the sidebar\'s update check held and rewritten to the host\'s "no source answered" answer: the Updates banner with Retry and no update row; ended with the hold.', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-updates-empty', 'sidebar', [primary('sidebar')],
+        'Utility chosen with the sidebar\'s update check held and rewritten to the host\'s "no update" answer: the welcome-style "No updates available." sentence (marker sidebar-updates-empty).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-updates-nomatch', 'sidebar', [primary('sidebar')],
+        '"@updates zz-no-match" typed with Gateway selected: "No updates match" in the Updates pane and Update all disabled (DS-COLOR-6 icon-buttons and labels).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-browse-unavailable', 'sidebar', [primary('sidebar')],
+        '"Newtonsoft.Json" searched in the sidebar box with its held answer rewritten to the form the host gives when a source could not be checked: the banner over the rows of the ones that answered.', [LIVE_SIDEBAR_RESULTS, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-installed-revalidating', 'sidebar', [primary('sidebar')],
+        '"@installed" typed, Gateway listed, then its next answer held while the main panel\'s Refresh asks again: the rows under the pane\'s 2 px bar, the list aria-busy; released after the capture.', [LIVE_MOTION, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-all-projects-tools', 'sidebar', [primary('sidebar')],
+        'All Projects with "@installed" typed, the tree pinned at the Tools folder: the Empty and Unsupported message leaves rendered (a new cell beside sidebar-all-projects, whose golden stays).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    pending('sidebar-updates-loading', 'sidebar', 'P3.10', 'The Updates pane\'s first load: its 2 px bar (marker sidebar-updates-progress).'),
+    pending('sidebar-updates-revalidating', 'sidebar', 'P3.10', 'The Updates rows under the pane\'s 2 px bar while the check is asked again (marker sidebar-updates-progress).'),
+    pending('sidebar-updates-error', 'sidebar', 'P3.10', 'The update check failed: the inline error with Retry (marker sidebar-updates-error).'),
+    pending('sidebar-updates-unsupported', 'sidebar', 'P3.10', 'An unsupported project in @updates mode: the banner above its read-only rows (marker sidebar-updates-unsupported).'),
+    pending('main-updates-unsupported', 'main', 'P3.10', 'An unsupported project on the Updates tab: the banner above its read-only rows (marker updates-unsupported).'),
+    pending('main-details-loading', 'main', 'P3.10', 'The details pane while the selection\'s first metadata loads: its 2 px bar (marker details-progress).'),
+    pending('main-details-error', 'main', 'P3.10', 'The details metadata failed: the inline error with Retry (marker details-error).'),
+    pending('main-details-readonly', 'main', 'P3.10', 'A selection kept while another project loads: the stale note (marker details-readonly).'),
+    pending('main-details-unsupported', 'main', 'P3.10', 'A selection in an unsupported project: why it cannot be changed (marker details-readonly).'),
+    pending('main-readme-loading', 'main', 'P3.10', 'The README tab while its content loads: its 2 px bar (marker readme-progress).'),
+    pending('main-readme-error', 'main', 'P3.10', 'The README failed: the inline error (marker readme-error).'),
 ];
 
 /**

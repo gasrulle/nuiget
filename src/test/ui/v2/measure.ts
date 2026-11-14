@@ -243,6 +243,13 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'sidebar-browse-empty': ['sidebar-browse-empty'],
     'sidebar-browse-error': ['sidebar-browse-error'],
     'sidebar-installed-loading': ['sidebar-installed-progress'],
+    // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 2).
+    'sidebar-updates-unavailable': ['sidebar-updates-unavailable'],
+    'sidebar-updates-empty': ['sidebar-updates-empty'],
+    'sidebar-updates-nomatch': ['sidebar-updates-empty'],
+    'sidebar-browse-unavailable': ['sidebar-browse-unavailable'],
+    'sidebar-installed-revalidating': ['sidebar-installed-progress'],
+    'sidebar-all-projects-tools': ['sidebar-installed-empty-empty.csproj', 'sidebar-installed-unsupported-unsupported.csproj'],
     'main-quicksearch-loading': ['search-suggestions-loading'],
     'main-quicksearch-error': ['search-suggestions-error'],
 };
