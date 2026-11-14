@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **High contrast themes outline the selected and the hovered tab**
 - **The sidebar shows its loading bar in the section that loads, and an empty or failed search says so in place**
 - **The sidebar's Updates section shows a loading bar, a banner for an unsupported project, and one message when updates could not be checked**
+- **The package details and README show a loading bar while they load**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**
 - **Installed packages are listed alphabetically**
@@ -59,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 
 ### Fixed
+- **A package of an unsupported project can no longer be installed or updated from the details pane**
 - **Sidebar text stays sharp while the search box has focus**
 - **A package stays marked busy while its operation waits in the queue**
 - **A password with a %VAR% placeholder inside a longer value is stored in clear text so the variable is read**

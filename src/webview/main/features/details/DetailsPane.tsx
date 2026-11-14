@@ -117,6 +117,9 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
         primaryWhy = undefined;
     } else if (!canChange) {
         primaryWhy = stale ? 'Checking the selected project' : 'Select a single project to install or change this package';
+    } else if (ownResult?.unsupported !== undefined) {
+        // A read-only project (D13): the reason at the disabled control, one full stop (UX-P3.10, design-advisor follow-up 3).
+        primaryWhy = `Unsupported project: ${ownResult.unsupported.message.replace(/\.+$/, '')}`;
     } else if (fixedVersion) {
         primaryWhy = 'A floating or ranged version is changed in the project file';
     } else if (entry?.declaration === 'unresolved') {
@@ -166,7 +169,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
         <div className="nuiget-details">
             <div className="nuiget-details-header" data-testid="details-header">
                 <h2 className="nuiget-details-title"><span className="nuiget-details-name" title={selection.packageId}>{selection.packageId}</span></h2>
-                {stale ? <Banner severity="info">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
+                {stale ? <Banner severity="info" data-testid="details-readonly">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
                 {/* One grid for the installed and the version rows: label, value, action (P9.fix-5). */}
                 <div className="nuiget-details-actions">
                     {entry !== undefined ? (
@@ -216,7 +219,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         </Button>
                     ) : null}
                 </div>
-                {noteShown ? <p className="nuiget-details-note" id={noteId}>{`${primaryWhy}.`}</p> : null}
+                {noteShown ? <p className="nuiget-details-note" id={noteId} data-testid={canChange && ownResult?.unsupported !== undefined ? 'details-readonly' : undefined}>{`${primaryWhy}.`}</p> : null}
                 {entry !== undefined && isCentral(entry) ? (
                     <p className="nuiget-details-note">Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only.</p>
                 ) : null}

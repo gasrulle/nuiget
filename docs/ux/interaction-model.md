@@ -266,6 +266,9 @@ project has several and one block per project in All Projects; no version select
 | `package-details-panel`, `details-tab-details`, `details-tab-readme`, `readme-content`, `readme-empty`, `transitive-details` | Details panel |
 | `details-header`, `details-tab-bar` | The details pane's header (its 20 px inset is measured on it, in the package and the transitive views) and its 36 px tab strip |
 | `details-empty` | The details pane's empty state, "Select a package to see its details." |
+| `details-progress`, `readme-progress` | The 2 px bar over the details facts' skeleton while the selection's metadata loads, and over the README's while it loads (UX-P3.10) |
+| `details-error`, `readme-error` | The inline error with Retry of the details facts and of the README (UX-P3.10) |
+| `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
@@ -345,6 +348,5 @@ is a project or section name lower-cased, as above.
 | Added by | Test id or attribute | Element |
 |---|---|---|
 | Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
-| Browse and details | `details-progress`, `details-error`, `details-readonly`, `readme-progress`, `readme-error` | The details pane's progress bar, inline error, the read-only note of a stale or unsupported selection, and the README's progress bar and inline error |
 
 **Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The sidebar's Installed pane under All Projects has been one tree since UX-P3.7c (`group-row-folder-<folder>`, `group-row-project-<name>`, `section-header-project-<name>`; `sidebar-installed-list-<name>` left at UX-P3.7c); its Updates pane since UX-P3.7d (`group-row-updates-folder-<folder>`, `group-row-updates-project-<name>`, `section-header-updates-project-<name>`; `sidebar-updates-list-<name>` left at UX-P3.7d), so no per-project list id remains.

@@ -127,9 +127,9 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating'];
+const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
-const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error'];
+const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error', 'main-details-error', 'main-readme-error'];
 
 /**
  * Holds every envelope of one request type (`installed/get`, or `updates/get` since UX-P3.1b; one type per hold, never two)
@@ -180,7 +180,7 @@ window.postMessage = function (data, ...rest) {
     return undefined;
 };`;
 
-type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list';
+type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
 type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty';
 
@@ -277,6 +277,13 @@ async function typeInSearch(text: string): Promise<void> {
     const search = await findByTestId('search-input', 30_000);
     await search.click();
     await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, text);
+}
+
+/** Makes a row current and waits for its selection in the details panel only: a held cell withholds what `currentDetails` waits for (UX-P3.10). */
+async function selectRow(rowTestId: string): Promise<void> {
+    await (await optionOf(rowTestId)).click();
+    const id = rowTestId.replace(/^package-row-/, '');
+    await poll(async () => (((await (await findByTestId('package-details-panel', 30_000)).getAttribute('textContent')) ?? '').toLowerCase().includes(id) ? true : undefined), `${id} in the details panel`, 30_000);
 }
 
 async function currentDetails(rowTestId: string): Promise<void> {
@@ -943,6 +950,75 @@ const REACH: Record<string, Reach> = {
             await endHold();
             await (await findByTestId('search-input')).sendKeys(Key.ESCAPE, Key.ESCAPE);
         },
+    },
+    // UX-P3.10 push C (opening ruling DO 11-13; follow-up 1, B; follow-up 3): the details and README cells.
+    'main-details-empty': {
+        reach: async () => {
+            await gatewayInstalled();
+            await until('document.querySelector(\'[data-testid="details-empty"]\') !== null', 'the details pane with no row current');
+        },
+    },
+    'main-details-loading': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('package/metadata');
+            await selectRow('package-row-serilog');
+            await until('window.__nuigetHold.held.length > 0', 'the held metadata', 60_000);
+            await until('document.querySelector(\'[data-testid="details-progress"]\') !== null && document.querySelectorAll(\'[data-testid="package-details-panel"] .nuiget-skeleton-row\').length > 0', 'the bar over the skeleton facts');
+        },
+        leave: () => releaseHeld('main-details-loading'),
+    },
+    'main-details-error': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('package/metadata');
+            await selectRow('package-row-serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer', 60_000);
+            await failHeld('main-details-error', 'The package source could not be read.');
+            await until('document.querySelector(\'[data-testid="details-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endHold,
+    },
+    'main-details-readonly': {
+        reach: async () => {
+            // Serilog current on Gateway, then Utility chosen with its list held: the selection kept read-only under its note.
+            await gatewayInstalled();
+            await currentDetails('package-row-serilog');
+            await holdRequest('installed/get');
+            await chooseFixtureProject('Utility.csproj');
+            await until('document.querySelector(\'[data-testid="details-readonly"]\') !== null', 'the stale note');
+        },
+        leave: () => releaseHeld('main-details-readonly'),
+    },
+    'main-details-unsupported': {
+        reach: async () => {
+            await REACH['main-installed-unsupported'].reach();
+            await currentDetails('package-row-polly');
+            await until('document.querySelector(\'[data-testid="details-readonly"]\') !== null && document.querySelector(\'[data-testid="install-update-button"]\')?.disabled === true', 'the read-only note at the disabled control');
+        },
+    },
+    'main-readme-loading': {
+        reach: async () => {
+            await gatewayInstalled();
+            await currentDetails('package-row-serilog');
+            await holdRequest('package/readme');
+            await clickVisible('details-tab-readme');
+            await until('window.__nuigetHold.held.length > 0', 'the held README', 60_000);
+            await until('document.querySelector(\'[data-testid="readme-progress"]\') !== null', 'the bar over the README skeleton');
+        },
+        leave: () => releaseHeld('main-readme-loading'),
+    },
+    'main-readme-error': {
+        reach: async () => {
+            await gatewayInstalled();
+            await currentDetails('package-row-serilog');
+            await holdRequest('package/readme');
+            await clickVisible('details-tab-readme');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer', 60_000);
+            await failHeld('main-readme-error', 'The package source could not be read.');
+            await until('document.querySelector(\'[data-testid="readme-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endHold,
     },
     'main-details-readme': {
         reach: async () => {

@@ -27,7 +27,7 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
     await Promise.resolve();
 });
 
-async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0')], isCpm = false): Promise<FakeHost> {
+async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0')], isCpm = false, unsupported?: { reason: 'sdk-too-old'; message: string }): Promise<FakeHost> {
     const host = createFakeHost();
     render(
         <StoreProvider bus={host.bus}>
@@ -41,7 +41,7 @@ async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0'
     );
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
     await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
-    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm, packages }, 1));
+    await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm, packages, ...(unsupported === undefined ? {} : { unsupported }) }, 1));
     await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: SOURCES, failed: [] }, 1));
     return host;
 }
@@ -505,6 +505,38 @@ describe('main panel: details', () => {
         await hostSays(() => host.fail(host.requests('package/readme')[1], 'failed', 'timeout'));
         await user.click(within(pane()).getByRole('button', { name: 'Retry' }));
         expect(host.requests('package/readme')).toHaveLength(3);
+    });
+
+    it('marks the details and README cells: their bars while loading, their errors with one full stop, the stale note (UX-P3.10)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        // The selection's metadata is unanswered: the bar over the skeleton facts.
+        expect(screen.getByTestId('details-progress')).toHaveAccessibleName('Loading details');
+        await hostSays(() => host.fail(metadataOf(host)[0], 'failed', 'the feed is down'));
+        expect(screen.queryByTestId('details-progress')).toBeNull();
+        expect(screen.getByTestId('details-error')).toHaveTextContent('Details could not be loaded: the feed is down.');
+        await user.click(screen.getByTestId('details-tab-readme'));
+        expect(screen.getByTestId('readme-progress')).toHaveAccessibleName('Loading the README');
+        await hostSays(() => host.fail(host.requests('package/readme')[0], 'failed', 'timeout.'));
+        expect(screen.queryByTestId('readme-progress')).toBeNull();
+        expect(screen.getByTestId('readme-error')).toHaveTextContent('The README could not be loaded: timeout.');
+        expect(screen.getByTestId('readme-error')).not.toHaveTextContent('timeout..');
+        // Another project chosen: the selection is kept read-only under its note.
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(screen.getByTestId('details-readonly')).toHaveTextContent('Showing Serilog of App until the packages of the selected project are listed.');
+    });
+
+    it('a selection in an unsupported project offers no write: Update/Install disabled and described by the read-only note, Uninstall disabled with its reason (UX-P3.10)', async () => {
+        const host = await mountReady([pkg('Serilog', '3.0.0')], false, { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer.' });
+        await selectInstalled(host);
+        await userEvent.setup().selectOptions(selector(), '3.1.0');
+        const note = screen.getByTestId('details-readonly');
+        expect(note.textContent).toBe('Unsupported project: requires .NET SDK 10 or newer.');
+        expect(primary()).toBeDisabled();
+        expect(primary()).toHaveAccessibleDescription('Unsupported project: requires .NET SDK 10 or newer.');
+        expect(screen.getByTestId('uninstall-button')).toBeDisabled();
+        expect(screen.getByTestId('uninstall-button')).toHaveAttribute('title', 'Serilog cannot be uninstalled: requires .NET SDK 10 or newer.');
     });
 
     it('stale selection: another project keeps the details read-only until its list confirms the package', async () => {

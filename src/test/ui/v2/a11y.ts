@@ -127,9 +127,11 @@ export interface AxePending {
  * it) are decided by the resolve pass (`RESOLVE_CONTRAST`), which decided every node of their 17 states in run 40152178889,
  * in both looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
  * UX-P3.3b held the README results of `main-details-readme` here; UX-P3.4 removed them (underlined links, link-only list items
- * on a 24 px line; design-advisor ruling of 2026-11-07).
+ * on a 24 px line; design-advisor ruling of 2026-11-07). UX-P3.10 (design-advisor follow-up 4, B): the facts' links (`dd > a`) of
+ * `main-details-readonly` are under 24 px apart; P3.12 raises `PropertyList`'s row pitch with `main-installed-details#D2` and
+ * removes the entry.
  */
-export const AXE_PENDING: readonly AxePending[] = [];
+export const AXE_PENDING: readonly AxePending[] = [{ rule: 'target-size', kind: 'violation', item: 'P3.12', states: ['main-details-readonly'] }];
 
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {

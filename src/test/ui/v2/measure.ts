@@ -193,14 +193,15 @@ const BROWSE_NO_LIST_STATES: readonly string[] = ['main-browse-loading', 'main-b
 const POPUP_STATES: readonly string[] = ['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped'];
 /** The popup's state cells: their markers are DS-STATE-1's; the list-cell rules (a bar, a banner, a welcome sentence) do not read a popup row. */
 const POPUP_CELL_STATES: readonly string[] = ['main-quicksearch-loading', 'main-quicksearch-error'];
-const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES];
+// UX-P3.10 push C: main-details-readonly keeps a selection while the next project's list loads, as main-installed-loading shows it.
+const NO_LIST_STATES: readonly string[] = ['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES];
 /** UX-P3.7b (design-advisor ruling, trigger 1): the filtered sidebar shows `k of N` text in the badge's place (DS-COPY-5) and no row badge; the badge rules have nothing to read. */
 const NO_BADGE_STATES: readonly string[] = ['sidebar-filter'];
 /**
  * The states without a list row by design. The quick-search popup states stay here: a popup option is no list row, and the
  * `popup` scope of DS-RADIUS-2 and DS-HEIGHT-2 reads it (design-advisor ruling of 2026-11-06, UX-P3.2).
  */
-const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
 // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): what a sidebar Browse or loading cell does not show, by fact.
 /** Browse results replace the sections: no pane header in any sidebar Browse cell (interaction model §2). */
 // UX-P3.10 push A (red run 43603128771): sidebar-browse-unavailable is a Browse cell too, by the same fact.
@@ -214,6 +215,12 @@ const SIDEBAR_BROWSE_NO_LIST_STATES: readonly string[] = ['sidebar-browse-loadin
 const SIDEBAR_NO_ROW_STATES: readonly string[] = [...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
 /** The sidebar cells with nothing trailing visible at rest: no header end, no hovered row action, no group count. */
 const SIDEBAR_NO_TRAILER_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', ...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-loading'];
+/**
+ * UX-P3.10 push C, by fact: the details cells with no facts block (the README tab, the empty pane, the facts loading or failed)
+ * and with no details header (the empty pane); never a cell whose pane shows them.
+ */
+const DETAILS_NO_FACTS_STATES: readonly string[] = ['main-details-readme', 'main-details-empty', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error'];
+const DETAILS_NO_HEADER_STATES: readonly string[] = ['main-details-empty'];
 /** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     // UX-P3.6: the sources dialog's cells (design-advisor ruling of 2026-11-07, DO 8).
@@ -259,6 +266,14 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'sidebar-updates-revalidating': ['sidebar-updates-progress'],
     'sidebar-updates-error': ['sidebar-updates-error'],
     'sidebar-updates-unsupported': ['sidebar-updates-unsupported'],
+    // UX-P3.10 push C (opening ruling DO 11-13; follow-up 1, B; follow-up 3).
+    'main-details-empty': ['details-empty'],
+    'main-details-loading': ['details-progress'],
+    'main-details-error': ['details-error'],
+    'main-details-readonly': ['details-readonly'],
+    'main-details-unsupported': ['details-readonly'],
+    'main-readme-loading': ['readme-progress'],
+    'main-readme-error': ['readme-error'],
     'main-quicksearch-loading': ['search-suggestions-loading'],
     'main-quicksearch-error': ['search-suggestions-error'],
 };
@@ -303,7 +318,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.height, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details'] }),
+    rule('DS-HEIGHT-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details', ...DETAILS_NO_HEADER_STATES] }),
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { sources: ['main-sources-add', 'main-sources-add-invalid'] } }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
@@ -342,7 +357,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.fontExact, exceptStates: SIDEBAR_BROWSE_NO_LIST_STATES }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
-    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
+    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_HEADER_STATES }),
     // UX-P2.7 (design trigger 6).
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
@@ -371,9 +386,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.7b (design trigger 6, design-advisor ruling): the sidebar's view-title actions, read by the capture suite in the top document.
     rule('DS-OVERFLOW-4', { helper: 6, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'] }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'], scopeExceptStates: { details: DETAILS_NO_HEADER_STATES } }),
     rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-details-readme'] }),
+    rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_FACTS_STATES }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -385,7 +400,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard', details: { pending: 'P3.10' } },
         // UX-P3.10 (design-advisor follow-up 1, F3): the side bar's All Projects trees read their message leaves too.
         tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$|^sidebar-all-projects/, exceptStates: POPUP_CELL_STATES,
     }),
@@ -404,10 +419,10 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
     rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
@@ -439,7 +454,8 @@ export function stateGroup(state: string): StateGroup {
         return 'sources';
     }
     // The current row's details are shown: the pane's rules are the details group's (UX-P2.8a).
-    if (state.endsWith('-details') || state === 'main-details-readme' || state === 'main-installed-hover-current') {
+    // UX-P3.10 push C: the details and README cells are the details group's too.
+    if (state.endsWith('-details') || state === 'main-details-readme' || state === 'main-installed-hover-current' || state.startsWith('main-details-') || state.startsWith('main-readme-')) {
         return 'details';
     }
     if (state.startsWith('main-browse-') || state.startsWith('main-quicksearch-')) {
@@ -455,13 +471,21 @@ export function stateGroup(state: string): StateGroup {
  * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
  * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
  */
-export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' | 'sidebar-updates' {
+export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' | 'sidebar-updates' | 'details' | 'readme' {
     // The sidebar's Browse results and Installed pane carry their own hooks (UX-P3.8).
     if (state.startsWith('sidebar-browse-')) {
         return 'sidebar-browse';
     }
     if (state.startsWith('sidebar-installed-')) {
         return 'sidebar-installed';
+    }
+    // UX-P3.10 push C: the details pane's and the README's bars (`details-progress`, `readme-progress`).
+    if (state.startsWith('main-readme-')) {
+        return 'readme';
+    }
+    // Only the cells whose facts load or fail there; a stale or unsupported selection's list state is the Installed list's.
+    if (state === 'main-details-loading' || state === 'main-details-error') {
+        return 'details';
     }
     // UX-P3.10 push B: the Updates pane's bar and list (`sidebar-updates-progress`, `sidebar-updates-list`).
     if (state.startsWith('sidebar-updates-')) {
@@ -1683,16 +1707,20 @@ const resolveKey = (key, property) => {
     return resolved;
 };
 const progressEl = shown('[data-testid="' + cellList + '-progress"]')[0];
-const contentEl = shown('.nuiget-skeleton-row, .nuiget-row, .nuiget-source-row')[0];
+// UX-P3.10 push C (design-advisor follow-up 4, C): a details or README cell loads in the details pane's tab panel; its skeleton,
+// rows, content top and track are read there, never from the package list beside it.
+const cellArea = cellList === 'details' || cellList === 'readme' ? document.querySelector('[data-testid="package-details-panel"] [role="tabpanel"]') : null;
+const inCell = selector => (cellArea ? [...cellArea.querySelectorAll(selector)].filter(visible) : shown(selector));
+const contentEl = inCell('.nuiget-skeleton-row, .nuiget-row, .nuiget-source-row')[0];
 const stateCells = {
     testIds: [...new Set(shown('[data-testid]').map(el => el.dataset.testid))],
     // The sources dialog's rows are list items of their own (UX-P3.6).
-    rows: shown('.nuiget-row-option, .nuiget-source-row').length,
+    rows: inCell('.nuiget-row-option, .nuiget-source-row').length,
     disabledVersions: shown('.nuiget-row-option[aria-disabled="true"]').map(el => (el.querySelector('.nuiget-row-version')?.textContent || '').trim()),
-    skeletonRows: shown('.nuiget-skeleton-row').length,
+    skeletonRows: inCell('.nuiget-skeleton-row').length,
     listBusy: scope.querySelector('[data-testid="' + cellList + '-list"]')?.getAttribute('aria-busy') === 'true',
     progressTop: progressEl ? rectOf(progressEl).top : undefined,
-    contentTop: contentEl ? rectOf(contentEl).top : undefined,
+    contentTop: cellArea ? rectOf(cellArea).top : contentEl ? rectOf(contentEl).top : undefined,
     empties: shown('.nuiget-empty').map(el => {
         const style = getComputedStyle(el);
         const buttons = [...el.querySelectorAll('button')];
@@ -1712,7 +1740,7 @@ const stateCells = {
             const paneOf = el => el.closest('[data-testid^="section-box-"]') || root;
             return {
                 progressBox: progressEl ? boxOf(progressEl) : undefined,
-                paneBox: progressEl ? boxOf(paneOf(progressEl)) : undefined,
+                paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 messageLeaves: shown('.nuiget-row-message--compact').map(el => {
                     const range = document.createRange();
@@ -3586,8 +3614,11 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     };
 }
 
-/** UX-P3.10 push A (DO 4): the side bar's progress track spans its pane (the workbench's view progress, paneviewlet.css). */
-function sidebarTrack(layout: Layout): { text: string; pass: boolean } | undefined {
+/**
+ * UX-P3.10 (DO 4; follow-up 4, C): a progress track spans the area that loads, the side bar's pane (the workbench's view progress,
+ * paneviewlet.css) or the details pane's tab panel.
+ */
+function cellTrack(layout: Layout): { text: string; pass: boolean } | undefined {
     const { progressBox, paneBox } = layout.endOfP0.stateCells;
     if (progressBox === undefined || paneBox === undefined) {
         return undefined;
@@ -3616,7 +3647,7 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench, state, lane) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
-        const track = (definition.id === 'DS-STATE-2' || definition.id === 'DS-HEIGHT-11') && scope === 'sidebar' ? sidebarTrack(layout) : undefined;
+        const track = (definition.id === 'DS-STATE-2' || definition.id === 'DS-HEIGHT-11') && (scope === 'sidebar' || scope === 'details') ? cellTrack(layout) : undefined;
         return track === undefined ? heightVerdict : { value: `${heightVerdict.value}; ${track.text}`, pass: heightVerdict.pass && track.pass };
     }
     switch (definition.id) {

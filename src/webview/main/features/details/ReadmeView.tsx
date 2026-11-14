@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
-import { Banner, EmptyState, Skeleton } from '../../../shared/primitives';
+import { Banner, EmptyState, ProgressBar, Skeleton } from '../../../shared/primitives';
+import { sentence } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages } from './markdown';
 
@@ -58,11 +59,17 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
         }, () => announce('The code could not be copied.'));
     };
 
+    // The README loads: the 2 px bar over its skeleton (DS-STATE-2; UX-P3.10, design-advisor DO 12).
     if (readme.status === 'loading' || readme.status === 'idle') {
-        return <Skeleton density="comfortable" />;
+        return (
+            <>
+                <ProgressBar label="Loading the README" data-testid="readme-progress" />
+                <Skeleton density="comfortable" />
+            </>
+        );
     }
     if (readme.status === 'error') {
-        return <Banner severity="error" action={{ label: 'Retry', onClick: retryReadme }}>{`The README could not be loaded: ${readme.error?.message ?? 'unknown error'}`}</Banner>;
+        return <Banner severity="error" data-testid="readme-error" action={{ label: 'Retry', onClick: retryReadme }}>{`The README could not be loaded: ${sentence(readme.error?.message ?? 'unknown error')}`}</Banner>;
     }
     if (html === null) {
         return <EmptyState data-testid="readme-empty" message="No README available." />;

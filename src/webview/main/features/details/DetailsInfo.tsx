@@ -1,7 +1,8 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { PackageDependencyGroup as Group, PackageMetadata } from '../../../../protocol';
-import { Banner, EmptyState, GroupCaption, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, EmptyState, GroupCaption, ProgressBar, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { sentence } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
@@ -111,11 +112,17 @@ export function DetailsInfo(): React.JSX.Element {
 
     useEffect(() => enable(), [enable]);
 
+    // The selection's first metadata: the 2 px bar over the skeleton facts (DS-STATE-2; UX-P3.10, design-advisor DO 11).
     if (metadata.status === 'loading' || metadata.status === 'idle') {
-        return <Skeleton density="comfortable" />;
+        return (
+            <>
+                <ProgressBar label="Loading details" data-testid="details-progress" />
+                <Skeleton density="comfortable" />
+            </>
+        );
     }
     if (metadata.status === 'error') {
-        return <Banner severity="error" action={{ label: 'Retry', onClick: retryMetadata }}>{`Details could not be loaded: ${metadata.error?.message ?? 'unknown error'}`}</Banner>;
+        return <Banner severity="error" data-testid="details-error" action={{ label: 'Retry', onClick: retryMetadata }}>{`Details could not be loaded: ${sentence(metadata.error?.message ?? 'unknown error')}`}</Banner>;
     }
     const value = metadata.value;
     const toggle = (framework: string): void => setExpanded(previous => {

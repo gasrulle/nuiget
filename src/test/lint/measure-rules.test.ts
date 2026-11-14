@@ -184,7 +184,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
-        expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme']);
+        // UX-P3.10 push C: the details cells with no facts block, by fact.
+        expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme', 'main-details-empty', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error']);
         expect(scopes('DS-COPY-2')).toEqual({ details: 'hard' });
         // UX-P3.3a: the details pane's weights and headings, hard with the facts.
         expect(scopes('DS-TYPE-3')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, 'hard'])));
@@ -197,12 +198,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': { pending: 'P3.10' } });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' });
+        // UX-P3.10 push C: the details cells, pending on P3.10.
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard', details: { pending: 'P3.10' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
             // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar cells with no row; UX-P3.10: the Updates pane filtered to none.
             'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
@@ -861,7 +863,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const sidebarNoRow = ['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
         for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
             const definition = RULES.find(rule => rule.id === id)!;
-            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-installed-error', ...updatesNoList, 'sidebar-filter', ...sidebarNoRow]); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3); UX-P3.8: the sidebar cells with no row and no badge
+            expect(definition.exceptStates, id).toEqual(['main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped', 'main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'sidebar-filter', ...sidebarNoRow]); // UX-P3.7b: NO_BADGE_STATES (design-advisor follow-up 3); UX-P3.8: the sidebar cells with no row and no badge
             expect(appliesTo(definition, 'main-installed-revalidating'), id).toBe(true);
         }
         const inset = RULES.find(rule => rule.id === 'DS-INSET-3')!;
@@ -870,9 +872,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
-        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, ...sidebarBrowse]);
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, ...sidebarBrowse]);
         // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
-        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse]);
+        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse]);
         // UX-P3.8 follow-up 2: the remaining ruled lists, pinned so none widens (never sidebar-installed-loading where it has headers).
         const except = (id: string) => RULES.find(rule => rule.id === id)?.exceptStates;
         for (const id of ['DS-COPY-5', 'DS-HEIGHT-1', 'DS-TYPE-9']) {
@@ -903,6 +905,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(cellList('main-updates-all')).toBe('updates');
         // UX-P3.10 push B: the side bar's Updates pane.
         expect(cellList('sidebar-updates-loading')).toBe('sidebar-updates');
+        // UX-P3.10 push C: the details facts' and the README's own cells; a stale selection reads the Installed list.
+        expect(cellList('main-details-loading')).toBe('details');
+        expect(cellList('main-readme-error')).toBe('readme');
+        expect(cellList('main-details-readonly')).toBe('installed');
         expect(cellList('main-installed-loading')).toBe('installed');
         expect(cellList('sidebar-browse-loading')).toBe('sidebar-browse');
         expect(cellList('sidebar-installed-loading')).toBe('sidebar-installed');
@@ -966,7 +972,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
         // UX-P3.6: the sources dialog's cells read pending for its reading run.
         // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
-        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard' });
+        // UX-P3.10 push C: the details cells, pending on P3.10 (follow-up 1, B).
+        expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: { pending: 'P3.10' } });
+        // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only.
+        expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error'] });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
             expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' });
         }
@@ -1502,5 +1511,7 @@ describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor 
         expect(lineOf('sidebar-installed-revalidating', withCells({ progressBox: { left: 8, width: 280 }, paneBox: { left: 0, width: 300 } }, { progress: [2] }), 'DS-HEIGHT-11@sidebar-installed-revalidating')?.pass).toBe(false);
         expect(lineOf('sidebar-installed-revalidating', bar, 'DS-STATE-2@sidebar-installed-revalidating')?.value).toContain('track Δleft 0');
         expect(lineOf('main-installed-revalidating', withCells(track, { progress: [2] }), 'DS-HEIGHT-11@main-installed-revalidating')?.value).not.toContain('track');
+        // UX-P3.10 push C (follow-up 4, C): the details cells' track spans the tab panel.
+        expect(lineOf('main-details-loading', withCells({ progressBox: { left: 500, width: 600 }, paneBox: { left: 500, width: 600 }, progressTop: 200, contentTop: 200, skeletonRows: 3, rows: 0 }, { progress: [2] }), 'DS-HEIGHT-11@main-details-loading')?.value).toContain('track Δleft 0 Δwidth 0');
     });
 });
