@@ -51,6 +51,11 @@ export interface Capture {
 export interface Mask {
     selector: string;
     reason: string;
+    /**
+     * A live result list: its ARIA snapshot keeps the first option and every option with a state or a test id, and collapses the rest
+     * into `option × # (live)` lines (UX-P3.fix-8, design-advisor rulings of 2026-11-14). Never written into a sidecar.
+     */
+    liveList?: true;
 }
 
 export interface NamedState {
@@ -95,7 +100,7 @@ const pending = (name: string, surface: Surface, item: string, setup: string): N
     ({ name, surface, tier: 'A', captures: [primary(surface)], setup, masks: [], status: { pending: item }, diffTolerance: DIFF_TOLERANCE_START });
 
 /** Live nuget.org content (download counts, newest versions, descriptions) that differs between runs. */
-const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs' };
+const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs', liveList: true };
 const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', reason: 'nuget.org metadata (downloads, versions) changes between runs' };
 const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]', reason: 'nuget.org suggestions change between runs' };
 /** The search box of a state whose setup leaves the focus in it (UX-P0.15, design-advisor ruling). */
@@ -112,7 +117,7 @@ const LIVE_ICONS: Mask = { selector: '.nuiget-row-icon', reason: 'nuget.org icon
 const LIVE_SIDEBAR_UPDATES: Mask = { selector: '[data-testid="sidebar-updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_SIDEBAR_CARET: Mask = { selector: '[data-testid="sidebar-search-input"]', reason: 'the caret blinks in the sidebar search box (UX-P3.7b)' };
 /** The side bar's Browse results: nuget.org search results change between runs (UX-P3.8). */
-const LIVE_SIDEBAR_RESULTS: Mask = { selector: '[data-testid="sidebar-browse-list"]', reason: 'nuget.org search results change between runs' };
+const LIVE_SIDEBAR_RESULTS: Mask = { selector: '[data-testid="sidebar-browse-list"]', reason: 'nuget.org search results change between runs', liveList: true };
 /** The main Updates list: the newest versions on nuget.org change between runs. */
 const LIVE_UPDATES: Mask = { selector: '[data-testid="updates-list"]', reason: 'the newest versions on nuget.org change' };
 const LIVE_FIELD_CARET: Mask = { selector: '.nuiget-text-field:focus', reason: 'the caret blinks (H27)' };

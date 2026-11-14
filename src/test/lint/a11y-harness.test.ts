@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
 /**
@@ -168,7 +169,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         axe.teardown();
     });
 
-    it('holds a run of version options under a combobox as one line, and enumerates every other list (UX-P3.fix-2)', () => {
+    it('holds a run of version options under a combobox as one line, collapses a flagged live result list after its first and stateful options, and enumerates every other list (UX-P3.fix-2, UX-P3.fix-8)', () => {
         const node = (depth: number, role: string, name: string, states: string[] = [], testid?: string): AriaNode => ({ depth, role, name, states, testid });
         const version = (depth = 2): AriaNode => node(depth, 'option', '13.0.4');
         const snapshot = ariaSnapshot('main-details-readme', [
@@ -206,6 +207,39 @@ describe('the accessibility harness (UX-P0.23)', () => {
             '    option "#"',
             '    option "#"',
         ]);
+        // UX-P3.fix-8 (design-advisor rulings of 2026-11-14): a listbox a `liveList` mask names keeps its first option and every
+        // option with a state, each with its subtree; each stretch of the others is one `option × # (live)` line.
+        const live: Mask[] = [{ selector: '[data-testid="browse-list"]', reason: 'live', liveList: true }];
+        const verified = (depth = 3): AriaNode => node(depth, 'img', 'Verified: the package id prefix is reserved by its owner');
+        const result = (name: string, states: string[] = []): AriaNode => node(2, 'option', `${name} 13.0.4`, states);
+        const list = (...options: AriaNode[]): AriaNode[] => [node(0, 'main', ''), node(1, 'listbox', 'Search results for Newtonsoft.Json', [], 'browse-list'), ...options];
+        const lines = (nodes: AriaNode[], masks: Mask[] = live): string[] => ariaSnapshot('main-browse-results', nodes, masks).lines;
+        // The first option with its subtree; a stretch collapsed with its subtrees.
+        const ranked = list(result('Newtonsoft.Json'), verified(), result('Newtonsoft.Json.Bson'), verified(), result('Newtonsoft.Json.Schema'), result('NJsonSchema'), verified());
+        expect(lines(ranked)).toEqual(['main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #"', '      img "Verified: the package id prefix is reserved by its owner"', '    option × # (live)']);
+        // A stateful option in the middle is kept with its subtree, and the options after it merge (no second "first").
+        expect(lines(list(result('Newtonsoft.Json'), verified(), result('A'), result('Bson', ['selected']), verified(), result('B'), verified(), result('C')))).toEqual([
+            'main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #"', '      img "Verified: the package id prefix is reserved by its owner"',
+            '    option × # (live)', '    option "Bson #" [selected]', '      img "Verified: the package id prefix is reserved by its owner"', '    option × # (live)',
+        ]);
+        // A stretch of one prints the line; a stateful option that is last leaves no trailing line.
+        expect(lines(list(result('Newtonsoft.Json'), result('A'), result('Bson', ['selected'])))).toEqual([
+            'main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #"', '    option × # (live)', '    option "Bson #" [selected]',
+        ]);
+        // A test id the driver returns as null is none (the webview's script reads `dataset.testid`); a real one keeps the option.
+        expect(lines(list(result('Newtonsoft.Json'), { ...result('A'), testid: null as unknown as string }, { ...result('B'), testid: 'package-row-b' }))).toEqual([
+            'main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #"', '    option × # (live)', '    option "B #" {package-row-b}',
+        ]);
+        // A stateful first option is the first.
+        expect(lines(list(result('Newtonsoft.Json', ['selected', 'focused']), verified(), result('A'), verified()))).toEqual([
+            'main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #" [selected, focused]', '      img "Verified: the package id prefix is reserved by its owner"', '    option × # (live)',
+        ]);
+        // Unflagged: no mask, or a mask of the same selector without the flag, enumerates every option.
+        const enumerated = ['main ""', '  listbox "Search results for Newtonsoft.Json" {browse-list}', '    option "Newtonsoft.Json #"', '      img "Verified: the package id prefix is reserved by its owner"', '    option "Newtonsoft.Json.Bson #"', '      img "Verified: the package id prefix is reserved by its owner"', '    option "Newtonsoft.Json.Schema #"', '    option "NJsonSchema #"', '      img "Verified: the package id prefix is reserved by its owner"'];
+        expect(lines(ranked, [])).toEqual(enumerated);
+        expect(lines(ranked, [{ selector: '[data-testid="browse-list"]', reason: 'pixels only' }])).toEqual(enumerated);
+        // The quick search's suggestions stay enumerated while the flagged masks are passed.
+        expect(lines([node(0, 'listbox', 'Suggestions', [], 'search-suggestions'), result('A'), result('B'), result('C')])).toEqual(['listbox "Suggestions" {search-suggestions}', '    option "A #"', '    option "B #"', '    option "C #"']);
     });
 
     it('masks digits, collapses white space and compares snapshots line by line', () => {

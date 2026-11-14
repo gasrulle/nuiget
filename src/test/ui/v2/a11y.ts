@@ -23,6 +23,7 @@
  */
 import { composite, contrastRatio, parseCssColor, thresholdFor } from './contrast';
 import type { RuleStatus } from './measure';
+import type { Mask } from './states';
 
 /** The rule of the tracker's a11y table this harness holds (`a11y-full-axe-real-page`, A5). */
 export const FULL_AXE_RULE = 'a11y-full-axe-real-page';
@@ -299,7 +300,7 @@ try {
 }
 `;
 
-/** A committed snapshot: the state and one line per node, a run of live version options one line. */
+/** A committed snapshot: the state and one line per node, a run of live version options or live results one line. */
 export interface AriaSnapshot {
     state: string;
     lines: string[];
@@ -315,28 +316,81 @@ export const ariaLine = (node: AriaNode): string =>
 /** A version option whose name is all digits: how many of them a select lists follows nuget.org. */
 const LIVE_OPTION = 'option "#"';
 
+/** The line that stands for a stretch of live results, whatever their number. */
+export const LIVE_RESULTS_LINE = 'option × # (live)';
+
 /**
- * One line per node, except that a run of equal `option "#"` lines under a `combobox` keeps its first line: the native
- * version select lists every published version, a count that grows with each publish (UX-P3.fix-2, design-advisor
- * ruling). A capped list (the quick search's versions, a `listbox`) stays enumerated, and an option with a state or a
- * test id is never merged.
+ * The options of each listbox a `liveList` mask names (by its test id) that nuget.org's ranking decides: every direct
+ * option but the first and those with a state or a test id, each with its subtree. Returns the dropped node indices and
+ * the indices where a stretch of dropped options starts (UX-P3.fix-8, design-advisor rulings of 2026-11-14).
  */
-export const ariaSnapshot = (state: string, nodes: readonly AriaNode[]): AriaSnapshot => {
+function liveResults(nodes: readonly AriaNode[], masks: readonly Mask[]): { dropped: Set<number>; stretches: Set<number> } {
+    const dropped = new Set<number>();
+    const stretches = new Set<number>();
+    const live = new Set(masks.filter(mask => mask.liveList === true).map(mask => mask.selector));
+    nodes.forEach((list, index) => {
+        if (list.role !== 'listbox' || list.testid === undefined || !live.has(`[data-testid="${list.testid}"]`)) {
+            return;
+        }
+        let firstSeen = false;
+        let inStretch = false;
+        let child = index + 1;
+        while (child < nodes.length && nodes[child].depth > list.depth) {
+            let end = child + 1;
+            while (end < nodes.length && nodes[end].depth > nodes[child].depth) {
+                end++;
+            }
+            const node = nodes[child];
+            // A test id counts as `ariaLine` prints it: WebDriver returns an absent one as `null`, not `undefined`.
+            if (node.role === 'option' && firstSeen && node.states.length === 0 && !node.testid) {
+                for (let at = child; at < end; at++) {
+                    dropped.add(at);
+                }
+                if (!inStretch) {
+                    stretches.add(child);
+                }
+                inStretch = true;
+            } else {
+                firstSeen = firstSeen || node.role === 'option';
+                inStretch = false;
+            }
+            child = end;
+        }
+    });
+    return { dropped, stretches };
+}
+
+/**
+ * One line per node, with two collapses. A run of equal `option "#"` lines under a `combobox` keeps its first line: the
+ * native version select lists every published version, a count that grows with each publish (UX-P3.fix-2, design-advisor
+ * ruling). A listbox that a state's `liveList` mask names keeps its first option and every option with a state or a test
+ * id, each with its subtree; each stretch of the other options, the order nuget.org ranks them in, is one line
+ * `option × # (live)` at their indent (UX-P3.fix-8). Every other list (the quick search's suggestions and versions)
+ * stays enumerated.
+ */
+export const ariaSnapshot = (state: string, nodes: readonly AriaNode[], masks: readonly Mask[] = []): AriaSnapshot => {
     const lines: string[] = [];
+    const { dropped, stretches } = liveResults(nodes, masks);
     // The open ancestors: the nearest preceding node of smaller depth is the parent.
     const ancestors: AriaNode[] = [];
-    for (const node of nodes) {
+    nodes.forEach((node, index) => {
         const line = ariaLine(node);
         while (ancestors.length > 0 && ancestors[ancestors.length - 1].depth >= node.depth) {
             ancestors.pop();
         }
         const parentRole = ancestors[ancestors.length - 1]?.role;
         ancestors.push(node);
+        if (stretches.has(index)) {
+            lines.push(`${'  '.repeat(node.depth)}${LIVE_RESULTS_LINE}`);
+        }
+        if (dropped.has(index)) {
+            return;
+        }
         if (line.trim() === LIVE_OPTION && parentRole === 'combobox' && lines[lines.length - 1] === line) {
-            continue;
+            return;
         }
         lines.push(line);
-    }
+    });
     return { state, lines };
 };
 

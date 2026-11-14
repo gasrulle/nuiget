@@ -1516,7 +1516,7 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
         if (tree.nodes === undefined) {
             console.warn(`[aria] ${state.name}: not read (${tree.error ?? 'no answer'})`);
         } else {
-            const snapshot = ariaSnapshot(state.name, tree.nodes);
+            const snapshot = ariaSnapshot(state.name, tree.nodes, state.masks);
             const dir = path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), 'aria');
             fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(path.join(dir, `${state.name}.json`), JSON.stringify(snapshot, null, 2) + '\n');
