@@ -328,7 +328,7 @@ badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact r
 - `docs/adr/013-keyboard-and-menus.md:46-47` (Decision 2) and D31 (plan line 94) name Delete on Installed and Updates rows only;
   `src/webview/sidebar/BrowseResults.tsx` (`onDelete={remove}`) also uninstalls an installed Browse row of one project, by the
   design-advisor's B = b1 and the architecture-advisor's ruling of 2026-11-13 (option 2, narrowed: an incomplete enumeration, the ADR
-  amendment proposed as its own row below); for the planning session's ratification.
+  amendment proposed as its own row below); ratified 2026-11-13 by the planning session (the P3.8 tracker row); the amendment is P4.fix-1.
 - `src/test/ui/v2/measure.ts`: `SIDEBAR_NO_ROW_STATES` also on DS-HEIGHT-3, DS-ROW-1, DS-ROW-6 and DS-ICON-3, which have no sidebar
   scope (a no-op), so `measure-rules.test.ts`'s pin "these six share DS-ROW-4's exceptions" holds unchanged; the pins of DS-HEIGHT-10,
   DS-TYPE-8, DS-HC-1, DS-OVERFLOW-2, DS-GRID-2b, DS-TYPE-6/DS-ROW-4 extended with the ruled lists, and DS-INSET-3's `scopeExceptStates`
@@ -340,7 +340,7 @@ badge.bottom)| ≤ 1` and both distances ≥ 1, per visible badge of a compact r
 - `src/test/ui/v2/sidebar.ui.test.ts` ("the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)"): the
   design-advisor's ruled steps are open the view, run `nuiget.sidebarView.focus`, poll; the case adds `Developer: Reload Webviews`
   after the open (the remount precondition of red run 43454600679's fix, 40abf19) and holds the command inside the wait. Never
-  returned to the design-advisor: for the planning session's ratification.
+  returned to the design-advisor; ratified by the design-advisor 2026-11-14 (planning brief, `docs/plans/handoff/P3.9.md`, "Planning session, 2026-11-14").
 - The first-open gap (an activity-bar open gives the view no focus) rests on one local macOS ExTester reading (`[sb14-open]`).
 - A first pointer click on a row of a fresh, unfocused sidebar (scratch, local, after `Developer: Reload Webviews` with the editor
   focused): `[sb14-click] fresh: … in editor true …; sidebar hasFocus false, active body`; `after the first click on a row: top
