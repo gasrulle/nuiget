@@ -93,6 +93,33 @@ async function clickVisible(testId: string, timeoutMs = 30_000): Promise<void> {
     await driverOf().actions().move({ origin: element, x: Math.round(offset.dx), y: Math.round(offset.dy) }).click().perform();
 }
 
+/**
+ * Selects a tab and holds it through the wait for its content (UX-P3.fix-7, architecture-advisor rulings of 2026-11-14): the
+ * first probe clicks it, as every site did once; each later probe re-clicks it while it is not selected and prints a
+ * `[reach]` line; once it is selected the wait ends when `ready`, a predicate with no side effect, holds in the page. A click
+ * that did not select the tab (UX-P3.7c red run 1, UX-P3.9 red run 2) is held for the whole wait, never re-clicked once.
+ */
+async function holdTab(tabTestId: string, ready: string, label: string, what: string): Promise<void> {
+    let clicks = 0;
+    await poll(async () => {
+        if (clicks === 0) {
+            // Counted before the click: a click that throws is never repeated as a first one; the later probes re-click only while the tab is not selected.
+            clicks = 1;
+            await clickVisible(tabTestId);
+            return undefined;
+        }
+        const selected = await script<string | null>(`return document.querySelector('[data-testid="${tabTestId}"]')?.getAttribute("aria-selected") ?? null;`);
+        if (selected !== 'true') {
+            clicks += 1;
+            const evidence = await script<string>('return (document.querySelector(\'[role="tab"][aria-selected="true"]\')?.getAttribute("data-testid") ?? "none") + "; tab badges " + document.querySelectorAll(".nuiget-tab-count").length;');
+            console.warn(`[reach] ${label}: ${tabTestId} re-clicked (${clicks}; selected: ${evidence})`);
+            await clickVisible(tabTestId);
+            return undefined;
+        }
+        return (await script<boolean>(`return (${ready});`)) ? true : undefined;
+    }, what, 120_000);
+}
+
 /** The tree is virtualized and keeps its offset: a state starts at the list's top, where its rows are rendered (UX-P2.1e). */
 async function installedListAtTop(): Promise<void> {
     await findByTestId('installed-list', 120_000);
@@ -226,7 +253,7 @@ async function scrollListTo(listTestId: string, rowTestId: string): Promise<void
  */
 async function gatewayInstalled(): Promise<void> {
     await chooseFixtureProject('Gateway.csproj');
-    await clickVisible('installed-tab');
+    await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'gatewayInstalled', 'the Installed list');
     await installedListAtTop();
     await until('document.querySelector(\'[data-testid="installed-list"] .nuiget-row:not([data-row-kind="group"])\') !== null', 'the first package row of the list');
     await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
@@ -235,7 +262,7 @@ async function gatewayInstalled(): Promise<void> {
 /** Gateway's Updates tab with an update row (the `main-updates` reach). */
 async function gatewayUpdates(): Promise<void> {
     await chooseFixtureProject('Gateway.csproj');
-    await clickVisible('updates-tab');
+    await holdTab('updates-tab', 'document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'gatewayUpdates', 'an update row');
     await findByTestId('updates-list', 120_000);
     await until('document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'an update row', 120_000);
 }
@@ -419,7 +446,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-empty': {
         reach: async () => {
             await chooseFixtureProject('Empty.csproj');
-            await clickVisible('installed-tab');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-empty"]\')?.textContent.includes("No packages installed.") === true', 'main-installed-empty', 'the empty state');
             await until('document.querySelector(\'[data-testid="installed-empty"]\')?.textContent.includes("No packages installed.") === true', 'the empty state');
             await until(TRANSITIVE_GROUP_SETTLED, 'the Transitive group settled (count, no spinner)', 60_000);
         },
@@ -441,7 +468,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-unresolved': {
         reach: async () => {
             await chooseFixtureProject('Unresolved.csproj');
-            await clickVisible('installed-tab');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\')?.getAttribute("aria-disabled") === "true" && document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-version\')?.textContent === "unresolved"', 'main-installed-unresolved', 'the unresolved row');
             await until('document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-option\')?.getAttribute("aria-disabled") === "true" && document.querySelector(\'[data-testid="package-row-serilog"] .nuiget-row-version\')?.textContent === "unresolved"', 'the unresolved row');
             await until('document.querySelector(\'[data-testid="package-row-newtonsoft.json"] .nuiget-row-authors\') !== null', 'the other row\'s authors');
         },
@@ -449,7 +476,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-all': {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
-            await clickVisible('installed-tab');
+            await holdTab('installed-tab', '/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'main-installed-all', 'the settled fan-out');
             // The tree is virtualized: the fan-out settled is the tab's count, shown once every project answered, and the
             // level-1 groups in the tree, the two folders and Transitive (UX-P2.1e).
             await until('/\\d/.test(document.querySelector(\'[data-testid="installed-tab"]\').textContent) && Number(document.querySelector(\'[data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 3', 'the settled fan-out');
@@ -467,7 +494,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-unsupported': {
         reach: async () => {
             await chooseFixtureProject('Unsupported.csproj');
-            await clickVisible('installed-tab');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'main-installed-unsupported', 'the Installed list');
             await installedListAtTop();
             await findByTestId('package-row-polly', 120_000);
             await until('document.querySelector(\'[data-testid="installed-unsupported"]\') !== null', 'the Unsupported banner');
@@ -478,7 +505,7 @@ const REACH: Record<string, Reach> = {
     'main-installed-cpm': {
         reach: async () => {
             await chooseFixtureProject('Catalog.csproj');
-            await clickVisible('installed-tab');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'main-installed-cpm', 'the Installed list');
             await installedListAtTop();
             await findByTestId('package-row-mapster', 120_000);
             await until('(() => { const row = document.querySelector(\'[data-testid="group-row-transitive"]\'); return row === null || (/^\\d+$/.test(row.querySelector(".nuiget-badge--count")?.textContent ?? "") && row.querySelector(".nuiget-spinner") === null); })()', 'the transitive section settled (count, no spinner)', 60_000);
@@ -606,7 +633,7 @@ const REACH: Record<string, Reach> = {
     'main-updates-all': {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);
-            await clickVisible('updates-tab');
+            await holdTab('updates-tab', '/\\d/.test(document.querySelector(\'[data-testid="updates-tab"]\').textContent) && Number(document.querySelector(\'[data-testid="updates-list"] [data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 2', 'main-updates-all', 'the settled fan-out');
             // The fan-out settled: the tab's count and the level-1 groups, the two workspace folders (UX-P3.1b, as main-installed-all).
             await until('/\\d/.test(document.querySelector(\'[data-testid="updates-tab"]\').textContent) && Number(document.querySelector(\'[data-testid="updates-list"] [data-testid^="group-row-"] [role="treeitem"]\')?.getAttribute("aria-setsize")) >= 2', 'the settled fan-out');
             // The window is pinned at the Tools folder with its markers and nothing unsettled, on one probe (as main-installed-all).
@@ -635,19 +662,9 @@ const REACH: Record<string, Reach> = {
     'main-updates-empty': {
         reach: async () => {
             await chooseFixtureProject('Empty.csproj');
-            // The Updates tab is held for the whole wait: re-clicked whenever it is not selected, the first click included
-            // (UX-P3.7c red run 1, architecture-advisor ruling: the project switch can land after a click resolved on the old strip).
+            // The Updates tab is held for the whole wait (UX-P3.7c red run 1, UX-P3.fix-7).
             // "No updates available." first means the installed result had not arrived: the wait goes on (MU10).
-            await poll(async () => {
-                const selected = await script<string | null>('return document.querySelector(\'[data-testid="updates-tab"]\')?.getAttribute("aria-selected") ?? null;');
-                if (selected !== 'true') {
-                    const evidence = await script<string>('return (document.querySelector(\'[role="tab"][aria-selected="true"]\')?.getAttribute("data-testid") ?? "none") + "; tab badges " + document.querySelectorAll(".nuiget-tab-count").length;');
-                    console.warn(`[reach] main-updates-empty: updates-tab re-clicked (selected: ${evidence})`);
-                    await clickVisible('updates-tab');
-                    return undefined;
-                }
-                return (await script<boolean>('return document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No packages installed.";')) ? true : undefined;
-            }, 'the empty state', 120_000);
+            await holdTab('updates-tab', 'document.querySelector(\'[data-testid="updates-empty"]\')?.textContent === "No packages installed."', 'main-updates-empty', 'the empty state');
         },
     },
     'main-updates-error': {
