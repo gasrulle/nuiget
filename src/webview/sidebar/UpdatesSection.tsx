@@ -32,9 +32,16 @@ export interface UpdatesSectionProps {
     showUnsupported?: boolean;
 }
 
-/** The empty sentence of one project's list. A check that could not be made is its banner alone, never an empty list (UX-P3.10). */
-function emptyMessage(total: number, filter: string): string {
-    return total > 0 && filter.length > 0 ? `No updates match "${filter}".` : 'No updates available.';
+/**
+ * The empty sentence of one project's list. A check that could not be made is its banner alone, never an empty list (UX-P3.10).
+ * An unsupported project without a package list, under the view's banner, is not "up to date": the pane says it has nothing to show,
+ * as the Installed pane does (UX-P3.10 push E design ruling, point 4; the final wording is P3.11's).
+ */
+function emptyMessage(total: number, filter: string, unreadable = false): string {
+    if (total > 0 && filter.length > 0) {
+        return `No updates match "${filter}".`;
+    }
+    return unreadable ? 'No updates to show.' : 'No updates available.';
 }
 
 type TreeItem =
@@ -242,8 +249,11 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
         const single = updateCandidates(visibleUpdates(rows, filter), installed.result, id => isPackageBusy(projectPath, id));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
         // A check that could not be made, or failed, with nothing to list: its banner is the one message (UX-P3.10 follow-up 1, F1).
-        const bannerAlone = rows.length === 0 && (updates.sourcesUnavailable || updates.error !== undefined);
         const unsupported = installed.result?.unsupported;
+        // An unsupported project with no package list and no row: where the pane carries the unsupported banner, it stands alone
+        // (the main panel's rule; UX-P3.10 push E design ruling, point 4).
+        const unreadable = unsupported !== undefined && installed.result !== undefined && installed.result.packages.length === 0 && rows.length === 0;
+        const bannerAlone = rows.length === 0 && (updates.sourcesUnavailable || updates.error !== undefined || (showUnsupported && unreadable));
         content = (
             <>
                 {showUnsupported && unsupported !== undefined
@@ -264,7 +274,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                     labelledBy={titleId}
                     testId="sidebar-updates-list"
                     busy={updates.revalidating}
-                    empty={emptyMessage(rows.length, filter.trim())}
+                    empty={emptyMessage(rows.length, filter.trim(), unreadable)}
                     selectedId={selectedId}
                     onSelectedChange={setSelectedId}
                 />}

@@ -162,6 +162,28 @@ describe('sidebar: Updates section', () => {
         expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
     });
 
+    it('an unsupported project with no package list: its banner alone in @updates mode; under the view\'s banner the pane says "No updates to show." (UX-P3.10)', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [], unsupported: { reason: 'packages-config', message: 'uses packages.config' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [] }, 1));
+        const banners = (): HTMLElement[] => screen.queryAllByText(/^Unsupported project: uses packages\.config\.$/);
+        // Both panes open: the view's one banner, and the Updates pane's neutral sentence (design-advisor push E ruling, point 4).
+        expect(banners()).toHaveLength(1);
+        expect(screen.getByTestId('sidebar-unsupported')).toBeInTheDocument();
+        expect(screen.getByTestId('sidebar-updates-empty')).toHaveTextContent('No updates to show.');
+        expect(screen.queryByText('No updates available.')).toBeNull();
+        // @updates mode: the pane's banner alone, no empty sentence and no list.
+        await user.type(screen.getByTestId('sidebar-search-input'), '@updates ');
+        expect(banners()).toHaveLength(1);
+        expect(screen.getByTestId('sidebar-updates-unsupported')).toBeInTheDocument();
+        expect(screen.queryByTestId('sidebar-updates-empty')).toBeNull();
+        expect(screen.queryByTestId('sidebar-updates-list')).toBeNull();
+    });
+
     it('an unreachable source is its banner with Retry alone, never an empty list, and the header shows no count (UX-P3.10)', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [], sourcesUnavailable: true });
