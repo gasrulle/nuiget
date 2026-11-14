@@ -93,7 +93,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling); UX-P3.5: nor dialogs.
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
-        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
+        // UX-P3.10 push A (DO 4): the compact skeleton clause, pending on P3.10.
+        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -119,7 +120,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: 'hard' });
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' });
-        expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } });
+        // UX-P3.10 push A (DO 4): the disabled-label clause, pending on P3.10.
+        expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' }, labels: { pending: 'P3.10' } });
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // A popup cell has no bar: its marker is DS-STATE-1's (UX-P3.2).
         expect(RULES.find(rule => rule.id === 'DS-HEIGHT-11')?.exceptStates).toEqual(['main-quicksearch-loading', 'main-quicksearch-error']);
@@ -191,7 +193,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // group; the red groups and the groups no state measures yet to the items that make them hold.
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
-        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard' });
+        // UX-P3.10 push A (DO 4): the compact message leaf clause, pending on P3.10.
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': { pending: 'P3.10' } });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard' });
@@ -1453,5 +1456,49 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         expect(lineOf('main-transitive-expanded', bars(scroller(0, token)), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
         expect(lineOf('main-transitive-expanded', layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers: [] } }), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
         expect(lineOf('main-installed-single', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-installed-single')).toBeUndefined();
+    });
+});
+
+describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor opening ruling of 2026-11-14, DO 4)', () => {
+    const withCells = (cells: Record<string, unknown>, heights: Partial<Heights> = {}) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] }, heights);
+
+    it('reads disabled labels against disabledForeground at opacity 1, and the side bar\'s disabled icon buttons (DS-COLOR-6)', () => {
+        const name = 'DS-COLOR-6@sidebar-updates-nomatch/labels';
+        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [{ label: 'Serilog', colour: 'rgb(90, 90, 90)', opacity: '1' }] }), name))
+            .toMatchObject({ pass: true, status: { pending: 'P3.10' }, value: 'disabled labels 1: colour rgb(90, 90, 90), opacity 1 (target rgb(90, 90, 90), 1)' });
+        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [{ label: 'Serilog', colour: 'rgb(204, 204, 204)', opacity: '0.4' }] }), name)?.pass).toBe(false);
+        expect(lineOf('sidebar-updates-nomatch', withCells({ disabledLabels: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no disabled label)' });
+        expect(lineOf('sidebar-updates-nomatch', withCells({ clauseError: 'TypeError: x' }), name)).toMatchObject({ pass: false, value: 'not measurable (collector: TypeError: x)' });
+        // Only the two states that show one; no other side bar cell prints the clause.
+        expect(lineOf('sidebar-sections', withCells({ disabledLabels: [] }), 'DS-COLOR-6@sidebar-sections/labels')).toBeUndefined();
+        const button: Heights['iconButtons'][number] = { inHeader: true, width: 22, height: 22, hit: { width: 24, height: 24 }, label: 'Update all (0)', glyph: { w: 16, h: 16 }, colour: 'rgb(90, 90, 90)', background: 'rgba(0, 0, 0, 0)', radius: '5px', disabled: true, hovered: false, band: undefined, listFocused: false, multi: false, severity: false };
+        expect(lineOf('sidebar-updates-nomatch', layout({}, { iconButtons: [button] }), 'DS-COLOR-6@sidebar-updates-nomatch/icon-buttons'))
+            .toMatchObject({ pass: true, status: { pending: 'P3.10' }, value: 'disabled 1: colour rgb(90, 90, 90) (target disabledForeground)' });
+    });
+
+    it('reads a compact skeleton bar from the pane against the level-1 row name, per look (DS-INSET-1 skeleton)', () => {
+        const name = 'DS-INSET-1@sidebar-installed-loading/skeleton';
+        expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [8, 8, 8] }), name))
+            .toMatchObject({ pass: false, status: { pending: 'P3.10' }, value: 'skeleton bars at 8 ×3 from the pane (target 28, the level-1 row name)' });
+        expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [28, 28.5, 27.4] }), name)?.pass).toBe(true);
+        expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [20] }), name, 'classic')?.pass).toBe(true);
+        expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no compact skeleton row)' });
+    });
+
+    it('reads a wrapped compact message leaf as body text, a one-line leaf at the row\'s 22 px (DS-TYPE-4 message-leaf)', () => {
+        const name = 'DS-TYPE-4@sidebar-all-projects-updates/message-leaf';
+        expect(lineOf('sidebar-all-projects-updates', withCells({ messageLeaves: [{ lineHeight: 22, height: 22, lines: 1 }, { lineHeight: 22, height: 44, lines: 2 }] }), name))
+            .toMatchObject({ pass: false, status: { pending: 'P3.10' }, value: '1 line: height 22, line 22 (target 22); 2 lines: height 44, line 22 (target 40.2, line 18.2)' });
+        expect(lineOf('sidebar-all-projects-updates', withCells({ messageLeaves: [{ lineHeight: 18.2, height: 22, lines: 1 }, { lineHeight: 18.2, height: 40.2, lines: 2 }] }), name)?.pass).toBe(true);
+        expect(lineOf('sidebar-all-projects-tools', withCells({ messageLeaves: [] }), 'DS-TYPE-4@sidebar-all-projects-tools/message-leaf')).toMatchObject({ pass: false, value: 'not measurable (no compact message leaf)' });
+    });
+
+    it('adds the side bar\'s track to DS-HEIGHT-11 and DS-STATE-2, and leaves the main panel\'s lines as they are', () => {
+        const track = { progressBox: { left: 0, width: 300 }, paneBox: { left: 0, width: 300 } };
+        const bar = withCells({ ...track, progressTop: 60, contentTop: 60, rows: 3, listBusy: true }, { progress: [2] });
+        expect(lineOf('sidebar-installed-revalidating', bar, 'DS-HEIGHT-11@sidebar-installed-revalidating')).toMatchObject({ status: { pending: 'P3.10' }, value: expect.stringContaining('; track Δleft 0 Δwidth 0 (target 0 0)') });
+        expect(lineOf('sidebar-installed-revalidating', withCells({ progressBox: { left: 8, width: 280 }, paneBox: { left: 0, width: 300 } }, { progress: [2] }), 'DS-HEIGHT-11@sidebar-installed-revalidating')?.pass).toBe(false);
+        expect(lineOf('sidebar-installed-revalidating', bar, 'DS-STATE-2@sidebar-installed-revalidating')?.value).toContain('track Δleft 0');
+        expect(lineOf('main-installed-revalidating', withCells(track, { progress: [2] }), 'DS-HEIGHT-11@main-installed-revalidating')?.value).not.toContain('track');
     });
 });

@@ -27,7 +27,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -281,7 +281,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.2 (design-advisor ruling): a flat Browse list or the popup has no group header, so DS-GRID-2b is registered apart
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES] }),
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide }),
+    // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name.
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'] } }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -327,7 +328,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES } }),
+    // UX-P3.10 push A (DO 4): `icon-buttons` read in the side bar too, and `labels`, the disabled-label clause (design trigger 6).
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' }, labels: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, labels: ['main-browse-multi-install-dialog', 'sidebar-updates-nomatch'] } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -370,7 +372,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.gapMembership }),
+    // UX-P3.10 push A (DO 4): `message-leaf`, a compact message leaf that wraps sets body text, not the row's line box.
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': { pending: 'P3.10' } }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'] } }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES],
     }),
@@ -476,9 +479,13 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'details':
             return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
         case 'dialogs':
-            return ['chrome', 'layers'];
+            return ['chrome', 'layers', 'labels'];
         case 'sources':
             return ['chrome', 'controls', 'text-buttons', 'icon-buttons'];
+        // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
+        // skeleton bars and compact message leaves.
+        case 'sidebar':
+            return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf'];
         default:
             return ['chrome'];
     }
@@ -873,6 +880,17 @@ export interface StateCells {
     empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; gap: number; buttons: number; buttonWidth: number | undefined; width: number; dialogInset?: number }>;
     banners: Array<{ severity: string; glyphs: string[]; buttons: number; text: string }>;
     roles: Array<{ role: string; key: string; actual: string; expected: string }>;
+    // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): what the new clauses read; absent on a collector error.
+    /** The list's progress bar and the pane it sits in (the side bar's track spans the pane). */
+    progressBox?: { left: number; width: number };
+    paneBox?: { left: number; width: number };
+    /** Each compact skeleton row's bar start, from its pane's left edge. */
+    skeletonBars?: number[];
+    /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
+    messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
+    /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
+    disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
+    clauseError?: string;
 }
 
 /** An outline as computed: width and offset in px. */
@@ -1677,6 +1695,32 @@ const stateCells = {
         text: (el.querySelector('.nuiget-banner-text')?.textContent || '').trim(),
     })),
     roles: ${JSON.stringify(ROLE_ELEMENTS)}.flatMap(entry => shown(entry.selector).map(el => ({ role: entry.role, key: entry.key, actual: getComputedStyle(el, entry.pseudo || null)[entry.property], expected: resolveKey(entry.key, entry.property) }))),
+    // UX-P3.10 push A (DO 4): the facts of the new clauses; an error here is printed by them, never fatal to the collector.
+    ...(() => {
+        try {
+            const boxOf = el => { const rect = rectOf(el); return { left: round(rect.left), width: round(rect.width) }; };
+            const paneOf = el => el.closest('[data-testid^="section-box-"]') || root;
+            return {
+                progressBox: progressEl ? boxOf(progressEl) : undefined,
+                paneBox: progressEl ? boxOf(paneOf(progressEl)) : undefined,
+                skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
+                messageLeaves: shown('.nuiget-row-message--compact').map(el => {
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    // The text's own height over its line height: inline boxes on other baselines would count as lines of their own.
+                    const lineHeight = px(getComputedStyle(el).lineHeight);
+                    const lines = lineHeight > 0 ? Math.max(1, Math.round(range.getBoundingClientRect().height / lineHeight)) : 1;
+                    return { lineHeight, height: round(rectOf(el.closest('.nuiget-row') || el).height), lines };
+                }),
+                disabledLabels: shown('[aria-disabled="true"], :disabled').filter(el => !el.closest('.nuiget-button, .nuiget-icon-button')).map(el => {
+                    const style = getComputedStyle(el);
+                    return { label: (el.dataset.testid || el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 40), colour: style.color, opacity: style.opacity };
+                }),
+            };
+        } catch (error) {
+            return { clauseError: String(error) };
+        }
+    })(),
 };
 // UX-P3.2: the quick-search popup, when open.
 const popupEl = shown('.nuiget-search-popup')[0];
@@ -3474,6 +3518,66 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
 }
 
 /** The value and the verdict of one rule in one scope, or undefined when no helper measures that scope. */
+/** UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the compact row and its 18.2 px text line (DS-TYPE-4). */
+const COMPACT_ROW = 22;
+const COMPACT_LINE = 18.2;
+/** The level-1 row name's x from the side bar pane's edge, per look (DO 4: Modern UI 28, classic 20). */
+const SIDEBAR_NAME_X = { modern: 28, classic: 20 } as const;
+
+/** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `message-leaf`), or undefined for another. */
+function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
+    const cells = layout.endOfP0.stateCells;
+    const tolerance = definition.tolerance;
+    const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && scope === 'skeleton') || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf');
+    if (!own) {
+        return undefined;
+    }
+    if (cells.clauseError !== undefined) {
+        return notMeasurable(`collector: ${cells.clauseError}`);
+    }
+    if (definition.id === 'DS-COLOR-6') {
+        const labels = cells.disabledLabels ?? [];
+        if (labels.length === 0) {
+            return notMeasurable('no disabled label');
+        }
+        const target = layout.endOfP0.iconColours.disabled;
+        return {
+            value: `disabled labels ${labels.length}: colour ${tally(labels.map(label => label.colour))}, opacity ${tally(labels.map(label => label.opacity))} (target ${target}, 1)`,
+            pass: labels.every(label => label.colour === target && label.opacity === '1'),
+        };
+    }
+    if (definition.id === 'DS-INSET-1') {
+        const bars = cells.skeletonBars ?? [];
+        if (bars.length === 0) {
+            return notMeasurable('no compact skeleton row');
+        }
+        const target = SIDEBAR_NAME_X[look];
+        return { value: `skeleton bars at ${tally(bars)} from the pane (target ${target}, the level-1 row name)`, pass: bars.every(x => near(x, target, tolerance)) };
+    }
+    const leaves = cells.messageLeaves ?? [];
+    if (leaves.length === 0) {
+        return notMeasurable('no compact message leaf');
+    }
+    const targetOf = (lines: number): number => (lines === 1 ? COMPACT_ROW : tenth(lines * COMPACT_LINE + (COMPACT_ROW - COMPACT_LINE)));
+    const holds = (leaf: { lineHeight: number; height: number; lines: number }): boolean => near(leaf.height, targetOf(leaf.lines), tolerance) && (leaf.lines === 1 || near(leaf.lineHeight, COMPACT_LINE, tolerance));
+    return {
+        value: leaves.map(leaf => `${leaf.lines} line${leaf.lines === 1 ? '' : 's'}: height ${leaf.height}, line ${leaf.lineHeight} (target ${targetOf(leaf.lines)}${leaf.lines === 1 ? '' : `, line ${COMPACT_LINE}`})`).join('; '),
+        pass: leaves.every(holds),
+    };
+}
+
+/** UX-P3.10 push A (DO 4): the side bar's progress track spans its pane (the workbench's view progress, paneviewlet.css). */
+function sidebarTrack(layout: Layout): { text: string; pass: boolean } | undefined {
+    const { progressBox, paneBox } = layout.endOfP0.stateCells;
+    if (progressBox === undefined || paneBox === undefined) {
+        return undefined;
+    }
+    const left = tenth(progressBox.left - paneBox.left);
+    const width = tenth(progressBox.width - paneBox.width);
+    return { text: `track Δleft ${left} Δwidth ${width} (target 0 0)`, pass: Math.abs(left) <= 1 && Math.abs(width) <= 1 };
+}
+
 function evaluate(definition: RuleDefinition, scope: Scope, state: string, layout: Layout, look: 'modern' | 'classic', workbench: WorkbenchHeights, reference: ChromeReference | undefined, spec: SpecLook | undefined, laneWorkbench: WorkbenchHeights | undefined, lane: Lane = 'ui'): { value: string; pass: boolean } | undefined {
     const tolerance = definition.tolerance;
     if (!layout.root) {
@@ -3482,6 +3586,10 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     if (definition.helper === 8) {
         return evaluateSpec(layout, spec, definition, scope, state);
     }
+    const clauseVerdict = evaluateStateClauses(definition, scope, layout, look);
+    if (clauseVerdict !== undefined) {
+        return clauseVerdict;
+    }
     const popupVerdict = evaluatePopup(definition, scope, layout) ?? evaluateLayers(definition, scope, layout);
     if (popupVerdict !== undefined) {
         return popupVerdict;
@@ -3489,7 +3597,8 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
     const heightVerdict = evaluateRowBadges(definition, state, layout) ?? evaluateHeights(definition, layout, look, workbench, laneWorkbench, state, lane) ?? evaluateOverflow(definition, scope, state, layout, look, reference) ?? evaluateEndOfP0(definition, scope, state, layout, reference)
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
-        return heightVerdict;
+        const track = (definition.id === 'DS-STATE-2' || definition.id === 'DS-HEIGHT-11') && scope === 'sidebar' ? sidebarTrack(layout) : undefined;
+        return track === undefined ? heightVerdict : { value: `${heightVerdict.value}; ${track.text}`, pass: heightVerdict.pass && track.pass };
     }
     switch (definition.id) {
         case 'PF-6': {
