@@ -1086,6 +1086,7 @@ const REACH: Record<string, Reach> = {
             await until('/\\d/.test(document.querySelector(\'[data-testid="section-box-updates"] .nuiget-badge--count\')?.textContent ?? "") && Number(document.querySelector(\'[data-testid="sidebar-updates-list"] [role="treeitem"][aria-level="1"]\')?.getAttribute("aria-setsize")) === 2 && document.querySelector(\'[data-testid="sidebar-updates-list"] .nuiget-spinner\') === null', 'the sidebar\'s All Projects Updates tree settled', 120_000);
             // Pinned at the Tools folder, its two leaves rendered (design-advisor ruling of 2026-11-08, DO 7).
             await settleOrReport('sidebar-all-projects-updates', SIDEBAR_UPDATES_ALL_SETTLED(), SIDEBAR_UPDATES_FACTS);
+            console.warn(`[reach] sidebar-all-projects-updates: ${await script<string>(PIN_FACTS('sidebar-updates-list', 'group-row-updates-folder-tools'))}`);
             await parkSidebarPointer();
         },
         settled: () => SIDEBAR_UPDATES_ALL_SETTLED(),
@@ -1310,6 +1311,7 @@ const REACH: Record<string, Reach> = {
             // Empty and Unsupported leaves rendered (UX-P3.7d hand-off; a new cell, never a re-pin).
             await REACH['sidebar-all-projects'].reach();
             await settleOrReport('sidebar-all-projects-tools', SIDEBAR_INSTALLED_TOOLS_SETTLED(), LEAF_FACTS);
+            console.warn(`[reach] sidebar-all-projects-tools: ${await script<string>(PIN_FACTS('sidebar-installed-list', 'group-row-folder-tools'))}`);
             await parkSidebarPointer();
         },
         settled: () => SIDEBAR_INSTALLED_TOOLS_SETTLED(),
@@ -1713,8 +1715,10 @@ const row = list.querySelector('[data-testid="${pinRow}"]');
 if (row === null) { list.scrollTop += 300; return false; }
 const delta = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
 ${pin === 'top-or-end'
-        // The sidebar's tree ends before the Tools row can reach the list's top: pinned at its end (UX-P3.7d).
-        ? 'const atEnd = list.scrollTop >= list.scrollHeight - list.clientHeight - 1;\nif (Math.abs(delta) >= 1 && !(delta > 0 && atEnd)) { list.scrollTop += delta; return false; }'
+        // The sidebar's tree ends before the Tools row can reach the list's top: pinned at its end (UX-P3.7d). Only the exact end
+        // settles: "within 1 px of it" let two outcomes 1 px apart through (run 43647226119, UX-P3.10 push E follow-up 2). A row
+        // below the top by less than a pixel is at the top, so the jump to the end needs a whole pixel of delta (no oscillation).
+        ? 'if (delta >= 1 && list.scrollHeight - list.clientHeight - list.scrollTop >= 0.5) { list.scrollTop = list.scrollHeight; return false; }\nconst atEnd = list.scrollTop >= list.scrollHeight - list.clientHeight - 1;\nif (Math.abs(delta) >= 1 && !(delta > 0 && atEnd)) { list.scrollTop += delta; return false; }'
         : 'if (Math.abs(delta) >= 1) { list.scrollTop += delta; return false; }'}
 if (!${JSON.stringify(markers)}.every(id => document.querySelector('[data-testid="' + id + '"]') !== null)) return false;
 const unsettled = (() => { ${UNSETTLED} })();
@@ -1737,6 +1741,14 @@ return 'scrollTop ' + Math.round(list.scrollTop) + ' of ' + list.scrollHeight + 
 `;
 /** `STATE_MARKERS['sidebar-all-projects-updates']` of `measure.ts`, pinned at the Updates tree's Tools folder (UX-P3.7d). */
 const SIDEBAR_UPDATES_ALL_SETTLED = (): string => allProjectsSettled('sidebar-updates-list', ['sidebar-updates-unsupported-unsupported.csproj', 'sidebar-updates-empty-empty.csproj'], 'group-row-updates-folder-tools', 'top-or-end');
+/** The scroll position a pinned sidebar tree settled on, printed after its settle (UX-P3.10 push E follow-up 2, DO 2). */
+const PIN_FACTS = (listTestId: string, pinRow: string): string => `
+const list = document.querySelector('[data-testid="${listTestId}"]');
+if (list === null) return 'no ${listTestId}';
+const row = list.querySelector('[data-testid="${pinRow}"]');
+return 'scrollTop ' + Math.round(list.scrollTop * 10) / 10 + ' of ' + list.scrollHeight + ', client ' + list.clientHeight
+    + ', tools row ' + (row === null ? 'absent' : 'at ' + Math.round((row.getBoundingClientRect().top - list.getBoundingClientRect().top) * 10) / 10);
+`;
 /** `sidebar-all-projects-tools`: the sidebar's Installed tree pinned at the Tools folder, its two leaves rendered (UX-P3.10, DO 2). */
 const SIDEBAR_INSTALLED_TOOLS_SETTLED = (): string => allProjectsSettled('sidebar-installed-list', ['sidebar-installed-empty-empty.csproj', 'sidebar-installed-unsupported-unsupported.csproj'], 'group-row-folder-tools', 'top-or-end');
 
