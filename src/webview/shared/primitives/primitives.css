@@ -1238,8 +1238,10 @@
     cursor: col-resize;
 }
 
+/* Above the panes' positioned content (a skeleton row, a banner, a tab) so the band precedes its neighbours (DS-DIVIDER-6; UX-P3.10 fix ruling, 2026-11-14); the hit area keeps tree order so a control keeps its presses. */
 .nuiget-sash--vertical::before {
     inset: 0 calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2);
+    z-index: 1;
 }
 
 /* One-sided: from the band's list-side edge into the trailing pane's padding, 24 px in all, so the list's scrollbar keeps its presses. */
