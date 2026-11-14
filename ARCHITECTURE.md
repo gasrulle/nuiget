@@ -794,8 +794,12 @@ is why it is not a dialog.
   Delete uninstall it through `usePackageRows().uninstall` (`whyNotRemovable` first); under All Projects a package installed
   in every project has "Uninstall..." and the others "Install...", both opening the actions menu, and Delete writes nothing
   (UX-P3.8). Each list shows its 2 px bar in the pane that loads: `sidebar-browse-progress` alone on a first search and over
-  the kept rows while it asks again, `sidebar-installed-progress` over the Installed pane on a first load and a revalidation;
-  `sidebar-browse-empty` and `sidebar-browse-error` mark the other Browse cells. The sidebar asks no suggestions; it enables the sources slice (`sources/list`, then `sources/health` and the sources invalidations) to name the active source on its `sidebar-source` header line, and asks `config/get` once, for `workbench.tree.indent` (UX-P3.7b). Its pane headers show no count badge at 0 and `k of N` while a filter is on (`directCount`, `src/webview/shared/counts.ts`); an All Projects project header carries the provisional badge (`sidebar-installed-provisional-<name>`); a filter mode opens its section without writing the kept layout.
+  the kept rows while it asks again, `sidebar-installed-progress` over the Installed pane and `sidebar-updates-progress` over the
+  Updates pane on a first load and a revalidation; a pane header's spinner shows on a first load only, a revalidation being the
+  pane's bar alone with the rows kept and the list `aria-busy` (UX-P3.10). The Updates pane's failed check is
+  `sidebar-updates-error`, and an unsupported project's `sidebar-updates-unsupported` banner shows in `@updates` mode, above the
+  read-only rows or alone when the project lists no package; under the view's banner such a pane says "No updates to show."
+  (UX-P3.10). `sidebar-browse-empty` and `sidebar-browse-error` mark the other Browse cells. The sidebar asks no suggestions; it enables the sources slice (`sources/list`, then `sources/health` and the sources invalidations) to name the active source on its `sidebar-source` header line, and asks `config/get` once, for `workbench.tree.indent` (UX-P3.7b). Its pane headers show no count badge at 0 and `k of N` while a filter is on (`directCount`, `src/webview/shared/counts.ts`); an All Projects project header carries the provisional badge (`sidebar-installed-provisional-<name>`); a filter mode opens its section without writing the kept layout.
   Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
   Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
   `UpdateAllDialog`, the main panel's body, that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one

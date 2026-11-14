@@ -300,7 +300,7 @@ State markers (§4) and layer roots:
 | `sidebar-installed-progress`, `sidebar-browse-progress` | The 2 px progress bar of the sidebar's Installed pane (over its list's top edge on a first load, above the skeleton rows, and while it revalidates) and of its Browse results (alone on a first search, over the rows while it asks again) (UX-P3.8) |
 | `sidebar-updates-progress` | The 2 px progress bar of the sidebar's Updates pane, over its list's top edge on a first load and while it revalidates (UX-P3.10) |
 | `sidebar-updates-error` | The sidebar Updates pane's inline error with Retry; with nothing listed it is the one message (UX-P3.10) |
-| `sidebar-updates-unsupported` | Banner of a single unsupported project above its read-only update rows, in `@updates` mode, where the view's `sidebar-unsupported` banner is hidden: one banner per view (UX-P3.10) |
+| `sidebar-updates-unsupported` | Banner of a single unsupported project above its read-only update rows, in `@updates` mode, where the view's `sidebar-unsupported` banner is hidden: one banner per view; with no package list and no update row the banner stands alone, and under the view's banner the pane shows `sidebar-updates-empty` instead (wording owned by P3.11) (UX-P3.10) |
 | `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's Browse empty state ("No results for "x".") and inline error with Retry (UX-P3.8) |
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |

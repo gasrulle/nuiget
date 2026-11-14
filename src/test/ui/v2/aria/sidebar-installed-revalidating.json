@@ -1,0 +1,30 @@
+{
+  "state": "sidebar-installed-revalidating",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  heading \"Installed #\"",
+    "    button \"Installed #\" [expanded] {section-header-installed}",
+    "  progressbar \"Refreshing installed packages\" {sidebar-installed-progress}",
+    "  listbox \"Installed\" [busy] {sidebar-installed-list}",
+    "    option \"Dapper #\"",
+    "    option \"FluentValidation #\"",
+    "    option \"Humanizer.Core #\"",
+    "    option \"Microsoft.Extensions.AI.Abstractions #-preview.#\"",
+    "    option \"Microsoft.Extensions.Configuration.EnvironmentVariables #\"",
+    "    option \"Microsoft.Extensions.DependencyInjection.Abstractions #\"",
+    "    option \"Microsoft.Extensions.Http #\"",
+    "    option \"Microsoft.Extensions.Logging.Abstractions #\"",
+    "    option \"Microsoft.Extensions.Options.ConfigurationExtensions #\"",
+    "    option \"NETStandard.Library #\"",
+    "    option \"Newtonsoft.Json #\"",
+    "    option \"Polly #\"",
+    "    option \"Serilog #\"",
+    "    option \"Serilog.Sinks.Console #\"",
+    "    option \"System.Text.Json #\"",
+    "  status \"\" {status-live}"
+  ]
+}

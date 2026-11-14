@@ -639,7 +639,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.10",
-          "evidence": "push E1 (b5daf0c and the closing push): the pane headers pass busy only on a first load; DS-STATE-2 prints `header spinner 0` in the two revalidating cells (hard), read on E1's run",
+          "evidence": "run 43644736317 (E1, c4eae3b): DS-STATE-2@sidebar-installed-revalidating: bar at list top; rows 15; aria-busy; header spinner 0; track Δleft 0 Δwidth 0 (target 0 0) (hard), and DS-STATE-2@sidebar-updates-revalidating: … rows 14; aria-busy; header spinner 0 … (hard)",
           "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: a pane header's spinner means a first load, never a revalidation (DS §9 :467, DECISIONS 2026-11-01)",
           "alsoFixes": [
             "sidebar-updates-revalidating#D1 (single judge, the same spinner in the Updates pane header)"

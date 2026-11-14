@@ -93,7 +93,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.2: no browse scope for DS-GRID-2b (a flat list and a popup have no group header; design-advisor ruling); UX-P3.5: nor dialogs.
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
-        // UX-P3.10 push A (DO 4): the compact skeleton clause, pending on P3.10.
+        // UX-P3.10 push A (DO 4) and push D: the skeleton clauses, hard since UX-P3.10 push E.
         expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard' });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
@@ -120,7 +120,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-8')).toEqual({ ...mainHard(), sidebar: 'hard', sources: 'hard' });
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' });
-        // UX-P3.10 push A (DO 4): the disabled-label clause, pending on P3.10.
+        // UX-P3.10 push A (DO 4): the disabled-label and icon-button scopes, hard since UX-P3.10 push E.
         expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' });
         expect(definition('DS-COLOR-6')?.scopeStates?.['icon-buttons']).toEqual(['sidebar-updates-nomatch']);
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
@@ -195,11 +195,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // group; the red groups and the groups no state measures yet to the items that make them hold.
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
-        // UX-P3.10 push A (DO 4): the compact message leaf clause, pending on P3.10.
+        // UX-P3.10 push A (DO 4): the compact message leaf clause, hard since UX-P3.10 push E.
         expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard' });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
-        // UX-P3.10 push C: the details cells, pending on P3.10.
+        // UX-P3.10 push C: the details cells, hard since UX-P3.10 push E.
         expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
@@ -975,7 +975,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const scopesOf = (id: string) => RULES.find(rule => rule.id === id)?.scopes;
         // UX-P3.6: the sources dialog's cells read pending for its reading run.
         // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
-        // UX-P3.10 push C: the details cells, pending on P3.10 (follow-up 1, B).
+        // UX-P3.10 push C: the details cells (follow-up 1, B), hard since UX-P3.10 push E.
         expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' });
         // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only.
         expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error'] });
@@ -1473,7 +1473,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 });
 
-describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor opening ruling of 2026-11-14, DO 4)', () => {
+describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor opening ruling of 2026-11-14, DO 4)', () => {
     const withCells = (cells: Record<string, unknown>, heights: Partial<Heights> = {}) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] }, heights);
 
     it('reads disabled labels against disabledForeground at opacity 1, and the side bar\'s disabled icon buttons (DS-COLOR-6)', () => {
@@ -1529,6 +1529,9 @@ describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor 
         // A first load keeps its spinner: printed, not asserted.
         const loading = page({ ...track, progressTop: 60, contentTop: 60, skeletonRows: 3, rows: 0, headerSpinners: 1 });
         expect(lineOf('sidebar-installed-loading', loading, 'DS-STATE-2@sidebar-installed-loading')).toMatchObject({ pass: true, value: expect.stringContaining('header spinner 1') });
+        // A revalidating cell whose collector read no spinner count is not measurable, so it fails.
+        expect(lineOf('sidebar-installed-revalidating', page({ ...track, progressTop: 60, contentTop: 60, rows: 15, listBusy: true }), 'DS-STATE-2@sidebar-installed-revalidating'))
+            .toMatchObject({ pass: false, value: expect.stringContaining('header spinner not measurable') });
         // The main panel prints no such clause.
         expect(lineOf('main-installed-revalidating', page({ progressTop: 60, contentTop: 60, rows: 3, listBusy: true, headerSpinners: 1 }), 'DS-STATE-2@main-installed-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 3; aria-busy' });
     });
