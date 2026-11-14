@@ -2199,76 +2199,95 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             if (state.surface === 'main') {
                 await freshMainPanel();
             }
+            // UX-P3.10 (design-advisor opening ruling, DO 1): the state's `leave` runs whatever threw before it, so a held
+            // cell whose crop or audit throws never leaves its `postMessage` hold to swallow the next cells' answers; a
+            // failing `leave` never replaces the first error.
+            let failure: unknown;
             try {
-                await reach.reach();
+                try {
+                    await reach.reach();
+                } catch (error) {
+                    const reason = error instanceof Error ? error.message : String(error);
+                    console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
+                    throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
+                }
+                const { red, layout, overflowHard } = await measure(state, capture);
+                // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
+                const facts = await script<CaptureFacts>(CAPTURE_FACTS, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
+                // UX-P2.1a: the document as it stands immediately before the shot; a state whose DS-OVERFLOW-6 is hard fails as the rule does.
+                const page = await script<{ width: number; height: number; scrollWidth: number; scrollHeight: number }>(READ_DOCUMENT);
+                console.warn(`[overflow] ${captureFile(state.name, capture)}: document ${page.width}×${page.height}, scroll ${page.scrollWidth}×${page.scrollHeight}`);
+                if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
+                    red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
+                }
+                const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number; scrollTop: number; clip: string; direct: string } | null>(READ_VIRTUAL);
+                if (virtual !== null) {
+                    console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}, scrollTop ${virtual.scrollTop}, clip y ${virtual.clip}, direct header y ${virtual.direct}`);
+                }
+                // UX-P3.9 push 1 (DO 1e, 1g): the chrome probes, once per state, in the webview under the same settle.
+                if (LANE === 'ui' && LOOK === 'modern' && CHROME_PROBE_STATES.includes(state.name) && !chromeProbed.has(state.name)) {
+                    chromeProbed.add(state.name);
+                    printLines(await chromeProbes(state.name));
+                }
+                // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot; a
+                // dialog of DIALOG_FRINGE_STATES gives its title and body lines, not its buttons' (UX-P3.9 follow-up 4).
+                const textLines = LANE !== 'ui' ? undefined
+                    : state.surface === 'sidebar' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar')
+                        : DIALOG_FRINGE_STATES.includes(state.name) ? (await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')).filter(line => line.label === 'confirm-dialog')
+                            : undefined;
+                const shot = await shoot(state, capture);
+                writeSidecar(state, capture, facts);
+                probeScrollbar(state, capture, layout, shot);
+                if (textLines !== undefined) {
+                    // Once per pass, at its first sidebar cell: the side bar's own title in that cell's window screenshot
+                    // (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red. A dialog
+                    // cell, whose scrim covers the label, takes no reading of its own and waits for this one (UX-P3.9 follow-up 5).
+                    if (hostReading === undefined && state.surface === 'sidebar') {
+                        hostReading = await hostFringe(shot.png, shot.dpr);
+                        const guard = hostGuard(hostReading, process.platform, LANE);
+                        if (guard !== undefined) {
+                            console.warn(guard);
+                            red.push(guard);
+                        }
+                    }
+                    const file = captureFile(state.name, capture);
+                    const judged = { state: state.name, width: capture.width, theme: capture.theme, cell: file.replace(/\.png$/, ''), png: path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), file), lines: textLines, dpr: shot.dpr };
+                    if (hostReading === undefined) {
+                        deferredFringe.push(judged);
+                    } else {
+                        for (const waiting of deferredFringe.splice(0)) {
+                            judgeFringe(waiting, hostReading, red);
+                        }
+                        judgeFringe(judged, hostReading, red);
+                    }
+                }
+                // Once per state in the `ui` lane, after the PNG and before the setup's layer closes.
+                const inaccessible = LANE === 'ui' && !audited.has(state.name) ? await auditSafely(state) : [];
+                audited.add(state.name);
+                // The PNG is written first: a red hard rule leaves its evidence.
+                if (red.length > 0) {
+                    throw new Error(`hard measurement red: ${red.join('; ')}`);
+                }
+                if (inaccessible.length > 0) {
+                    throw new Error(`axe (a11y-full-axe-real-page): ${inaccessible.join('; ')}`);
+                }
             } catch (error) {
-                const reason = error instanceof Error ? error.message : String(error);
-                console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
-                throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
+                failure = error;
             }
-            const { red, layout, overflowHard } = await measure(state, capture);
-            // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
-            const facts = await script<CaptureFacts>(CAPTURE_FACTS, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
-            // UX-P2.1a: the document as it stands immediately before the shot; a state whose DS-OVERFLOW-6 is hard fails as the rule does.
-            const page = await script<{ width: number; height: number; scrollWidth: number; scrollHeight: number }>(READ_DOCUMENT);
-            console.warn(`[overflow] ${captureFile(state.name, capture)}: document ${page.width}×${page.height}, scroll ${page.scrollWidth}×${page.scrollHeight}`);
-            if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
-                red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
-            }
-            const virtual = await script<{ client: number; scroll: number; sizer: number; rendered: number; heights: number; items: number; scrollTop: number; clip: string; direct: string } | null>(READ_VIRTUAL);
-            if (virtual !== null) {
-                console.warn(`[virtual] ${captureFile(state.name, capture).replace(/\.png$/, '')}: client ${virtual.client}, scroll ${virtual.scroll}, sizer ${virtual.sizer}, rendered ${virtual.rendered} of ${virtual.items}, rendered heights ${virtual.heights}, scrollTop ${virtual.scrollTop}, clip y ${virtual.clip}, direct header y ${virtual.direct}`);
-            }
-            // UX-P3.9 push 1 (DO 1e, 1g): the chrome probes, once per state, in the webview under the same settle.
-            if (LANE === 'ui' && LOOK === 'modern' && CHROME_PROBE_STATES.includes(state.name) && !chromeProbed.has(state.name)) {
-                chromeProbed.add(state.name);
-                printLines(await chromeProbes(state.name));
-            }
-            // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot; a
-            // dialog of DIALOG_FRINGE_STATES gives its title and body lines, not its buttons' (UX-P3.9 follow-up 4).
-            const textLines = LANE !== 'ui' ? undefined
-                : state.surface === 'sidebar' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar')
-                    : DIALOG_FRINGE_STATES.includes(state.name) ? (await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')).filter(line => line.label === 'confirm-dialog')
-                        : undefined;
-            const shot = await shoot(state, capture);
-            writeSidecar(state, capture, facts);
-            probeScrollbar(state, capture, layout, shot);
-            if (textLines !== undefined) {
-                // Once per pass, at its first sidebar cell: the side bar's own title in that cell's window screenshot
-                // (opening ruling DO 9, follow-up 3 DO 1-2); on Linux in the ui lane a host not drawing LCD is red. A dialog
-                // cell, whose scrim covers the label, takes no reading of its own and waits for this one (UX-P3.9 follow-up 5).
-                if (hostReading === undefined && state.surface === 'sidebar') {
-                    hostReading = await hostFringe(shot.png, shot.dpr);
-                    const guard = hostGuard(hostReading, process.platform, LANE);
-                    if (guard !== undefined) {
-                        console.warn(guard);
-                        red.push(guard);
-                    }
-                }
-                const file = captureFile(state.name, capture);
-                const judged = { state: state.name, width: capture.width, theme: capture.theme, cell: file.replace(/\.png$/, ''), png: path.join(path.dirname(VSBrowser.instance.getScreenshotsDir()), file), lines: textLines, dpr: shot.dpr };
-                if (hostReading === undefined) {
-                    deferredFringe.push(judged);
-                } else {
-                    for (const waiting of deferredFringe.splice(0)) {
-                        judgeFringe(waiting, hostReading, red);
-                    }
-                    judgeFringe(judged, hostReading, red);
-                }
-            }
-            // Once per state in the `ui` lane, after the PNG and before the setup's layer closes.
-            const inaccessible = LANE === 'ui' && !audited.has(state.name) ? await auditSafely(state) : [];
-            audited.add(state.name);
             if (reach.leave) {
-                await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
-                await reach.leave();
+                try {
+                    await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+                    await reach.leave();
+                } catch (leaveError) {
+                    if (failure === undefined) {
+                        failure = leaveError;
+                    } else {
+                        console.warn(`[capture] ${captureFile(state.name, capture)}: leave failed after an earlier error (${leaveError instanceof Error ? leaveError.message : String(leaveError)})`);
+                    }
+                }
             }
-            // The PNG is written first: a red hard rule leaves its evidence.
-            if (red.length > 0) {
-                throw new Error(`hard measurement red: ${red.join('; ')}`);
-            }
-            if (inaccessible.length > 0) {
-                throw new Error(`axe (a11y-full-axe-real-page): ${inaccessible.join('; ')}`);
+            if (failure !== undefined) {
+                throw failure;
             }
         });
     }
