@@ -320,7 +320,8 @@ describe('sidebar: Installed section', () => {
         expect(names()).toEqual(['Moq', 'Serilog']);
         expect(list()).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByRole('progressbar', { name: 'Refreshing installed packages' })).not.toHaveAttribute('aria-valuenow');
-        expect(sectionSpinner()).not.toBeNull();
+        // A revalidation is the pane's bar alone: the header's spinner is the first load's (UX-P3.10 push E, design-advisor follow-up 1).
+        expect(sectionSpinner()).toBeNull();
         expect(skeletonRows()).toHaveLength(0);
         // Not a first load: nothing new is said, also two frames later, when an announcement would be there.
         await act(async () => {

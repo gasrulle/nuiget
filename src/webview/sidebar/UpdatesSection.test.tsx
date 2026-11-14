@@ -119,12 +119,16 @@ describe('sidebar: Updates section', () => {
         // The first load: the bar over the skeleton.
         expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Loading updates');
         expect(skeletonRows().length).toBeGreaterThan(0);
+        // The header's spinner is the first load's (UX-P3.10 push E, design-advisor follow-up 1).
+        expect(screen.getByTestId('section-header-updates').querySelector('.nuiget-spinner')).not.toBeNull();
         await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '4.0.0')] }, 1));
         expect(screen.queryByTestId('sidebar-updates-progress')).toBeNull();
         // A revalidation: the rows stay under the bar.
         await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
         expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Refreshing updates');
         expect(updateOption('Serilog')).toBeInTheDocument();
+        // A revalidation is the bar alone: no spinner in the header.
+        expect(screen.getByTestId('section-header-updates').querySelector('.nuiget-spinner')).toBeNull();
     });
 
     it('a failed check with nothing listed is its error banner with Retry alone, never "No updates available" (UX-P3.10)', async () => {

@@ -312,7 +312,8 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count === undefined ? undefined : needle !== '' ? directCount(count, shown, true) : count > 0 ? count : undefined}
-                busy={busy}
+                // The header's spinner is the first load's; a revalidation is the pane's bar alone (UX-P3.10 push E, follow-up 1).
+                busy={loadingFirst}
                 actions={count !== undefined && count > 0 && (all.active || installed.result?.unsupported === undefined) ? (
                     <IconButton label={`Update all (${candidates.length})`} data-testid="sidebar-update-all-button" disabled={candidates.length === 0} onClick={() => setConfirming(true)}>
                         <ArrowUpIcon />

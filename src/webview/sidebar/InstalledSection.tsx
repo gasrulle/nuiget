@@ -211,7 +211,8 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
         content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 
-    // The pane loads or revalidates: its 2 px bar over the list's top edge and the header's spinner (DS-STATE-2, UX-P3.8).
+    // The pane loads or revalidates: its 2 px bar over the list's top edge (DS-STATE-2, UX-P3.8); the header's spinner is the first
+    // load's only, never a revalidation's (UX-P3.10 push E, design-advisor follow-up 1).
     const loadingFirst = all.active ? all.status === 'loading' : installed.status === 'loading';
     const busy = loadingFirst || (all.active ? all.revalidating : installed.revalidating);
     return (
@@ -225,7 +226,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 expanded={expanded}
                 onToggle={onToggle ?? (() => setOwn(previous => !previous))}
                 count={count}
-                busy={busy}
+                busy={loadingFirst}
                 badges={!all.active && result?.fidelity === 'provisional'
                     ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="provisional" tone="info" /></span>
                     : undefined}
