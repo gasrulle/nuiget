@@ -25,6 +25,11 @@ export interface UpdatesSectionProps {
     onToggle?: () => void;
     /** The section's share of the height while both sections are open, a number of parts, for example `"60"` against `"40"`. */
     share?: string;
+    /**
+     * The pane says an unsupported project itself (`sidebar-updates-unsupported`) only where the view's own banner is hidden, in
+     * `@updates` mode: one fact, one banner (UX-P3.10, design-advisor follow-up 2).
+     */
+    showUnsupported?: boolean;
 }
 
 /** The empty sentence of one project's list. A check that could not be made is its banner alone, never an empty list (UX-P3.10). */
@@ -167,7 +172,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
  * folder when there are several. A row updates its own project. A source that could not be checked is a banner, never
  * "no updates".
  */
-export function UpdatesSection({ announce, filter = '', expanded: controlled, onToggle, share }: UpdatesSectionProps): React.JSX.Element {
+export function UpdatesSection({ announce, filter = '', expanded: controlled, onToggle, share, showUnsupported = false }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
     const all = useAllProjects();
@@ -241,7 +246,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
         const unsupported = installed.result?.unsupported;
         content = (
             <>
-                {unsupported !== undefined
+                {showUnsupported && unsupported !== undefined
                     ? <Banner severity="warning" data-testid="sidebar-updates-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner>
                     : null}
                 {updates.sourcesUnavailable

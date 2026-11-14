@@ -139,16 +139,25 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('updates/get')).toHaveLength(2);
     });
 
-    it('an unsupported project shows its banner above its read-only rows, and no Update all (UX-P3.10)', async () => {
+    it('one banner per view for an unsupported project: the view\'s with both panes open, the pane\'s in @updates mode above its read-only rows; no Update all (UX-P3.10)', async () => {
+        const user = userEvent.setup();
         const host = createFakeHost();
         render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: PACKAGES, unsupported: { reason: 'sdk-too-old', message: 'needs SDK 10' } }, 1));
         await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '4.0.0')] }, 1));
-        expect(screen.getByTestId('sidebar-updates-unsupported')).toHaveTextContent('Unsupported project: needs SDK 10.');
-        // Both panes open: the view's banner too, one full stop (DS-COPY-3); in @updates mode the pane's banner is the one message.
+        const banners = (): HTMLElement[] => screen.queryAllByText(/^Unsupported project: needs SDK 10\.$/);
+        // Both panes open: the view's banner alone, one full stop (DS-COPY-3; design-advisor follow-up 2).
+        expect(banners()).toHaveLength(1);
         expect(screen.getByTestId('sidebar-unsupported')).toHaveTextContent(/Unsupported project: needs SDK 10\.$/);
+        expect(screen.queryByTestId('sidebar-updates-unsupported')).toBeNull();
+        expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
+        // @updates mode: the view's banner leaves and the pane says it above its read-only rows.
+        await user.type(screen.getByTestId('sidebar-search-input'), '@updates ');
+        expect(banners()).toHaveLength(1);
+        expect(screen.queryByTestId('sidebar-unsupported')).toBeNull();
+        expect(screen.getByTestId('sidebar-updates-unsupported')).toHaveTextContent(/Unsupported project: needs SDK 10\.$/);
         expect(updateOption('Serilog')).toBeInTheDocument();
         expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
     });
