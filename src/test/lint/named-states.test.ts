@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_THEMES, matrixCaptures, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
+import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_THEMES, matrixCaptures, pending as pendingState, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
 
 /**
  * UX-P0.8: the one list of named states (`src/test/ui/v2/states.ts`). A pending state names an item that is still
@@ -36,7 +36,7 @@ describe('the named states (UX-P0.8)', () => {
     it('gives each pending state an item that is a tracker row and not done', () => {
         const statuses = trackerStatuses();
         const pending = STATES.filter(state => !isReady(state)).map(state => [state.name, (state.status as { pending: string }).pending] as const);
-        expect(pending.length).toBeGreaterThan(0);
+        // Empty since UX-P3.10 push D; the loop holds for a later item's pending state.
         for (const [name, item] of pending) {
             expect(statuses.has(item), `${name}: ${item} is a row of STATUS-ux.md`).toBe(true);
             expect(statuses.get(item), `${name}: ${item} is still open`).not.toBe('done');
@@ -47,8 +47,8 @@ describe('the named states (UX-P0.8)', () => {
         const byItem = (item: string): string[] => STATES.filter(state => !isReady(state) && (state.status as { pending: string }).pending === item).map(state => state.name);
         expect(byItem('P2.8b')).toEqual([]);
         expect(byItem('P3.1b')).toEqual([]);
-        // UX-P3.10 push A: the cells that wait for their markers (design-advisor opening ruling of 2026-11-14, DO 3).
-        expect(byItem('P3.10')).toEqual(['main-updates-unsupported']);
+        // UX-P3.10 push A: the cells that wait for their markers (design-advisor opening ruling of 2026-11-14, DO 3); push D made the last one ready.
+        expect(byItem('P3.10')).toEqual([]);
     });
 
     it('has a setup in the capture suite for every ready state', () => {
@@ -88,8 +88,10 @@ describe('the named states (UX-P0.8)', () => {
         const windows = LEGACY_STATES.map(state => `${state}.png`);
         expect(screenshotProblems(crops, windows)).toEqual([]);
         expect(screenshotProblems(crops.slice(1), windows)).toEqual([`no capture ${crops[0]}`]);
-        expect(screenshotProblems([...crops, 'main-updates-unsupported.dark-modern.1200.png'], windows))
-            .toEqual(['a capture of the pending state main-updates-unsupported: main-updates-unsupported.dark-modern.1200.png']);
+        // No state is pending since UX-P3.10 push D: a probe state proves the check (architecture ruling of 2026-11-14).
+        const probe = pendingState('main-pending-probe', 'main', 'P3.10', 'A state no item renders: the proof of the pending-crop branch.');
+        expect(screenshotProblems([...crops, 'main-pending-probe.dark-modern.1200.png'], windows, [...STATES, probe]))
+            .toEqual(['a capture of the pending state main-pending-probe: main-pending-probe.dark-modern.1200.png']);
         expect(screenshotProblems(crops, windows.filter(file => file !== 'main-updates.png'))).toEqual(['no window PNG of the 2.0 state main-updates']);
         // An empty folder fails for every expected file.
         expect(screenshotProblems([], [])).toHaveLength(crops.length + LEGACY_STATES.length);
@@ -113,8 +115,8 @@ describe('the named states (UX-P0.8)', () => {
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
-            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells and seven details cells.
-            const expected = theme.includes('high-contrast') ? 238 : 247;
+            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported.
+            const expected = theme.includes('high-contrast') ? 241 : 250;
             expect(files, theme).toHaveLength(expected);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
@@ -133,9 +135,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells and seven details cells.
-        expect(files).toHaveLength(102);
-        expect(new Set(files).size).toBe(102);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported.
+        expect(files).toHaveLength(103);
+        expect(new Set(files).size).toBe(103);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());
@@ -146,7 +148,10 @@ describe('the named states (UX-P0.8)', () => {
         expect(laneProblems(files, 'matrix', 'dark-2026')).toEqual([]);
         expect(laneProblems(files.slice(1), 'matrix', 'dark-2026')).toEqual([`no capture ${files[0]}`]);
         expect(laneProblems([...files, 'main-installed-single.dark-modern.1200.png'], 'matrix', 'dark-2026')).toEqual(['an unexpected capture main-installed-single.dark-modern.1200.png']);
-        expect(laneProblems([...files, 'main-updates-unsupported.dark-2026.1200.png'], 'matrix', 'dark-2026')).toEqual(['a capture of the pending state main-updates-unsupported: main-updates-unsupported.dark-2026.1200.png']);
+        // No state is pending since UX-P3.10 push D: a probe state proves the check (architecture ruling of 2026-11-14).
+        const probe = pendingState('main-pending-probe', 'main', 'P3.10', 'A state no item renders: the proof of the pending-crop branch.');
+        expect(laneProblems([...files, 'main-pending-probe.dark-2026.1200.png'], 'matrix', 'dark-2026', [...STATES, probe])).toEqual(['a capture of the pending state main-pending-probe: main-pending-probe.dark-2026.1200.png']);
+        expect(laneProblems([...files, 'main-pending-probe.dark-2026.1200.png'], 'matrix', 'dark-2026')).toEqual(['an unexpected capture main-pending-probe.dark-2026.1200.png']);
     });
 
     it('runs the Linux lanes under a window manager and the ui job without one', () => {

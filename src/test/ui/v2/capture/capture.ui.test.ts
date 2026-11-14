@@ -787,6 +787,14 @@ const REACH: Record<string, Reach> = {
             await endHold();
         },
     },
+    // UX-P3.10 push D (DO 15): the Unsupported project's update rows under its banner, read-only; their versions are live (masked).
+    'main-updates-unsupported': {
+        reach: async () => {
+            await chooseFixtureProject('Unsupported.csproj');
+            await holdTab('updates-tab', 'document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0', 'main-updates-unsupported', 'an update row');
+            await until('document.querySelector(\'[data-testid="updates-unsupported"]\') !== null && document.querySelectorAll(\'[data-testid="updates-list"] .nuiget-row-option\').length > 0 && document.querySelector(\'[data-testid="updates-progress"]\') === null', 'the banner above the read-only update rows, no bar', 120_000);
+        },
+    },
     'main-updates-unavailable': {
         reach: async () => {
             await gatewayUpdates();

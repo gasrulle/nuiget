@@ -92,13 +92,6 @@ body {
     z-index: 1;
 }
 
-/* The revalidation bar lies over the header's bottom edge, so the list does not move when it comes and goes. */
-.nuiget-main-progress {
-    position: absolute;
-    inset-inline: var(--nuiget-inset);
-    inset-block-end: 0;
-}
-
 /* The list takes the share the sash reports; the details take the rest. */
 .nuiget-main-split {
     display: flex;
@@ -168,6 +161,7 @@ body {
 
 .nuiget-details {
     --nuiget-message-inset: var(--nuiget-inset-details);
+    --nuiget-skeleton-inset: var(--nuiget-inset-details);
     --nuiget-tab-strip-inset: var(--nuiget-inset-details);
     display: flex;
     flex: 1;

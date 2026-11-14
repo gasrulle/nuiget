@@ -27,7 +27,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -240,6 +240,8 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-updates-empty-uptodate': ['updates-empty'],
     'main-updates-error': ['updates-error'],
     'main-updates-unavailable': ['updates-unavailable-banner'],
+    // UX-P3.10 push D (design-advisor opening ruling of 2026-11-14, DO 15).
+    'main-updates-unsupported': ['updates-unsupported'],
     'main-updates-all': ['updates-unsupported-unsupported.csproj', 'updates-empty-empty.csproj'],
     // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
     'sidebar-all-projects-updates': ['sidebar-updates-unsupported-unsupported.csproj', 'sidebar-updates-empty-empty.csproj'],
@@ -288,11 +290,11 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
     { role: 'skeleton', selector: '.nuiget-skeleton-row--compact', pseudo: '::after', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
 ];
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5); `main-details-readme` returns it to the current row (UX-P3.9 follow-up 3), and the theme pass reads the details tab's ring. */
-const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates'];
+const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
-const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme'];
+const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
 
 export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
@@ -301,8 +303,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.2 (design-advisor ruling): a flat Browse list or the popup has no group header, so DS-GRID-2b is registered apart
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES] }),
-    // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name.
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'] } }),
+    // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
+    // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' }, 'details-skeleton': { pending: 'P3.10' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'] } }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -511,7 +514,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'browse':
             return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':
-            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons'];
+            // UX-P3.10 push D (design-advisor fix ruling of 2026-11-14, DEFECTS 1): the details and README skeleton's first mark.
+            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton'];
         case 'dialogs':
             return ['chrome', 'layers', 'labels'];
         case 'sources':
@@ -920,6 +924,8 @@ export interface StateCells {
     paneBox?: { left: number; width: number };
     /** Each compact skeleton row's bar start, from its pane's left edge. */
     skeletonBars?: number[];
+    /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
+    detailsSkeletonMarks?: number[];
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
     /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
@@ -1742,6 +1748,12 @@ const stateCells = {
                 progressBox: progressEl ? boxOf(progressEl) : undefined,
                 paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
+                // The first painted mark of every skeleton row in the details pane's tab panel, whatever its density: a comfortable
+                // row's tile (::before), a compact row's bar (::after); from the pane's left (push D ruling, D 11).
+                detailsSkeletonMarks: (() => {
+                    const pane = document.querySelector('[data-testid="package-details-panel"]');
+                    return cellArea && pane ? inCell('.nuiget-skeleton-row').map(el => round(rectOf(el).left + px(getComputedStyle(el, el.classList.contains('nuiget-skeleton-row--compact') ? '::after' : '::before').left) - rectOf(pane).left)) : [];
+                })(),
                 messageLeaves: shown('.nuiget-row-message--compact').map(el => {
                     const range = document.createRange();
                     range.selectNodeContents(el);
@@ -3570,13 +3582,15 @@ const COMPACT_ROW = 22;
 const COMPACT_LINE = 18.2;
 /** The level-1 row name's x from the side bar pane's edge, per look (DO 4: Modern UI 28, classic 20). */
 const SIDEBAR_NAME_X = { modern: 28, classic: 20 } as const;
+/** The details pane's content inset, where its title and tab label start in both looks (DS-INSET-4; UX-P3.10 fix ruling, DEFECTS 1). */
+const DETAILS_CONTENT_X = 20;
 
-/** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `message-leaf`), or undefined for another. */
+/** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`), or undefined for another. */
 function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && scope === 'skeleton') || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf');
     if (!own) {
         return undefined;
     }
@@ -3593,6 +3607,13 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
             value: `disabled labels ${labels.length}: colour ${tally(labels.map(label => label.colour))}, opacity ${tally(labels.map(label => label.opacity))} (target ${target}, 1): ${labels.map(label => label.label).join(', ')}`,
             pass: labels.every(label => label.colour === target && label.opacity === '1'),
         };
+    }
+    if (definition.id === 'DS-INSET-1' && scope === 'details-skeleton') {
+        const marks = cells.detailsSkeletonMarks ?? [];
+        if (marks.length === 0) {
+            return notMeasurable('no details skeleton row');
+        }
+        return { value: `skeleton marks at ${tally(marks)} from the pane (target ${DETAILS_CONTENT_X}, the details content inset)`, pass: marks.every(x => near(x, DETAILS_CONTENT_X, tolerance)) };
     }
     if (definition.id === 'DS-INSET-1') {
         const bars = cells.skeletonBars ?? [];

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sidebar shows its loading bar in the section that loads, and an empty or failed search says so in place**
 - **The sidebar's Updates section shows a loading bar, a banner for an unsupported project, and one message when updates could not be checked**
 - **The package details and README show a loading bar while they load**
+- **The Updates tab says why an unsupported project's updates cannot be applied**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**
 - **Installed packages are listed alphabetically**

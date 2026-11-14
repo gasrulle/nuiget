@@ -16,8 +16,8 @@ import { useSearchTyping } from './features/search/useSearchTyping';
 import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { useCentralChange, type CentralChange } from './features/updates/useCentralChange';
 import { SourcesControl } from './features/sources/SourcesControl';
+import { FirstUsefulRenderMark } from './FirstUsefulRenderMark';
 import { MainTabs } from './MainTabs';
-import { RefreshBar } from './RefreshBar';
 import { clampTo, useSplitBounds } from './useSplitBounds';
 
 export type MainTab = 'installed' | 'updates';
@@ -240,7 +240,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         onFocusChange={setFocused}
                     />
                 </div>
-                <RefreshBar refreshing={refreshing} browsing={browsing} />
+                <FirstUsefulRenderMark />
             </header>
             {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
             <div className="nuiget-main-split" ref={splitRef} style={cssVars({ '--nuiget-split': `${shownSplit}%` })}>

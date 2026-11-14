@@ -302,6 +302,46 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByTestId('select-all-button')).toHaveAttribute('title', 'No update in this list can join a bulk update.');
     });
 
+    it('an unsupported project says why in one banner above its read-only rows (UX-P3.10)', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed([pkg('Serilog', { version: '3.0.0' })]), unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [update('Serilog', '3.0.0', '3.1.0')] }, 1));
+        await user.click(screen.getByTestId('updates-tab'));
+
+        const panel = document.getElementById(screen.getByTestId('updates-tab').getAttribute('aria-controls')!)!;
+        const banner = within(panel).getByTestId('updates-unsupported');
+        expect(banner).toHaveTextContent('Unsupported project: requires .NET SDK 10 or newer.');
+        expect(within(panel).getAllByTestId('updates-unsupported')).toHaveLength(1);
+        // Above the list, and the rows stay listed (read-only).
+        expect(banner.compareDocumentPosition(screen.getByTestId('updates-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(within(screen.getByTestId('updates-list')).getAllByRole('treeitem').some(item => item.textContent?.includes('Serilog'))).toBe(true);
+    });
+
+    it('an unsupported project with no package list shows its banner alone, never "No updates available" (UX-P3.10)', async () => {
+        const user = userEvent.setup();
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed([]), unsupported: { reason: 'packages-config', message: 'uses packages.config' } }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [] }, 1));
+        await user.click(screen.getByTestId('updates-tab'));
+
+        expect(screen.getByTestId('updates-unsupported')).toHaveTextContent('Unsupported project: uses packages.config.');
+        expect(screen.queryByTestId('updates-empty')).toBeNull();
+        expect(screen.queryByTestId('updates-list')).toBeNull();
+        expect(screen.queryByText('No updates available.')).toBeNull();
+    });
+
+    it('a supported project shows no unsupported banner on the Updates tab (UX-P3.10)', async () => {
+        await mountWith({ updates: [update('Serilog', '3.0.0', '3.1.0')] });
+        expect(screen.queryByTestId('updates-unsupported')).toBeNull();
+    });
+
     it('All Projects: the updates come from allProjects/updates, never updates/get', async () => {
         const host = await mountWith(null, ALL_PROJECTS);
         const stream = host.requests('allProjects/updates');

@@ -205,9 +205,13 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         body = null;
     } else if (updates.status === 'loading' && rows.length === 0) {
         body = <Skeleton density="comfortable" />;
+    } else if (unsupported && installed.result !== undefined && installed.result.packages.length === 0 && rows.length === 0) {
+        // The unsupported banner above is the one message: a project that cannot be read is not "up to date" (the Installed
+        // tab's `listed` rule; UX-P3.10 push D design ruling, B).
+        body = null;
     } else {
+        // Nothing installed is not "up to date" (MU10).
         const empty = rows.length > 0 ? `No update matches "${filter.trim()}".`
-            // Nothing installed is not "up to date" (MU10); an unsupported project lists no packages either.
             : !unsupported && installed.result !== undefined && installed.result.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
         body = (
             <Listbox
@@ -284,6 +288,8 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                     Select all
                 </Button>
             </Toolbar>
+            {/* The Installed tab's form: the reason above the read-only rows (UX-P3.10, UX-P3.1b hand-off). */}
+            {unsupported ? <Banner severity="warning" data-testid="updates-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner> : null}
             {updates.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>
                 : null}

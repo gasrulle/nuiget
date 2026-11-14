@@ -207,7 +207,7 @@ describe('main panel shell', () => {
         expect(host.requests('refresh/all')).toHaveLength(1);
     });
 
-    it('on Updates the header draws no bar while refresh/all is unanswered (the list draws its own); under Browse it does (UX-P3.1b)', async () => {
+    it('on Updates and under Browse the header draws no bar while refresh/all is unanswered; Refresh stays disabled until it answers (UX-P3.10)', async () => {
         const user = userEvent.setup();
         const { host } = await mountReady();
         await user.click(screen.getByTestId('updates-tab'));
@@ -216,7 +216,25 @@ describe('main panel shell', () => {
         await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
         await user.type(search(), 'serilog');
         await user.click(screen.getByRole('button', { name: 'Refresh' }));
-        expect(screen.getByRole('progressbar', { name: 'Refreshing' })).toBeInTheDocument();
+        // Under Browse the Refresh button's busy state is the cue (design-advisor opening ruling of 2026-11-14, DO 16).
+        expect(screen.queryByRole('progressbar', { name: 'Refreshing' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+        await hostSays(() => host.respond(host.requests('refresh/all')[1], {}));
+        expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    });
+
+    it('marks firstUsefulRender once when the first installed list answers while Browse is shown, and not again after it (UX-P3.10)', async () => {
+        const host = createFakeHost();
+        render(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list</p>} /></StoreProvider></StrictMode>);
+        await hostSays(() => host.respond(host.requests('session/get').at(-1)!, snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list').at(-1)!, { projects: [{ name: 'App', path: A }] }, 1));
+        await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+        fireEvent.change(search(), { target: { value: 'serilog' } });
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady']);
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [] }, 1));
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
+        fireEvent.change(search(), { target: { value: '' } });
+        expect(host.requests('perf/mark').map(request => request.payload.name)).toEqual(['webviewReady', 'firstUsefulRender']);
     });
 
     it('refresh asks the host once and says how it ended', async () => {

@@ -117,7 +117,7 @@ export function DetailsInfo(): React.JSX.Element {
         return (
             <>
                 <ProgressBar label="Loading details" data-testid="details-progress" />
-                <Skeleton density="comfortable" />
+                <Skeleton density="compact" />
             </>
         );
     }

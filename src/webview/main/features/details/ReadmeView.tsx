@@ -64,7 +64,7 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
         return (
             <>
                 <ProgressBar label="Loading the README" data-testid="readme-progress" />
-                <Skeleton density="comfortable" />
+                <Skeleton density="compact" />
             </>
         );
     }

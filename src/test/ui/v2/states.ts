@@ -96,7 +96,8 @@ const themeSensitive = (surface: Surface): Capture[] => {
 const ready = (name: string, surface: Surface, captures: Capture[], setup: string, masks: Mask[] = []): NamedState =>
     ({ name, surface, tier: 'A', captures, setup, masks, status: 'ready', diffTolerance: DIFF_TOLERANCE_START });
 
-const pending = (name: string, surface: Surface, item: string, setup: string): NamedState =>
+/** A state no item renders yet; exported for the lint test's probe of the pending-crop checks (UX-P3.10 push D, architecture ruling). */
+export const pending = (name: string, surface: Surface, item: string, setup: string): NamedState =>
     ({ name, surface, tier: 'A', captures: [primary(surface)], setup, masks: [], status: { pending: item }, diffTolerance: DIFF_TOLERANCE_START });
 
 /** Live nuget.org content (download counts, newest versions, descriptions) that differs between runs. */
@@ -298,7 +299,8 @@ export const STATES: readonly NamedState[] = [
         'Utility chosen with the sidebar\'s update check held and released as a failure, one fixed sentence: the Updates pane\'s inline error with Retry, its one message (marker sidebar-updates-error).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-updates-unsupported', 'sidebar', [primary('sidebar')],
         'Unsupported.csproj chosen and "@updates" typed: the banner "Unsupported project: …" above its read-only update rows, no Update all (marker sidebar-updates-unsupported).', [LIVE_SIDEBAR_UPDATES, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
-    pending('main-updates-unsupported', 'main', 'P3.10', 'An unsupported project on the Updates tab: the banner above its read-only rows (marker updates-unsupported).'),
+    { ...ready('main-updates-unsupported', 'main', [primary('main')],
+        'Unsupported.csproj chosen on the Updates tab: the banner "Unsupported project: …" above its read-only update rows, Update all and Select all disabled (marker updates-unsupported; UX-P3.10 push D).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-empty', 'main', [primary('main')],
         "Gateway listed, no row current: the details pane's welcome-style \"Select a package to see its details.\" (marker details-empty; follow-up 1, B).", [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-loading', 'main', [primary('main')],
@@ -356,13 +358,14 @@ export function expectedFiles(look?: Look): string[] {
 /**
  * What CI's step "Check the named screenshots" fails for, given the PNG names at the root of the screenshots folder
  * (`root`) and in its timestamp folders (`nested`): a missing crop of a ready state, a crop of a pending state, and a
- * state of the 2.0 set without its window PNG.
+ * state of the 2.0 set without its window PNG. `states` exists for the lint test, which proves the pending-crop check with a
+ * probe state while no state is pending (UX-P3.10 push D, architecture ruling); CI passes two arguments.
  */
-export function screenshotProblems(root: Iterable<string>, nested: Iterable<string>): string[] {
+export function screenshotProblems(root: Iterable<string>, nested: Iterable<string>, states: readonly NamedState[] = STATES): string[] {
     const crops = new Set(root);
     const windows = new Set(nested);
     const problems = expectedFiles().filter(file => !crops.has(file)).map(file => `no capture ${file}`);
-    for (const state of STATES.filter(entry => !isReady(entry))) {
+    for (const state of states.filter(entry => !isReady(entry))) {
         for (const file of crops) {
             if (file.startsWith(`${state.name}.`)) {
                 problems.push(`a capture of the pending state ${state.name}: ${file}`);
@@ -423,14 +426,17 @@ export function laneFiles(lane: Lane, theme?: Theme): string[] {
     return jobs.map(({ state, capture }) => captureFile(state.name, capture));
 }
 
-/** What a lane's check step fails for: a missing crop, an extra crop and a crop of a pending state. */
-export function laneProblems(root: Iterable<string>, lane: Lane, theme?: Theme): string[] {
+/**
+ * What a lane's check step fails for: a missing crop, an extra crop and a crop of a pending state. `states` exists for the lint
+ * test's probe of the pending-crop check (UX-P3.10 push D, architecture ruling); CI passes three arguments.
+ */
+export function laneProblems(root: Iterable<string>, lane: Lane, theme?: Theme, states: readonly NamedState[] = STATES): string[] {
     const expected = new Set(laneFiles(lane, theme));
     const crops = [...root];
     const problems = [...expected].filter(file => !crops.includes(file)).map(file => `no capture ${file}`);
     for (const file of crops) {
         if (!expected.has(file)) {
-            const pendingState = STATES.find(state => !isReady(state) && file.startsWith(`${state.name}.`));
+            const pendingState = states.find(state => !isReady(state) && file.startsWith(`${state.name}.`));
             problems.push(pendingState ? `a capture of the pending state ${pendingState.name}: ${file}` : `an unexpected capture ${file}`);
         }
     }

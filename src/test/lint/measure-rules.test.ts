@@ -74,7 +74,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates'] });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
@@ -94,7 +94,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         // UX-P3.10 push A (DO 4): the compact skeleton clause, pending on P3.10.
-        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' } });
+        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' }, 'details-skeleton': { pending: 'P3.10' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -1494,6 +1494,17 @@ describe('UX-P3.10 push A: the state-cell clauses, read pending (design-advisor 
         expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [28, 28.5, 27.4] }), name)?.pass).toBe(true);
         expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [20] }), name, 'classic')?.pass).toBe(true);
         expect(lineOf('sidebar-installed-loading', withCells({ skeletonBars: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no compact skeleton row)' });
+    });
+
+    it('reads the details skeleton\'s first mark from the details pane against its 20 px content inset, in both looks (DS-INSET-1 details-skeleton, UX-P3.10)', () => {
+        const name = 'DS-INSET-1@main-details-loading/details-skeleton';
+        expect(lineOf('main-details-loading', withCells({ detailsSkeletonMarks: [46, 46, 46] }), name))
+            .toMatchObject({ pass: false, status: { pending: 'P3.10' }, value: 'skeleton marks at 46 ×3 from the pane (target 20, the details content inset)' });
+        expect(lineOf('main-details-loading', withCells({ detailsSkeletonMarks: [20, 20.5, 19.4] }), name)?.pass).toBe(true);
+        expect(lineOf('main-readme-loading', withCells({ detailsSkeletonMarks: [20, 20, 20] }), 'DS-INSET-1@main-readme-loading/details-skeleton', 'classic')?.pass).toBe(true);
+        expect(lineOf('main-details-loading', withCells({ detailsSkeletonMarks: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no details skeleton row)' });
+        // Only the two loading cells read it.
+        expect(lineOf('main-details-error', withCells({ detailsSkeletonMarks: [46] }), 'DS-INSET-1@main-details-error/details-skeleton')).toBeUndefined();
     });
 
     it('reads a wrapped compact message leaf as body text, a one-line leaf at the row\'s 22 px (DS-TYPE-4 message-leaf)', () => {

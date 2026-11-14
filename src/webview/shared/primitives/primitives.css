@@ -1083,8 +1083,9 @@
     content: '';
     position: absolute;
     inset-block-start: calc(50% - var(--nuiget-space-4) / 2);
-    /* The bar starts where a level-1 compact row's name does (DS-INSET-1; UX-P3.10, design-advisor follow-up 1, F3). */
-    inset-inline-start: calc(var(--nuiget-row-inset-x) + var(--nuiget-pane-header-padding-start) + var(--nuiget-icon-size-md) + var(--nuiget-space-2));
+    /* The bar starts where a level-1 compact row's name does (DS-INSET-1; UX-P3.10, design-advisor follow-up 1, F3); a pane whose
+     * content has no row name sets `--nuiget-skeleton-inset` to its content inset (the details pane; UX-P3.10 push D ruling, D). */
+    inset-inline-start: var(--nuiget-skeleton-inset, calc(var(--nuiget-row-inset-x) + var(--nuiget-pane-header-padding-start) + var(--nuiget-icon-size-md) + var(--nuiget-space-2)));
     inline-size: 60%;
     block-size: var(--nuiget-space-4);
     border-radius: var(--nuiget-radius-xs);
