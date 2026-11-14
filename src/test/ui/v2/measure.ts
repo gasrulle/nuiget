@@ -371,7 +371,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11', 'package-details-panel': 'P3.9', 'transitive-details': 'P3.9' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -3405,24 +3405,6 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
     const later: string[] = [];
     const styleOff: string[] = [];
     let pendingCount = 0;
-    // UX-P3.3b: while a later item moves the details panel itself (the sash's 4 px band, P3.9), a child's x and inset are
-    // read relative to the panel, and its width too when the spec draws it as wide as the panel; y, h and every other
-    // width stay absolute. Leaves with the panel's pending entry.
-    const PANEL = 'package-details-panel';
-    const panelPending = definition.pendingIds?.[PANEL] !== undefined && spec[PANEL] !== undefined && layout.testIds[PANEL] !== undefined;
-    const panelDx = panelPending ? (layout.testIds[PANEL] as { rect: { x: number } }).rect.x - spec[PANEL].rect.x : 0;
-    const panelDw = panelPending ? (layout.testIds[PANEL] as { rect: { w: number } }).rect.w - spec[PANEL].rect.w : 0;
-    const insidePanel = (id: string): boolean => {
-        if (!panelPending || id === PANEL) {
-            return false;
-        }
-        const outer = spec[PANEL].rect;
-        const inner = spec[id].rect;
-        return inner.x >= outer.x - 0.5 && inner.x + inner.w <= outer.x + outer.w + 0.5 && inner.y >= outer.y - 0.5 && inner.y + inner.h <= outer.y + outer.h + 0.5;
-    };
-    let relative = false;
-    // UX-P3.9 follow-up 6: while the clause applies, the reading it hides (absolute x, w and inset) is printed beside it.
-    const absoluteOff: string[] = [];
     // UX-P3.fix-1: an id the artboard composes for this state is the current row's instance, the bare key when none is flagged.
     const instanceOf = (id: string): SpecElement | undefined => (spec[id].composed === state
         ? Object.entries(layout.testIds).find(([key, entry]) => (key === id || key.startsWith(`${id}#`)) && entry.current === true)?.[1] ?? layout.testIds[id]
@@ -3433,21 +3415,10 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
             continue;
         }
         const expected = spec[id];
-        const inside = insidePanel(id);
-        relative = relative || inside;
-        const dx = inside ? panelDx : 0;
-        const dw = inside && Math.abs(expected.rect.w - spec[PANEL].rect.w) <= 0.5 ? panelDw : 0;
         const deltas = {
-            x: tenth(actual.rect.x - expected.rect.x - dx), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w - dw),
-            h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset - dx),
+            x: tenth(actual.rect.x - expected.rect.x), y: tenth(actual.rect.y - expected.rect.y), w: tenth(actual.rect.w - expected.rect.w),
+            h: tenth(actual.rect.h - expected.rect.h), inset: tenth(actual.inset - expected.inset),
         };
-        if (inside) {
-            const absolute = Object.entries({ x: tenth(actual.rect.x - expected.rect.x), w: tenth(actual.rect.w - expected.rect.w), inset: tenth(actual.inset - expected.inset) })
-                .filter(([, delta]) => Math.abs(delta) > tolerance);
-            if (absolute.length > 0) {
-                absoluteOff.push(`${id} ${absolute.map(([key, delta]) => `Δ${key} ${delta}`).join(' ')}`);
-            }
-        }
         const named = Object.entries(deltas).filter(([, delta]) => Math.abs(delta) > tolerance);
         const owner = definition.pendingIds?.[id];
         if (named.length > 0) {
@@ -3471,8 +3442,7 @@ function evaluateSpec(layout: Layout, spec: SpecLook | undefined, definition: Ru
         }
     }
     const within = required.length - missing.length - off.length - pendingCount;
-    const absoluteText = absoluteOff.length === 0 ? `; absolute: all within ${tolerance}` : `; absolute off: ${absoluteOff.join('; ')}`;
-    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}${relative ? ` (x and inset relative to ${PANEL}, pending ${definition.pendingIds?.[PANEL]}${absoluteText})` : ''}`] : [];
+    const parts = required.length > 0 ? [`${within}/${required.length - pendingCount} within ${tolerance}`] : [];
     if (composed.length > 0) {
         parts.push(`composed (${spec[composed[0]].composed}): ${composed.join(', ')}`);
     }

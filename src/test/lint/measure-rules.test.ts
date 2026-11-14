@@ -1102,17 +1102,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // An id a later item owns prints and leaves the verdict.
         expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
         // The later scopes print on their owners.
-        // UX-P3.3b: the panel's own offset is the sash's (P3.9); a child inside it is read relative to it.
-        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: true, status: 'hard', value: '0/0 within 1; composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
+        // UX-P3.9 (follow-up 6, push B): the panel and every child are read absolutely; a panel 2.2 or 3 px right reads off.
+        expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: false, status: 'hard', value: '0/1 within 1; composed (main-details-readme): uninstall-button; off: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
         const withEmpty: SpecLook = { ...spec, 'details-empty': element(328, 77, 604, 60) };
         expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 77, 601, 60) }, withEmpty))
-            .toMatchObject({ pass: true, value: '1/1 within 1 (x and inset relative to package-details-panel, pending P3.9; absolute off: details-empty Δx 3 Δw -3 Δinset 3); composed (main-details-readme): uninstall-button; pending P3.9: package-details-panel Δx 3 Δw -3 Δinset 3' });
-        expect(at('details', { 'package-details-panel': element(331, 77, 601, 726), 'details-empty': element(331, 85, 601, 60) }, withEmpty))
+            .toMatchObject({ pass: false, value: '0/2 within 1; composed (main-details-readme): uninstall-button; off: package-details-panel Δx 3 Δw -3 Δinset 3; details-empty Δx 3 Δw -3 Δinset 3' });
+        expect(at('details', { 'package-details-panel': element(328, 77, 604, 726), 'details-empty': element(328, 85, 604, 60) }, withEmpty))
             .toMatchObject({ pass: false, value: expect.stringContaining('off: details-empty Δy 8') });
-        // UX-P3.9 follow-up 6: the reading the clause hides is printed beside it, and never changes the verdict.
+        // Within 1 absolutely (the 932 cell's 327.2 against 328 is Δx -0.8): a pass, with no relative clause.
         expect(at('details', { 'package-details-panel': element(328.6, 77, 603.4, 726), 'details-empty': element(328.6, 77, 603.4, 60) }, withEmpty))
-            .toMatchObject({ pass: true, value: expect.stringContaining('(x and inset relative to package-details-panel, pending P3.9; absolute: all within 1)') });
-        // A header control lies across the panel's x range but above it: never read relative to the panel (UX-P3.3b fix-forward).
+            .toMatchObject({ pass: true, value: '2/2 within 1; composed (main-details-readme): uninstall-button' });
+        // A header control lies across the panel's x range but above it: a header id, read in the header scope (UX-P3.3b fix-forward).
         const header = { ...withEmpty, 'project-selector': { ...element(862, 8, 157, 26), tokens: ['--nuiget-inset'] } };
         expect(at('header', { 'project-selector': element(862, 8, 157, 26), 'package-details-panel': element(331, 77, 601, 726) }, header))
             .toMatchObject({ pass: true, value: '1/1 within 1' });
