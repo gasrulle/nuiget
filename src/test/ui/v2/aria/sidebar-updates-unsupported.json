@@ -1,0 +1,18 @@
+{
+  "state": "sidebar-updates-unsupported",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  heading \"Updates #\"",
+    "    button \"Updates #\" [expanded] {section-header-updates}",
+    "  status \"\" {sidebar-updates-unsupported}",
+    "  listbox \"Updates\" {sidebar-updates-list}",
+    "    option \"Newtonsoft.Json # → #\"",
+    "    option \"Polly # → #\"",
+    "    option \"Serilog # → #\"",
+    "  status \"\" {status-live}"
+  ]
+}

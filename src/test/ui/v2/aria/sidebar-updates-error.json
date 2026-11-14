@@ -1,0 +1,31 @@
+{
+  "state": "sidebar-updates-error",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed] {sidebar-search-input}",
+    "    button \"Filters\"",
+    "  heading \"Installed #\"",
+    "    button \"Installed #\" [expanded] {section-header-installed}",
+    "  listbox \"Installed\" {sidebar-installed-list}",
+    "    option \"CsvHelper #\"",
+    "    option \"Dapper #\"",
+    "    option \"Humanizer.Core #\"",
+    "    option \"Microsoft.Extensions.Configuration.CommandLine #\"",
+    "    option \"Microsoft.Extensions.Configuration.UserSecrets #\"",
+    "    option \"Microsoft.Extensions.Hosting #\"",
+    "    option \"Microsoft.Extensions.Hosting.Abstractions #\"",
+    "    option \"Newtonsoft.Json #\"",
+    "    option \"NodaTime #\"",
+    "    option \"Serilog #\"",
+    "    option \"Spectre.Console #\"",
+    "    option \"System.CommandLine #-beta#\"",
+    "    option \"YamlDotNet #\"",
+    "  separator \"Resize the Installed and Updates sections\" {sash}",
+    "  heading \"Updates\"",
+    "    button \"Updates\" [expanded] {section-header-updates}",
+    "  alert \"\" {sidebar-updates-error}",
+    "    button \"Retry\"",
+    "  status \"\" {status-live}"
+  ]
+}

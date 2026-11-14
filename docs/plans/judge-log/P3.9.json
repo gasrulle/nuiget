@@ -1046,7 +1046,9 @@
               "method": "crop",
               "refuterSeverity": "minor"
             }
-          ]
+          ],
+          "disposition": "accepted-as-design",
+          "ruling": "design-advisor opening ruling of 2026-11-14 for UX-P3.10 (DO 21, brief point 3): docs/design/design-system.md:441 (the overflow table: the details title is one line and ellipsizes) and DS-INSET-4's 20 px end inset; the artboard is the outlier (docs/plans/handoff/P3.10.md)"
         }
       ],
       "refuted": [

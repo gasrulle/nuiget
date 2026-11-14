@@ -1,0 +1,1254 @@
+{
+  "item": "P3.10",
+  "runs": [
+    {
+      "runId": "43637775654",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "320b339 (push D; product of pushes A-D: f8e3d03, e709f7b, 5fd739a, 8b4dc9e, bc4302a, 2f711c3, 5696884, a6433d0, 320b339)",
+      "look": "modern",
+      "workflow": "wf_f12946f4-0d9",
+      "note": "No artboard of their own: the main cells are judged against main-updates.dark-modern.1200.png and main-installed-details.dark-modern.1200.png with their specs, the side bar cells with rows against main-installed-all.dark-modern.1200.png and its spec (the P3.7c and P3.8 precedent), per the design-advisor push E ruling of 2026-11-14 (point 2).",
+      "captures": {
+        "main-updates-unsupported": {
+          "png": "captures/43637775654/main-updates-unsupported.dark-modern.1200.png",
+          "sha256": "e0b97e5993ef89ae9a6534549c9634c977d97217371e2777c92a3d79812fe0d0",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "1226e13cf7f7fc34580bc664fe0bd1d39d112a12473ed160364cc0da159d94ce"
+        },
+        "main-details-unsupported": {
+          "png": "captures/43637775654/main-details-unsupported.dark-modern.1200.png",
+          "sha256": "c179d16ed09ecb5b3e40254e1dd6363b0074afee9d55af0dd214628737ebab95",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-details-readonly": {
+          "png": "captures/43637775654/main-details-readonly.dark-modern.1200.png",
+          "sha256": "df0d9289e6b4af25f9bcb6642d21b88ea16f434cfa788572eea3f50dd250fb3f",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 17,
+        "standing": 5,
+        "blocking": 0,
+        "refuted": 4,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-updates-unsupported#D1",
+          "state": "main-updates-unsupported",
+          "finding": "[native] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and button labels must be Title Case. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 (Microcopy §10.1 names \"Select All\") requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-updates-unsupported",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and button labels must be Title Case.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the disabled secondary button labelled \"Select all\" while the artboard crop at the same box draws \"Select All\"; DS-COPY-1 requires Title Case on button labels, and the run has no DS-COPY-1 measurement line that contradicts this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-updates-unsupported",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, where the artboard's select-all-button draws \"Select All\" and DS-COPY-1 (Microcopy §10.1 names \"Select All\") requires Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The same crop shows \"Select all\" in sentence case where the artboard draws \"Select All\", against DS-COPY-1's Title Case for button labels.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: fixed, owner P3.11",
+          "owner": "P3.11",
+          "disposition": "fixed",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (N), Update all (N)); P3.10 touched no label"
+        },
+        {
+          "id": "main-updates-unsupported#D2",
+          "state": "main-updates-unsupported",
+          "finding": "[native] The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and button labels must be Title Case. | [states] The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and DS-COPY-1 (Microcopy §10.1 names \"Update All\") requires Title Case for button labels.",
+          "severity": "major",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-updates-unsupported",
+              "finding": "The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and button labels must be Title Case.",
+              "severity": "major",
+              "box": [
+                304,
+                117,
+                100,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary button labelled \"Update all (0)\" while the artboard crop draws \"Update All (14)\"; the casing breaks DS-COPY-1 Title Case, and no measurement contradicts it (the count value itself is live content).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-updates-unsupported",
+              "finding": "The bulk toolbar's primary button reads \"Update all (0)\" in sentence case, where the artboard's update-all-button draws \"Update All (14)\" and DS-COPY-1 (Microcopy §10.1 names \"Update All\") requires Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                304,
+                117,
+                100,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The same crop shows \"Update all (0)\" in sentence case where the artboard draws \"Update All (14)\", against DS-COPY-1's Title Case for button labels.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: fixed, owner P3.11",
+          "owner": "P3.11",
+          "disposition": "fixed",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (N), Update all (N)); P3.10 touched no label"
+        },
+        {
+          "id": "main-details-unsupported#D1",
+          "state": "main-details-unsupported",
+          "finding": "[native] The bulk toolbar's 'Select all' button label is sentence case, where the artboard's select-all-button draws 'Select All' and the copy rules require Title Case on button labels. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\" (Title Case button label, interaction model copy \"Select All\").",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            74,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-details-unsupported",
+              "finding": "The bulk toolbar's 'Select all' button label is sentence case, where the artboard's select-all-button draws 'Select All' and the copy rules require Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Crop shows the secondary button reading 'Select all' while the artboard crop at the same box reads 'Select All'; DS-COPY-1 requires Title Case on button labels and no measurement covers casing (DS-COPY-2 'labels 9: ok' checks colons only).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-details-unsupported",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case where the artboard draws \"Select All\" (Title Case button label, interaction model copy \"Select All\").",
+              "severity": "major",
+              "box": [
+                16,
+                118,
+                74,
+                25
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same button as native-1: crop reads 'Select all' where the artboard draws 'Select All' (DS-COPY-1 Title Case).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: fixed, owner P3.11",
+          "owner": "P3.11",
+          "disposition": "fixed",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (N), Update all (N)); P3.10 touched no label"
+        },
+        {
+          "id": "main-details-unsupported#D2",
+          "state": "main-details-unsupported",
+          "finding": "[native] The bulk toolbar's primary button reads 'Uninstall selected (0)' in sentence case, where the artboard's uninstall-selected-button draws 'Uninstall Selected (0)' and the copy rules require Title Case on button labels. | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard draws \"Uninstall Selected (0)\" (Title Case button label).",
+          "severity": "major",
+          "box": [
+            257,
+            117,
+            148,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-details-unsupported",
+              "finding": "The bulk toolbar's primary button reads 'Uninstall selected (0)' in sentence case, where the artboard's uninstall-selected-button draws 'Uninstall Selected (0)' and the copy rules require Title Case on button labels.",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Crop shows the primary button reading 'Uninstall selected (0)' while the artboard crop at the same box reads 'Uninstall Selected (0)', against DS-COPY-1 Title Case for buttons.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-details-unsupported",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case where the artboard draws \"Uninstall Selected (0)\" (Title Case button label).",
+              "severity": "major",
+              "box": [
+                258,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Same button as native-2: crop reads 'Uninstall selected (0)' where the artboard draws 'Uninstall Selected (0)' (DS-COPY-1 Title Case).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: fixed, owner P3.11",
+          "owner": "P3.11",
+          "disposition": "fixed",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (N), Update all (N)); P3.10 touched no label"
+        },
+        {
+          "id": "main-details-readonly#D1",
+          "state": "main-details-readonly",
+          "finding": "[native] The list toolbar's button labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard's select-all-button and uninstall-selected-button read \"Select All\" and \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels. | [states] The bulk toolbar's secondary button reads \"Select all\" in sentence case, but the artboard's select-all-button and design-system §10 give the Title Case label \"Select All\". | [states] The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, but the artboard's uninstall-selected-button and design-system §10 give the Title Case label \"Uninstall Selected (0)\".",
+          "severity": "major",
+          "box": [
+            16,
+            117,
+            388,
+            26
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-details-readonly",
+              "finding": "The list toolbar's button labels read \"Select all\" and \"Uninstall selected (0)\" in sentence case, where the artboard's select-all-button and uninstall-selected-button read \"Select All\" and \"Uninstall Selected (0)\" and the copy rules require Title Case for button labels.",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                388,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the bulk toolbar's buttons reading \"Select all\" and \"Uninstall selected (0)\", where the artboard crop reads \"Select All\" and \"Uninstall Selected (0)\". DS-COPY-1 and design-system §10.1 require Title Case, and no DS-COPY-1 measurement in ui-output.txt contradicts this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-details-readonly",
+              "finding": "The bulk toolbar's secondary button reads \"Select all\" in sentence case, but the artboard's select-all-button and design-system §10 give the Title Case label \"Select All\".",
+              "severity": "major",
+              "box": [
+                16,
+                117,
+                74,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the secondary toolbar button labelled \"Select all\", while the artboard crop shows \"Select All\", the Title Case label that design-system §10.1 names under DS-COPY-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-details-readonly",
+              "finding": "The bulk toolbar's primary button reads \"Uninstall selected (0)\" in sentence case, but the artboard's uninstall-selected-button and design-system §10 give the Title Case label \"Uninstall Selected (0)\".",
+              "severity": "major",
+              "box": [
+                257,
+                117,
+                147,
+                26
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary toolbar button labelled \"Uninstall selected (0)\", while the artboard crop shows \"Uninstall Selected (0)\", the Title Case label that design-system §10.1 names under DS-COPY-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: fixed, owner P3.11",
+          "owner": "P3.11",
+          "disposition": "fixed",
+          "evidence": "DS-COPY-1 sweep owned by P3.11 (its tracker row lists Select all, Uninstall selected (N), Update all (N)); P3.10 touched no label"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-updates-unsupported#D3",
+          "state": "main-updates-unsupported",
+          "finding": "[native] The row check boxes have a light grey border (about #7e7e7e) instead of the checkbox.border role (#3c3c3c) that the artboard's row checks use. On read-only rows whose Select all is disabled, these checks look more emphasised than the enabled checks in the artboard.",
+          "severity": "major",
+          "box": [
+            16,
+            228,
+            18,
+            162
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-updates-unsupported",
+              "finding": "The row check boxes have a light grey border (about #7e7e7e) instead of the checkbox.border role (#3c3c3c) that the artboard's row checks use. On read-only rows whose Select all is disabled, these checks look more emphasised than the enabled checks in the artboard.",
+              "severity": "major",
+              "box": [
+                16,
+                228,
+                18,
+                162
+              ],
+              "rule": "DS-HEIGHT-9",
+              "verdict": "confirmed",
+              "reason": "Pixel reads show each row check's border at #7e7e7e in the capture, where the artboard's row checks are #3c3c3c (the checkbox.border value DS-HEIGHT-9 names). The read-only rows' checks therefore look brighter than the enabled checks. The hard measurement DS-HEIGHT-9 18x18 x5 checks size only.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-details-unsupported#D3",
+          "state": "main-details-unsupported",
+          "finding": "[states] The Direct Packages group row's provisional badge reads \"provisional\" in lower case beside the capitalised \"Unsupported\" badge, where the interaction model names it the \"Provisional\" badge; group-header labels are Title Case.",
+          "severity": "major",
+          "box": [
+            311,
+            177,
+            69,
+            19
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-details-unsupported",
+              "finding": "The Direct Packages group row's provisional badge reads \"provisional\" in lower case beside the capitalised \"Unsupported\" badge, where the interaction model names it the \"Provisional\" badge; group-header labels are Title Case.",
+              "severity": "major",
+              "box": [
+                311,
+                177,
+                69,
+                19
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "Crop of the Direct Packages group row shows the badge 'provisional' in lower case beside the capitalised 'Unsupported' badge, while the interaction model names it the \"Provisional\" badge; DS-OVERFLOW-2 measures it at 311.2–379.6 inside the box, so placement is fine but the casing contradicts the copy.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-updates-unsupported",
+          "finding": "The three rows are marked Read-only and Select all is disabled, yet each row's check box is drawn as a normal enabled, unchecked check box (same border and fill as the artboard's actionable rows) rather than a muted check that shows the row cannot be picked.",
+          "severity": "major",
+          "box": [
+            16,
+            228,
+            18,
+            162
+          ],
+          "rule": "DS-STATE-7",
+          "verdict": "refuted",
+          "reason": "The checks are not drawn like the artboard's enabled checks: pixel reads give a #7e7e7e border in the capture against #3c3c3c in the artboard, which is the muted .nuiget-row-check--off line. The hard measurement DS-STATE-7 reads \"2 disabled, 3 unselectable ... 0 without a reason\", and each row shows Read-only.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-updates-unsupported",
+          "finding": "The disabled primary button's count \"(0)\" contradicts the Updates tab badge and the Direct Packages badge, which both read 3 for the same three listed updates, so the surface shows two different counts for one list.",
+          "severity": "minor",
+          "box": [
+            304,
+            117,
+            100,
+            26
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The \"(0)\" is a count value, which rubric §6 excludes as live content. It is also consistent: all three listed rows are Read-only, so zero updates can be applied, and the hard measurement DS-COPY-5 reads one count style (badges, no \"(N)\" header texts).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-details-unsupported",
+          "finding": "The details pane's read-only note 'Unsupported project: requires .NET SDK 10 or newer.' is plain muted text with no severity glyph, while the same sentence in the list pane's banner carries the warning codicon. The one condition is drawn two ways on one screen, and the Extensions editor's status message carries an icon.",
+          "severity": "minor",
+          "box": [
+            441,
+            194,
+            346,
+            17
+          ],
+          "rule": "DS-STATE-4",
+          "verdict": "refuted",
+          "reason": "Crop shows the muted sentence 'Unsupported project: requires .NET SDK 10 or newer.' under the disabled Uninstall/Update buttons; it is the disabled-reason text of DS-STATE-7, not an inline error in the area that failed, and DS-STATE-4's glyph is already on the list pane's banner where the condition is reported, so no rule requires a glyph here.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-details-readonly",
+          "finding": "In the details header the gap between the info line (ink 136-149) and the Version row (164-189) is about 3 px larger than the gap between the Version row and the 'Checking the selected project.' status line (ink 201-213), although both text lines have the same glyph extents: roughly 12 px against 8 px. Rhythm rule (a) allows only 4 px inside a group and 8 px between groups, and the artboard's header rows are 4 px apart (156 to 160).",
+          "severity": "major",
+          "box": [
+            441,
+            133,
+            590,
+            83
+          ],
+          "rule": "DS-GRID-2",
+          "verdict": "refuted",
+          "reason": "The pixel profile does show 14 empty rows (150-163) above the Version row and 11 (190-200) below it, but the hard measurement reads \"DS-GRID-2a@main-details-readonly: gaps 4, 8 (hard)\": both content-box gaps are on the ramp. The ink difference comes from the info line's taller box (its 16 px icon). The artboard is the installed-details state, which has no info line, so its 4 px Installed-to-Version spacing is not a like-for-like comparison.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        }
+      ],
+      "pendingArtboard": [
+        {
+          "state": "main-details-empty",
+          "png": "captures/43637775654/main-details-empty.dark-modern.1200.png",
+          "sha256": "10c3dcdd070e32bed022fec95dbd454ad05ef0e2302def1212e34339629981ca"
+        },
+        {
+          "state": "main-details-loading",
+          "png": "captures/43637775654/main-details-loading.dark-modern.1200.png",
+          "sha256": "57805a9638af8c8cbcb70f423a8a8134d0321fabb7698255a7a36513dda53967"
+        },
+        {
+          "state": "main-details-error",
+          "png": "captures/43637775654/main-details-error.dark-modern.1200.png",
+          "sha256": "1c6b06d50645064b77ef58cd9f38d63c98df364e27890c345d3aee621630c217"
+        },
+        {
+          "state": "main-readme-loading",
+          "png": "captures/43637775654/main-readme-loading.dark-modern.1200.png",
+          "sha256": "53424f1a63205e1930edd20a7ac072df591148fd8f11546b5edde6577917880b"
+        },
+        {
+          "state": "main-readme-error",
+          "png": "captures/43637775654/main-readme-error.dark-modern.1200.png",
+          "sha256": "1f1de2d005bcc469bd142d5015853e1b90ab347949e1b1470b091071fae941e1"
+        }
+      ]
+    },
+    {
+      "runId": "43637775654",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "320b339 (push D; product of pushes A-D: f8e3d03, e709f7b, 5fd739a, 8b4dc9e, bc4302a, 2f711c3, 5696884, a6433d0, 320b339)",
+      "look": "modern",
+      "workflow": "wf_f2a6ad0d-a5a",
+      "note": "No artboard of their own: the main cells are judged against main-updates.dark-modern.1200.png and main-installed-details.dark-modern.1200.png with their specs, the side bar cells with rows against main-installed-all.dark-modern.1200.png and its spec (the P3.7c and P3.8 precedent), per the design-advisor push E ruling of 2026-11-14 (point 2). Pending artboard (gate: the measurements, all on target on run 43637775654): the ten cells listed under pendingArtboard across both runs and the touched sidebar-installed-loading.",
+      "captures": {
+        "sidebar-installed-revalidating": {
+          "png": "captures/43637775654/sidebar-installed-revalidating.dark-modern.300.png",
+          "sha256": "b9a7cfc35ff47253487c51a668ab81fdbfd7d497e78b171d1d689d66e10ead9f",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-updates-revalidating": {
+          "png": "captures/43637775654/sidebar-updates-revalidating.dark-modern.300.png",
+          "sha256": "f83626e868becc0f1345f10c78c889de488bfcc5e205319d3b2a19afd4a5a4bf",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-updates-unsupported": {
+          "png": "captures/43637775654/sidebar-updates-unsupported.dark-modern.300.png",
+          "sha256": "cd9b08618b6bce5087d58d2beec5b1783426527ae52498e26e58dad4f73678a8",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-all-projects-tools": {
+          "png": "captures/43637775654/sidebar-all-projects-tools.dark-modern.300.png",
+          "sha256": "ecb04885008b66fd604091c99e5dced026ae49de52d6dbf674b8ba2996cf57c2",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-browse-unavailable": {
+          "png": "captures/43637775654/sidebar-browse-unavailable.dark-modern.300.png",
+          "sha256": "9ebd2375bf41035f45d5fb58a3cd47075a9d187f4c29139d07a2284fa5e6f3c4",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-all-projects-updates": {
+          "png": "captures/43637775654/sidebar-all-projects-updates.dark-modern.300.png",
+          "sha256": "7237ad74c2c6f6dbe559b995a1cb382917e16124925454b891b708225c606e6e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 21,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 7,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "sidebar-installed-revalidating#D1",
+          "state": "sidebar-installed-revalidating",
+          "finding": "[native] The Installed header draws a spinning loading glyph beside its title while the 2 px bar under the header already shows the revalidation. That is two progress indicators for one load. A native pane header shows progress only as the bar at its bottom edge (DS-STATE-2's exemplar), and the design system's state matrix gives the header spinner to the first load, not to revalidating. | [states] The revalidating sidebar Installed pane draws a header spinner beside the \"Installed\" title as well as the 2 px progress bar under the header, so it shows two progress indicators. The design system's §9 matrix gives the header spinner to the first-load cell only; the revalidating cell (sidebar-installed-progress) is the pane's bar with the rows kept.",
+          "severity": "major",
+          "box": [
+            91,
+            60,
+            16,
+            16
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-installed-revalidating",
+              "finding": "The Installed header draws a spinning loading glyph beside its title while the 2 px bar under the header already shows the revalidation. That is two progress indicators for one load. A native pane header shows progress only as the bar at its bottom edge (DS-STATE-2's exemplar), and the design system's state matrix gives the header spinner to the first load, not to revalidating.",
+              "severity": "minor",
+              "box": [
+                91,
+                60,
+                16,
+                16
+              ],
+              "rule": "DS-STATE-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows a loading glyph right after the \"Installed\" title, and the 2 px bar sits under the header with the 15 count and the rows kept. The §9 sidebar row gives the header spinner to the first-load cell only (\"the header spinner, no count\"), while the revalidating cell is the bar marker alone. The log line 'DS-STATE-2 … bar at list top; rows 15; aria-busy' is consistent with this and does not contradict it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "sidebar-installed-revalidating",
+              "finding": "The revalidating sidebar Installed pane draws a header spinner beside the \"Installed\" title as well as the 2 px progress bar under the header, so it shows two progress indicators. The design system's §9 matrix gives the header spinner to the first-load cell only; the revalidating cell (sidebar-installed-progress) is the pane's bar with the rows kept.",
+              "severity": "major",
+              "box": [
+                92,
+                61,
+                14,
+                12
+              ],
+              "rule": "DS-STATE-2",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-1: the crop shows the header spinner beside \"Installed\" next to the pane's 2 px progress bar, which makes two progress indicators for one revalidation. The §9 revalidating cell for Sidebar · Installed lists only `sidebar-installed-progress` (the bar); the spinner belongs to the first-load cell.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.10",
+          "evidence": "push E1 (b5daf0c and the closing push): the pane headers pass busy only on a first load; DS-STATE-2 prints `header spinner 0` in the two revalidating cells (hard), read on E1's run",
+          "ruling": "design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14: a pane header's spinner means a first load, never a revalidation (DS §9 :467, DECISIONS 2026-11-01)",
+          "alsoFixes": [
+            "sidebar-updates-revalidating#D1 (single judge, the same spinner in the Updates pane header)"
+          ]
+        },
+        {
+          "id": "sidebar-updates-unsupported#D1",
+          "state": "sidebar-updates-unsupported",
+          "finding": "[native] The unsupported banner's sentence starts at x 32 while the Updates section title and the row names below it start at x 28-29, and its warning glyph sits in the chevron column at the pane's 8 px edge; one region ends up with three start edges. The artboard draws the same 'Unsupported project: requires .NET SDK 10 or newer.' message at its group title's text x, with no glyph out in the twisty column. | [geometry] The unsupported message's text starts at x 32 (first line 'U' at 32, second line at 33), 4 px right of the column that the 'Updates' header title (x 28) and the row names below (Newtonsoft.Json, Polly, Serilog at x 28-29) share, so the message does not start at the title column; the artboard starts its unsupported message on the group header's title column (x 36 = title x in installed-unsupported-unsupported.csproj under section-header-project-unsupported.csproj).",
+          "severity": "major",
+          "box": [
+            9,
+            62,
+            110,
+            82
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-updates-unsupported",
+              "finding": "The unsupported banner's sentence starts at x 32 while the Updates section title and the row names below it start at x 28-29, and its warning glyph sits in the chevron column at the pane's 8 px edge; one region ends up with three start edges. The artboard draws the same 'Unsupported project: requires .NET SDK 10 or newer.' message at its group title's text x, with no glyph out in the twisty column.",
+              "severity": "major",
+              "box": [
+                9,
+                62,
+                110,
+                82
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "In the crop the message's first ink starts at x 33 on both lines while the 'Updates' title (x 29) and the row names (x 28-29) share another column, a visible 4 px step, and the warning glyph sits at x 9 under the header chevron (x 11); the artboard puts its unsupported sentence on the group-title column (spec inset 36 = title text x) with no glyph. The hard DS-INSET-1 line ('content 28; search 8') measures only section titles and row names, not the message, so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-updates-unsupported",
+              "finding": "The unsupported message's text starts at x 32 (first line 'U' at 32, second line at 33), 4 px right of the column that the 'Updates' header title (x 28) and the row names below (Newtonsoft.Json, Polly, Serilog at x 28-29) share, so the message does not start at the title column; the artboard starts its unsupported message on the group header's title column (x 36 = title x in installed-unsupported-unsupported.csproj under section-header-project-unsupported.csproj).",
+              "severity": "major",
+              "box": [
+                28,
+                62,
+                80,
+                82
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-1: in the crop the message text starts at x 33 against the title/row-name column at x 28-29, while the artboard's 'installed-unsupported-unsupported.csproj' sits on its group title column (inset 36). DS-INSET-1's hard 'content 28' covers titles and row names only, not the message text.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-01 (UX-P2.8b): a banner is glyph, sentence and at most one button at the carrier --nuiget-message-inset; DS-INSET-1@sidebar-updates-unsupported content 28 (hard) reads row names",
+          "ruling": "A banner is glyph, sentence and at most one button at the carrier `--nuiget-message-inset` (DECISIONS 2026-11-01, UX-P2.8b); in the side bar the glyph stands at the pane inset and the sentence follows it. DS-INSET-1 reads row names, `content 28` green. design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14 (docs/plans/handoff/P3.10.md, \"Design-advisor push E follow-up 1 of 2026-11-14\")"
+        },
+        {
+          "id": "sidebar-browse-unavailable#D1",
+          "state": "sidebar-browse-unavailable",
+          "finding": "[native] The warning banner keeps its own start edges. Its glyph starts at x 8 and its sentence at x 32, while the result row names below start at x 28, the sidebar's pane-header title x. The banner text and the row names visibly fail to share one start inset for the region. | [geometry] The sidebar banner's message text starts at x 32, so it lines up with neither sidebar edge: the row names below start at x 28 (DS-INSET-1's Modern UI title and name x), and the search box and the banner's own warning glyph start at x 8. Two stacked, left-aligned text blocks therefore visibly miss each other by 4 px.",
+          "severity": "major",
+          "box": [
+            8,
+            61,
+            213,
+            56
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "sidebar-browse-unavailable",
+              "finding": "The warning banner keeps its own start edges. Its glyph starts at x 8 and its sentence at x 32, while the result row names below start at x 28, the sidebar's pane-header title x. The banner text and the row names visibly fail to share one start inset for the region.",
+              "severity": "minor",
+              "box": [
+                8,
+                61,
+                212,
+                56
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "In the crop the banner sentence's ink starts at x 32 (line 2 at x 33), while every row name's ink starts at x 28–29 and the warning glyph sits at x 9, so the banner text lies on neither of the sidebar's two Modern UI edges (8 and 28, DS-INSET-1/T-3). The hard DS-INSET-1 line ('content 28; search 8') measures only the rows and the search box, not the banner text, so it does not contradict the finding.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-browse-unavailable",
+              "finding": "The sidebar banner's message text starts at x 32, so it lines up with neither sidebar edge: the row names below start at x 28 (DS-INSET-1's Modern UI title and name x), and the search box and the banner's own warning glyph start at x 8. Two stacked, left-aligned text blocks therefore visibly miss each other by 4 px.",
+              "severity": "major",
+              "box": [
+                28,
+                61,
+                193,
+                52
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-2: in the crop 'Some package sources…' starts at ink x 32 directly above 'Newtonsoft.Json' at x 29, a visible 3–4 px miss between two stacked left-aligned text blocks. The glyph and search box start at x 8–9. DS-INSET-1's hard measurement ('content 28; search 8') does not cover the banner text.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-01 (UX-P2.8b): a banner is glyph, sentence and at most one button at the carrier --nuiget-message-inset; DS-INSET-1@sidebar-browse-unavailable content 28 (hard) reads row names",
+          "ruling": "A banner is glyph, sentence and at most one button at the carrier `--nuiget-message-inset` (DECISIONS 2026-11-01, UX-P2.8b); in the side bar the glyph stands at the pane inset and the sentence follows it. DS-INSET-1 reads row names, `content 28` green. design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14 (docs/plans/handoff/P3.10.md, \"Design-advisor push E follow-up 1 of 2026-11-14\")"
+        },
+        {
+          "id": "sidebar-all-projects-updates#D2",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[native] The Unsupported.csproj group row shows only its count badge \"3\". The artboard's section-header-project-unsupported.csproj draws an \"Unsupported\" label badge before the count, and the state table says \"the group row's badge stays\" when the unsupported message leaf is shown. The sentence below still tells the user the project is unsupported, so no information is lost. | [states] Under Unsupported.csproj the three update rows (Newtonsoft.Json, Polly, Serilog) look the same as updatable rows: full-contrast names, green bold target versions, and no Read-only marker or Unsupported/provisional badge on the group row. The artboard marks this project's header with Unsupported and provisional badges (section-header-project-unsupported.csproj) and labels each of its rows Read-only (package-row-newtonsoft.json#2, package-row-polly, package-row-serilog#2); here only the message leaf above the rows says the project is unsupported.",
+          "severity": "major",
+          "box": [
+            18,
+            364,
+            265,
+            124
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "sidebar-all-projects-updates",
+              "finding": "The Unsupported.csproj group row shows only its count badge \"3\". The artboard's section-header-project-unsupported.csproj draws an \"Unsupported\" label badge before the count, and the state table says \"the group row's badge stays\" when the unsupported message leaf is shown. The sentence below still tells the user the project is unsupported, so no information is lost.",
+              "severity": "major",
+              "box": [
+                186,
+                364,
+                70,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop, the Unsupported.csproj group row has only its count badge '3' (DS-OVERFLOW-2 puts it at 261.6–282) and nothing between the name and the count. The artboard's section-header-project-unsupported.csproj draws an 'Unsupported' label badge there. DS-ROW-7 measures 'label none', which agrees with the missing badge, and the spec does not declare it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "sidebar-all-projects-updates",
+              "finding": "Under Unsupported.csproj the three update rows (Newtonsoft.Json, Polly, Serilog) look the same as updatable rows: full-contrast names, green bold target versions, and no Read-only marker or Unsupported/provisional badge on the group row. The artboard marks this project's header with Unsupported and provisional badges (section-header-project-unsupported.csproj) and labels each of its rows Read-only (package-row-newtonsoft.json#2, package-row-polly, package-row-serilog#2); here only the message leaf above the rows says the project is unsupported.",
+              "severity": "minor",
+              "box": [
+                18,
+                366,
+                265,
+                122
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop confirms the part that holds: the Unsupported.csproj group row has no Unsupported label badge where the artboard draws one (same defect as native-3). The per-row 'Read-only' marker does not map onto this surface: the artboard puts it on the comfortable row's author meta line, and no compact sidebar row has that line (DS-TYPE-6 reads meta 11 ×22, versions only).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-08 (UX-P3.7c; UX-P3.7d): the sidebar trees say an unsupported project in a message leaf under its group row",
+          "ruling": "Surrogate artefact: the sidebar trees say an unsupported project in a message leaf under its group row (DECISIONS 2026-11-08, UX-P3.7c; UX-P3.7d), in the Installed tree as well; the label badge is the main panel's. design-advisor follow-up 1 of UX-P3.10 push E, 2026-11-14 (docs/plans/handoff/P3.10.md, \"Design-advisor push E follow-up 1 of 2026-11-14\")"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "sidebar-installed-revalidating#D2",
+          "state": "sidebar-installed-revalidating",
+          "finding": "[native] The truncated compact rows (Microsoft.Extensions.* names) end their ellipsis at x≈252, which leaves a blank end column of about 44 px inside the 296 px row band while no row action is shown. An Explorer or tree row of a native side-bar pane truncates its label close to the band's end and takes action space only while the actions are visible.",
+          "severity": "minor",
+          "box": [
+            240,
+            151,
+            56,
+            124
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "sidebar-installed-revalidating",
+              "finding": "The truncated compact rows (Microsoft.Extensions.* names) end their ellipsis at x≈252, which leaves a blank end column of about 44 px inside the 296 px row band while no row action is shown. An Explorer or tree row of a native side-bar pane truncates its label close to the band's end and takes action space only while the actions are visible.",
+              "severity": "minor",
+              "box": [
+                240,
+                151,
+                56,
+                124
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Measured against the background, the ellipsis of the cut Microsoft.Extensions.* rows ends at x=248–252 in the 296 px band, so about 44 px stays blank at the end with no row action visible. No hard measurement covers the label's end gap (DS-ROW-5 '15 rows, 5 names cut' only checks the truncation order), and the actions are absolutely positioned, so they do not account for the gap.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "sidebar-updates-revalidating#D1",
+          "state": "sidebar-updates-revalidating",
+          "finding": "[native] During a revalidation the Updates section header shows a loading spinner beside its title on top of the 2 px indeterminate bar under the header, so the state has two progress indicators. A native VS Code pane header shows only the bar, and the state matrix for Sidebar · Updates revalidating names only the bar (`sidebar-updates-progress`).",
+          "severity": "major",
+          "box": [
+            88,
+            59,
+            16,
+            16
+          ],
+          "rule": "DS-STATE-2",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-updates-revalidating",
+              "finding": "During a revalidation the Updates section header shows a loading spinner beside its title on top of the 2 px indeterminate bar under the header, so the state has two progress indicators. A native VS Code pane header shows only the bar, and the state matrix for Sidebar · Updates revalidating names only the bar (`sidebar-updates-progress`).",
+              "severity": "major",
+              "box": [
+                88,
+                59,
+                16,
+                16
+              ],
+              "rule": "DS-STATE-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows a loading spinner glyph right of the 'Updates' title at about x 96, y 66, and the full PNG shows the 2 px blue indeterminate stripe under the header at y≈83. The state matrix row 'Sidebar · Updates' names only `sidebar-updates-progress` for this state, while the header spinner is listed only for Sidebar · Installed loading. DS-STATE-2 is measured as 'bar at list top; rows 14; aria-busy' (pending P3.10), which does not rule out the second indicator.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "sidebar-updates-revalidating#D2",
+          "state": "sidebar-updates-revalidating",
+          "finding": "[native] Every compact Updates row leaves about 40 px empty at the end of its band, with no action visible. Names ellipsize at x≈253 and the Microsoft.Extensions.Http row cuts its target version to '1…' at x≈262, while the band runs to x≈296. A native side-bar tree row lets its label use the band up to the end padding until hover reveals actions.",
+          "severity": "major",
+          "box": [
+            4,
+            216,
+            292,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "sidebar-updates-revalidating",
+              "finding": "Every compact Updates row leaves about 40 px empty at the end of its band, with no action visible. Names ellipsize at x≈253 and the Microsoft.Extensions.Http row cuts its target version to '1…' at x≈262, while the band runs to x≈296. A native side-bar tree row lets its label use the band up to the end padding until hover reveals actions.",
+              "severity": "major",
+              "box": [
+                4,
+                216,
+                292,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop every compact row's text stops at a common right edge near x 253–262: 'Microsoft.Extensions.Dependenc…' and 'Logging.Ab…' ellipsize there, and the Http row cuts its target version to '1…'. About 35–40 px of the band to x≈296 stays empty with no action visible (DS-ROW-4 measured 0 visible actions ×14). No spec or rule declares that reserved slot; DS-ROW-5 (hard, 5 names cut) allows truncation but not the unused end space.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "sidebar-all-projects-updates#D1",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[native] The message leaf \"Unsupported project: requires .NET SDK 10 or newer.\" under Unsupported.csproj is painted in the secondary-text role (descriptionForeground, #9d9d9d), while the artboard's matching element installed-unsupported-unsupported.csproj draws the same sentence in the Text role (foreground, #cccccc), as workbench view messages are. | [native] The message leaf \"No packages installed.\" under Empty.csproj is painted in descriptionForeground (#9d9d9d), while the artboard's installed-empty-empty.csproj draws it in foreground (#cccccc). The muted colour makes the empty message read as metadata rather than a view message.",
+          "severity": "major",
+          "box": [
+            44,
+            302,
+            229,
+            116
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-all-projects-updates",
+              "finding": "The message leaf \"Unsupported project: requires .NET SDK 10 or newer.\" under Unsupported.csproj is painted in the secondary-text role (descriptionForeground, #9d9d9d), while the artboard's matching element installed-unsupported-unsupported.csproj draws the same sentence in the Text role (foreground, #cccccc), as workbench view messages are.",
+              "severity": "major",
+              "box": [
+                44,
+                390,
+                229,
+                28
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the Unsupported.csproj message leaf in muted grey: its brightest text pixel reads 157,157,157 (descriptionForeground), while the artboard's installed-unsupported-unsupported.csproj sentence reads 204,204,204 (foreground) and the package names in the same capture read 204,204,204; the spec declares no colour difference and no hard measurement covers the leaf colour.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "sidebar-all-projects-updates",
+              "finding": "The message leaf \"No packages installed.\" under Empty.csproj is painted in descriptionForeground (#9d9d9d), while the artboard's installed-empty-empty.csproj draws it in foreground (#cccccc). The muted colour makes the empty message read as metadata rather than a view message.",
+              "severity": "major",
+              "box": [
+                45,
+                302,
+                145,
+                13
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows 'No packages installed.' under Empty.csproj with a brightest pixel of 157,157,157, while the artboard's installed-empty-empty.csproj reads 204,204,204. This is the same message-leaf colour role as native-1.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "sidebar-all-projects-updates#D3",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[geometry] The Updates tree is scrolled away from its start (the thumb at x 292-299 runs from y 372 to the bottom, and the first row's band begins about 5 px above the list top at y 82), yet the list's top edge under the Updates pane header shows no inset scroll shadow: pixels at x 270, y 78-92 read a flat 24,24,24, where DS-SCROLL-2 requires the 0 6px 6px -6px inset scrollbar.shadow at scrollTop > 0.",
+          "severity": "major",
+          "box": [
+            0,
+            82,
+            292,
+            6
+          ],
+          "rule": "DS-SCROLL-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-all-projects-updates",
+              "finding": "The Updates tree is scrolled away from its start (the thumb at x 292-299 runs from y 372 to the bottom, and the first row's band begins about 5 px above the list top at y 82), yet the list's top edge under the Updates pane header shows no inset scroll shadow: pixels at x 270, y 78-92 read a flat 24,24,24, where DS-SCROLL-2 requires the 0 6px 6px -6px inset scrollbar.shadow at scrollTop > 0.",
+              "severity": "major",
+              "box": [
+                0,
+                82,
+                292,
+                6
+              ],
+              "rule": "DS-SCROLL-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows the list top under the Updates header as a flat 24,24,24 at x 270 from y 78 to 96, with no inset shadow. The list is scrolled: the thumb starts at y 372. The measurement agrees: 'DS-SCROLL-2@sidebar-all-projects-updates: [sidebar-updates-list] scrollTop 489, shadow none' (pending P3.fix-6).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-updates-unsupported",
+          "finding": "The three update rows under the unsupported banner are drawn exactly like updatable rows (new version in the bold green update-available emphasis, no per-row read-only cue), whereas the artboard marks every row of the unsupported project with a 'Read-only' status text; only the banner above the list says they cannot be updated.",
+          "severity": "minor",
+          "box": [
+            28,
+            127,
+            214,
+            63
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The artboard's 'Read-only' text sits in the meta line of the main panel's 72 px comfortable Installed rows, a row structure the sidebar's 22 px compact update rows do not have (DS-HEIGHT-2 '22 ×3', DS-ROW-7 hard '0 badges in compact rows'). The design system's sidebar-updates-unsupported row asks for 'read-only, no Update All', and the crop shows the read-only banner above the list with no Update All action, so the artboard does not show a missing per-row cue on this surface.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only the 'provisional' pill and the count 3. The artboard's section-header-project-unsupported.csproj draws a warning-outlined 'Unsupported' badge before 'provisional', and the design system's All Projects state table says 'the group row's badge stays' beside the unsupported message leaf. The reason is still given once, in the wrapped leaf below the row.",
+          "severity": "major",
+          "box": [
+            36,
+            362,
+            246,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the Unsupported.csproj row with 'provisional' and 3, but the 'group row's badge stays' clause belongs to the Main · Installed (All Projects) row of design-system §9, while the Sidebar · Installed row asks only for `sidebar-unsupported`. DS-STATE-1 is hard and green ('present: … sidebar-installed-unsupported-unsupported.csproj'), and the artboard crop at this box shows the main panel's Serilog row, not a badge.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "native-2",
+          "lens": "native",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The trailing count column does not line up. The Installed section header's count badge (46) ends at x 290, but every project group row's count badge (0, 2, 3, 13) ends at x 282. The list's 8 px scrollbar (x 292-299) takes layout width from the tree rows, so the end column moves 8 px left of the header's. Native VS Code trees use overlay scrollbars, so pane-header actions and row-end content keep one end edge. Without the scrollbar the band rule (DS-INSET-3, band inset 4 plus 6) would put both at 290.",
+          "severity": "major",
+          "box": [
+            262,
+            58,
+            28,
+            214
+          ],
+          "rule": "DS-INSET-3",
+          "verdict": "refuted",
+          "reason": "The crop shows 46 ending about 8 px right of the group counts. The hard measurements set the inset: DS-INSET-3 reads 'section headers 6 (target 6); group rows 6 ×4 (target 6)' and DS-OVERFLOW-2 reads '46' 263.3–290 in a box ending 296 and the group counts …–282 in boxes ending 288. The 8 px is the list's token scrollbar (DS-SCROLL-1 measured 8), and DS-SCROLL-1 chooses that scrollbar over an overlay one, so no rule asks these two columns to coincide.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The group-row count badges of the tree (Empty.csproj 0, Unresolved.csproj 2, Unsupported.csproj 3, Utility.csproj 13) end at x 282, 18 px from the pane edge, while the Installed section header's count (46) ends at x 290, 10 px from the edge. The two count columns sit 8 px apart. DS-INSET-3 puts a sidebar group row's count 6 px inside its band, and DS-ROW-3 insets the Modern band 4 px from the pane edge, so both columns should end 10 px from the edge and line up. The overlay scrollbar starts at x 292, so it does not explain the extra 8 px.",
+          "severity": "major",
+          "box": [
+            255,
+            56,
+            35,
+            457
+          ],
+          "rule": "DS-INSET-3",
+          "verdict": "refuted",
+          "reason": "The crop shows the 8 px offset, but the hard DS-INSET-3 measurement is green: each count ends 6 px inside its own band ('section headers 6; group rows 6 ×4'). Bands end at 296 and 288 (DS-OVERFLOW-2), and the 8 px gap equals the scrollbar's layout width (DS-SCROLL-1 8). That contradicts the finding's claims that the scrollbar does not explain the gap and that DS-INSET-3 is violated.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only the 'provisional' label pill before its count. The approved artboard draws an 'Unsupported' label badge beside 'provisional' on the same header (artboard x 221-298, y 406-428). The badge slot ends after one pill where the artboard has two. The message leaf below still says the project is unsupported, so no information is lost.",
+          "severity": "major",
+          "box": [
+            186,
+            362,
+            96,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture crop shows 'provisional' and 3. The artboard is the 1200 px main panel, and at this box its crop shows the Serilog row, not the cited badge (which the finding itself places at x 221-298, y 406-428, outside the box). The Sidebar · Installed row of §9 requires no Unsupported badge on the group row, only the `sidebar-unsupported` leaf, which DS-STATE-1 measured present.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only the 'provisional' badge and the count 3, while the artboard's Unsupported.csproj header (section-header-project-unsupported.csproj) also draws an 'Unsupported' badge before 'provisional'. DS-STATE-1's All Projects row says the group row's badge stays next to the message leaf; the message leaf below still carries the information.",
+          "severity": "major",
+          "box": [
+            180,
+            363,
+            80,
+            20
+          ],
+          "rule": "DS-STATE-1",
+          "verdict": "refuted",
+          "reason": "The crop shows 'provisional' and 3 on the Unsupported.csproj row. The 'badge stays' wording quoted for DS-STATE-1 is in the Main · Installed (All Projects) row of §9, not the Sidebar · Installed row, and the hard DS-STATE-1 measurement reads 'present: … sidebar-installed-unsupported-unsupported.csproj; missing: none'. The artboard crop at this box shows the main panel's Serilog row, not a badge.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "sidebar-browse-unavailable",
+          "finding": "Every compact result row stops its text column about 36 px from the pane edge: the trailing 'Installed' label badge ends at x 263 and the names truncate at x 261 (e.g. 'Swashbuckle.AspNetCore.Newto...'), while the search box and the Retry button above end at x 291 (8 px inset). This leaves an empty end slot on every row, so the badge floats instead of sitting at the row's end inset the way a native tree row's trailing decoration does.",
+          "severity": "major",
+          "box": [
+            209,
+            97,
+            87,
+            22
+          ],
+          "rule": "DS-INSET-3",
+          "verdict": "refuted",
+          "reason": "The crop shows the 'Installed' badge ending at x 263 with an empty end slot after it, but DS-INSET-3 only forbids a row's action, badge or count touching the pane edge or sash (a row's last action 6 inside the band), and nothing touches here. No rule or redline requires a compact row's trailing badge to end at the 8 px header inset; the slot is the row's action slot, and the cited artboard is a main-panel page with no sidebar row to compare. DS-ROW-7 (label 1/1) and DS-OVERFLOW-6 (fits) are green.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ],
+      "pendingArtboard": [
+        {
+          "state": "sidebar-updates-empty",
+          "png": "captures/43637775654/sidebar-updates-empty.dark-modern.300.png",
+          "sha256": "7ae98c182436202802db188096847c65ebf8f0d7dcbe125c114292545635b1fb"
+        },
+        {
+          "state": "sidebar-updates-error",
+          "png": "captures/43637775654/sidebar-updates-error.dark-modern.300.png",
+          "sha256": "e5ed6191a913c90a272df0bf1b9cbb52fe17a3d5236569d7c63d535172b9bf5b"
+        },
+        {
+          "state": "sidebar-updates-loading",
+          "png": "captures/43637775654/sidebar-updates-loading.dark-modern.300.png",
+          "sha256": "146da41131832accb4820a1b762d86c1383a0152167ce85ad394db77f044d421"
+        },
+        {
+          "state": "sidebar-updates-nomatch",
+          "png": "captures/43637775654/sidebar-updates-nomatch.dark-modern.300.png",
+          "sha256": "90c6a3b45bb2dafb8978d4b4ec51d5ecf87851bc4f0f15cc58a195f3193991a6"
+        },
+        {
+          "state": "sidebar-updates-unavailable",
+          "png": "captures/43637775654/sidebar-updates-unavailable.dark-modern.300.png",
+          "sha256": "87c736f64b0218009933f7b64593112b9d9d0e64c5e6a5b8e259bbb433b41304"
+        },
+        {
+          "state": "sidebar-installed-loading",
+          "png": "captures/43637775654/sidebar-installed-loading.dark-modern.300.png",
+          "sha256": "056bcd5304df01234e17605868e02902afddb51d32109755e3395d5115599832"
+        }
+      ]
+    },
+    {
+      "runId": "43637775654",
+      "note": "Findings of earlier P3.10 rulings recorded here (design-advisor push E ruling of 2026-11-14, DO 7); no judge panel.",
+      "findings": [
+        {
+          "id": "P3.7d sidebar-all-projects-updates single-judge leaf; opening ruling DEFECTS 2",
+          "state": "sidebar-all-projects-updates",
+          "finding": "A compact message leaf that wraps keeps the 22 px row line box, so its second line reads as a row of its own (DS-TYPE-4).",
+          "rule": "DS-TYPE-4",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: DS-TYPE-4@sidebar-all-projects-updates/message-leaf: 1 line: height 22, line 18.2 (target 22); 2 lines: height 40.2, line 18.2 (target 40.2, line 18.2)",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "opening ruling DEFECTS 1",
+          "state": "sidebar-installed-loading",
+          "finding": "The three compact skeleton bars start at x 8 against the pane title and row names at 28.",
+          "rule": "DS-INSET-1",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: DS-INSET-1@sidebar-installed-loading/skeleton: skeleton bars at 28 ×3 from the pane (target 28, the level-1 row name)",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "follow-up 1 F1 DEFECT",
+          "state": "sidebar-updates-unavailable",
+          "finding": "A second sentence repeats the banner and marks an unknown as empty.",
+          "rule": "DS-STATE-4",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: DS-COPY-3@sidebar-updates-unavailable: 1 end with a full stop",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "fix ruling DEFECTS 1 (details)",
+          "state": "main-details-loading",
+          "finding": "The loading placeholder is the Installed list's comfortable row (a 36 px tile at x 467) in a pane whose content inset is 20 and whose loaded content has no icon.",
+          "rule": "DS-INSET-1",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: DS-INSET-1@main-details-loading/details-skeleton: skeleton marks at 20 ×3 from the pane (target 20, the details content inset)",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "fix ruling DEFECTS 1 (README)",
+          "state": "main-readme-loading",
+          "finding": "The same defect in the README panel.",
+          "rule": "DS-INSET-1",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: DS-INSET-1@main-readme-loading/details-skeleton: skeleton marks at 20 ×3 from the pane (target 20, the details content inset)",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "follow-up 1 F3 period",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The All Projects Unsupported leaf ended without a full stop.",
+          "rule": "DS-COPY-3",
+          "disposition": "fixed",
+          "evidence": "run 43637775654: the leaf reads \"Unsupported project: requires .NET SDK 10 or newer.\" on the crop sidebar-all-projects-tools.dark-modern.300.png (ecb04885…)",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        },
+        {
+          "id": "follow-up 1 F2 judge-only note",
+          "state": "sidebar-updates-nomatch",
+          "finding": "The disabled Update all button is not painted at rest.",
+          "rule": "judge-only",
+          "disposition": "accepted-as-design",
+          "evidence": "a pane header's actions show on hover or focus (the workbench's pane-header behaviour; stated from knowledge, not re-measured); DS-COLOR-6@sidebar-updates-nomatch/icon-buttons reads the computed colour and the ARIA snapshot holds the button",
+          "ruling": "design-advisor push E ruling of 2026-11-14, DO 7"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "state": "sidebar-updates-loading",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
+    "    button \"Clear search\"",
+    "    button \"Filters\"",
+    "  heading \"Updates\"",
+    "    button \"Updates\" [expanded] {section-header-updates}",
+    "  progressbar \"Loading updates\" {sidebar-updates-progress}",
+    "  status \"\" {status-live}"
+  ]
+}

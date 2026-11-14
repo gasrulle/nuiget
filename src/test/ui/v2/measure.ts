@@ -296,6 +296,12 @@ const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
 
+/**
+ * The states that show a disabled icon button (UX-P3.10 push E, design-advisor ruling of 2026-11-14, point 1): DS-COLOR-6
+ * `icon-buttons` reads these only. An item that adds a state showing one adds it here with its pasted `disabled n` line.
+ */
+const DISABLED_ICON_BUTTON_STATES: readonly string[] = ['sidebar-updates-nomatch'];
+
 export const RULES: readonly RuleDefinition[] = [
     rule('PF-6', { helper: 2, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single'] }),
     rule('DS-GRID-1', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
@@ -305,7 +311,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES] }),
     // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
     // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: { pending: 'P3.10' }, 'details-skeleton': { pending: 'P3.10' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'] } }),
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'] } }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -328,7 +334,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
-    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...on('P3.10', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...inGroups('hard', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
@@ -352,7 +358,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `icon-buttons` read in the side bar too, and `labels`, the disabled-label clause (design trigger 6).
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': { pending: 'P3.10' }, labels: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -396,14 +402,14 @@ export const RULES: readonly RuleDefinition[] = [
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `message-leaf`, a compact message leaf that wraps sets body text, not the row's line box.
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': { pending: 'P3.10' } }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'] } }),
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard' }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'] } }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES],
     }),
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: { pending: 'P3.10' }, sources: 'hard', details: { pending: 'P3.10' } },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' },
         // UX-P3.10 (design-advisor follow-up 1, F3): the side bar's All Projects trees read their message leaves too.
         tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$|^sidebar-all-projects/, exceptStates: POPUP_CELL_STATES,
     }),
@@ -422,11 +428,11 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: { pending: 'P3.10' } }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
-    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: { pending: 'P3.10' }, sidebar: { pending: 'P3.10' }, sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
     rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
@@ -924,6 +930,8 @@ export interface StateCells {
     paneBox?: { left: number; width: number };
     /** Each compact skeleton row's bar start, from its pane's left edge. */
     skeletonBars?: number[];
+    /** The spinners in the pane headers (`section-header-*`): a first load's cue, never a revalidation's (UX-P3.10 push E). */
+    headerSpinners?: number;
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
     detailsSkeletonMarks?: number[];
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
@@ -1748,6 +1756,7 @@ const stateCells = {
                 progressBox: progressEl ? boxOf(progressEl) : undefined,
                 paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
+                headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
                 // The first painted mark of every skeleton row in the details pane's tab panel, whatever its density: a comfortable
                 // row's tile (::before), a compact row's bar (::after); from the pane's left (push D ruling, D 11).
                 detailsSkeletonMarks: (() => {
@@ -3636,6 +3645,19 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
 }
 
 /**
+ * UX-P3.10 push E (design-advisor follow-up 1): a pane header's spinner is a first load's cue; in a revalidating side bar cell the
+ * pane's 2 px bar stands alone. Printed in every side bar cell, asserted 0 where the state revalidates.
+ */
+function headerSpinner(layout: Layout, state: string): { text: string; pass: boolean } {
+    const count = layout.endOfP0.stateCells.headerSpinners;
+    const revalidating = /revalidating/.test(state);
+    if (count === undefined) {
+        return { text: 'header spinner not measurable', pass: !revalidating };
+    }
+    return { text: `header spinner ${count}`, pass: !revalidating || count === 0 };
+}
+
+/**
  * UX-P3.10 (DO 4; follow-up 4, C): a progress track spans the area that loads, the side bar's pane (the workbench's view progress,
  * paneviewlet.css) or the details pane's tab panel.
  */
@@ -3669,7 +3691,9 @@ function evaluate(definition: RuleDefinition, scope: Scope, state: string, layou
         ?? evaluateFocusAndState(definition, scope, state, layout, look) ?? evaluateType(definition, layout, look);
     if (heightVerdict !== undefined) {
         const track = (definition.id === 'DS-STATE-2' || definition.id === 'DS-HEIGHT-11') && (scope === 'sidebar' || scope === 'details') ? cellTrack(layout) : undefined;
-        return track === undefined ? heightVerdict : { value: `${heightVerdict.value}; ${track.text}`, pass: heightVerdict.pass && track.pass };
+        const spinner = definition.id === 'DS-STATE-2' && scope === 'sidebar' ? headerSpinner(layout, state) : undefined;
+        const clauses = [spinner, track].filter((clause): clause is { text: string; pass: boolean } => clause !== undefined);
+        return clauses.length === 0 ? heightVerdict : { value: [heightVerdict.value, ...clauses.map(clause => clause.text)].join('; '), pass: heightVerdict.pass && clauses.every(clause => clause.pass) };
     }
     switch (definition.id) {
         case 'PF-6': {

@@ -348,6 +348,6 @@ is a project or section name lower-cased, as above.
 
 | Added by | Test id or attribute | Element |
 |---|---|---|
-| Installed slice | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
+| P4.2a | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
 
 **Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The sidebar's Installed pane under All Projects has been one tree since UX-P3.7c (`group-row-folder-<folder>`, `group-row-project-<name>`, `section-header-project-<name>`; `sidebar-installed-list-<name>` left at UX-P3.7c); its Updates pane since UX-P3.7d (`group-row-updates-folder-<folder>`, `group-row-updates-project-<name>`, `section-header-updates-project-<name>`; `sidebar-updates-list-<name>` left at UX-P3.7d), so no per-project list id remains.
