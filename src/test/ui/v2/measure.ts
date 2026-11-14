@@ -203,13 +203,17 @@ const NO_BADGE_STATES: readonly string[] = ['sidebar-filter'];
 const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
 // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): what a sidebar Browse or loading cell does not show, by fact.
 /** Browse results replace the sections: no pane header in any sidebar Browse cell (interaction model §2). */
-const SIDEBAR_BROWSE_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-hover', 'sidebar-browse-revalidating', 'sidebar-browse-empty', 'sidebar-browse-loading', 'sidebar-browse-error'];
+// UX-P3.10 push A (red run 43603128771): sidebar-browse-unavailable is a Browse cell too, by the same fact.
+const SIDEBAR_BROWSE_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-hover', 'sidebar-browse-revalidating', 'sidebar-browse-empty', 'sidebar-browse-loading', 'sidebar-browse-error', 'sidebar-browse-unavailable'];
 /** The sidebar Browse cells without a list: the bar alone, the empty state, the inline error. */
 const SIDEBAR_BROWSE_NO_LIST_STATES: readonly string[] = ['sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error'];
-/** The sidebar cells with no row and no badge: the three above and the Installed pane's first load (SB13: no count). */
-const SIDEBAR_NO_ROW_STATES: readonly string[] = [...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading'];
+/**
+ * The sidebar cells with no row and no badge: the three above, the Installed pane's first load (SB13: no count) and the
+ * Updates pane filtered to no row ('@updates' hides Installed; UX-P3.10 push A, red run 43603128771).
+ */
+const SIDEBAR_NO_ROW_STATES: readonly string[] = [...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading', 'sidebar-updates-nomatch'];
 /** The sidebar cells with nothing trailing visible at rest: no header end, no hovered row action, no group count. */
-const SIDEBAR_NO_TRAILER_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-revalidating', ...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading'];
+const SIDEBAR_NO_TRAILER_STATES: readonly string[] = ['sidebar-browse-results', 'sidebar-browse-revalidating', 'sidebar-browse-unavailable', ...SIDEBAR_BROWSE_NO_LIST_STATES, 'sidebar-installed-loading'];
 /** DS-STATE-1: the markers each Installed (UX-P2.8b) and Updates (UX-P3.1b) cell renders (design-system.md §9). */
 const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     // UX-P3.6: the sources dialog's cells (design-advisor ruling of 2026-11-07, DO 8).
