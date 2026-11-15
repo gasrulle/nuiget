@@ -2,7 +2,7 @@
   "state": "main-updates-unavailable",
   "lines": [
     "main \"\" {nuiget-app}",
-    "  heading \"Manage NuGet packages\"",
+    "  heading \"Manage NuGet Packages\"",
     "  checkbox \"Restore After Operations\" [checked]",
     "  checkbox \"Include Pre-Release\" [unchecked]",
     "  combobox \"Project\" {project-selector}",
@@ -14,7 +14,7 @@
     "    option \"Unsupported.csproj\"",
     "    option \"Utility.csproj\"",
     "  combobox \"Package source\" {source-selector}",
-    "    option \"All sources\"",
+    "    option \"All Sources\"",
     "    option \"nuget.org\"",
     "  button \"Manage Package Sources...\" {source-settings}",
     "  button \"Refresh\" {refresh-button}",

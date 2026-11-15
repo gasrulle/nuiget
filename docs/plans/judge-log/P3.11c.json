@@ -1,0 +1,399 @@
+{
+  "item": "P3.11c",
+  "runs": [
+    {
+      "runId": "43726017923",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "27791f9 (commit 2, the proving push)",
+      "look": "modern",
+      "workflow": "wf_a1a6ef29-e8a",
+      "note": "Five main states against their own artboards, copied in 27791f9 from the reading run 43722806484; sidebar-sections against main-installed-all (as UX-P3.11). Single-judge findings are informational; each with its owner.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/43726017923/main-installed-single.dark-modern.932.png",
+          "sha256": "b99f8ca7bc10a2468858438a4b1119409be865fd956790f91326b59f6316c595",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "8dca8b1affb0c2944ea354973d26ad162f4c36744662cc052c019cbd27922e82"
+        },
+        "main-installed-details": {
+          "png": "captures/43726017923/main-installed-details.dark-modern.1200.png",
+          "sha256": "4849836e7f1d49fd1d83e264cabf8eca020bef19aeec06cc443dc47a0da5b6ca",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "3daf3f72268e7b93f27687196e69409c9553a59cdc2c8bedbf8d114ef5468706"
+        },
+        "main-installed-all": {
+          "png": "captures/43726017923/main-installed-all.dark-modern.1200.png",
+          "sha256": "47781485f6ffda4dfd3c3d4ac1dd741d110b47b9a5f74b62884b50f2a2485a56",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "f5d87df13772156ed2f9d39cf76d90743437dc91a6529b2b6a0f795a4ac54e77"
+        },
+        "main-transitive-details": {
+          "png": "captures/43726017923/main-transitive-details.dark-modern.1200.png",
+          "sha256": "1ef4d8017746d8c8c2599ecb8412e8c57657ad72bc1c2bd2381d61a61649b391",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png",
+          "artboardSha256": "fc36989077f89cbe217cc56ccc9d231e65e397dd2c1d1fec9f49c8ddda8ae81f"
+        },
+        "main-updates": {
+          "png": "captures/43726017923/main-updates.dark-modern.1200.png",
+          "sha256": "b60429f95969cbf9cda88561a006885af7793e35a8cea6d423a9f90544c323e8",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "b2344a70245e43f45cb77bc739096c2ea865b35b9890e83fe86febe86929a6ca"
+        },
+        "sidebar-sections": {
+          "png": "captures/43726017923/sidebar-sections.dark-modern.300.png",
+          "sha256": "ac601ac83ed8903cf98aadab9d58807d1891b93643924eb8865e3f737c3bfa21",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "f5d87df13772156ed2f9d39cf76d90743437dc91a6529b2b6a0f795a4ac54e77"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 12,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 5,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[native] The NETStandard.Library row's second label badge reads \"Props\" in the capture, but the artboard's badge in the same place reads \"props\". | [states] The NETStandard.Library row's second label badge reads \"Props\" in the capture, but the artboard's badge in the same place reads \"props\". The copy differs from the artboard element, and DS-COPY-1 does not cover badge labels.",
+          "severity": "minor",
+          "box": [
+            295,
+            360,
+            43,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "The NETStandard.Library row's second label badge reads \"Props\" in the capture, but the artboard's badge in the same place reads \"props\".",
+              "severity": "minor",
+              "box": [
+                295,
+                360,
+                43,
+                19
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop the NETStandard.Library second label badge reads 'Props' in the capture and 'props' in the artboard; the spec declares no badge text and DS-COPY-1 does not cover label badges, so this is a copy difference from the artboard element.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "The NETStandard.Library row's second label badge reads \"Props\" in the capture, but the artboard's badge in the same place reads \"props\". The copy differs from the artboard element, and DS-COPY-1 does not cover badge labels.",
+              "severity": "minor",
+              "box": [
+                296,
+                360,
+                42,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "This is the same badge as native-2: it reads 'Props' in the capture crop and 'props' in the artboard crop at the same place, and the spec declares no badge text.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "captures/43726017923/main-installed-details.dark-modern.1200.png 295,360,43,20 reads \"Props\"; the round3 page main-installed-details.dc.html:146 predates the UX-P3.11 badge casing",
+          "ruling": "design-advisor GOLDEN CLASS ruling UX-P3.11c of 2026-11-15 (docs/plans/handoff/P3.11c.md): accepted-as-design; DECISIONS.md \"Microcopy (UX-P3.11)\" names the version badge \"Props\" (Title Case); the artboard pages' lower-case badges go to P3.11d (Artboard badge casing)"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] On the current row (Newtonsoft.Json) the capture draws the version and author line in the selection foreground and the check mark in the checkbox select colours, while the artboard draws that line in muted descriptionForeground and the check mark in the plain checkbox colours; the redline gives this row --nuiget-color-list-active-fg, and the colour-role table (secondary text on selection: the row's foreground) and DS-HEIGHT-9 (check mark on a selected row: checkbox.select*) agree with the capture, so the artboard drawing disagrees with the spec.",
+          "severity": "minor",
+          "box": [
+            16,
+            440,
+            274,
+            30
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "On the current row (Newtonsoft.Json) the capture draws the version and author line in the selection foreground and the check mark in the checkbox select colours, while the artboard draws that line in muted descriptionForeground and the check mark in the plain checkbox colours; the redline gives this row --nuiget-color-list-active-fg, and the colour-role table (secondary text on selection: the row's foreground) and DS-HEIGHT-9 (check mark on a selected row: checkbox.select*) agree with the capture, so the artboard drawing disagrees with the spec.",
+              "severity": "minor",
+              "box": [
+                16,
+                440,
+                274,
+                30
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture's current row draws the version line in white (255,255,255) and the check mark at #202020/#cccccc, while the artboard uses muted #9d9d9d text and #313131/#3c3c3c; the redline's list-active-fg and the hard DS-HEIGHT-9 line ('selected in checkbox.selectBackground/selectBorder (#202020/#cccccc)') back the capture, so this is the artboard-versus-spec disagreement, reported once as a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.11d (Artboard badge casing) (the artboard draws the current row's secondary text muted; the spec and DS-HEIGHT-9 back the capture)"
+        },
+        {
+          "id": "main-installed-details#D4",
+          "state": "main-installed-details",
+          "finding": "[native] Rows with no package icon (Microsoft.Extensions.Http, Options.Confi..., NETStandard.Library, Newtonsoft.Json, Serilog, Serilog.Sinks.Console, System.Text.Json) show a coloured orange NuGet box bitmap in the 36 px icon column, where the artboard draws a neutral 36 px tile with the codicon package glyph in icon.foreground. Six identical orange marks in a list add colour as decoration, unlike the Extensions view's neutral default icon.",
+          "severity": "major",
+          "box": [
+            46,
+            146,
+            36,
+            620
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "Rows with no package icon (Microsoft.Extensions.Http, Options.Confi..., NETStandard.Library, Newtonsoft.Json, Serilog, Serilog.Sinks.Console, System.Text.Json) show a coloured orange NuGet box bitmap in the 36 px icon column, where the artboard draws a neutral 36 px tile with the codicon package glyph in icon.foreground. Six identical orange marks in a list add colour as decoration, unlike the Extensions view's neutral default icon.",
+              "severity": "minor",
+              "box": [
+                46,
+                146,
+                36,
+                620
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Rows without a package icon show a bright orange NuGet box bitmap in the 36 px column, where the artboard draws a neutral icon-tile with an icon.foreground package glyph; the spec declares no difference, and six orange marks are visible at 1:1 without a side-by-side comparison (Polly and .NET carry real live icons, which are not part of this finding).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "P7.4b (re-judges the fallback rows of the default package icon)"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[geometry] In the comfortable rows the label badges sit 6 px after the end of the name, but the artboard places them 8 px after it. Measured ink: the Newtonsoft.Json name ends at x 217 in both images, while the Vulnerable badge starts at x 224 in the capture and x 226 in the artboard. The NETStandard.Library name ends at x 250 and its SDK badge starts at x 257 in the capture and x 259 in the artboard. The gap is still on the spacing ramp, so the only difference is from the artboard and it shows only side by side.",
+          "severity": "minor",
+          "box": [
+            98,
+            432,
+            194,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "In the comfortable rows the label badges sit 6 px after the end of the name, but the artboard places them 8 px after it. Measured ink: the Newtonsoft.Json name ends at x 217 in both images, while the Vulnerable badge starts at x 224 in the capture and x 226 in the artboard. The NETStandard.Library name ends at x 250 and its SDK badge starts at x 257 in the capture and x 259 in the artboard. The gap is still on the spacing ramp, so the only difference is from the artboard and it shows only side by side.",
+              "severity": "minor",
+              "box": [
+                98,
+                432,
+                194,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Measured ink: the Newtonsoft.Json name ends at x 217 in both images, and the Vulnerable badge starts at x 224 in the capture and x 226 in the artboard; the SDK badge after NETStandard.Library (name ends at 250) starts at 257 versus 259. That is a consistent 2 px shift, still on the ramp (DS-GRID-1: 0 off-ramp), and visible only side by side.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (badge spacing, leftover stylesheet debt)"
+        },
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[geometry] In the details pane, the stack below the Version row sits higher than the artboard. The Authors row is 1 px higher, with its row pitch at 22 px against the artboard's 23. The Required by heading and both target-framework groups (net8.0 and netstandard2.0 with their package lines) are 2 px higher: Required by cap top at y 194 against 196, and the last line at 321 against 323. So the gap between the metadata block and the Required by heading is 2 px tighter than the approved artboard.",
+          "severity": "minor",
+          "box": [
+            441,
+            154,
+            373,
+            181
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-transitive-details",
+              "finding": "In the details pane, the stack below the Version row sits higher than the artboard. The Authors row is 1 px higher, with its row pitch at 22 px against the artboard's 23. The Required by heading and both target-framework groups (net8.0 and netstandard2.0 with their package lines) are 2 px higher: Required by cap top at y 194 against 196, and the last line at 321 against 323. So the gap between the metadata block and the Required by heading is 2 px tighter than the approved artboard.",
+              "severity": "minor",
+              "box": [
+                441,
+                154,
+                373,
+                181
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "I scanned for text-ink bands across x 441-814. The Version line sits at y 133 in both images. Below it the capture runs higher than the artboard: Authors at 154 against 155, Required by at 194 against 196, and the last net-standard line at 321 against 323. That is a 2 px tighter gap above Required by, visible only when the two crops sit side by side. No hard measurement contradicts it: SPEC details 2/2 within 1 covers only the pane rects, and DS-GRID-2b (required-by 12/4) reads gaps inside the groups.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (PropertyList row pitch, main-installed-details#D2 of UX-P3.9)"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[states] The NETStandard.Library row's second label badge reads \"Props\" in the capture, while the approved artboard (and its source dc.html) draws it as \"props\". The copy departs from the artboard. No DS-COPY rule covers badge text, so this is a mismatch with the artboard, not a broken rule.",
+          "severity": "minor",
+          "box": [
+            296,
+            260,
+            41,
+            19
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-transitive-details",
+              "finding": "The NETStandard.Library row's second label badge reads \"Props\" in the capture, while the approved artboard (and its source dc.html) draws it as \"props\". The copy departs from the artboard. No DS-COPY rule covers badge text, so this is a mismatch with the artboard, not a broken rule.",
+              "severity": "minor",
+              "box": [
+                296,
+                260,
+                41,
+                19
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the capture crop, the second label badge on the NETStandard.Library row reads 'Props', while the artboard crop at the same box reads 'props'. The product hard-codes this label (Badge label=\"Props\" in InstalledProjectSection.tsx), so §6 does not exclude it as live content. The spec does not declare the difference, and no DS-COPY rule covers badge text, so it is a minor mismatch with the artboard.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "accepted-as-design, informational (same class as main-installed-details#D2; row P3.11d (Artboard badge casing))"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "In the rest state (no current row, details pane empty) the Installed tab draws a 1 px focusBorder ring around the whole tab (x 6–144, y 77–111, rgb 0,120,212) on top of its active underline. The artboard draws the same tab with only the 2 px active-tab underline and no ring, so keyboard focus appears to sit on the tab strip in a state the redline defines as having no focus.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show a 1 px blue ring around the Installed tab, but this state is a declared focused-tab state: main-installed-single is in FOCUSED_TAB_STATES, and the hard measurement reads exactly this ring ('DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1) (hard)'). DECISIONS.md UX-P2.5 also says tabs show 'a ring after a click', and the spec's 'rest state' wording covers rows only ('no current row').",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The Installed tab is drawn with a full 1 px focusBorder ring around the whole tab in this rest state, where the artboard's installed-tab (6, 77, 138.6 x 35) has only the 1 px active underline and no focus ring.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            36
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Same ring as native-1. It is the expected focus ring of a clicked tab: the hard measurement DS-FOCUS-1@main-installed-single/tabs reads 'outline 1 solid rgb(0, 120, 212) offset -1' against target '1 solid #0078d4 offset -1', and the spec declares only that no row is current, not that no tab has focus.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The source-settings action (868, 10, 22 x 22) shows the settings-gear cog glyph, while the artboard draws a different codicon there: a sun-like glyph, a circle with short rays.",
+          "severity": "minor",
+          "box": [
+            868,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture draws the settings-gear codicon at 868,10. The artboard's glyph is not a codicon but a hand-drawn SVG standing in for a settings icon (a circle of r=2 with eight stroked rays). Rubric §6 excludes glyph-outline differences, and the hard measurement 'DS-ICON-2@main-installed-single: glyph 16×16 ×3 (target 16×16); colour icon.foreground ×3' shows matching geometry and colour role.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-details",
+          "finding": "The header's source-settings icon button shows a different glyph from the artboard: the capture draws a toothed gear (looks like codicon settings-gear), while the artboard draws a smaller rayed cog (looks like codicon settings) in the same 22 px slot.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture draws a codicon gear and the artboard a hand-drawn circle-and-rays placeholder SVG (every artboard glyph is a placeholder path), so only the glyph outline differs, which §6 excludes. DS-ICON-1 requires codicons, and the hard DS-ICON-2 line reads 'glyph 16×16 ×4, colour icon.foreground', so size and colour role hold.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-all",
+          "finding": "The second badge on the Unsupported.csproj group row reads \"Provisional\" in the capture, while the approved artboard draws the same badge as lowercase \"provisional\". The capture matches its Title Case sibling \"Unsupported\", so the artboard may be the side that is out of date.",
+          "severity": "minor",
+          "box": [
+            304,
+            407,
+            68,
+            19
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the capture's badge reads \"Provisional\" and the artboard's reads \"provisional\". The capture is the side that follows the copy rule: DS-COPY-1 makes labels Title Case, and the capture matches its sibling badge \"Unsupported\". The hard DS-OVERFLOW-2 measurement places the \"Provisional\" badge at 303.7–371.6 with 0 offending, so nothing in the capture is defective; the artboard drawing is stale, not the product.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    }
+  ]
+}
