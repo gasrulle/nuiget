@@ -710,6 +710,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ value: '[installed-toolbar] 2/2 reachable; cut 1 (uninstall-selected-button); lines 2' + fitSuffix, pass: TOOLBAR_FIT_STATUS !== 'hard' });
     });
 
+    it('PF-3a: separated authors that fill their room are ellipsized, 4 px short of it are cut (UX-P3.fix-14)', () => {
+        const authorsRow = (width: number) => ({ list: 'installed-list', compact: false, name: 'Dapper', nameCut: false, nameEllipsis: true, authors: { width, need: 266, room: 178 }, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined }) as RowFacts;
+        expect(lineOf('main-installed-single', layout({ rows: [authorsRow(178)] }), 'PF-3a@main-installed-single')).toMatchObject({ value: '1 authors, none cut; 1 wider than its line, ellipsized (Dapper 266 > 178)', pass: true });
+        expect(lineOf('main-installed-single', layout({ rows: [authorsRow(174)] }), 'PF-3a@main-installed-single')).toMatchObject({ value: expect.stringContaining('cut: Dapper (174 of 178)'), pass: false });
+    });
+
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {
         const band = { left: 0, top: 100, right: 400, bottom: 172 };
         const row = (overrides: Record<string, unknown> = {}) => ({

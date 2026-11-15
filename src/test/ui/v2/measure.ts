@@ -1535,7 +1535,8 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         const lineStyle = getComputedStyle(line);
         const others = [...line.children].filter(el => el !== authors && visible(el));
         const gap = px(lineStyle.columnGap);
-        const room = rectOf(line).width - px(lineStyle.paddingLeft) - px(lineStyle.paddingRight) - px(lineStyle.borderLeftWidth) - px(lineStyle.borderRightWidth) - others.reduce((sum, el) => sum + rectOf(el).width, 0) - gap * others.length;
+        const room = rectOf(line).width - px(lineStyle.paddingLeft) - px(lineStyle.paddingRight) - px(lineStyle.borderLeftWidth) - px(lineStyle.borderRightWidth) - others.reduce((sum, el) => sum + rectOf(el).width + px(getComputedStyle(el).marginLeft), 0) - gap * others.length - px(getComputedStyle(authors).marginLeft);
+        // UX-P3.fix-14 (follow-up 2): a separated part cancels the gap before it by a negative start margin and carries the spacing in its own box.
         return { width: round(rectOf(authors).width), need: round(authors.scrollWidth), room: round(room) };
     })() : undefined;
     return {
@@ -1546,7 +1547,8 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         nameEllipsis: Boolean(name) && getComputedStyle(name).textOverflow === 'ellipsis',
         authors: authorsFacts,
         versionShown: visible(version),
-        versionCut: visible(version) && version.scrollWidth > version.clientWidth,
+        // 0.5 is the rounding between a rect and the integer scrollWidth (as PF-3a): a fractional box one integer short is not cut (UX-P3.fix-14).
+        versionCut: visible(version) && version.scrollWidth - rectOf(version).width > 0.5,
         versionEllipsis: visible(version) && getComputedStyle(version).textOverflow === 'ellipsis',
         // UX-P3.fix-14: each shown child of the row's lines, badges aside, against its line's content right.
         lineChildren: [...option.querySelectorAll('.nuiget-row-line')].filter(visible).flatMap(line => {
@@ -1555,7 +1557,7 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
             return [...line.children].filter(el => visible(el) && !el.matches('.nuiget-row-badges, .nuiget-badge')).map(el => ({
                 name: typeof el.className === 'string' && el.className.trim() !== '' ? el.className.trim().split(' ')[0] : el.tagName.toLowerCase(),
                 sliced: rectOf(el).right > right + 0.5,
-                plain: el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow !== 'ellipsis',
+                plain: el.scrollWidth - rectOf(el).width > 0.5 && getComputedStyle(el).textOverflow !== 'ellipsis',
             }));
         }),
         badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,

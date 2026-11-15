@@ -304,6 +304,27 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().rows[0].versionEllipsis).toBe(true);
     });
 
+    it('counts a separated part\'s negative start margin in the authors\' room, and reads a fractional version box as whole (PF-3a, DS-ROW-5, UX-P3.fix-14)', () => {
+        const option = document.querySelector('.nuiget-row-option') as HTMLElement;
+        option.querySelector('.nuiget-row-authors')?.remove();
+        option.querySelector('.nuiget-row-version')?.remove();
+        option.insertAdjacentHTML('beforeend', '<div class="nuiget-row-line" data-rect="80,168,300,186"><span class="nuiget-row-version" data-rect="80,170,130.6,184">2.1.35</span><span class="nuiget-row-authors nuiget-row-sep" style="margin-left: -8px" data-rect="130.6,170,308.6,184">Sam Saffron, Marc Gravell, Nick Craver</span></div>');
+        const authors = option.querySelector('.nuiget-row-line .nuiget-row-authors') as HTMLElement;
+        Object.defineProperty(authors, 'scrollWidth', { configurable: true, value: 260 });
+        const version = option.querySelector('.nuiget-row-line .nuiget-row-version') as HTMLElement;
+        Object.defineProperty(version, 'scrollWidth', { configurable: true, value: 51 });
+        Object.defineProperty(version, 'clientWidth', { configurable: true, value: 50 });
+        const row = () => collect().rows[0];
+        // 220 of line less the version's 50.6, plus the 8 px the separated authors carry in their own box.
+        expect(row().authors).toEqual({ width: 178, need: 260, room: 177.4 });
+        // A box of fractional width one integer short of its scrollWidth is not cut, as a version or as a line child.
+        expect(row().versionCut).toBe(false);
+        expect(row().lineChildren).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: false });
+        Object.defineProperty(version, 'scrollWidth', { configurable: true, value: 60 });
+        expect(row().versionCut).toBe(true);
+        expect(row().lineChildren).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: true });
+    });
+
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         const box = document.createElement('input');
