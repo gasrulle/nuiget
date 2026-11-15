@@ -150,6 +150,8 @@
     --nuiget-color-checkbox-bg: var(--vscode-checkbox-background);
     --nuiget-color-checkbox-fg: var(--vscode-checkbox-foreground);
     --nuiget-color-checkbox-border: var(--vscode-checkbox-border);
+    --nuiget-color-checkbox-select-bg: var(--vscode-checkbox-selectBackground, var(--vscode-checkbox-background));
+    --nuiget-color-checkbox-select-border: var(--vscode-checkbox-selectBorder, var(--vscode-checkbox-border));
     --nuiget-color-dropdown-bg: var(--vscode-dropdown-background);
     --nuiget-color-dropdown-fg: var(--vscode-dropdown-foreground);
     --nuiget-color-dropdown-border: var(--vscode-dropdown-border);
