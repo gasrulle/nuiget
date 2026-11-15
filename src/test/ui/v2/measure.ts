@@ -56,8 +56,49 @@ export interface TabBadges {
  */
 export const TAB_BADGES_STATUS: RuleStatus = 'hard';
 
+/** A list toolbar's fit (UX-P3.fix-14): its pane, the buttons whose own box overflows (a cut label), and its rows of controls. */
+export interface ToolbarFit {
+    pane: number | undefined;
+    cut: string[];
+    lines: number;
+}
+
+/**
+ * DS-OVERFLOW-3's toolbar-fit clause in the `toolbars` scope (§8: the bulk toolbar's labels are never cut; below a 250 px
+ * pane Select All and the primary collapse to their glyphs on one line; UX-P3.fix-14, design-advisor opening ruling of
+ * 2026-11-15). Pending until that item's fix.
+ */
+export const TOOLBAR_FIT_STATUS: RuleStatus = { pending: 'P3.fix-14' };
+
+/**
+ * DS-ROW-5's line clause for comfortable rows (a text of a row's line is never sliced by the line: it fits, or it
+ * ellipsizes in its own box; UX-P3.fix-14). Pending until that item's fix.
+ */
+export const ROW_LINE_STATUS: RuleStatus = { pending: 'P3.fix-14' };
+
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
+
+/** No toolbar button is cut; at a pane of at most 250 px the toolbar's controls share one line. */
+export function toolbarFitClause(fits: readonly ToolbarFit[]): { text: string; pass: boolean } {
+    const cut = fits.flatMap(fit => fit.cut);
+    const narrow = fits.filter(fit => fit.pane !== undefined && fit.pane <= COLLAPSE_PANE);
+    const lines = Math.max(0, ...fits.map(fit => fit.lines));
+    return {
+        text: `cut ${cut.length}${cut.length > 0 ? ` (${cut.join(', ')})` : ''}; lines ${lines}`,
+        pass: cut.length === 0 && narrow.every(fit => fit.lines <= 1),
+    };
+}
+
+/** Every shown child of a comfortable row's lines (badges aside) lies inside its line, and one that overflows ellipsizes. */
+export function rowLineClause(rows: readonly RowFacts[]): { text: string; pass: boolean } {
+    const children = rows.flatMap(row => (row.lineChildren ?? []).map(child => ({ ...child, row: row.name })));
+    const bad = children.filter(child => child.sliced || child.plain);
+    return {
+        text: `line children inside ×${children.length - bad.length}, sliced ${bad.length}${bad.length > 0 ? ` (${bad.slice(0, 3).map(child => `${child.row.slice(0, 24)} ${child.name}`).join('; ')})` : ''}`,
+        pass: bad.length === 0,
+    };
+}
 
 /**
  * At a pane of at most 250 px every tab badge's box is at most 1×1 (clipped, still named); above it every present badge
@@ -75,7 +116,7 @@ export function tabBadgesClause(tabs: TabBadges): { text: string; pass: boolean 
 
 /**
  * DS-OVERFLOW-3's collapsed-button clause: at a pane of at most 250 px the glyph shows alone, 16×16, inside the button and
- * centred on it within the containment tolerance, the label hidden and the name kept ("Select All"); above it the label
+ * centred on it within the containment tolerance, the label hidden and the name kept (its label, e.g. "Select All"; UX-P3.fix-14); above it the label
  * shows and the glyph does not (UX-P3.fix-12).
  */
 export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { text: string; pass: boolean } {
@@ -83,7 +124,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
     const wide = buttons.filter(button => !(button.pane !== undefined && button.pane <= COLLAPSE_PANE));
     const centred = (delta: number) => Math.abs(delta) <= TOLERANCES.containment;
     const collapsedOk = (button: CollapsibleButton) => button.glyph !== undefined && button.glyph.w === 16 && button.glyph.h === 16 && button.glyph.inside
-        && centred(button.glyph.dx) && centred(button.glyph.dy) && !button.labelShown && button.name === 'Select All';
+        && centred(button.glyph.dx) && centred(button.glyph.dy) && !button.labelShown && button.name !== '';
     const parts: string[] = [];
     if (narrow.length > 0) {
         parts.push(`collapsed ${narrow.length}: ${narrow.map(button => button.glyph === undefined
@@ -715,6 +756,10 @@ export interface RowFacts {
     versionShown: boolean;
     /** The version ellipsized itself (it collapses before the name, DS-ROW-5). */
     versionCut: boolean;
+    /** The version's own `text-overflow` is an ellipsis (UX-P3.fix-14). */
+    versionEllipsis?: boolean;
+    /** UX-P3.fix-14: the shown children of the row's lines other than badges, each sliced past its line or overflowing without an ellipsis. */
+    lineChildren?: Array<{ name: string; sliced: boolean; plain: boolean }>;
     badgesShown: number;
     /** Comfortable rows: badges that overrun the content of their line (DS-ROW-5: a badge is never clipped). */
     badgesClipped: number;
@@ -918,7 +963,7 @@ export interface EndOfP0 {
      * Per container, its controls: `out` counts a visible one outside its rect and, when no visible control opens a menu
      * (`aria-haspopup`), a hidden one; `hidden` counts the hidden ones.
      */
-    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number; collapsible?: CollapsibleButton[]; tabBadges?: TabBadges }>;
+    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number; collapsible?: CollapsibleButton[]; tabBadges?: TabBadges; toolbarFit?: ToolbarFit }>;
     /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
     minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
     /** UX-P3.3b: the details pane's empty state's computed top padding (DS-INSET-4's empty clause). */
@@ -1500,6 +1545,17 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         authors: authorsFacts,
         versionShown: visible(version),
         versionCut: visible(version) && version.scrollWidth > version.clientWidth,
+        versionEllipsis: visible(version) && getComputedStyle(version).textOverflow === 'ellipsis',
+        // UX-P3.fix-14: each shown child of the row's lines, badges aside, against its line's content right.
+        lineChildren: [...option.querySelectorAll('.nuiget-row-line')].filter(visible).flatMap(line => {
+            const lineStyle = getComputedStyle(line);
+            const right = rectOf(line).right - px(lineStyle.paddingRight) - px(lineStyle.borderRightWidth);
+            return [...line.children].filter(el => visible(el) && !el.matches('.nuiget-row-badges, .nuiget-badge')).map(el => ({
+                name: typeof el.className === 'string' && el.className.trim() !== '' ? el.className.trim().split(' ')[0] : el.tagName.toLowerCase(),
+                sliced: rectOf(el).right > right + 0.5,
+                plain: el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow !== 'ellipsis',
+            }));
+        }),
         badgesShown: [...option.querySelectorAll('.nuiget-badge')].filter(badge => visible(badge) && unclipped(badge, option)).length,
         badgesClipped: [...option.querySelectorAll('.nuiget-row-line .nuiget-badge')].filter(badge => visible(badge) && badge.getBoundingClientRect().right > badge.closest('.nuiget-row-line').getBoundingClientRect().right + 0.5).length,
         // A compact row's band is the wrapper inset by the option's margin (DS-ROW-3, UX-P3.7a); a comfortable row's is the wrapper.
@@ -1768,7 +1824,17 @@ const controlsIn = (kind, container) => {
         badges: [...container.querySelectorAll('.nuiget-tab-count, .nuiget-tab-badge')].map(el => { const r = rectOf(el); return { w: round(r.width), h: round(r.height) }; }),
         labelsCut: [...container.querySelectorAll('.nuiget-tab-label')].filter(el => el.scrollWidth > el.clientWidth).length,
     } : undefined;
-    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible, tabBadges };
+    // UX-P3.fix-14: a button whose own box overflows has a cut label (a collapsed one keeps its glyph and a clipped label); the control rows.
+    const toolbarFit = kind === 'toolbars' ? (() => {
+        const tops = [];
+        for (const control of controls.filter(visible)) {
+            const top = rectOf(control).top;
+            if (!tops.some(seen => Math.abs(seen - top) <= 1)) tops.push(top);
+        }
+        const cut = [...container.querySelectorAll('.nuiget-button')].filter(button => visible(button) && button.scrollWidth > button.clientWidth).map(button => button.dataset.testid || 'button');
+        return { pane: holderWidth(container), cut, lines: tops.length };
+    })() : undefined;
+    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible, tabBadges, toolbarFit };
 };
 const controlsOut = [
     ...shown('[data-testid="main-header"]').map(el => controlsIn('main-header', el)),
@@ -2710,10 +2776,16 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
             const cut = rows.filter(row => row.nameCut).length;
             // The facts line yields the authors, never the version (judge main-installed-single#D7, UX-P2.8a).
             const comfortableVersions = rows.filter(row => !row.compact && row.versionShown);
-            const versionCut = comfortableVersions.filter(row => row.versionCut).length;
+            // UX-P3.fix-14: a comfortable version may ellipsize only once its row's authors have given way (absent or 0 wide).
+            const yielded = (row: RowFacts) => (row.authors === undefined || row.authors.width === 0) && row.versionEllipsis === true;
+            const ellipsized = comfortableVersions.filter(row => row.versionCut && yielded(row)).length;
+            const versionCut = comfortableVersions.filter(row => row.versionCut && !yielded(row)).length;
+            // Printed where a row has line children (every capture; a fact without them, as an old fixture, prints none).
+            const line = scope === 'sidebar' || rows.every(row => (row.lineChildren ?? []).length === 0) ? undefined : rowLineClause(rows);
+            const lineText = line === undefined ? '' : `; ${line.text}${ROW_LINE_STATUS === 'hard' ? '' : ` (pending ${ROW_LINE_STATUS.pending})`}`;
             return {
-                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}`,
-                pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0,
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut - ellipsized}${ellipsized > 0 ? `, ellipsized ${ellipsized}` : ''}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}${lineText}`,
+                pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0 && (line === undefined || ROW_LINE_STATUS !== 'hard' || line.pass),
             };
         }
         default:
@@ -3095,12 +3167,20 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return { value: `${reach}; ${clause}`, pass: reachable && (TAB_BADGES_STATUS !== 'hard' || verdicts.every(verdict => verdict.pass)) };
             }
             const collapsible = kind === 'toolbars' ? containers.flatMap(entry => entry.collapsible ?? []) : [];
-            if (collapsible.length === 0) {
-                return { value: reach, pass: reachable };
+            const fits = kind === 'toolbars' ? containers.map(entry => entry.toolbarFit).filter((entry): entry is ToolbarFit => entry !== undefined) : [];
+            const parts = [reach];
+            let pass = reachable;
+            if (collapsible.length > 0) {
+                const collapsed = collapsedGlyphClause(collapsible);
+                parts.push(collapsed.text + (COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ` (pending ${COLLAPSED_GLYPH_STATUS.pending})`));
+                pass = pass && (COLLAPSED_GLYPH_STATUS !== 'hard' || collapsed.pass);
             }
-            const collapsed = collapsedGlyphClause(collapsible);
-            const clause = collapsed.text + (COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ` (pending ${COLLAPSED_GLYPH_STATUS.pending})`);
-            return { value: `${reach}; ${clause}`, pass: reachable && (COLLAPSED_GLYPH_STATUS !== 'hard' || collapsed.pass) };
+            if (fits.length > 0) {
+                const fit = toolbarFitClause(fits);
+                parts.push(fit.text + (TOOLBAR_FIT_STATUS === 'hard' ? '' : ` (pending ${TOOLBAR_FIT_STATUS.pending})`));
+                pass = pass && (TOOLBAR_FIT_STATUS !== 'hard' || fit.pass);
+            }
+            return { value: parts.join('; '), pass };
         }
         case 'DS-OVERFLOW-5': {
             const { toolbar, header } = facts.minContent;

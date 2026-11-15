@@ -348,7 +348,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
     const primary = bulkUpdateButton(chosenCount, candidateTotal, knowledge);
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={total === 0 || primary.disabled} title={primary.title ?? (total === 0 ? noCandidateWhy(knowledge) : undefined)} onClick={() => setConfirming(true)}>
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button icon={<ArrowUpIcon />} data-testid="update-all-button" disabled={total === 0 || primary.disabled} title={primary.title ?? (total === 0 ? noCandidateWhy(knowledge) : undefined)} onClick={() => setConfirming(true)}>
                 {primary.label}
             </Button>}>
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={bulk.allSelected} disabled={candidateTotal === 0} title={candidateTotal === 0 ? noCandidateWhy(knowledge) : undefined} onClick={bulk.selectAll}>

@@ -277,6 +277,33 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(sizes()).toContainEqual([19, 19]);
     });
 
+    it('reads a toolbar\'s cut buttons and control rows, and each line child of a row against its line (DS-OVERFLOW-3, DS-ROW-5, UX-P3.fix-14)', () => {
+        const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
+        const primary = toolbar.querySelector('[data-testid="uninstall-selected-button"]') as HTMLElement;
+        const fit = () => collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.toolbarFit;
+        expect(fit()).toMatchObject({ cut: [], lines: 1 });
+        Object.defineProperty(primary, 'scrollWidth', { configurable: true, value: 160 });
+        Object.defineProperty(primary, 'clientWidth', { configurable: true, value: 138 });
+        primary.setAttribute('data-rect', '16,108,154,134');
+        expect(fit()).toMatchObject({ cut: ['uninstall-selected-button'], lines: 2 });
+        // A row's line: the version past the line's right is sliced; a child that overflows without an ellipsis is plain.
+        const option = document.querySelector('.nuiget-row-option') as HTMLElement;
+        option.insertAdjacentHTML('beforeend', '<div class="nuiget-row-line" data-rect="80,168,200,186"><span class="nuiget-row-version" data-rect="80,170,230,184">9.5.0-preview.1.25262.9</span></div>');
+        const children = () => collect().rows[0].lineChildren;
+        expect(children()).toContainEqual({ name: 'nuiget-row-version', sliced: true, plain: false });
+        (option.querySelector('.nuiget-row-line .nuiget-row-version') as HTMLElement).setAttribute('data-rect', '80,170,190,184');
+        expect(children()).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: false });
+        // A child that overflows its own box without an ellipsis is plain; the version's own ellipsis is read.
+        const version = option.querySelector('.nuiget-row-line .nuiget-row-version') as HTMLElement;
+        Object.defineProperty(version, 'scrollWidth', { configurable: true, value: 150 });
+        Object.defineProperty(version, 'clientWidth', { configurable: true, value: 110 });
+        expect(children()).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: true });
+        version.style.textOverflow = 'ellipsis';
+        expect(children()).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: false });
+        option.querySelector('.nuiget-row-version')?.remove();
+        expect(collect().rows[0].versionEllipsis).toBe(true);
+    });
+
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         const box = document.createElement('input');

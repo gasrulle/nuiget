@@ -285,7 +285,7 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
     const primary = bulkUpdateButton(chosen.length, candidates.length, knowledge);
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={primary.disabled} title={primary.title} onClick={() => setConfirming(true)}>
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button icon={<ArrowUpIcon />} data-testid="update-all-button" disabled={primary.disabled} title={primary.title} onClick={() => setConfirming(true)}>
                 {primary.label}
             </Button>}>
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? noCandidateWhy(knowledge) : undefined} onClick={bulk.selectAll}>

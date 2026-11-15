@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
 import { whyNotRemovable } from '../../../shared/installed/rules';
-import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
+import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, TrashIcon, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -379,7 +379,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
 
     return (
         <div className="nuiget-installed">
-            <Toolbar label="Bulk actions" data-testid="installed-toolbar" end={<Button data-testid="uninstall-selected-button" disabled={count === 0} title={count === 0 ? 'Select packages to uninstall them together.' : undefined} onClick={() => setConfirming(true)}>
+            <Toolbar label="Bulk actions" data-testid="installed-toolbar" end={<Button icon={<TrashIcon />} data-testid="uninstall-selected-button" disabled={count === 0} title={count === 0 ? 'Select packages to uninstall them together.' : undefined} onClick={() => setConfirming(true)}>
                 {`Uninstall Selected (${count})`}
             </Button>}>
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} title={candidateCount === 0 ? 'No package in this list can join a bulk action.' : undefined} onClick={selectAll}>

@@ -349,11 +349,15 @@
     white-space: nowrap;
 }
 
+/* A line narrower than its version or status ellipsizes each in its own box, once the authors have given way (DS-ROW-5, UX-P3.fix-14). */
 .nuiget-row-version,
 .nuiget-row-status {
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
     font-size: var(--nuiget-font-size-sm);
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* A Browse description reads at 13, the Extensions description's size (DS-TYPE-6, UX-P3.2). */
@@ -402,12 +406,18 @@
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
     font-size: var(--nuiget-font-size-sm);
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* No opacity: at 0.7 the muted colour falls below 4.5:1 on Light Modern (theme.ui.test.ts). */
 .nuiget-row-authors {
     /* The Extensions publisher, 11/600 (DS-TYPE-6). */
     font-weight: var(--nuiget-font-weight-semibold);
+    /* The line's leftover: the authors give way first, the rest keep their width while the line has room (UX-P3.fix-14). */
+    flex: 1 1 0;
+    max-width: max-content;
     min-width: 0;
     overflow: hidden;
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
@@ -516,10 +526,7 @@
 
 .nuiget-row--compact .nuiget-row-version {
     flex: 1 1 0;
-    min-width: 0;
     max-width: max-content;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .nuiget-row--compact .nuiget-row-badges {

@@ -151,6 +151,9 @@ describe('main panel: Updates tab', () => {
         // The toolbar box of the measurements (UX-P0.10).
         expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
         expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (2)');
+        // The primary collapses to its glyph below 250 and keeps its label and count as its name (UX-P3.fix-14).
+        expect(screen.getByTestId('update-all-button').querySelector('.nuiget-button-icon svg')).not.toBeNull();
+        expect(screen.getByTestId('update-all-button')).toHaveAccessibleName('Update All (2)');
         expect(screen.getByTestId('update-all-button')).not.toHaveAttribute('title');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
@@ -450,6 +453,9 @@ describe('main panel: Updates tab', () => {
             expect(names()).toEqual(['Newtonsoft.Json', 'Serilog', 'Moq']);
             // All Projects has its own toolbar, the same box of the measurements (UX-P0.10).
             expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
+            // The All Projects primary collapses to its glyph below 250 too, its name kept (UX-P3.fix-14).
+            expect(screen.getByTestId('update-all-button').querySelector('.nuiget-button-icon svg')).not.toBeNull();
+            expect(screen.getByTestId('update-all-button')).toHaveAccessibleName('Update All (2)');
             expect(screen.queryByTestId('updates-list-app')).toBeNull();
             expect(screen.getByTestId('updates-tab')).toHaveAccessibleName(/Updates\s+3/);
             expect(host.requests('updates/get')).toHaveLength(0);

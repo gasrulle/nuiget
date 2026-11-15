@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -675,6 +675,39 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(elementGroups('details', 'main-browse-details')).not.toContain('toolbars');
         expect(elementGroups('details', 'main-installed-details')).toContain('toolbars');
         expect(elementGroups('details', 'main-transitive-details')).toContain('toolbars');
+    });
+
+    it('reads a list toolbar\'s fit and a comfortable row\'s lines: nothing cut, one line below 250, no text sliced by its line (DS-OVERFLOW-3, DS-ROW-5, UX-P3.fix-14)', () => {
+        // Today's tree (16002046): at a 170 px pane the primary's label is cut and the toolbar takes two lines.
+        const today = { pane: 170, cut: ['uninstall-selected-button'], lines: 2 };
+        expect(toolbarFitClause([today])).toEqual({ text: 'cut 1 (uninstall-selected-button); lines 2', pass: false });
+        expect(toolbarFitClause([{ pane: 170, cut: [], lines: 1 }])).toEqual({ text: 'cut 0; lines 1', pass: true });
+        expect(toolbarFitClause([{ pane: 170, cut: [], lines: 2 }]).pass).toBe(false);
+        expect(toolbarFitClause([{ pane: 400, cut: [], lines: 2 }]).pass).toBe(true);
+        expect(toolbarFitClause([{ pane: 400, cut: ['b'], lines: 1 }]).pass).toBe(false);
+        // Both collapsed buttons keep their names: Select All and the primary with its count.
+        const glyph = { w: 16, h: 16, inside: true, dx: 0, dy: 0 };
+        expect(collapsedGlyphClause([{ pane: 170, glyph, labelShown: false, name: 'Select All' }, { pane: 170, glyph, labelShown: false, name: 'Uninstall Selected (0)' }]))
+            .toEqual({ text: 'collapsed 2: glyph 16×16, centre dx 0 dy 0, name "Select All"; glyph 16×16, centre dx 0 dy 0, name "Uninstall Selected (0)"', pass: true });
+        expect(collapsedGlyphClause([{ pane: 170, glyph, labelShown: false, name: '' }]).pass).toBe(false);
+        // A version beyond its line, sliced with no ellipsis (the 9.5.0-preview row at 170).
+        const row = (children: Array<{ name: string; sliced: boolean; plain: boolean }>) => ({ list: 'installed-list', compact: false, name: 'Microsoft.Extensions.AI.Abstractions', nameCut: true, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, lineChildren: children }) as RowFacts;
+        const sliced = row([{ name: 'nuiget-row-name', sliced: false, plain: false }, { name: 'nuiget-row-version', sliced: true, plain: false }]);
+        expect(rowLineClause([sliced])).toEqual({ text: 'line children inside ×1, sliced 1 (Microsoft.Extensions.AI. nuiget-row-version)', pass: false });
+        expect(rowLineClause([row([{ name: 'nuiget-row-version', sliced: false, plain: true }])]).pass).toBe(false);
+        expect(rowLineClause([row([{ name: 'nuiget-row-name', sliced: false, plain: false }, { name: 'nuiget-row-version', sliced: false, plain: false }])])).toEqual({ text: 'line children inside ×2, sliced 0', pass: true });
+        // The lines print their clause; an ellipsized version is whole-or-ellipsized only once the authors gave way.
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, ...overrides } as Layout['endOfP0'] });
+        const value = (state: string, built: Layout, name: string) => lineOf(state, built, name);
+        const lineSuffix = ROW_LINE_STATUS === 'hard' ? '' : ' (pending ' + ROW_LINE_STATUS.pending + ')';
+        expect(value('main-installed-single', layout({ rows: [sliced] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ value: expect.stringContaining('sliced 1 (Microsoft.Extensions.AI. nuiget-row-version)' + lineSuffix), pass: ROW_LINE_STATUS !== 'hard' });
+        const ellipsized = { ...row([]), versionCut: true, versionEllipsis: true, authors: { width: 0, need: 120, room: 0 } } as RowFacts;
+        expect(value('main-installed-single', layout({ rows: [ellipsized] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ value: expect.stringContaining('version whole ×0, ellipsized 1'), pass: true });
+        const early = { ...ellipsized, authors: { width: 40, need: 120, room: 40 } } as RowFacts;
+        expect(value('main-installed-single', layout({ rows: [early] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ value: expect.stringContaining('version whole ×0, 1 cut'), pass: false });
+        const fitSuffix = TOOLBAR_FIT_STATUS === 'hard' ? '' : ' (pending ' + TOOLBAR_FIT_STATUS.pending + ')';
+        expect(value('main-installed-single', facts({ controlsOut: [{ container: 'toolbars', label: '[installed-toolbar]', out: 0, hidden: 0, menu: false, total: 2, toolbarFit: today }] }), 'DS-OVERFLOW-3@main-installed-single/toolbars'))
+            .toMatchObject({ value: '[installed-toolbar] 2/2 reachable; cut 1 (uninstall-selected-button); lines 2' + fitSuffix, pass: TOOLBAR_FIT_STATUS !== 'hard' });
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

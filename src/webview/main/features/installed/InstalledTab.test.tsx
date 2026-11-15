@@ -176,6 +176,9 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByTestId('installed-toolbar')).toContainElement(screen.getByTestId('select-all-button'));
         expect(uninstallSelected()).toBeDisabled();
         expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
+        // The primary collapses to its glyph below 250 and keeps its label and count as its name (UX-P3.fix-14).
+        expect(uninstallSelected().querySelector('.nuiget-button-icon svg')).not.toBeNull();
+        expect(uninstallSelected()).toHaveAccessibleName('Uninstall Selected (0)');
         await user.click(screen.getByTestId('select-all-button'));
         expect(screen.getByTestId('select-all-button')).toHaveAttribute('aria-pressed', 'true');
         // A centrally managed row is removable: an uninstall keeps its central entry (ADR-004).
