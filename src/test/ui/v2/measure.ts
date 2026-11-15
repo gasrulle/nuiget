@@ -36,9 +36,10 @@ export interface CollapsibleButton {
 
 /**
  * DS-OVERFLOW-3's collapsed-button clause in the `toolbars` scope (§8: Select All gives way to its glyph below a 250 px
- * pane and keeps its name; UX-P3.fix-12, design-advisor opening ruling of 2026-11-15). Pending until that item's fix.
+ * pane and keeps its name; UX-P3.fix-12, design-advisor opening ruling of 2026-11-15). Hard since that item's closing commit
+ * (GOLDEN ruling of 2026-11-15, run 43739104739: `collapsed 1: glyph 16×16, centre dx 0 dy 0` at panes 210, 172 and 170).
  */
-export const COLLAPSED_GLYPH_STATUS: RuleStatus = { pending: 'P3.fix-12' };
+export const COLLAPSED_GLYPH_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;

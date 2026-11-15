@@ -1,7 +1,7 @@
-# STATUS — src/webview/shared/primitives (UX-P3.fix-12)   commit c5102ad (base; the proving push)   2026-11-15
+# STATUS — src/webview/shared/primitives (UX-P3.fix-12)   commit d30ed09 (proving push; 5633c4d and the closing commit follow)   2026-11-15
 
-git status --short: `primitives.css`, `Button.test.tsx`, `measure.ts`, `measure-rules.test.ts`, the tracker, P3.11d's note
-and this note
+git status --short (closing commit): the four goldens with their sidecars and `index.json`, `measure.ts` (the flip),
+`docs/plans/judge-log/P3.fix-12.json`, DECISIONS, the tracker and this note
 
 Item: UX-P3.fix-12 ⚑-design "The collapsed Select All button at 220 draws an empty box", tracker row
 `docs/plans/STATUS-ux.md`. The one counted source directory is `src/webview/shared/primitives` (`measure.ts` is a §2.1 UI
@@ -72,7 +72,52 @@ Gates after the edits:
 
 ## Visual evidence (UI items)
 
-Not yet: the proving push.
+Proving run 43739104739 (d30ed09), green on every job; `captures/43739104739/`:
+
+```text
+[diff] summary: 114 compared, 110 at 0 px, 4 above tolerance, 0 without a golden, 0 refused
+[diff] main-installed-details.dark-modern.400: 21 px (0.007 %, tolerance 0 %, 151636 px masked, above)
+[diff] main-installed-single.dark-modern.220: 21 px (0.012 %, tolerance 0 %, above)
+[diff] main-installed-single.dark-modern.400: 21 px (0.007 %, tolerance 0 %, above)
+[diff] main-installed-single.dark-modern.600: 18908 px (3.924 %, tolerance 0 %, 9240 px masked, above)
+[measure] DS-OVERFLOW-3@main-installed-single/toolbars: [installed-toolbar] 2/2 reachable; collapsed 1: glyph 16×16, centre dx 0 dy 0, name "Select All" (pending P3.fix-12) (hard)   (×3: the 220, 400 and 600 cells)
+```
+
+(each `[diff]` line also prints `fingerprint differs: image ubuntu26 20261111.82.6 → ubuntu26 20261111.196.1`, the runner
+image.) Exactly the opening ruling's step 4 cells. Changed-pixel boxes (pixelmatch red of `compare()`, masks applied):
+220 `27,251,12,6`, 400 and details 400 `27,185,12,6` (the glyph's ink), 600 `16,177,194,626` (the wrap). Pixels: the box
+spans x 16–49 (34 px) with glyph ink at x 26–38; at 600 the Uninstall fill's last row moved 202 → 232. Every wider toolbar
+cell reads `labelled 1: icon hidden, label shown`; the centre is within tolerance, so DO 5 was not needed. Hard lines
+against run 43734973583 (sorted, the toolbars clause text stripped): identical but the 600 cell's
+`MS-8@main-installed-single/first-row: reference 235.2 → 265.2` and `PF-3b … first Dapper: row 271.2 → 301.2` (the wrap);
+DS-HEIGHT-6 `26 ×2`, DS-ICON-2 `glyph 16×16 ×3`, DS-OVERFLOW-1 `no sideways scroll`; `[aria] … differs` 0 and 0; classic
+hard lines identical. `main-installed-details` prints no `/toolbars` line: the `details` state group has no `toolbars`
+(`measure.ts` `elementGroups`), P3.fix-13's duty under the GOLDEN ruling.
+
+sha256: `main-installed-single.dark-modern.220` 55a08299676df36ceed9b25439cea62db4bee342f5d54a8223f35946d11701f9,
+`.400` e84ac2da2e5c26dcd38cc2001103cc84dd405ccabde2fc911eb9fd64b4fbfda6, `.600`
+d4a34428694b4190d6df1462ef5d4ee1980cd0c039a1b9580750442b8c344b5f, `main-installed-details.dark-modern.400`
+0f45bcb4dc3e7884af46a2c9f05db67ca0bef023918404a83278583bb4842d3f.
+
+design-judge wf_f513f231-6d1 (`captures/43739104739/judge-wf_f513f231-6d1.json`), the four cells against their committed
+goldens as artboards: `states 4, candidates 31, standing 10, blocking 4, refuted 2, singleJudge 4, incomplete 0`. D37 is
+not met (informational); every finding has a disposition and an owner in `docs/plans/judge-log/P3.fix-12.json` (the
+GOLDEN ruling's DO 4): the tab badges → P3.fix-13; the wraps → accepted-as-design; the empty-box golden → fixed here;
+the cut primary and the sliced version → P3.fix-14; the 49 px details pane and the clipped placeholder → P3.fix-15.
+
+Closing (G-UI): the four cells adopted from run 43739104739 only (`captures/43739104739/adopt-4/`, the four PNGs and their
+sidecars): `compare-goldens: 4 goldens adopted from run 43739104739 as approved`; `index.json` holds the four with run
+43739104739, status `approved` and the sha256 above. `COLLAPSED_GLYPH_STATUS` is `'hard'`; the pending table row says so.
+§8's bulk-toolbar "Today" cell corrected in its own commit 5633c4d (`docs(design)`, citing the rulings). The closing
+run must read `114 at 0 px`, the three clause lines without `(pending P3.fix-12)` and `[aria] … differs` 0.
+
+Gates on the staged closing tree (after the flip): `npx tsc --noEmit` → exit 0; `npm run check-types` → exit 0;
+`npx eslint src` → exit 0; `npx vitest run --project backend src/test/lint` → `Tests  482 passed (482)` (the measure-rules
+case reads the status, so it asserts the hard verdict now: `pass: false` for today's fact); `npx vitest run --project
+backend src/test/lint/measure-rules.test.ts` → `Tests  56 passed (56)`; `node scripts/check-css-baseline.mjs --item
+P3.fix-12` → `check-css-baseline: 0 entries for P3.fix-12`; `npm run docs:check` → exit 0; `npm run check:matrix` → `282
+rows: 277 covered, 2 gap, 3 manual-credentials; 0 finding(s).` `precommit-review` on the closing commit (wf_cd7019b6-31e)
+→ 0 blocking, 2 non-blocking (this paragraph and the judge log's `evidence` fields), both fixed before the commit.
 
 ## Done (tested)
 
@@ -99,12 +144,14 @@ Not yet: the proving push.
 
 ## Done (untested)
 
-- The CSS move's effect on the four cells (the proving run reads it).
+None.
 
 ## Not started
 
-The proving run (DO 4-5), the GOLDEN brief and the judge (DO 6), the closing commit (DO 7-8: adoption, the flip, §8's
-"Today" cell, the DECISIONS row).
+Nothing. The closing run is the proof.
+
+Also in the closing commit: the DECISIONS row "Collapsed Select All (UX-P3.fix-12)"; P3.fix-13's row gains the details
+`toolbars` duty; rows P3.fix-14 and P3.fix-15 (the GOLDEN ruling's rows A and B) placed for the planning session.
 
 ## Deviations from contract/ADR/decision (file:line each)
 
@@ -230,6 +277,108 @@ adding (trigger 6).
 > | `main-installed-single.dark-modern.600.png` | 25501d63f078d8b676bfffd5a9d4b719cc8db3406fde664825a8a37134f4fa20 |
 > | `main-installed-details.dark-modern.400.png` | 1507254b09e4d6493965300e6b671d9804e69ca315c81b00d680a9e2c6e122e8 |
 
+### 2026-11-15, UX-P3.fix-12, design-advisor, GOLDEN ruling
+
+Question: are the four moved cells in the pre-ruled class (adopt and flip); the `main-installed-details` toolbars gap;
+dispositions and owners for the judge's 10 standing findings.
+
+> GOLDEN ruling for UX-P3.fix-12, proving run 43739104739 (d30ed09). The brief checks out: the four sha256 values match the files, the `[diff]` lines and the clause counts (3 collapsed, 35 labelled) match `ui-output.txt` and `ui-diff.txt`, and the CSS diff of d30ed09 is exactly the two base rules moved above the 250 query. I opened all four captures; each shows the check-all glyph centred in a 34 px box, and the 600 cell shows Uninstall Selected (0) on a second line.
+>
+> ```text
+> DECISION: APPROVE the four cells; accept the clause as read on the three main-installed-single cells; dispositions
+> below.
+>
+> WHY: The four moved cells are exactly the opening ruling's step 4 prediction: 21 px in the glyph box at 220, 400
+> and details 400, and the 30 px wrap at 600 (MS-8 235.2 → 265.2, PF-3b 271.2 → 301.2), with 110 cells at 0 px.
+> The clause reads `collapsed 1: glyph 16×16, centre dx 0 dy 0, name "Select All"` at panes 210, 172 and 170, so
+> step 5 is not needed; DS-HEIGHT-6 stays `26 ×2` and DS-ICON-2 `×3`. The details-400 cell has the same toolbar at
+> the same 172 px pane and the same changed box (27,185,12,6) as single-400, so the missing `/toolbars` line there
+> is a coverage gap of the state group, not doubt about the cell. Every standing finding outside the glyph box is
+> unchanged from the committed goldens, and the hardness rule (D37) is not met, so none blocks adoption; each gets
+> a disposition.
+>
+> DO:
+> 1. Adopt the four cells with `--status approved` from run 43739104739:
+>    main-installed-single.dark-modern.220 sha256 55a08299676df36ceed9b25439cea62db4bee342f5d54a8223f35946d11701f9
+>    main-installed-single.dark-modern.400 sha256 e84ac2da2e5c26dcd38cc2001103cc84dd405ccabde2fc911eb9fd64b4fbfda6
+>    main-installed-single.dark-modern.600 sha256 d4a34428694b4190d6df1462ef5d4ee1980cd0c039a1b9580750442b8c344b5f
+>    main-installed-details.dark-modern.400 sha256 0f45bcb4dc3e7884af46a2c9f05db67ca0bef023918404a83278583bb4842d3f
+>    Adopt nothing else.
+> 2. Flip COLLAPSED_GLYPH_STATUS to 'hard' in the closing commit, with §8's bulk-toolbar "Today" cell and the
+>    DECISIONS.md row of the opening ruling's step 8.
+> 3. Do not add 'toolbars' to the details group in this item. Add it to P3.fix-13's row as a duty: a reading push
+>    with the group added, every toolbars-scoped line of the details states pasted, any red a stop-and-ask. That
+>    item moves the same cells.
+> 4. Write docs/plans/judge-log/P3.fix-12.json with these dispositions:
+>    - main-installed-single#D1, main-installed-single-400#D1, main-installed-single-600#D2,
+>      main-installed-details#D1 (tab badges shown below 250): fixed, owner P3.fix-13.
+>    - main-installed-single-600#D1 (wrap at 600) and main-installed-details#D2 (wrap at 400, single judge):
+>      accepted-as-design, owner P3.fix-12; ruling: the DECISIONS.md row "Collapsed Select All (UX-P3.fix-12)"
+>      and the UX-P2.7 row ("the wrap keeps every control reachable").
+>    - main-installed-single#D6 (golden drew the empty box, single judge): fixed, owner P3.fix-12; the golden is
+>      replaced by step 1.
+>    - main-installed-single#D4 and main-installed-single-400#D2 (Uninstall Selected cut to "Uninstall
+>      Selecte...", the count lost): fixed, owner new row A.
+>    - main-installed-single#D2 and main-installed-single-400#D3 (facts-line version cut with no ellipsis): fixed,
+>      owner new row A. Not refuted: `versionCut` (measure.ts:1461) reads the version's own scrollWidth and cannot
+>      see the parent line clipping it. P2.8a's #D7 ruling covered the authors' ellipsis, not this.
+>    - main-installed-single#D3 (details pane about 49 px at 220): fixed, owner new row B.
+>    - main-installed-single#D5 and main-installed-single-400#D4 (main search placeholder clipped, no ellipsis):
+>      fixed, owner new row B.
+> 5. Add two rows to STATUS-ux.md for the planning session to place, both ⚑-design, pre-existing, blocking
+>    nothing in this item:
+>    - Row A, "Clips at the 170 px list-pane floor". The primary's label needs 147 px and has 138 (170 minus 32).
+>      A version wider than the facts line is sliced by the line. The same version clip shows at 600 (pane 210),
+>      where the panel's refuter leaned on the blind helper; that cell joins the row.
+>    - Row B, "The main panel at the editor minimum". At 220 the 170 px list floor leaves the details pane about
+>      49 px, and no rule says what the split does below 170 + 220. The main placeholder does not fit its field
+>      at 220 or 400.
+>    Each row carries its NEW rule from DEFECTS, to fail on today's captures before the CSS.
+> 6. Push the closing commit and paste its `[diff] summary`.
+>
+> DO NOT:
+> - Fix the tab badges, the Uninstall label, the version clip, the placeholder or the split in this item.
+> - Add 'toolbars' to the details group here, or mark any finding refuted-by-measurement on `version whole`.
+> - Adopt from any run other than 43739104739, or any fifth cell.
+> - Leave a finding without a disposition because it is single-judge or pre-existing.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - `git diff --stat` of the closing commit under src/test/ui/v2/golden/ shows the four PNGs, their four sidecars
+>   and index.json only; index.json records run 43739104739 and the four sha256 above with status approved.
+> - The closing run prints `[diff] summary: 114 compared, 114 at 0 px, 0 above tolerance`, the three collapsed
+>   clause lines without `(pending P3.fix-12)`, and `[aria] … differs` 0.
+> - `node scripts/check-css-baseline.mjs --item P3.fix-12` prints `0 entries`.
+> - docs/plans/judge-log/P3.fix-12.json holds 14 entries (10 standing, 4 single judge), each with a disposition
+>   and an owner.
+>
+> DEFECTS (none blocks approval; all predate this item):
+> - captures/43739104739/main-installed-single.dark-modern.220.png 6,201,154,35 DS-OVERFLOW-3 major: tab badges
+>   shown below 250, labels "I..", "U.."; P3.fix-13. Same in the other three cells.
+> - captures/43739104739/main-installed-single.dark-modern.220.png 16,271,138,26 NEW: "at the list-pane minimum no
+>   toolbar button's label is cut (label scrollWidth ≤ clientWidth); a DS-OVERFLOW-3 toolbars clause" blocking:
+>   "Uninstall Selecte..." loses its count; §8 declares no truncation of the primary. Same at 400 and details 400.
+>   Row A.
+> - captures/43739104739/main-installed-single.dark-modern.220.png 46,584,84,14 DS-ROW-5 blocking: "9.5.0-preview.1"
+>   sliced by the facts line with no ellipsis; the helper needs the version's right edge against its line's
+>   (NEW clause: version rect right ≤ line content right + 0.5, or the version itself ellipsizes). Same at 400
+>   (46,519,84,13) and 600. Row A.
+> - captures/43739104739/main-installed-single.dark-modern.220.png 171,201,49,189 NEW: "below list minimum plus
+>   details minimum the split's behaviour is declared in §8 and measured (the details pane is either at least its
+>   minimum or not shown)" major: the empty sentence breaks mid-word in 49 px. Row B.
+> - captures/43739104739/main-installed-single.dark-modern.220.png 16,166,188,26 NEW: "the main search placeholder
+>   fits its field's text box at every named width (as the sidebar's does by its copy)" major: cut at "filt" with
+>   no ellipsis; at 400 cut after "@updates, @". Row B.
+> ```
+>
+> **Not checked**
+> - I did not open the four committed goldens or the `diff/` images; the "byte-identical outside the glyph box" claim rests on the run's 21 px `[diff]` lines and the changed-pixel boxes in the brief.
+> - I read the judge JSON's finding texts only to their first 330 characters, and did not read its `perState` block.
+> - The classic output and the "hard lines identical to run 43734973583" comparison are taken from the brief; I confirmed only the DS-HEIGHT-6, DS-OVERFLOW-3 and DS-OVERFLOW-5 lines of `main-installed-details` and the clause counts.
+> - `src/webview/shared/primitives/STATUS.md` and the measure.ts diff of d30ed09 were not read beyond `COLLAPSED_GLYPH_STATUS` and the details group list (measure.ts:567-569, confirmed without 'toolbars').
+
 ## Exact next step (one item ID)
 
-UX-P3.fix-12: push the proving commit, then DO 4-6.
+UX-P3.fix-12 is `done` once the closing run reads `[diff] summary: 114 compared, 114 at 0 px, 0 above tolerance`, the three
+collapsed clause lines without `(pending P3.fix-12)` and `[aria] … differs` 0. Next open row: P3.fix-13.

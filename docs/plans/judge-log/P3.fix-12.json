@@ -1,0 +1,931 @@
+{
+  "item": "P3.fix-12",
+  "runs": [
+    {
+      "runId": "43739104739",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "d30ed09 (the proving push)",
+      "look": "modern",
+      "workflow": "wf_f513f231-6d1",
+      "note": "The four moved cells, each against its committed golden as the artboard (no artboard at these widths; UX-P3.11's precedent) and its state's spec. D37 is not met: every standing and single-judge finding carries a disposition and an owner (GOLDEN ruling DO 4).",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/43739104739/main-installed-single.dark-modern.220.png",
+          "sha256": "55a08299676df36ceed9b25439cea62db4bee342f5d54a8223f35946d11701f9",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.220.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-single-400": {
+          "png": "captures/43739104739/main-installed-single.dark-modern.400.png",
+          "sha256": "e84ac2da2e5c26dcd38cc2001103cc84dd405ccabde2fc911eb9fd64b4fbfda6",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.400.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-single-600": {
+          "png": "captures/43739104739/main-installed-single.dark-modern.600.png",
+          "sha256": "d4a34428694b4190d6df1462ef5d4ee1980cd0c039a1b9580750442b8c344b5f",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.600.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-details": {
+          "png": "captures/43739104739/main-installed-details.dark-modern.400.png",
+          "sha256": "0f45bcb4dc3e7884af46a2c9f05db67ca0bef023918404a83278583bb4842d3f",
+          "artboard": "src/test/ui/v2/golden/main-installed-details.dark-modern.400.png (the committed golden before this item's adoption)"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 31,
+        "standing": 10,
+        "blocking": 4,
+        "refuted": 2,
+        "singleJudge": 4,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] In the 170 px list pane the Installed/Updates tabs keep their count badges (15, 1, 14) while their labels ellipsize to a single letter ('I...', 'U...'), so neither tab reads as a workbench tab with a name; the overflow table for the tab strip says count badges hide below 250 first and labels ellipsize only after that. | [geometry] In the Installed/Updates tab strip (list pane 170 px wide) the tab labels are cut down to 'I..' and 'U..' while all three count badges (15, 1, 14) stay visible. The overflow table orders the tab strip to hide its count badges below 250 first, and only then to ellipsize the labels. | [states] In the tab strip the labels are cut to one letter (\"I..\", \"U..\") while all three count badges (15, 1, 14) still show, so the tabs cannot be told apart by name; the overflow table (§8, Tab strip) says the badges hide below 250 px first and only then do the labels ellipsize.",
+          "severity": "major",
+          "box": [
+            6,
+            201,
+            154,
+            35
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "In the 170 px list pane the Installed/Updates tabs keep their count badges (15, 1, 14) while their labels ellipsize to a single letter ('I...', 'U...'), so neither tab reads as a workbench tab with a name; the overflow table for the tab strip says count badges hide below 250 first and labels ellipsize only after that.",
+              "severity": "major",
+              "box": [
+                6,
+                201,
+                154,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the tab labels cut to 'I..' and 'U..' while the badges 15, 1 and 14 are all still drawn. The overflow table says the badges hide below 250 first. DS-COPY-5 'tabs 2: count badges 3' confirms the badges are shown, and DS-OVERFLOW-3/tabs '2/2 reachable' only checks reachability.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "In the Installed/Updates tab strip (list pane 170 px wide) the tab labels are cut down to 'I..' and 'U..' while all three count badges (15, 1, 14) stay visible. The overflow table orders the tab strip to hide its count badges below 250 first, and only then to ellipsize the labels.",
+              "severity": "major",
+              "box": [
+                6,
+                201,
+                148,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows labels 'I..' and 'U..' with all three count badges (15, 1, 14) visible in the 170 px list pane. That is the reverse of the overflow table's order (badges hide below 250 first, then labels ellipsize).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "In the tab strip the labels are cut to one letter (\"I..\", \"U..\") while all three count badges (15, 1, 14) still show, so the tabs cannot be told apart by name; the overflow table (§8, Tab strip) says the badges hide below 250 px first and only then do the labels ellipsize.",
+              "severity": "blocking",
+              "box": [
+                6,
+                201,
+                149,
+                34
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "Same as native-1: the crop shows 'I..' and 'U..' labels with the 15, 1 and 14 badges still drawn, contrary to the tab-strip order in the overflow table. The tabs keep their full accessible names, so this is major rather than blocking.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single box [6,201,154,35]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[native] The facts line of the fourth row ('9.5.0-preview.1') is cut through its last glyph with no ellipsis, at the row's text column edge; the spec composition and DS-ROW-5 say the version stays whole in a comfortable row's facts line and only the authors ellipsize. | [geometry] The facts line of the Microsoft row with version 9.5.0-preview.1 cuts the version mid-glyph at x 126 with no ellipsis and no Verified mark or authors. The spec's composition and DS-ROW-5 say the version stays whole in a comfortable row's facts line, and the authors ellipsize after the Verified mark. | [states] The fourth row's facts line shows its version clipped at the end of the text column (\"9.5.0-preview.\" with the final \"1\" cut and no ellipsis), and the Verified mark and authors are gone; DS-ROW-5 says the version stays whole and the authors ellipsize after the Verified mark, as the other rows' \"2.1.35 • ✓ ...\" lines do.",
+          "severity": "blocking",
+          "box": [
+            46,
+            584,
+            84,
+            14
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The facts line of the fourth row ('9.5.0-preview.1') is cut through its last glyph with no ellipsis, at the row's text column edge; the spec composition and DS-ROW-5 say the version stays whole in a comfortable row's facts line and only the authors ellipsize.",
+              "severity": "blocking",
+              "box": [
+                46,
+                585,
+                84,
+                13
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "An 8x upscale of the fourth row's facts line shows '9.5.0-preview.' followed by a sliver of the final '1', cut at about x 126 with no ellipsis. DS-ROW-5 'version whole ×12' reads only the version element's own scrollWidth against its clientWidth (measure.ts:1461), so it cannot see this clip by the parent line and does not contradict it.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The facts line of the Microsoft row with version 9.5.0-preview.1 cuts the version mid-glyph at x 126 with no ellipsis and no Verified mark or authors. The spec's composition and DS-ROW-5 say the version stays whole in a comfortable row's facts line, and the authors ellipsize after the Verified mark.",
+              "severity": "blocking",
+              "box": [
+                46,
+                587,
+                80,
+                10
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "Same clip as native-2: the version '9.5.0-preview.1' loses its final '1' at about x 126 with no ellipsis, and no Verified mark or authors follow. DS-ROW-5 'version whole ×12' measures only the version element's own box and misses the parent clip.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The fourth row's facts line shows its version clipped at the end of the text column (\"9.5.0-preview.\" with the final \"1\" cut and no ellipsis), and the Verified mark and authors are gone; DS-ROW-5 says the version stays whole and the authors ellipsize after the Verified mark, as the other rows' \"2.1.35 • ✓ ...\" lines do.",
+              "severity": "blocking",
+              "box": [
+                46,
+                584,
+                82,
+                14
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "Same as native-2: the upscaled crop shows the final '1' of '9.5.0-preview.1' cut with no ellipsis, while the other rows end in '• ✓ ...'. DS-ROW-5 'version whole ×12' reads only the version element's own box and misses the clip.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single box [46,584,84,14]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[native] The details pane is squeezed to about 48 px, so its empty-state sentence 'Select a package to see its details.' breaks mid-word ('Selec/t a/pack/age/.../detai/ls.'), which no workbench welcome view does; DS-OVERFLOW-5 keeps the details pane at or above its header's min-content width. | [geometry] The details pane is squeezed to 49 px (x 171 to 219), so its empty-state sentence breaks inside words ('Sele/ct', 'pack/age', 'detai/ls') and sits only 8 px from each edge. DS-OVERFLOW-5 and the overflow table say the details pane never goes below its min-content width (220), and DS-INSET-1/DS-INSET-4 give the details content a 20 px inset. | [states] The details pane is squeezed to about 50 px, so its empty-state sentence \"Select a package to see its details.\" breaks mid-word over ten lines (\"Sele / ct a / pack / age ... detai / ls.\"); the overflow table gives the details pane a 220 px minimum and DS-STATE-3 asks for a left-aligned sentence with 20 px side padding.",
+          "severity": "major",
+          "box": [
+            171,
+            201,
+            49,
+            189
+          ],
+          "rule": "DS-OVERFLOW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The details pane is squeezed to about 48 px, so its empty-state sentence 'Select a package to see its details.' breaks mid-word ('Selec/t a/pack/age/.../detai/ls.'), which no workbench welcome view does; DS-OVERFLOW-5 keeps the details pane at or above its header's min-content width.",
+              "severity": "major",
+              "box": [
+                174,
+                250,
+                44,
+                140
+              ],
+              "rule": "DS-OVERFLOW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows the details pane about 48 px wide, with the empty-state sentence broken inside words ('Selec/t', 'pack/age', 'detai/ls'). That is a squeezed region against the 220 px details-pane minimum. The text stays readable, and no measurement covers the pane width (DS-OVERFLOW-1 and DS-OVERFLOW-6 only check sideways scroll and document fit).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-4",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The details pane is squeezed to 49 px (x 171 to 219), so its empty-state sentence breaks inside words ('Sele/ct', 'pack/age', 'detai/ls') and sits only 8 px from each edge. DS-OVERFLOW-5 and the overflow table say the details pane never goes below its min-content width (220), and DS-INSET-1/DS-INSET-4 give the details content a 20 px inset.",
+              "severity": "major",
+              "box": [
+                171,
+                201,
+                49,
+                179
+              ],
+              "rule": "DS-OVERFLOW-5",
+              "verdict": "confirmed",
+              "reason": "Same squeezed details pane as native-3: it is about 49 px wide and the sentence breaks inside words ('Sele/ct', 'pack/age', 'detai/ls'), against the 220 px details-pane minimum. DS-INSET-4 'empty top 20' measures only the top inset.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The details pane is squeezed to about 50 px, so its empty-state sentence \"Select a package to see its details.\" breaks mid-word over ten lines (\"Sele / ct a / pack / age ... detai / ls.\"); the overflow table gives the details pane a 220 px minimum and DS-STATE-3 asks for a left-aligned sentence with 20 px side padding.",
+              "severity": "blocking",
+              "box": [
+                176,
+                222,
+                38,
+                158
+              ],
+              "rule": "DS-OVERFLOW-5",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-3: the crop shows the details empty-state sentence broken mid-word over about ten lines in a pane about 50 px wide. The text is still all present, so this is a squeezed region (major), not lost information.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-15",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single box [171,201,49,189]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single#D4",
+          "state": "main-installed-single",
+          "finding": "[geometry] The bulk toolbar wraps the primary action onto its own row, where its label still truncates to 'Uninstall Selecte...' across the full 138 px content width. The overflow table gives the Bulk toolbar no truncation of the primary action: Select All collapses to its glyph and the primary stays at the end. | [states] The bulk toolbar's primary action wraps onto its own line under the collapsed Select All button, and its label is cut to \"Uninstall Selecte...\"; the overflow table (§8, Bulk toolbar) declares only that the primary stays at the end and Select All collapses to its glyph, with no ellipsis on the primary's label.",
+          "severity": "major",
+          "box": [
+            16,
+            271,
+            138,
+            26
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "geometry-3",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The bulk toolbar wraps the primary action onto its own row, where its label still truncates to 'Uninstall Selecte...' across the full 138 px content width. The overflow table gives the Bulk toolbar no truncation of the primary action: Select All collapses to its glyph and the primary stays at the end.",
+              "severity": "major",
+              "box": [
+                16,
+                271,
+                138,
+                26
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary button wrapped onto its own row under the collapsed Select All, with its label truncated to 'Uninstall Selecte...' (the 'd' is lost). The Bulk toolbar row of the overflow table declares no truncation of the primary. DS-OVERFLOW-3/toolbars '2/2 reachable' only checks reachability.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-4",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The bulk toolbar's primary action wraps onto its own line under the collapsed Select All button, and its label is cut to \"Uninstall Selecte...\"; the overflow table (§8, Bulk toolbar) declares only that the primary stays at the end and Select All collapses to its glyph, with no ellipsis on the primary's label.",
+              "severity": "major",
+              "box": [
+                16,
+                271,
+                138,
+                26
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "Same as geometry-3: the crop shows 'Uninstall Selecte...' on its own wrapped row under the collapsed Select All glyph, a label truncation the Bulk toolbar row of the overflow table does not declare.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single box [16,271,138,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single#D5",
+          "state": "main-installed-single",
+          "finding": "[geometry] The main search box's placeholder is hard-clipped mid-word at x 175 ('Search packages, or filt'), with no ellipsis, just before the filter action. The text overflows its field at the editor minimum, and the overflow table declares no truncation for the main header. | [states] The main search box's placeholder is cut mid-word with no ellipsis (\"Search packages, or filt\") where it meets the Filter button's end space; the overflow table's sidebar row asks for a placeholder that fits through its wording, and no rule declares this cut for the main header at 220 px.",
+          "severity": "major",
+          "box": [
+            16,
+            166,
+            188,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "geometry-5",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The main search box's placeholder is hard-clipped mid-word at x 175 ('Search packages, or filt'), with no ellipsis, just before the filter action. The text overflows its field at the editor minimum, and the overflow table declares no truncation for the main header.",
+              "severity": "major",
+              "box": [
+                16,
+                166,
+                188,
+                26
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the placeholder hard-clipped mid-word as 'Search packages, or filt' just before the Filter glyph, with no ellipsis. The overflow table declares no truncation for the main header, and DS-OVERFLOW-3/main-header '8/8 reachable' only checks reachability.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-5",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The main search box's placeholder is cut mid-word with no ellipsis (\"Search packages, or filt\") where it meets the Filter button's end space; the overflow table's sidebar row asks for a placeholder that fits through its wording, and no rule declares this cut for the main header at 220 px.",
+              "severity": "major",
+              "box": [
+                16,
+                167,
+                188,
+                25
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Same as geometry-5: the crop shows the main search placeholder cut as 'Search packages, or filt' against the filter action, with no ellipsis and no declared truncation for the main header at 220.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-15",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single box [16,166,188,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single-400#D3",
+          "state": "main-installed-single-400",
+          "finding": "[native] In the 'Microsoft...' row (9.5.0-preview) the facts-line version is cut off hard at the row's content edge (x=128): there is no ellipsis and the base of the last glyph '1' is sliced. The composition note and DS-ROW-5 say the version in a comfortable row's facts line stays whole. | [states] In the fourth row's facts line, the version \"9.5.0-preview.1.25262.9\" is hard-clipped mid-glyph at the text column's end edge (\"9.5.0-preview.1\") with no ellipsis, and the Verified mark and authors are gone. DS-ROW-5 and the spec's composition note both say the version stays whole and the authors ellipsize after the Verified mark.",
+          "severity": "blocking",
+          "box": [
+            46,
+            519,
+            84,
+            13
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single-400",
+              "finding": "In the 'Microsoft...' row (9.5.0-preview) the facts-line version is cut off hard at the row's content edge (x=128): there is no ellipsis and the base of the last glyph '1' is sliced. The composition note and DS-ROW-5 say the version in a comfortable row's facts line stays whole.",
+              "severity": "blocking",
+              "box": [
+                46,
+                519,
+                83,
+                12
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows '9.5.0-preview.1' with the base serif of the last '1' cut at x=128, the column end. Nothing follows it, not even an ellipsis. The hard line 'DS-ROW-5 … version whole ×13' does not refute this: measure.ts:1461 only checks the version element's own scrollWidth against its clientWidth, so it cannot see a clip by an ancestor.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "In the fourth row's facts line, the version \"9.5.0-preview.1.25262.9\" is hard-clipped mid-glyph at the text column's end edge (\"9.5.0-preview.1\") with no ellipsis, and the Verified mark and authors are gone. DS-ROW-5 and the spec's composition note both say the version stays whole and the authors ellipsize after the Verified mark.",
+              "severity": "blocking",
+              "box": [
+                46,
+                519,
+                84,
+                13
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "Same facts-line defect as native-1. The ink map shows the base of the final '1' ending at its stem, x=127, with no ellipsis and no further glyphs. The 'version whole ×13' measurement does not see an ancestor clip, so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single-400 box [46,519,84,13]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single-400#D1",
+          "state": "main-installed-single-400",
+          "finding": "[native] The list pane is about 172 px wide, yet the Installed/Updates tab strip still shows its count badges (15, 1, 14) and has shrunk the labels to 'I..' and 'U..'. The overflow table says the badges hide below 250 px first and only then do the labels ellipsize, so the tabs do not read as a workbench tab strip. | [geometry] At the 172 px list pane the Installed and Updates tabs ellipsize their labels to a single letter ('I...', 'U...') while their count badges (15, 1 and 14) stay visible. The overflow table (design-system §8, tab strip) says the badges hide below 250 px first and only then do the labels ellipsize, so the tab names can no longer be read. | [states] In the Installed/Updates tab strip of a list pane about 172 px wide, the count badges (15, 1, 14) are still drawn and the tab labels are cut to \"I..\" and \"U..\", so the tab names cannot be read. Overflow table §8 says the badges hide below 250 px first and only then do the labels ellipsize. With the badges hidden, both labels would fit.",
+          "severity": "blocking",
+          "box": [
+            0,
+            134,
+            173,
+            37
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-single-400",
+              "finding": "The list pane is about 172 px wide, yet the Installed/Updates tab strip still shows its count badges (15, 1, 14) and has shrunk the labels to 'I..' and 'U..'. The overflow table says the badges hide below 250 px first and only then do the labels ellipsize, so the tabs do not read as a workbench tab strip.",
+              "severity": "major",
+              "box": [
+                6,
+                135,
+                151,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the tabs as 'I..' with badges 15 and 1, and 'U..' with badge 14, at the 172 px pane (MS-8 tab-bar 0,135.2 172×36). Overflow table §8 says the badges hide below 250 px before the labels ellipsize, so the badges should be gone and the tab names are lost.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single-400",
+              "finding": "At the 172 px list pane the Installed and Updates tabs ellipsize their labels to a single letter ('I...', 'U...') while their count badges (15, 1 and 14) stay visible. The overflow table (design-system §8, tab strip) says the badges hide below 250 px first and only then do the labels ellipsize, so the tab names can no longer be read.",
+              "severity": "blocking",
+              "box": [
+                0,
+                134,
+                173,
+                37
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "Same tab strip as native-2: both labels are cut to one letter plus '..' while the count badges 15, 1 and 14 stay drawn in the 172 px strip, against §8's rule that badges hide below 250 px first.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "In the Installed/Updates tab strip of a list pane about 172 px wide, the count badges (15, 1, 14) are still drawn and the tab labels are cut to \"I..\" and \"U..\", so the tab names cannot be read. Overflow table §8 says the badges hide below 250 px first and only then do the labels ellipsize. With the badges hidden, both labels would fit.",
+              "severity": "blocking",
+              "box": [
+                6,
+                135,
+                154,
+                33
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-2: the crop shows 'I..' and 'U..' next to visible count badges in the 172 px tab strip, where the overflow table hides the badges below 250 px before any label ellipsizes.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single-400 box [0,134,173,37]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single-600#D1",
+          "state": "main-installed-single-600",
+          "finding": "[native] The bulk toolbar wraps onto two lines: the collapsed Select All glyph button (16..49, y 177..202) stands alone and Uninstall Selected (0) drops to a second line at x 47..193, y 207..232, where the artboard draws both on one 26 px toolbar row at y 177..202. The overflow table declares only 'Select All collapses to its glyph' with the primary staying at the end, not a wrap. The extra line pushes the whole tree down 30 px, and the two lines' start edges are ragged (16 vs 47). | [geometry] The bulk toolbar wraps onto two lines at this width: the collapsed Select All (16–49, 34×26, which keeps the text button's 8 px side padding) sits alone on line 1 (y 177–202) and Uninstall Selected (47–193) alone on line 2 (y 207–232). The approved artboard keeps both on one line at y 177–202, and the overflow table declares collapse-to-glyph with the primary at the end, not a wrap. The extra line pushes the Direct Packages header and every row 30 px lower (header at y≈237 against 207 in the artboard). | [states] The bulk toolbar wraps onto two rows: the collapsed Select All glyph button sits alone on the first row (y 177) and Uninstall Selected (0) drops to a second row (y 207), while the approved artboard draws both on one row at y 177 and the overflow table gives the bulk toolbar no wrap (primary action stays at the end, Select All collapses to its glyph); the extra row pushes the Direct Packages header and every row down 30 px.",
+          "severity": "major",
+          "box": [
+            16,
+            177,
+            178,
+            56
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single-600",
+              "finding": "The bulk toolbar wraps onto two lines: the collapsed Select All glyph button (16..49, y 177..202) stands alone and Uninstall Selected (0) drops to a second line at x 47..193, y 207..232, where the artboard draws both on one 26 px toolbar row at y 177..202. The overflow table declares only 'Select All collapses to its glyph' with the primary staying at the end, not a wrap. The extra line pushes the whole tree down 30 px, and the two lines' start edges are ragged (16 vs 47).",
+              "severity": "major",
+              "box": [
+                16,
+                177,
+                178,
+                56
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the collapsed Select All glyph alone on the first toolbar line and Uninstall Selected (0) wrapped to a second line below it; the artboard has both on one row. The table only allows Select All to collapse to its glyph, not a wrap. The measured direct header is at y 237–265 and the first row at 265.2, about 30 px lower than in the artboard.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single-600",
+              "finding": "The bulk toolbar wraps onto two lines at this width: the collapsed Select All (16–49, 34×26, which keeps the text button's 8 px side padding) sits alone on line 1 (y 177–202) and Uninstall Selected (47–193) alone on line 2 (y 207–232). The approved artboard keeps both on one line at y 177–202, and the overflow table declares collapse-to-glyph with the primary at the end, not a wrap. The extra line pushes the Direct Packages header and every row 30 px lower (header at y≈237 against 207 in the artboard).",
+              "severity": "major",
+              "box": [
+                16,
+                177,
+                178,
+                56
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The bulk toolbar wraps: the 34 px Select All glyph button sits alone on line 1 and Uninstall Selected (0) is on line 2. The artboard keeps both on one line. The measured direct header y 237 (against 207 in the artboard) confirms the 30 px push-down.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single-600",
+              "finding": "The bulk toolbar wraps onto two rows: the collapsed Select All glyph button sits alone on the first row (y 177) and Uninstall Selected (0) drops to a second row (y 207), while the approved artboard draws both on one row at y 177 and the overflow table gives the bulk toolbar no wrap (primary action stays at the end, Select All collapses to its glyph); the extra row pushes the Direct Packages header and every row down 30 px.",
+              "severity": "major",
+              "box": [
+                16,
+                177,
+                178,
+                56
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the toolbar on two rows (glyph alone, then Uninstall Selected (0)) where the artboard draws one row. The [virtual] line puts the direct header at y 237–265, 30 px lower.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "owner": "P3.fix-12",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): accepted-as-design; DECISIONS.md \"Collapsed Select All (UX-P3.fix-12)\" and the UX-P2.7 row (\"the wrap keeps every control reachable\")",
+          "evidence": "DECISIONS.md \"Collapsed Select All (UX-P3.fix-12)\"; captures/43739104739 main-installed-single.dark-modern.600.png box [16,177,178,56]"
+        },
+        {
+          "id": "main-installed-single-600#D2",
+          "state": "main-installed-single-600",
+          "finding": "[native] At this list-pane width (about 210 px, below the 250 breakpoint) the Installed/Updates tab strip keeps its count badges (15, 1, 14) and ellipsizes the labels to 'INS...' and 'UP...'. The overflow table says the badges hide below 250 first and only then the labels ellipsize, so the tabs read as unlabeled stubs rather than the workbench's navbar labels. | [states] The list pane is about 210 px wide, and the Installed/Updates tab strip keeps its count badges (15, 1, 14) while the tab labels are cut to 'INS...' and 'UP...'. The overflow table says the tab strip hides its count badges below 250 px first and ellipsizes the labels only after that, so here the tab names are unreadable while the badges stay.",
+          "severity": "major",
+          "box": [
+            6,
+            137,
+            190,
+            35
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-single-600",
+              "finding": "At this list-pane width (about 210 px, below the 250 breakpoint) the Installed/Updates tab strip keeps its count badges (15, 1, 14) and ellipsizes the labels to 'INS...' and 'UP...'. The overflow table says the badges hide below 250 first and only then the labels ellipsize, so the tabs read as unlabeled stubs rather than the workbench's navbar labels.",
+              "severity": "major",
+              "box": [
+                6,
+                137,
+                190,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "In the 210 px tab strip (MS-8 tab-bar 0,137.2 210×36) the crop shows the badges 15, 1 and 14 still drawn while the labels are cut to 'INS...' and 'UP...'. The overflow table says the badges hide below 250 first, and DS-COPY-5 counts 3 tab badges. The artboard draws the same thing, but no spec declares it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-single-600",
+              "finding": "The list pane is about 210 px wide, and the Installed/Updates tab strip keeps its count badges (15, 1, 14) while the tab labels are cut to 'INS...' and 'UP...'. The overflow table says the tab strip hides its count badges below 250 px first and ellipsizes the labels only after that, so here the tab names are unreadable while the badges stay.",
+              "severity": "major",
+              "box": [
+                6,
+                137,
+                190,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "At the 210 px tab bar the crop shows the count badges 15, 1 and 14 kept and the labels cut to 'INS...' and 'UP...', against the overflow table's order (badges hide below 250 first). DS-COPY-5 measures 3 tab count badges.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single-600 box [6,137,190,35]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[geometry] In the Installed/Updates tab strip of the 172 px list pane the count badges (15, 1, 14) stay visible while both tab labels are cut to a single letter ('I..', 'U..'); the overflow table of DS-OVERFLOW-3 orders the tab strip's behaviour as badges hiding below 250 px first and only then labels ellipsizing. The golden draws the same, so this is a rule contradiction, not a regression. | [states] In the list pane's Installed/Updates tab strip, about 172 px wide and so below the 250 px breakpoint, the count badges (15, 1, 14) still show and the labels are cut to \"I..\" and \"U..\". The overflow table (§8) says the badges hide first and the labels ellipsize only after that. With the order reversed, neither tab can be read by its name. The approved 400 px golden draws the same defect.",
+          "severity": "blocking",
+          "box": [
+            0,
+            135,
+            172,
+            36
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "In the Installed/Updates tab strip of the 172 px list pane the count badges (15, 1, 14) stay visible while both tab labels are cut to a single letter ('I..', 'U..'); the overflow table of DS-OVERFLOW-3 orders the tab strip's behaviour as badges hiding below 250 px first and only then labels ellipsizing. The golden draws the same, so this is a rule contradiction, not a regression.",
+              "severity": "major",
+              "box": [
+                0,
+                135,
+                172,
+                36
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop of the 172 px list pane's tab strip reads 'I.. 15 1' and 'U.. 14': the count badges still show and both labels are cut to one letter. That reverses the overflow table's order (badges hide below 250 first, then labels ellipsize). The hard line '[tab-bar] 2/2 reachable' only checks that the tabs are reachable, so it does not contradict this. The golden crop draws the same.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "In the list pane's Installed/Updates tab strip, about 172 px wide and so below the 250 px breakpoint, the count badges (15, 1, 14) still show and the labels are cut to \"I..\" and \"U..\". The overflow table (§8) says the badges hide first and the labels ellipsize only after that. With the order reversed, neither tab can be read by its name. The approved 400 px golden draws the same defect.",
+              "severity": "blocking",
+              "box": [
+                6,
+                136,
+                156,
+                34
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "Same strip and same defect as geometry-1: the crop shows badges 15, 1 and 14 visible beside labels cut to 'I..' and 'U..' in a pane 172 px wide (DS-ROW-6 line 'pane 172'), against DS-OVERFLOW-3's badges-first order. Neither tab can be read by its name. The golden shows the same.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-details box [0,135,172,36]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D6",
+          "state": "main-installed-single",
+          "finding": "[states] The approved 220 px golden draws the collapsed Select All button as an empty box with no glyph, while the capture draws the check-all glyph that the overflow table (§8, Bulk toolbar: \"Select All collapses to its glyph below 250\") requires; the golden contradicts the rule.",
+          "severity": "minor",
+          "box": [
+            16,
+            241,
+            34,
+            26
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-6",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The approved 220 px golden draws the collapsed Select All button as an empty box with no glyph, while the capture draws the check-all glyph that the overflow table (§8, Bulk toolbar: \"Select All collapses to its glyph below 250\") requires; the golden contradicts the rule.",
+              "severity": "minor",
+              "box": [
+                16,
+                241,
+                34,
+                26
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The artboard (golden) crop shows the collapsed Select All as an empty bordered box with no glyph. The capture crop shows the check-all glyph that the overflow table requires ('Select All collapses to its glyph below 250'), and DS-OVERFLOW-3/toolbars reads 'collapsed 1: glyph 16×16'. The golden contradicts the rule.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-12",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed by this item; the golden that drew the empty box is replaced from run 43739104739",
+          "evidence": "run 43739104739: the golden that drew the empty box replaced by the capture with the glyph (adopted in the closing commit)"
+        },
+        {
+          "id": "main-installed-single-400#D2",
+          "state": "main-installed-single-400",
+          "finding": "[states] The bulk toolbar's primary button is cut from \"Uninstall Selected (0)\" to \"Uninstall Selected...\". The selection count is lost, and the trailing ellipsis reads like the DS-COPY-4 marker for a command that opens UI. Overflow table §8 declares no truncation for this label: the primary stays whole and only Select All collapses to its glyph.",
+          "severity": "blocking",
+          "box": [
+            16,
+            205,
+            140,
+            26
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "The bulk toolbar's primary button is cut from \"Uninstall Selected (0)\" to \"Uninstall Selected...\". The selection count is lost, and the trailing ellipsis reads like the DS-COPY-4 marker for a command that opens UI. Overflow table §8 declares no truncation for this label: the primary stays whole and only Select All collapses to its glyph.",
+              "severity": "blocking",
+              "box": [
+                16,
+                205,
+                140,
+                26
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary button as 'Uninstall Selected...', so the '(0)' count is lost. §8 declares no truncation for the bulk toolbar's primary: it stays at the end, and only Select All collapses to its glyph.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single-400 box [16,205,140,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-single-400#D4",
+          "state": "main-installed-single-400",
+          "finding": "[states] The main search box's placeholder is cut off mid-token after \"@installed, @updates, @\" with no ellipsis, so the last filter it advertises (@vulnerable) is lost at this width. The sidebar's search box keeps its placeholder within the field by its copy.",
+          "severity": "minor",
+          "box": [
+            20,
+            103,
+            338,
+            18
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-4",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "The main search box's placeholder is cut off mid-token after \"@installed, @updates, @\" with no ellipsis, so the last filter it advertises (@vulnerable) is lost at this width. The sidebar's search box keeps its placeholder within the field by its copy.",
+              "severity": "minor",
+              "box": [
+                20,
+                103,
+                338,
+                18
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the 368 px search box (MS-8 search 16,100.2 368×26), the crop shows the placeholder ending in an '@' sliced in half just before the filter icon. There is no ellipsis, and the last advertised filter is lost.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-15",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
+          "evidence": "captures/43739104739 cell of main-installed-single-400 box [20,103,338,18]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[geometry] The bulk toolbar wraps onto two lines: the collapsed Select All glyph button (x 16-49, y 175-200) sits alone on the first line, and Uninstall Selected... drops to a second line (x 16-155, y 205-230). The overflow table declares only one behaviour for this toolbar, Select All collapsing to its glyph with the primary staying at the end of the same row, and declares no wrap. The toolbar becomes 64 px tall instead of a single 34 px control row. The golden draws the same, and every control stays reachable.",
+          "severity": "major",
+          "box": [
+            16,
+            175,
+            140,
+            56
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "The bulk toolbar wraps onto two lines: the collapsed Select All glyph button (x 16-49, y 175-200) sits alone on the first line, and Uninstall Selected... drops to a second line (x 16-155, y 205-230). The overflow table declares only one behaviour for this toolbar, Select All collapsing to its glyph with the primary staying at the end of the same row, and declares no wrap. The toolbar becomes 64 px tall instead of a single 34 px control row. The golden draws the same, and every control stays reachable.",
+              "severity": "minor",
+              "box": [
+                16,
+                175,
+                140,
+                56
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "In the crop the collapsed Select All glyph button sits alone on the first line at y about 175-200, and Uninstall Selected... wraps to a second line at y about 205-230, at the start of that line. The overflow table declares no wrap for the bulk toolbar and keeps the primary at the end of the row. The golden crop wraps the same way (its Select All button is blank); every control stays reachable.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "owner": "P3.fix-12",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): accepted-as-design; DECISIONS.md \"Collapsed Select All (UX-P3.fix-12)\" and the UX-P2.7 row (\"the wrap keeps every control reachable\")",
+          "evidence": "DECISIONS.md \"Collapsed Select All (UX-P3.fix-12)\"; captures/43739104739 main-installed-details.dark-modern.400.png box [16,175,140,56]"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "lens": "native",
+          "state": "main-installed-single-600",
+          "finding": "In the Microsoft.Extensions row with the preview version, the facts line clips '9.5.0-preview.1' mid-glyph at the text column's edge with no ellipsis, and the Verified mark and authors are gone. The redline composition and the rule say the version stays whole and the authors ellipsize after the Verified mark. A built-in Extensions row never hard-clips text.",
+          "severity": "blocking",
+          "box": [
+            86,
+            519,
+            81,
+            15
+          ],
+          "rule": "DS-ROW-5",
+          "verdict": "refuted",
+          "reason": "The hard measurement DS-ROW-5 reads 'version whole ×13' for this cell, and the facts line in the crop is drawn the same as in the approved 600 px artboard. A measurement contradicts the finding.",
+          "method": "crop",
+          "refuterSeverity": "blocking"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-single-600",
+          "finding": "In the Microsoft... row with the 9.5.0-preview version, the facts line's version is cut off by the text column at about x 166 and the last character is clipped with no ellipsis. The redline's composition and DS-ROW-5 say the version stays whole in a comfortable row's facts line (versionCut false on every row).",
+          "severity": "blocking",
+          "box": [
+            86,
+            519,
+            82,
+            15
+          ],
+          "rule": "DS-ROW-5",
+          "verdict": "refuted",
+          "reason": "The hard DS-ROW-5 measurement reads '13 rows, 10 names cut; badges clipped 0; version whole ×13', which contradicts a cut version, and the crop is the same as the approved 600 px artboard.",
+          "method": "crop",
+          "refuterSeverity": "blocking"
+        }
+      ]
+    }
+  ]
+}
