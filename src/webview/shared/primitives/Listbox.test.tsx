@@ -587,6 +587,15 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
         expect(within(tree).getAllByRole('treeitem')).toHaveLength(3);
         expect(within(tree).queryAllByRole('option')).toHaveLength(0);
     });
+
+    it('an untouched tree\'s tab stop is its first node when a folder row arrives above its first project (UX-P3.fix-10)', () => {
+        const project: Package[] = [{ id: 'Catalog', version: '' }, { id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0' }];
+        const { rerender } = render(<Grouped items={project} levels={{ Catalog: 1 }} />);
+        rerender(<Grouped items={[{ id: 'App', version: '' }, ...project]} levels={{ App: 1, Catalog: 2 }} />);
+        const stops = screen.getByTestId('grouped-list').querySelectorAll('[tabindex="0"]');
+        expect(stops).toHaveLength(1);
+        expect(stops[0]).toBe(treeitem('App'));
+    });
 });
 
 describe('Listbox message leaves (UX-P2.8b)', () => {
@@ -831,5 +840,103 @@ describe('Listbox multi-selection', () => {
         const results = await axe(container);
         expect(results).toHaveNoViolations();
         expect(['aria-allowed-attr', 'nested-interactive', 'aria-required-children'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes']);
+    });
+});
+
+describe('Listbox: an untouched list\'s tab stop is its first row (UX-P3.fix-10)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 110, row: 22 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    const zeta: Package = { id: 'Zeta', version: '9.0.0' };
+    /** The list's tab stops: exactly one is expected, and its text is returned. */
+    const onlyStop = (): string => {
+        const stops = screen.getByRole('listbox').querySelectorAll('[tabindex="0"]');
+        expect(stops).toHaveLength(1);
+        return stops[0].textContent ?? '';
+    };
+    const Page = ({ items, selectedId }: { items: Package[]; selectedId?: string }) => <><button type="button">Refresh</button><PackageList items={items} selectedId={selectedId} empty={<p>No packages installed</p>} /></>;
+
+    it('a row prepended before any interaction becomes the tab stop', () => {
+        const { rerender } = render(<PackageList items={three} />);
+        rerender(<PackageList items={[zeta, ...three]} />);
+        expect(onlyStop()).toContain('Zeta');
+        expect(option('Zeta')).toHaveAttribute('tabindex', '0');
+    });
+
+    it('a moved stop stays with its item when a row is prepended', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<PackageList items={three} />);
+        await user.tab();
+        await user.keyboard('{ArrowDown}');
+        rerender(<PackageList items={[zeta, ...three]} />);
+        expect(option('Beta')).toHaveFocus();
+        expect(onlyStop()).toContain('Beta');
+    });
+
+    it('a row that has held focus keeps the stop when a row is prepended, without a key', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<PackageList items={three} />);
+        await user.tab();
+        rerender(<PackageList items={[zeta, ...three]} />);
+        expect(option('Alpha')).toHaveFocus();
+        expect(onlyStop()).toContain('Alpha');
+    });
+
+    it('a touched list keeps its stop after focus has left it', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<Page items={three} />);
+        await user.tab();
+        await user.tab();
+        expect(option('Alpha')).toHaveFocus();
+        await user.click(screen.getByRole('button', { name: 'Refresh' }));
+        rerender(<Page items={[zeta, ...three]} />);
+        expect(screen.getByRole('button', { name: 'Refresh' })).toHaveFocus();
+        expect(onlyStop()).toContain('Alpha');
+    });
+
+    it('a list emptied and refilled with focus elsewhere is untouched again: its stop is the first row', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<Page items={three} />);
+        await user.tab();
+        await user.tab();
+        await user.keyboard('{ArrowDown}');
+        await user.click(screen.getByRole('button', { name: 'Refresh' }));
+        rerender(<Page items={[]} />);
+        rerender(<Page items={[three[2]]} />);
+        rerender(<Page items={[three[0], three[2]]} />);
+        expect(onlyStop()).toContain('Alpha');
+    });
+
+    it('a list emptied and refilled with focus inside it focuses the first arrival, which then keeps the stop', async () => {
+        const user = userEvent.setup();
+        const { rerender, container } = render(<PackageList items={three} empty={<p>No packages installed</p>} />);
+        await user.tab();
+        rerender(<PackageList items={[]} empty={<p>No packages installed</p>} />);
+        expect(container.querySelector('.nuiget-listbox-empty')).toHaveFocus();
+        rerender(<PackageList items={[three[2]]} empty={<p>No packages installed</p>} />);
+        expect(option('Gamma')).toHaveFocus();
+        rerender(<PackageList items={[three[0], three[2]]} empty={<p>No packages installed</p>} />);
+        expect(option('Gamma')).toHaveFocus();
+        expect(onlyStop()).toContain('Gamma');
+    });
+
+    it('a selectedId present at mount keeps the stop on the selected row when a row is prepended', () => {
+        const { rerender } = render(<PackageList items={three} selectedId="Beta" />);
+        expect(onlyStop()).toContain('Beta');
+        rerender(<PackageList items={[zeta, ...three]} selectedId="Beta" />);
+        expect(onlyStop()).toContain('Beta');
+    });
+
+    it('a selectedId absent at mount does not pin the first arrival: the stop follows the first row', () => {
+        const { rerender } = render(<PackageList items={[three[0]]} selectedId="Beta" />);
+        rerender(<PackageList items={[zeta, three[0]]} selectedId="Beta" />);
+        expect(onlyStop()).toContain('Zeta');
     });
 });

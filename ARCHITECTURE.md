@@ -398,7 +398,9 @@ A click toggles a group row, as Enter does; Ctrl+Enter, Delete, the actions menu
 (`src/webview/shared/selection/`) is the one owner of a bulk set, always a subset of the rows a bulk action may take.
 `Listbox` is always virtualized (`@tanstack/react-virtual`): only the rows in view and an overscan are in the
 document, every row says its place (`aria-posinset`, `aria-setsize`: among all in a listbox, among its siblings in a tree), and the active row stays
-mounted when it is scrolled out of view, so focus never falls out of the list. The active row is remembered
+mounted when it is scrolled out of view, so focus never falls out of the list. Until one of its rows has held focus
+(or a selection named one of its rows at mount) the list is untouched and its active row is its first row, whatever
+streams in above it; a list without items is untouched again (UX-P3.fix-10). Once touched, the active row is remembered
 by item id. When its item disappears, the row now at its index takes over; when the list empties, the
 container around the empty state takes focus. The list never takes focus it did not have. Scrolled away from its start,
 the list's root carries `data-scrolled="true"`; no rule reads it yet: the workbench's scroll shadow (DS-SCROLL-2) waits for a

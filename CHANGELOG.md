@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scrollbars in the package manager are thin again**
 - **No second scrollbar on the Installed tab in All Projects or with the transitive section expanded**
 - **Update all no longer offers a package whose version could not be resolved**
+- **Tab into a package list lands on its first row, also when more rows arrived above while it loaded**
 
 ## [2.0.0] - 2026-10-17
 

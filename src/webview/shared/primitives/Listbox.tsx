@@ -165,16 +165,22 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     // The active row is remembered by id, so that it stays with its item when the list is reordered. When the
     // item is gone, the row now at its index takes over (or the last one).
     const [activeId, setActiveId] = useState<string | null>(() => selectedId ?? items[0]?.id ?? null);
+    // Until one of its rows has held focus, the list is untouched and its tab stop is its first row, whatever arrives
+    // above it (UX-P3.fix-10); a list without items is untouched again. A selection present at mount touches it.
+    const [touched, setTouched] = useState(() => selectedId !== null && items.some(item => item.id === selectedId));
     const lastActiveIndex = useRef(0);
     let activeIndex = items.findIndex(item => item.id === activeId);
-    if (activeIndex < 0 && items.length > 0) {
-        activeIndex = Math.min(lastActiveIndex.current, items.length - 1);
+    if (items.length > 0 && (!touched || activeIndex < 0)) {
+        activeIndex = touched ? Math.min(lastActiveIndex.current, items.length - 1) : 0;
     }
     useEffect(() => {
         lastActiveIndex.current = Math.max(activeIndex, 0);
         const id = items[activeIndex]?.id ?? null;
         if (id !== activeId) {
             setActiveId(id);
+        }
+        if (items.length === 0) {
+            setTouched(false);
         }
     }, [activeIndex, activeId, items]);
 
@@ -242,6 +248,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         if (!item) {
             return;
         }
+        setTouched(true);
         const command = event.ctrlKey || event.metaKey;
         const disabled = isDisabled?.(item) === true;
         const handled = (): void => event.preventDefault();
@@ -333,6 +340,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                     const index = indexOf(event.target);
                     if (index >= 0 && items[index]) {
                         setActiveId(items[index].id);
+                        setTouched(true);
                     }
                 }}
                 onClick={event => {
@@ -341,6 +349,7 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
                     if (index < 0 || !items[index] || !rowFocusAt(index)?.contains(event.target as Node)) {
                         return;
                     }
+                    setTouched(true);
                     if (groups && isGroupAt(index)) {
                         groups.onToggle(items[index], !groups.isExpanded(items[index]));
                         return;

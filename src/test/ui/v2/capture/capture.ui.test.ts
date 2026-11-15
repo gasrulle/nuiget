@@ -1741,13 +1741,20 @@ return 'scrollTop ' + Math.round(list.scrollTop) + ' of ' + list.scrollHeight + 
 `;
 /** `STATE_MARKERS['sidebar-all-projects-updates']` of `measure.ts`, pinned at the Updates tree's Tools folder (UX-P3.7d). */
 const SIDEBAR_UPDATES_ALL_SETTLED = (): string => allProjectsSettled('sidebar-updates-list', ['sidebar-updates-unsupported-unsupported.csproj', 'sidebar-updates-empty-empty.csproj'], 'group-row-updates-folder-tools', 'top-or-end');
-/** The scroll position a pinned sidebar tree settled on, printed after its settle (UX-P3.10 push E follow-up 2, DO 2). */
+/**
+ * The scroll position a pinned sidebar tree settled on, printed after its settle (UX-P3.10 push E follow-up 2, DO 2), and
+ * the tree's tab stop: its wrapper's test id, or its text, and the count of tab stops (UX-P3.fix-10, DO 6).
+ */
 const PIN_FACTS = (listTestId: string, pinRow: string): string => `
 const list = document.querySelector('[data-testid="${listTestId}"]');
 if (list === null) return 'no ${listTestId}';
 const row = list.querySelector('[data-testid="${pinRow}"]');
+const stops = list.querySelectorAll('[tabindex="0"]');
+const stop = stops[0];
+const stopName = stop === undefined ? 'none' : (stop.closest('[data-index]')?.getAttribute('data-testid') || (stop.textContent ?? '').replace(/\\s+/g, ' ').trim().slice(0, 60) || 'unnamed');
 return 'scrollTop ' + Math.round(list.scrollTop * 10) / 10 + ' of ' + list.scrollHeight + ', client ' + list.clientHeight
-    + ', tools row ' + (row === null ? 'absent' : 'at ' + Math.round((row.getBoundingClientRect().top - list.getBoundingClientRect().top) * 10) / 10);
+    + ', tools row ' + (row === null ? 'absent' : 'at ' + Math.round((row.getBoundingClientRect().top - list.getBoundingClientRect().top) * 10) / 10)
+    + ', tab stop "' + stopName + '", stops ' + stops.length;
 `;
 /** `sidebar-all-projects-tools`: the sidebar's Installed tree pinned at the Tools folder, its two leaves rendered (UX-P3.10, DO 2). */
 const SIDEBAR_INSTALLED_TOOLS_SETTLED = (): string => allProjectsSettled('sidebar-installed-list', ['sidebar-installed-empty-empty.csproj', 'sidebar-installed-unsupported-unsupported.csproj'], 'group-row-folder-tools', 'top-or-end');
