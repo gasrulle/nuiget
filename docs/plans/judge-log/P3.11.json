@@ -1,0 +1,1422 @@
+{
+  "item": "P3.11",
+  "runs": [
+    {
+      "runId": "43661836795",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "955b108 (push A)",
+      "look": "modern",
+      "workflow": "wf_cba3f761-5f9",
+      "note": "Cells with their own artboard judged against it; error, unavailable and dialog cells against the P3.1b / P3.2 / P3.5 surrogates (main-updates, main-installed-details), side bar cells against main-installed-all (P3.8). Single-judge findings are informational; each with its `owner`.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/43661836795/main-installed-single.dark-modern.932.png",
+          "sha256": "e4260212d8d79efcd219ddf2c371a7dedc243ff72f881e6c4895033a0e18ca72",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "f2c0217f4881b137f3484939b81467512742f377a38a4b1e166222af7e59fe1a"
+        },
+        "main-installed-details": {
+          "png": "captures/43661836795/main-installed-details.dark-modern.1200.png",
+          "sha256": "62f35d05ba08d82ff50fb037402d68bb89a06b141414610507c1b0d709e3d453",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/43661836795/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "d3e8b67f46d4bb79165dc4dc90ba38dfb03d1bfc48d995ead030b2f17094149e",
+          "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png",
+          "artboardSha256": "839fa9f168b6d66026cf04d34d549fc48eb6bca06e12ab779d5cdee733fb4607"
+        },
+        "main-updates": {
+          "png": "captures/43661836795/main-updates.dark-modern.1200.png",
+          "sha256": "3c3b39e667c4a17d3bfe62126c42d51bafcbee872b17d24a9d982733d574b188",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "1226e13cf7f7fc34580bc664fe0bd1d39d112a12473ed160364cc0da159d94ce"
+        },
+        "main-installed-error": {
+          "png": "captures/43661836795/main-installed-error.dark-modern.1200.png",
+          "sha256": "09d8aab6cc62d3bcf0152c5f49454eb1a3e1b7d9d123ab95e9c7c26d211d6518",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-installed-bulk-dialog": {
+          "png": "captures/43661836795/main-installed-bulk-dialog.dark-modern.1200.png",
+          "sha256": "953450b7726c715dc46a458338d55211eb8f4a7a118ba3017a516beeee6519d7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 24,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 13,
+        "singleJudge": 8,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-error#D1",
+          "state": "main-installed-error",
+          "finding": "[native] The inline error message in the Installed pane joins two sentences with a colon and restarts in capitals mid-sentence (\"could not be loaded: The project file could not be read.\"), where a workbench inline message (Extensions view message container) is one sentence-case sentence. | [states] The inline error message reads 'The installed packages of Utility.csproj could not be loaded: The project file could not be read.': a capital 'The' after the colon in the middle of one message, so it reads as two sentences glued by a colon instead of the one sentence-case sentence DS-STATE-4 and DS-COPY-1 ask for (for example '… could not be loaded because the project file could not be read.').",
+          "severity": "major",
+          "box": [
+            38,
+            150,
+            294,
+            55
+          ],
+          "rule": "DS-STATE-4, DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-error",
+              "finding": "The inline error message in the Installed pane joins two sentences with a colon and restarts in capitals mid-sentence (\"could not be loaded: The project file could not be read.\"), where a workbench inline message (Extensions view message container) is one sentence-case sentence.",
+              "severity": "minor",
+              "box": [
+                40,
+                151,
+                292,
+                52
+              ],
+              "rule": "DS-STATE-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the inline error 'The installed packages of Utility.csproj could not be loaded: The project file could not be read.', with a capital 'The' after a mid-message colon, so two sentences are glued into one message. The hard DS-STATE-4 measurement ('1 glyph (error), 1 buttons, ends with a full stop') checks only the glyph, the button count and the final period, not whether the message is one sentence, so it does not contradict this. By §3, punctuation or casing against the copy rules is major.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-error",
+              "finding": "The inline error message reads 'The installed packages of Utility.csproj could not be loaded: The project file could not be read.': a capital 'The' after the colon in the middle of one message, so it reads as two sentences glued by a colon instead of the one sentence-case sentence DS-STATE-4 and DS-COPY-1 ask for (for example '… could not be loaded because the project file could not be read.').",
+              "severity": "major",
+              "box": [
+                38,
+                150,
+                292,
+                55
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "This crop shows the same message as native-1: 'could not be loaded: The project file could not be read.', with a capital T after the colon. That breaks the one sentence-case sentence DS-COPY-1 and DS-STATE-4 ask for a message. DS-COPY-3 (2 end with a full stop) and DS-STATE-4 measure only the ending and the structure, so neither contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-15 \"Microcopy (UX-P3.11)\"; DS-STATE-4 and DS-COPY-3 hard and green on run 43661836795",
+          "ruling": "design-advisor GOLDEN CLASS UX-P3.11 of 2026-11-15 (docs/plans/handoff/P3.11.md): accepted-as-design; DECISIONS.md \"Microcopy (UX-P3.11)\": the failure form keeps the host reason verbatim, its casing untouched (codes and fragments too); here the fixture reason is a full sentence"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[geometry] In the NETStandard.Library row the label badges sit closer together than the artboard draws them. The space between the SDK and Props badges is 4 px (SDK badge ends at x 291, Props starts at x 296) where the artboard has 8 px (293 to 302). The space from the name to the SDK badge is 6 px (name ink ends at x 250, badge at 257) where the artboard has 8 px (250 to 259). The badges' inline rhythm is tighter than the approved artboard, and the space between two badges no longer matches the space from the name to the first badge. | [geometry] In the selected Newtonsoft.Json row the Vulnerable badge starts 2 px closer to the name than in the artboard. The name ink ends at x 217 in both images; the badge border is at x 224 in the capture against x 226 in the artboard, so the gap is 6 px where the artboard has 8 px. This is the same tightened name-to-badge gap as in the NETStandard.Library row.",
+          "severity": "major",
+          "box": [
+            98,
+            359,
+            240,
+            94
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "In the NETStandard.Library row the label badges sit closer together than the artboard draws them. The space between the SDK and Props badges is 4 px (SDK badge ends at x 291, Props starts at x 296) where the artboard has 8 px (293 to 302). The space from the name to the SDK badge is 6 px (name ink ends at x 250, badge at 257) where the artboard has 8 px (250 to 259). The badges' inline rhythm is tighter than the approved artboard, and the space between two badges no longer matches the space from the name to the first badge.",
+              "severity": "major",
+              "box": [
+                98,
+                359,
+                240,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Column profile of the crop at y 362-377: capture name ink ends x 250, SDK badge starts x 257 (6 px clear, x 251-256), SDK ends x 291, Props starts x 296 (4 px clear, x 292-295); artboard has 8 px (x 251-258) and 8 px (x 294-301), so the badge gaps are tighter and the two same-role gaps differ; no hard measurement or spec entry covers the badge gap.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "In the selected Newtonsoft.Json row the Vulnerable badge starts 2 px closer to the name than in the artboard. The name ink ends at x 217 in both images; the badge border is at x 224 in the capture against x 226 in the artboard, so the gap is 6 px where the artboard has 8 px. This is the same tightened name-to-badge gap as in the NETStandard.Library row.",
+              "severity": "minor",
+              "box": [
+                98,
+                431,
+                195,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Column profile at y 434-449: name ink ends x 217 in both images; the Vulnerable badge begins at x 224 in the capture (6 px clear, x 218-223) against x 226 in the artboard (8 px clear), the same tightened name-to-badge gap as in the NETStandard.Library row.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (badge spacing, leftover stylesheet debt)"
+        },
+        {
+          "id": "main-transitive-expanded#D1",
+          "state": "main-transitive-expanded",
+          "finding": "[geometry] In the NETStandard.Library row the label badges sit closer together than on the artboard: SDK to Props is 4 px apart in the capture (SDK ends at x 292, Props starts at x 296) against 8 px on the artboard (x 294 to x 302). The name to SDK space is also about 2 px tighter (SDK starts at x 257 against x 259 on the artboard, with the name ink ending at x 250/251 in both). The badge line therefore reads tighter than the approved drawing, and the name-to-badge and badge-to-badge gaps are unequal (about 6 and 4) where the artboard draws them equal (about 8 and 8).",
+          "severity": "minor",
+          "box": [
+            98,
+            360,
+            239,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-transitive-expanded",
+              "finding": "In the NETStandard.Library row the label badges sit closer together than on the artboard: SDK to Props is 4 px apart in the capture (SDK ends at x 292, Props starts at x 296) against 8 px on the artboard (x 294 to x 302). The name to SDK space is also about 2 px tighter (SDK starts at x 257 against x 259 on the artboard, with the name ink ending at x 250/251 in both). The badge line therefore reads tighter than the approved drawing, and the name-to-badge and badge-to-badge gaps are unequal (about 6 and 4) where the artboard draws them equal (about 8 and 8).",
+              "severity": "minor",
+              "box": [
+                98,
+                360,
+                239,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Pill edges measured at y 369 in the crop: SDK spans 257–291 and Props 296–336, a 4 px gap, against SDK 259–293 and props 302–343 on the artboard, an 8 px gap. Name ink ends at x 250 in both, so the name-to-badge space is 6 px against 8 px. No hard measurement covers badge-to-badge spacing: DS-HEIGHT-10's 'label 4' is a count of label badges, and DS-GRID-2a only checks that gaps are on the ramp. The tighter badge line is visible side by side.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (badge spacing)"
+        },
+        {
+          "id": "main-transitive-expanded#D2",
+          "state": "main-transitive-expanded",
+          "finding": "[states] The NETStandard.Library row's source badge reads \"Props\" in the capture where the approved artboard draws \"props\" in the same badge (beside \"SDK\"), so the badge copy departs from the artboard with no copy rule that requires Title Case on a badge (DS-COPY-1 names buttons, tabs, menus, commands and group headers).",
+          "severity": "minor",
+          "box": [
+            296,
+            360,
+            42,
+            20
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-transitive-expanded",
+              "finding": "The NETStandard.Library row's source badge reads \"Props\" in the capture where the approved artboard draws \"props\" in the same badge (beside \"SDK\"), so the badge copy departs from the artboard with no copy rule that requires Title Case on a badge (DS-COPY-1 names buttons, tabs, menus, commands and group headers).",
+              "severity": "minor",
+              "box": [
+                296,
+                360,
+                42,
+                20
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the badge text 'Props' (296–336, y 360–379) where the artboard's badge in the same place reads 'props'. The spec does not declare the difference and DS-COPY-1 does not cover badge labels, so it is a copy departure from an artboard element, noticeable only side by side.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: \"Props\" ruled (DECISIONS \"Microcopy (UX-P3.11)\")"
+        },
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] Every package that falls back to the default icon (Dapper, FluentValidation, Humanizer.Core, Microsoft.Extensions.AI.Abstractions, .DependencyInjection.Abstractions, .Http, .Logging.Abstractions, .Options.ConfigurationExtensions) shows the bright orange bitmap cube from resources/package-icon.png. At the same 36 px slot (x 46–82), the artboard draws a neutral tile holding the muted codicon `package`. The icon column therefore reads as decorative colour rather than the Extensions view's quiet default icon.",
+          "severity": "major",
+          "box": [
+            46,
+            193,
+            36,
+            610
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "Every package that falls back to the default icon (Dapper, FluentValidation, Humanizer.Core, Microsoft.Extensions.AI.Abstractions, .DependencyInjection.Abstractions, .Http, .Logging.Abstractions, .Options.ConfigurationExtensions) shows the bright orange bitmap cube from resources/package-icon.png. At the same 36 px slot (x 46–82), the artboard draws a neutral tile holding the muted codicon `package`. The icon column therefore reads as decorative colour rather than the Extensions view's quiet default icon.",
+              "severity": "major",
+              "box": [
+                46,
+                193,
+                36,
+                610
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop of x 46-82 shows a bright orange bitmap cube in every icon slot except the real .NET package icon. The artboard crop at the same box shows a neutral dark tile with a muted package codicon. Nothing in spec.json declares this difference. The hard measurements DS-ICON-3 (36×36 ×14) and DS-ROW-1 check only size and position, not the colour role, so no measurement contradicts the finding.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "none: the default icon is package content (refuted in wf_7060d1da-0af states-1)"
+        },
+        {
+          "id": "main-updates#D2",
+          "state": "main-updates",
+          "finding": "[states] The header check box labels read \"Restore After Operations\" and \"Include Pre-Release\", while the artboard draws \"Restore after operations\" and \"Include prerelease\". The capture follows the Title Case and \"Pre-Release\" rules (DS-COPY-1, microcopy item 7), so the artboard's copy is out of date and conflicts with the rules. This is not a casing defect in the product.",
+          "severity": "minor",
+          "box": [
+            514,
+            10,
+            340,
+            21
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-updates",
+              "finding": "The header check box labels read \"Restore After Operations\" and \"Include Pre-Release\", while the artboard draws \"Restore after operations\" and \"Include prerelease\". The capture follows the Title Case and \"Pre-Release\" rules (DS-COPY-1, microcopy item 7), so the artboard's copy is out of date and conflicts with the rules. This is not a casing defect in the product.",
+              "severity": "minor",
+              "box": [
+                514,
+                10,
+                340,
+                21
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture crop reads \"Restore After Operations\" and \"Include Pre-Release\". The artboard crop reads \"Restore after operations\" and \"Include prerelease\". The capture follows DS-COPY-1 and the design system's \"Pre-Release in Title Case labels\" term, so the out-of-date artboard copy is a spec-conflict, reported once as minor under rubric §6.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: T-20 (DECISIONS \"Microcopy (UX-P3.11)\")"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D1",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[native] No control in the modal confirm dialog shows a focus ring: Cancel, which the ConfirmDialog opens on, keeps only its grey secondary border, and nothing around Cancel or Uninstall draws the 1 px focusBorder outline. In the main panel a workbench dialog shows a ring on its focused button, also after a pointer click.",
+          "severity": "major",
+          "box": [
+            671,
+            424,
+            60,
+            26
+          ],
+          "rule": "DS-FOCUS-3",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-bulk-dialog",
+              "finding": "No control in the modal confirm dialog shows a focus ring: Cancel, which the ConfirmDialog opens on, keeps only its grey secondary border, and nothing around Cancel or Uninstall draws the 1 px focusBorder outline. In the main panel a workbench dialog shows a ring on its focused button, also after a pointer click.",
+              "severity": "major",
+              "box": [
+                671,
+                424,
+                60,
+                26
+              ],
+              "rule": "DS-FOCUS-3",
+              "verdict": "confirmed",
+              "reason": "The ARIA snapshot marks Cancel `[focused]`, yet the crop shows only its grey 54,54,54 border at x 671 and y 424/449. The pixels just outside the border (x 670, x 669) stay at the 32,32,32 dialog background, so no 1 px focusBorder ring is drawn. DS-FOCUS-3 requires the main panel to keep rings after a click.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "planning session (DS-FOCUS-3 in a modal; no row places it)"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D2",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[native] Eight of the ten package rows draw the fallback package icon as a saturated orange cube bitmap. The artboard draws the fallback as a neutral monochrome codicon package tile, and the Extensions view's default icon is also monochrome, so here colour is used as decoration down the icon column.",
+          "severity": "minor",
+          "box": [
+            45,
+            145,
+            38,
+            615
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-bulk-dialog",
+              "finding": "Eight of the ten package rows draw the fallback package icon as a saturated orange cube bitmap. The artboard draws the fallback as a neutral monochrome codicon package tile, and the Extensions view's default icon is also monochrome, so here colour is used as decoration down the icon column.",
+              "severity": "minor",
+              "box": [
+                45,
+                145,
+                38,
+                615
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Eight rows in the crop draw the saturated orange cube, which is the product's own fallback resources/package-icon.png and not live nuget.org content. At the same box the artboard draws a monochrome codicon tile, and the redline gives those rows the --nuiget-color-icon token.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: the default icon is package content"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D3",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[states] The NETStandard.Library badge reads 'Props', where the artboard draws the lowercase badge 'props' beside 'SDK'.",
+          "severity": "minor",
+          "box": [
+            296,
+            360,
+            42,
+            19
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-bulk-dialog",
+              "finding": "The NETStandard.Library badge reads 'Props', where the artboard draws the lowercase badge 'props' beside 'SDK'.",
+              "severity": "minor",
+              "box": [
+                296,
+                360,
+                42,
+                19
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop shows the badge 'Props' where the artboard crop at the same box draws 'props'. No redline entry, measurement or copy rule declares the capitalised form, so the badge text departs from the approved drawing.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: \"Props\" ruled"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "The list/details split sits 1 px left of the redline: the separator is at x=326 and the details pane starts at x=327, against the spec's installed-list w 327 and package-details-panel x 328 (the artboard's separator is at x=327). Every trailing edge of the list pane moves left with it: the Uninstall Selected button's right edge is at 310 instead of 311 (spec x 164 w 147, capture x 163), the Direct Packages badge ends at 302 instead of 303, and the scrollbar thumb is at 318-325 instead of 319-326. The end insets inside the pane still hold (16 px to the separator), so this is a 1 px offset of the split position only.",
+          "severity": "minor",
+          "box": [
+            318,
+            77,
+            11,
+            726
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Pixel reads of the crop put the separator at x=326 in the capture and x=327 in the artboard. That is a sub-pixel split: the hard MS-8 line measures the tab bar at 326.2 px against the spec's 327. The hard line 'SPEC@main-installed-single/list: 9/9 within 1' puts every list-region element, the tab bar and both toolbar buttons included, within the 1 px tolerance, so the measurement contradicts the finding.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The Installed tab is drawn with a 1 px focusBorder ring around its whole box (top, sides and bottom at x 6-144, y 77-111), while the artboard's rest state draws only the 1 px active-tab underline at y 111 and no focus ring. A focus state appears in a state whose composition is the rest state with nothing current.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show a 1 px focusBorder ring around the Installed tab where the artboard has only the underline. But the hard line 'DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target …)' measures this ring as the expected focus on this state. DS-FOCUS-3 says the main panel, an editor surface, draws rings after a click in both looks, so the ring is the focused tab's declared appearance and not an extra state.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-single",
+          "finding": "The two header check-box labels read 'Restore After Operations' and 'Include Pre-Release' (Title Case, hyphenated), while the artboard draws 'Restore after operations' and 'Include prerelease'. The labels of DS-COPY-1 do not name check-box labels, so the copy departs from the artboard with no rule to back it.",
+          "severity": "minor",
+          "box": [
+            268,
+            11,
+            318,
+            20
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop does read 'Restore After Operations' and 'Include Pre-Release' where the artboard reads 'Restore after operations' and 'Include prerelease'. The finding's premise that no rule backs this copy is false: interaction-model.md §1 names these check boxes in exactly this Title Case. design-system.md's terms rule (T-20, and lines 483-484) also prescribes 'Pre-Release' in Title Case labels, as VS Code writes it.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-details",
+          "finding": "The two header check box labels read \"Restore After Operations\" and \"Include Pre-Release\" in Title Case (and the word changes from \"prerelease\" to \"Pre-Release\"), where the approved artboard draws them as \"Restore after operations\" and \"Include prerelease\" in sentence case. DS-COPY-1's Title Case list names buttons, tabs, menus, commands and group headers, not check box labels, so the capture departs from the artboard's copy without a rule that requires it.",
+          "severity": "minor",
+          "box": [
+            513,
+            9,
+            343,
+            23
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does read \"Restore After Operations\" / \"Include Pre-Release\" against the artboard's sentence case, but the copy rules require that form: design-system.md T-20 names \"Pre-Release\" in labels and rubric Q9 asks for labels in Title Case, so the capture follows the rules and the artboard copy is what departs; no copy rule is broken.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-details",
+          "finding": "The NETStandard.Library row's second badge reads \"Props\" (capitalised), where the artboard draws \"props\" in lower case. The artboard's form matches the .props file kind the badge names.",
+          "severity": "minor",
+          "box": [
+            296,
+            360,
+            42,
+            19
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows \"Props\" where the artboard has \"props\", but no rule asks for a lower-case badge, and the capitalised form matches the label badges DS-ROW-5 names (Vulnerable, Deprecated, CPM, SDK) and the SDK badge beside it; preferring lower case to echo the .props file kind is taste with no rule behind it (rubric §6).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-installed-details",
+          "finding": "The source-settings action in the header (spec rect 1136,10 22x22) draws a gear glyph, where the artboard draws a different codicon (a sun-like glyph with rays) at the same place. The element is present but its icon does not match the approved artboard.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "An 8x upscale of the crop shows the capture drawing the toothed settings-gear codicon that design-system.md §8 names for the main header (\"gear\") and docs/design/icons.json pins (SettingsGearIcon to settings-gear), at the hard-measured 16x16 (DS-ICON-2 glyph 16×16 ×4); the artboard's rayed glyph differs from the rule, not the product.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-transitive-expanded",
+          "finding": "The check mark in the header's Restore After Operations check box is drawn as a larger, thinner glyph that never reaches full foreground: it spans about 14 px of the 18 px box and peaks at rgb(188,188,188). The approved artboard's mark at the same spot is a compact 12 px, heavier check in the full #cccccc foreground, so the checked state reads fainter than the artboard's and the workbench's own check box.",
+          "severity": "minor",
+          "box": [
+            514,
+            12,
+            18,
+            18
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the product's own CheckIcon codicon at 16 px (Checkbox.tsx renders <CheckIcon size={16} />, the workbench check box's glyph) in a box that is hard-measured 18×18 (DS-HEIGHT-9 '18×18 ×20') with radius 3 (DS-RADIUS-2 'check 3px ×20'). Its ink spans x 516–529 with 1 px strokes peaking at 188, while the artboard draws a heavier ~10 px check peaking at 204, and it does so 10 px further right (box at x 525, not 515). That is a difference in glyph outline and anti-aliasing in the same foreground role, which rubric §6 excludes, not a different element or colour role.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-error",
+          "finding": "The header check-box labels read 'Restore After Operations' and 'Include Pre-Release'. The approved artboard draws 'Restore after operations' and 'Include prerelease', so the casing and the hyphenated word differ from the artboard. DS-COPY-1's Title Case list names buttons, tabs, menus, commands and group headers, not check-box labels, so the artboard and the rule disagree on which casing is right here.",
+          "severity": "minor",
+          "box": [
+            514,
+            11,
+            341,
+            20
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop does read 'Restore After Operations' and 'Include Pre-Release', where the artboard reads 'Restore after operations' and 'Include prerelease'. The redline spec says nothing about these labels, and the Design System's term row T-20 asks for 'Pre-Release' in labels. DS-COPY-1 names check-box labels in neither its Title Case list nor its sentence-case list, so the capture breaks no copy rule. The only difference is from an artboard drawing that the rules overrule.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-bulk-dialog",
+          "finding": "The Serilog row is painted with the inactive-selection band (scrimmed list.inactiveSelectionBackground, about rgb 27,27,30 across x 0 to 411). That marks it as the current row, but the details pane beside it shows the no-selection message 'Select a package to see its details.' The artboard instead pairs its one banded row (Newtonsoft.Json) with that package's details. A check-marked bulk row should not take the selection band unless it is the current row (DS-COLOR-2).",
+          "severity": "major",
+          "box": [
+            0,
+            559,
+            412,
+            72
+          ],
+          "rule": "DS-COLOR-2",
+          "verdict": "refuted",
+          "reason": "The crop shows the Serilog band at 27,27,30 across x 0-411 and y 559-630, but the ARIA snapshot lists Serilog as `[selected, level 2]` with no `current`. primitives.css deliberately gives aria-selected bulk rows the quieter list-inactive colour plus a check mark. With no current row, the 'Select a package to see its details.' message is consistent.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "native-4",
+          "lens": "native",
+          "state": "main-installed-bulk-dialog",
+          "finding": "The dialog's body opens with the fragment 'From Gateway.csproj:' ending in a colon, followed by a bulleted list. Dialog messages are whole sentences that end with a period, as workbench dialog detail text is.",
+          "severity": "minor",
+          "box": [
+            392,
+            384,
+            139,
+            13
+          ],
+          "rule": "DS-COPY-3",
+          "verdict": "refuted",
+          "reason": "The crop shows 'From Gateway.csproj:' introducing a bulleted list under the question heading. That is a list lead-in, not a standalone message, and DS-COPY-3 is measured on EmptyState and Banner text. No artboard or redline element covers this dialog body.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-bulk-dialog",
+          "finding": "The Serilog row is painted with the current-row band (list.inactiveSelectionBackground under the scrim, 27,27,30 across 0-411 x 559-630), but it shows no uninstall action at 384,584, where the artboard draws the current row's action (row-action-uninstall#7 on Newtonsoft.Json), and the details pane shows 'Select a package to see its details.' instead of that row's details. So either a row that is only checked carries the selection band, or the current row lost its action and its details. The selection state and the details pane contradict each other.",
+          "severity": "major",
+          "box": [
+            0,
+            559,
+            412,
+            72
+          ],
+          "rule": "DS-COLOR-2",
+          "verdict": "refuted",
+          "reason": "Same band as native-1 (27,27,30 over 0-411 x 559-630), but the ARIA snapshot has Serilog `[selected]` and no `current`. The designed bulk colour applies, and with no current row there is no row action or details pane to show. Selection and details do not contradict each other.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-installed-bulk-dialog",
+          "finding": "The header check box labels read 'Restore After Operations' and 'Include Pre-Release', where the approved artboard draws 'Restore after operations' and 'Include prerelease'. Check box labels are not in DS-COPY-1's Title Case list, and the spelling of prerelease also changes.",
+          "severity": "minor",
+          "box": [
+            514,
+            10,
+            341,
+            22
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop reads 'Restore After Operations' and 'Include Pre-Release'. The interaction model names exactly these check boxes, and design-system copy item 7 writes \"'Pre-Release' in Title Case labels\". The capture follows the written spec where the older artboard text differs.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-installed-bulk-dialog",
+          "finding": "The toolbar's primary button 'Uninstall Selected (1)' opens this confirmation dialog, but its label has no trailing '...'. DS-COPY-4 asks for one on a label that opens a dialog. The artboard draws the label without it as well, so the drawing and the rule disagree.",
+          "severity": "minor",
+          "box": [
+            257,
+            117,
+            147,
+            26
+          ],
+          "rule": "DS-COPY-4",
+          "verdict": "refuted",
+          "reason": "The crop shows 'Uninstall Selected (1)' with no ellipsis, as the artboard does. The design system's own copy list writes the label 'Uninstall Selected (0)' without one and gives DS-COPY-4 examples only for labels that open pickers or forms ('Install in Projects...'). Artboard and spec agree, and a plain confirmation is not shown as a DS-COPY-4 case.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    },
+    {
+      "runId": "43661836795",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "955b108 (push A)",
+      "look": "modern",
+      "workflow": "wf_7060d1da-0af",
+      "note": "Cells with their own artboard judged against it; error, unavailable and dialog cells against the P3.1b / P3.2 / P3.5 surrogates (main-updates, main-installed-details), side bar cells against main-installed-all (P3.8). Single-judge findings are informational; each with its `owner`.",
+      "captures": {
+        "main-updates-error": {
+          "png": "captures/43661836795/main-updates-error.dark-modern.1200.png",
+          "sha256": "4dc7b71e8b251dabc72aeb39aed82fa9879b68a08255ec14593b444b463426da",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "1226e13cf7f7fc34580bc664fe0bd1d39d112a12473ed160364cc0da159d94ce"
+        },
+        "main-updates-unavailable": {
+          "png": "captures/43661836795/main-updates-unavailable.dark-modern.1200.png",
+          "sha256": "eb76a472d1860689a5407e0b72ded7ddf641e8a37aeb20a494e833dd01369dd6",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "1226e13cf7f7fc34580bc664fe0bd1d39d112a12473ed160364cc0da159d94ce"
+        },
+        "main-browse-error": {
+          "png": "captures/43661836795/main-browse-error.dark-modern.1200.png",
+          "sha256": "7b85c31cfe2bfc0d72ae8e86a415e1e5f54a5db7c0421cb50da7415cd600cd75",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-browse-unavailable": {
+          "png": "captures/43661836795/main-browse-unavailable.dark-modern.1200.png",
+          "sha256": "532fa4b90f696065dd62b07b149b24659e7070cd87127e08c80e9e2374589eca",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-browse-multi-install-dialog": {
+          "png": "captures/43661836795/main-browse-multi-install-dialog.dark-modern.1200.png",
+          "sha256": "6b8a7e2ad09950ae05aff1fa3f0923f8f3f58571019f3994fe55d290e515217e",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        },
+        "main-sources-error": {
+          "png": "captures/43661836795/main-sources-error.dark-modern.1200.png",
+          "sha256": "f47c536ca7b43dcd20e23f5a8de6db4672204c91a858d77c11d3418783f795ee",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "11823434f2f01adac4bf9ea3b7fe9f90fbf0f3b1931afdfba17cb2fa919e212f"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 19,
+        "standing": 2,
+        "blocking": 0,
+        "refuted": 9,
+        "singleJudge": 6,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-updates-error#D1",
+          "state": "main-updates-error",
+          "finding": "[native] The inline error in the Updates list reads as two sentences joined by a colon, with a capital \"The\" after the colon (\"The updates could not be checked: The package sources could not be read.\"). DS-STATE-4 asks for one sentence, and the workbench's inline messages use sentence case. | [states] The inline error message (updates-error) reads as two sentences joined by a colon, 'The updates could not be checked: The package sources could not be read.', with a capitalised 'The' mid-message and a repeated 'could not be'. DS-STATE-4 asks for one sentence, and DS-COPY-1 asks for sentence case in messages.",
+          "severity": "major",
+          "box": [
+            40,
+            151,
+            258,
+            36
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-updates-error",
+              "finding": "The inline error in the Updates list reads as two sentences joined by a colon, with a capital \"The\" after the colon (\"The updates could not be checked: The package sources could not be read.\"). DS-STATE-4 asks for one sentence, and the workbench's inline messages use sentence case.",
+              "severity": "major",
+              "box": [
+                40,
+                151,
+                258,
+                36
+              ],
+              "rule": "DS-STATE-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the inline error reading 'The updates could not be checked: The package sources could not be read.' with a capital 'The' after the colon, which breaks the sentence case DS-COPY-1 requires for messages and the single sentence DS-STATE-4 asks for. The hard DS-STATE-4 line ('1 glyph (error), 1 buttons, ends with a full stop') counts only the glyph, the buttons and the final stop, so it does not contradict this, and the spec declares no error text.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-updates-error",
+              "finding": "The inline error message (updates-error) reads as two sentences joined by a colon, 'The updates could not be checked: The package sources could not be read.', with a capitalised 'The' mid-message and a repeated 'could not be'. DS-STATE-4 asks for one sentence, and DS-COPY-1 asks for sentence case in messages.",
+              "severity": "minor",
+              "box": [
+                40,
+                151,
+                258,
+                36
+              ],
+              "rule": "DS-STATE-4",
+              "verdict": "confirmed",
+              "reason": "Same box and same defect as native-1: the crop shows two clauses joined by a colon with a mid-message capital 'The', which is label punctuation and casing against the copy rules, so §3 rates it major. The hard DS-STATE-4 and DS-COPY-3 lines measure only the glyph, the buttons and the full stop.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-15 \"Microcopy (UX-P3.11)\"; DS-STATE-4 and DS-COPY-3 hard and green on run 43661836795",
+          "ruling": "design-advisor GOLDEN CLASS UX-P3.11 of 2026-11-15 (docs/plans/handoff/P3.11.md): accepted-as-design; DECISIONS.md \"Microcopy (UX-P3.11)\": the failure form keeps the host reason verbatim, its casing untouched (codes and fragments too); here the fixture reason is a full sentence"
+        },
+        {
+          "id": "main-browse-error#D1",
+          "state": "main-browse-error",
+          "finding": "[native] The inline Browse error joins two sentences with a colon and capitalises the second (\"The packages could not be searched: The package source could not be read.\"). DS-STATE-4 asks for one sentence, and VS Code's own inline messages (Extensions view, \"No extensions found.\") use a single sentence-case sentence, so this reads as a concatenated developer string rather than built-in copy. | [states] The inline Browse error reads \"The packages could not be searched: The package source could not be read.\": the reason after the colon starts with a capital \"The\" and repeats \"could not be\", so it reads as two sentences joined by a colon. A sentence-case message in the failure pattern of design-system §10.8 (\"<What> could not be searched: <reason>.\") would continue in lower case as one sentence.",
+          "severity": "major",
+          "box": [
+            39,
+            82,
+            273,
+            33
+          ],
+          "rule": "DS-STATE-4, DS-COPY-1",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-browse-error",
+              "finding": "The inline Browse error joins two sentences with a colon and capitalises the second (\"The packages could not be searched: The package source could not be read.\"). DS-STATE-4 asks for one sentence, and VS Code's own inline messages (Extensions view, \"No extensions found.\") use a single sentence-case sentence, so this reads as a concatenated developer string rather than built-in copy.",
+              "severity": "major",
+              "box": [
+                39,
+                84,
+                272,
+                31
+              ],
+              "rule": "DS-STATE-4",
+              "verdict": "confirmed",
+              "reason": "The crop shows the inline error 'The packages could not be searched: The package source could not be read.' with a capital 'The' after the colon, so it reads as two sentences joined by a colon. That conflicts with the one-sentence rule of DS-STATE-4 and the sentence-case failure pattern '<What> could not be searched: <reason>.' (design-system §10.8). The hard measurement 'DS-STATE-4@main-browse-error: 1 glyph (error), 1 buttons, ends with a full stop (1)' checks only the glyph, the button and the final period, so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-browse-error",
+              "finding": "The inline Browse error reads \"The packages could not be searched: The package source could not be read.\": the reason after the colon starts with a capital \"The\" and repeats \"could not be\", so it reads as two sentences joined by a colon. A sentence-case message in the failure pattern of design-system §10.8 (\"<What> could not be searched: <reason>.\") would continue in lower case as one sentence.",
+              "severity": "minor",
+              "box": [
+                40,
+                82,
+                272,
+                33
+              ],
+              "rule": "DS-COPY-1",
+              "verdict": "confirmed",
+              "reason": "It is the same text in the same place as native-1: the crop shows the reason after the colon starting with a capital 'The' and repeating 'could not be', which breaks sentence case for a message (DS-COPY-1 messages clause, §10 items 2 and 8). Rubric §3 rates casing against the copy rules as major. No hard measurement covers casing after a colon (DS-COPY-3 measured '2 end with a full stop').",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS.md 2026-11-15 \"Microcopy (UX-P3.11)\"; DS-STATE-4 and DS-COPY-3 hard and green on run 43661836795",
+          "ruling": "design-advisor GOLDEN CLASS UX-P3.11 of 2026-11-15 (docs/plans/handoff/P3.11.md): accepted-as-design; DECISIONS.md \"Microcopy (UX-P3.11)\": the failure form keeps the host reason verbatim, its casing untouched (codes and fragments too); here the fixture reason is a full sentence"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-updates-error#D2",
+          "state": "main-updates-error",
+          "finding": "[states] The header check box labels read 'Restore After Operations' and 'Include Pre-Release' in the capture, but the approved artboard draws 'Restore after operations' and 'Include prerelease'. The capture follows the copy rules (DS-COPY-1, T-20 'Pre-Release' in labels), so the artboard drawing is out of date with the rules.",
+          "severity": "minor",
+          "box": [
+            514,
+            10,
+            341,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-updates-error",
+              "finding": "The header check box labels read 'Restore After Operations' and 'Include Pre-Release' in the capture, but the approved artboard draws 'Restore after operations' and 'Include prerelease'. The capture follows the copy rules (DS-COPY-1, T-20 'Pre-Release' in labels), so the artboard drawing is out of date with the rules.",
+              "severity": "minor",
+              "box": [
+                514,
+                10,
+                341,
+                22
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture crop reads 'Restore After Operations' and 'Include Pre-Release', and the artboard crop at the same box reads 'Restore after operations' and 'Include prerelease'. The capture follows DS-COPY-1 and T-20 ('Pre-Release' in labels), spec.json names neither label, so this is the artboard drawing out of date: a minor spec-conflict under §6, not a product defect.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: T-20"
+        },
+        {
+          "id": "main-updates-unavailable#D1",
+          "state": "main-updates-unavailable",
+          "finding": "[states] The Updates unavailable banner reads \"Some package sources could not be checked.\", which names neither the failing source nor the reason; the failure form of design-system §10 item 8 is \"<What> could not be checked: <reason>.\".",
+          "severity": "major",
+          "box": [
+            16,
+            151,
+            388,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-updates-unavailable",
+              "finding": "The Updates unavailable banner reads \"Some package sources could not be checked.\", which names neither the failing source nor the reason; the failure form of design-system §10 item 8 is \"<What> could not be checked: <reason>.\".",
+              "severity": "minor",
+              "box": [
+                16,
+                151,
+                388,
+                26
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The crop (0,135,420,58) shows the warning banner reading \"Some package sources could not be checked.\" with Retry and no \": <reason>\" clause, against design-system §10 item 8's one failure pattern \"<What> could not be checked: <reason>.\"; the main-updates spec declares no banner copy, no hard measurement covers the failure form (DS-COPY-3 only checks the full stop: \"2 end with a full stop\"), and the missing reason clause is structural copy, not live content under rubric §6; per rubric §3 a visible contradiction of a copy rule is major.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "none: the one unavailable form is ruled (opening DO 4)"
+        },
+        {
+          "id": "main-sources-error#D2",
+          "state": "main-sources-error",
+          "finding": "[native] The source row's check box is centred vertically on the three-line block (name, URL, config path) instead of sitting on the first line (the source name), as the workbench's own check-box settings (Settings editor boolean rows) align their box with the first line of text.",
+          "severity": "minor",
+          "box": [
+            392,
+            416,
+            354,
+            52
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-sources-error",
+              "finding": "The source row's check box is centred vertically on the three-line block (name, URL, config path) instead of sitting on the first line (the source name), as the workbench's own check-box settings (Settings editor boolean rows) align their box with the first line of text.",
+              "severity": "minor",
+              "box": [
+                392,
+                416,
+                354,
+                52
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop, the 18 px check box spans y 433-450, beside the URL and config-path lines, centred on the four-line text block (y about 414-469, from .nuiget-source-row's align-items: center), not on the 'nuget.org' name line at y about 418-429; the Settings editor's boolean rows put the box on their first line.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (the sources dialog row alignment)"
+        },
+        {
+          "id": "main-sources-error#D1",
+          "state": "main-sources-error",
+          "finding": "[geometry] Inside the Sources dialog the body blocks are spaced unevenly. From the error line to the nuget.org source row the gap is about 16 px (ink 398 to 418; baseline to top about 23). Description to error line and source row to Add Source... are both about 12 px (baseline to top 18 and 17). Same-role block gaps differ, and none of them is the 4/8 block rhythm.",
+          "severity": "major",
+          "box": [
+            392,
+            368,
+            416,
+            102
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-sources-error",
+              "finding": "Inside the Sources dialog the body blocks are spaced unevenly. From the error line to the nuget.org source row the gap is about 16 px (ink 398 to 418; baseline to top about 23). Description to error line and source row to Add Source... are both about 12 px (baseline to top 18 and 17). Same-role block gaps differ, and none of them is the 4/8 block rhythm.",
+              "severity": "major",
+              "box": [
+                392,
+                368,
+                416,
+                102
+              ],
+              "rule": "DS-GRID-2",
+              "verdict": "confirmed",
+              "reason": "Ink in the crop places the description baseline (about 353) 19 px above the error text's cap top (372), and the error's last baseline (about 395) 23 px above the 'nuget.org' cap top (418), a visible difference of 4 px between consecutive block gaps in the dialog column. This matches the CSS: an 8 px gap plus the banner's 4 px padding above, and 4 + 8 + 4 below because of the row's own padding. The hard DS-GRID-2a 'gaps 8' reads only .nuiget-main, .nuiget-main-list, .nuiget-installed and the sidebar root, never the dialog body, so it does not contradict.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "P3.12 (the sources dialog block gaps, DS-GRID-2)"
+        },
+        {
+          "id": "main-sources-error#D3",
+          "state": "main-sources-error",
+          "finding": "[geometry] The dialog's two text columns do not share a start edge. The error message after the 16 px error icon starts at x 414-415, while the source name after the 18 px check box starts at x 417-418, about 3 px further right. The error icon and the check box start on the same edge at x 392.",
+          "severity": "minor",
+          "box": [
+            392,
+            371,
+            40,
+            80
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-sources-error",
+              "finding": "The dialog's two text columns do not share a start edge. The error message after the 16 px error icon starts at x 414-415, while the source name after the 18 px check box starts at x 417-418, about 3 px further right. The error icon and the check box start on the same edge at x 392.",
+              "severity": "minor",
+              "box": [
+                392,
+                371,
+                40,
+                80
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Column ink puts the error text's 'N' stem at x 417 and the source column's 'h' and '/' at x 418, with 'n' at 419, while the 16 px error glyph and the 18 px check box both start at 392 with the same 8 px gap. The text columns therefore start about 2 px apart (416 against 418), a small offset that is visible when zoomed.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (the sources dialog start edges)"
+        },
+        {
+          "id": "main-sources-error#D4",
+          "state": "main-sources-error",
+          "finding": "[states] The header check-box labels read \"Restore After Operations\" and \"Include Pre-Release\" (Title Case, following microcopy §10.7 and T-20), while the approved artboard still draws \"Restore after operations\" and \"Include prerelease\". The artboard and the copy rules disagree.",
+          "severity": "minor",
+          "box": [
+            514,
+            10,
+            342,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-sources-error",
+              "finding": "The header check-box labels read \"Restore After Operations\" and \"Include Pre-Release\" (Title Case, following microcopy §10.7 and T-20), while the approved artboard still draws \"Restore after operations\" and \"Include prerelease\". The artboard and the copy rules disagree.",
+              "severity": "minor",
+              "box": [
+                514,
+                10,
+                342,
+                22
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture crop reads 'Restore After Operations' and 'Include Pre-Release'. The artboard crop at the same box reads 'Restore after operations' and 'Include prerelease', and the spec.json declares neither label. This is an artboard-against-copy-rule disagreement, reported once as minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: T-20"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-browse-unavailable",
+          "finding": "Every result row draws its package icon as the raster orange box (resources/package-icon.png, no tile), where the artboard draws a package without its own icon as a grey 36 px tile holding the codicon package glyph (spec package-row-* rows); Newtonsoft.Json has this tile in the artboard and the orange box here, so the fallback icon differs between surfaces.",
+          "severity": "major",
+          "box": [
+            46,
+            117,
+            36,
+            686
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture crop shows the orange box icon in every row and the artboard crop a grey codicon tile. But the artboard draws that tile for every package, Polly included, and Polly has its own icon in the product capture, so the tile is a placeholder for the icon image (package content under §6), not a fallback the spec declares. The spec and DS-ICON-3 fix only the geometry, and the hard measurements hold: DS-ICON-3 '36×36 ×15', DS-RADIUS-2 'icon 2px ×15'.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-browse-unavailable",
+          "finding": "The header check-box labels read 'Restore After Operations' and 'Include Pre-Release'. The artboard draws them in sentence case as 'Restore after operations' and 'Include prerelease'. DS-COPY-1's Title Case list covers buttons, tabs, menus, commands and group headers, not check boxes, so the casing and the hyphenated wording do not match the artboard copy.",
+          "severity": "major",
+          "box": [
+            514,
+            10,
+            341,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop reads 'Restore After Operations' and 'Include Pre-Release', against 'Restore after operations' and 'Include prerelease' in the artboard. This copy follows the Design System's own term ruling T-20 ('Pre-Release' in labels, design-system.md §15), so the capture meets the rules and the artboard copy is the one that is out of date. No spec entry declares the label text.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "main-browse-unavailable",
+          "finding": "The settings action at the header's end shows the settings-gear cog glyph. The artboard draws a different codicon in the same rect (spec source-settings, x 1136, y 10, 22 x 22).",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the codicon settings-gear (icons.json SettingsGearIcon), which DS-ICON-1 requires. The artboard's glyph is a hand-stroked SVG in its markup (round3 main-installed-details.dc.html: stroke-width 1.2, a circle), not a different codicon, so this is a glyph-shape difference that §6 excludes. DS-ICON-2 measured 'glyph 16×16 ×4, colour icon.foreground ×4' (hard).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-4",
+          "lens": "states",
+          "state": "main-browse-unavailable",
+          "finding": "Download counts are written with four integer digits before the suffix ('9795.7M downloads', '1471.9M downloads') instead of moving up to the next unit (9.8B, 1.5B). The count reads longer than the compact form the workbench's Extensions view uses.",
+          "severity": "minor",
+          "box": [
+            98,
+            160,
+            162,
+            84
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show '9795.7M downloads' and '1471.9M downloads'. But download counts are live content under §6, no Design System rule sets a compact-unit format, and the artboard draws no download line to compare with (its Installed rows have none). The finding therefore cites no rule or artboard element.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "A stray rounded shape, about 14 px wide and 3 px tall, hangs below the multi-install dialog's bottom border, centred on the dialog (x≈599, y 540–542). It is painted above the scrim, outside the dialog surface. No layer in the workbench or the artboard draws anything there, so it reads as an extra element leaking out of the dialog.",
+          "severity": "major",
+          "box": [
+            592,
+            539,
+            14,
+            4
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows a faint grey arc at y 540-542, x 592-605, the visible bottom of a shape that continues behind the dialog. It peaks at #262626 over the #0b0b0b-#0d0d0d scrim, so it is page content dimmed under the scrim (DS-DIVIDER-5 hard: scrim rgba(0,0,0,0.5)). It is not painted above the scrim or leaking from the dialog, and it lies inside the sidecar's package-details-panel mask (x 421, y 77, 779x726), which is declared live content.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-browse-multi-install-dialog",
+          "finding": "The disabled Unsupported.csproj check box draws a bright grey border (≈#7e7e7e) with the same fill as the enabled boxes, whose border is #3c3c3c. The disabled control therefore stands out more than the enabled ones instead of reading muted, while its label is dimmed. Its disabled appearance contradicts the state it shows.",
+          "severity": "major",
+          "box": [
+            392,
+            444,
+            19,
+            18
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop confirms an 18x18 disabled box with a #7e7e7e border, against #3c3c3c on the enabled boxes. #7e7e7e is exactly disabledForeground rgba(204,204,204,0.5) blended over the #313131 fill. Design-system §5's Check box row assigns disabledForeground to the disabled state, and the label measures that same colour (DS-COLOR-6 labels hard: rgba(204, 204, 204, 0.5), opacity 1), so this is the specified colour role, not a contradiction.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-sources-error",
+          "finding": "The inline error in the Sources dialog reads as two sentences joined by a colon with a capital after it (\"…could not be listed: The NuGet configuration could not be read.\"), where the workbench's inline error (Extensions view message container) gives one sentence after the severity glyph.",
+          "severity": "minor",
+          "box": [
+            416,
+            369,
+            296,
+            30
+          ],
+          "rule": "DS-STATE-4",
+          "verdict": "refuted",
+          "reason": "The crop shows a single error line ending in one full stop after one error glyph and one Retry button. The hard measurement reads 'DS-STATE-4@main-sources-error: 1 glyph (error), 1 buttons, ends with a full stop (1)'. The capital after the colon begins the host's reason, which is a complete clause, inside the product's one failure form 'X could not be Y: reason.' (sentence.ts). That makes this copy taste with no rule broken.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-sources-error",
+          "finding": "The header's source-settings action (spec rect source-settings 1136,10,22,22) draws a gear glyph, while the approved artboard draws a different, sun-shaped settings codicon in the same slot, so the action's icon does not match the artboard element.",
+          "severity": "major",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture draws the settings-gear codicon that docs/design/icons.json lists for SettingsGearIcon. The same 1136,10 slot of the approved main-updates artboard also draws this gear, so the sun-shaped glyph in the main-installed-details artboard is an artboard inconsistency, not a defect of the capture, and the spec rect names no glyph.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "main-sources-error",
+          "finding": "The dialog's description says \"Remove deletes a source from the file that declares it.\", but the source row has no visible Remove label, only an unlabelled trash glyph at the row end, so the copy points to a control the user cannot see by that name.",
+          "severity": "minor",
+          "box": [
+            392,
+            326,
+            416,
+            125
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show the row's trash glyph without a visible label, but the IconButton is named 'Remove nuget.org' (its label and tooltip, SourceSettingsDialog.tsx:44). The description's 'Remove' therefore names the control as the workbench names icon actions, and no rule, artboard element or exemplar is cited (rubric §6, taste).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    },
+    {
+      "runId": "43661836795",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "955b108 (push A)",
+      "look": "modern",
+      "workflow": "wf_b6f71d4d-136",
+      "note": "Cells with their own artboard judged against it; error, unavailable and dialog cells against the P3.1b / P3.2 / P3.5 surrogates (main-updates, main-installed-details), side bar cells against main-installed-all (P3.8). Single-judge findings are informational; each with its `owner`.",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/43661836795/sidebar-sections.dark-modern.300.png",
+          "sha256": "5e4b27f5e01eb2247be242d7897e0722e0472759dc079cc823af74fc1ab886b5",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-updates-error": {
+          "png": "captures/43661836795/sidebar-updates-error.dark-modern.300.png",
+          "sha256": "826093ad025498ac84c7598017902ee710e230243298278232f7e2b07a8d17f9",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-browse-error": {
+          "png": "captures/43661836795/sidebar-browse-error.dark-modern.300.png",
+          "sha256": "87bce3cdc132d72a12c5a0cde1988ecce0b25be50c3c9977e3a919e38ab3339e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 5,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "sidebar-updates-error#D1",
+          "state": "sidebar-updates-error",
+          "finding": "[geometry] The Updates error banner does not start on the section's content column: its error glyph starts at x 8, left of the Updates chevron at x 11, and its sentence starts at x 32, 4 px right of the Updates title and the Installed row names at x 28. The artboard starts its in-list messages ('No packages installed.', the Unsupported sentence) on the group title's x, and DS-INSET-1 sets one sidebar start column at the pane-header title x (M 28).",
+          "severity": "major",
+          "box": [
+            8,
+            434,
+            76,
+            78
+          ],
+          "rule": "DS-INSET-1",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-updates-error",
+              "finding": "The Updates error banner does not start on the section's content column: its error glyph starts at x 8, left of the Updates chevron at x 11, and its sentence starts at x 32, 4 px right of the Updates title and the Installed row names at x 28. The artboard starts its in-list messages ('No packages installed.', the Unsupported sentence) on the group title's x, and DS-INSET-1 sets one sidebar start column at the pane-header title x (M 28).",
+              "severity": "major",
+              "box": [
+                8,
+                434,
+                76,
+                78
+              ],
+              "rule": "DS-INSET-1",
+              "verdict": "confirmed",
+              "reason": "In the crop the error glyph is painted from x 9, left of the Updates chevron painted from x 11, and the sentence's first glyphs start at x 31-32, while the Updates title and the Installed row names start at x 28 (DS-INSET-1 measured 'content 28' for titles and rows only, so no hard value covers the banner); the banner keeps the sidebar header inset 8, which adds a third start column inside the pane.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "none: accepted-as-design at UX-P3.10 push E follow-up 1 (banner anatomy)"
+        },
+        {
+          "id": "sidebar-browse-error#D1",
+          "state": "sidebar-browse-error",
+          "finding": "[native] The error glyph (y 78-91) and the Retry button (y 72-97) are centred on the middle of the three-line message (y 61-106), not on its first line. VS Code's inline severity messages, such as the Extensions view's message container and input validation, put the icon on the first text line, so the glyph floats beside the second line.",
+          "severity": "minor",
+          "box": [
+            9,
+            61,
+            283,
+            46
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-browse-error",
+              "finding": "The error glyph (y 78-91) and the Retry button (y 72-97) are centred on the middle of the three-line message (y 61-106), not on its first line. VS Code's inline severity messages, such as the Extensions view's message container and input validation, put the icon on the first text line, so the glyph floats beside the second line.",
+              "severity": "minor",
+              "box": [
+                9,
+                61,
+                283,
+                46
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop (0,45 300x78), the red error glyph and the Retry button line up with the second of the three message lines (\"searched: The package source\"), not the first. This is a polish issue of optical alignment. DS-STATE-4 (hard: 1 glyph, 1 button) and DS-ICON-2 (glyph 16x16) measure count and size only, not vertical placement, so no measurement contradicts it.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "planning session (a banner glyph on the first text line; no row places it)"
+        },
+        {
+          "id": "sidebar-browse-error#D2",
+          "state": "sidebar-browse-error",
+          "finding": "[states] The inline error message joins two messages with a colon (\"The packages could not be searched: The package source could not be read.\"): it repeats \"could not be\" and capitalises \"The\" after the colon, when DS-STATE-4 asks for a single sentence. A shorter single sentence would carry the same information.",
+          "severity": "minor",
+          "box": [
+            32,
+            58,
+            206,
+            54
+          ],
+          "rule": "DS-STATE-4",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "sidebar-browse-error",
+              "finding": "The inline error message joins two messages with a colon (\"The packages could not be searched: The package source could not be read.\"): it repeats \"could not be\" and capitalises \"The\" after the colon, when DS-STATE-4 asks for a single sentence. A shorter single sentence would carry the same information.",
+              "severity": "minor",
+              "box": [
+                32,
+                58,
+                206,
+                54
+              ],
+              "rule": "DS-STATE-4",
+              "verdict": "confirmed",
+              "reason": "The crop (16,42 238x86) shows \"The packages could not be searched: The package source could not be read.\": two clauses joined by a colon, a capital \"The\" after the colon and \"could not be\" twice, so the wording is longer than DS-STATE-4's one sentence needs. The hard DS-STATE-4 line (\"ends with a full stop (1)\") checks only the final full stop, so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none: the failure form is ruled (DECISIONS \"Microcopy (UX-P3.11)\")"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "sidebar-updates-error",
+          "finding": "The Retry button's right edge is at x 292, 8 px from the pane edge, while the sidebar's trailing column (the Installed count badge, right edge x 290) ends 10 px from it. The banner's action therefore sits 2 px outside the trailing edge that the section header's count keeps.",
+          "severity": "minor",
+          "box": [
+            242,
+            58,
+            50,
+            441
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The Retry button's last painted column is x 291 and the Installed count badge ends at x 290 (DS-OVERFLOW-2 measured badge 263.3-290). The 1-2 px difference sits about 420 px apart vertically and cannot be seen in the crop. No rule ties a banner action's end to a pane header's count, and the banner's action keeps the symmetric 8 px sidebar inset (300 - 8 = 292).",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-updates-error",
+          "finding": "The Updates pane's inline error sentence capitalises the word after its colon (\"…could not be checked: The package sources could not be read.\"), so a single sentence-case message carries a mid-sentence capital; DS-COPY-1 requires messages in sentence case.",
+          "severity": "major",
+          "box": [
+            32,
+            460,
+            202,
+            52
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop shows 'The updates could not be checked: The package sources could not be read.', which opens in sentence case and ends with a full stop (DS-COPY-3 measured '1 end with a full stop', DS-STATE-4 hard). The capital after the colon begins a complete sentence, which the Microsoft style VS Code follows allows. DS-COPY-1's measurement checks button, tab, menu and group-header labels, not this message, so I see no copy-rule defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    }
+  ]
+}

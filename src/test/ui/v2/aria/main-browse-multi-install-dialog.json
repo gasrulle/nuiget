@@ -3,8 +3,8 @@
   "lines": [
     "main \"\" {nuiget-app}",
     "  heading \"Manage NuGet packages\"",
-    "  checkbox \"Restore after operations\" [checked]",
-    "  checkbox \"Include prerelease\" [unchecked]",
+    "  checkbox \"Restore After Operations\" [checked]",
+    "  checkbox \"Include Pre-Release\" [unchecked]",
     "  combobox \"Project\" {project-selector}",
     "    option \"All Projects (#)\"",
     "    option \"Catalog.csproj\"",
@@ -16,11 +16,11 @@
     "  combobox \"Package source\" {source-selector}",
     "    option \"All sources\"",
     "    option \"nuget.org\"",
-    "  button \"NuGet sources\" {source-settings}",
+    "  button \"Manage Package Sources...\" {source-settings}",
     "  button \"Refresh\" {refresh-button}",
     "  search \"\"",
     "    combobox \"Search packages, or filter with @installed, @updates or @vulnerable\" [collapsed] {search-input}",
-    "    button \"Clear search\"",
+    "    button \"Clear Search\"",
     "    button \"Filters\"",
     "  listbox \"Search results for Newtonsoft.Json\" {browse-list}",
     "    option \"Newtonsoft.Json #\"",
@@ -34,7 +34,7 @@
     "    combobox \"Version\" {version-selector}",
     "      option \"#\"",
     "    button \"Install\" {install-update-button}",
-    "    button \"Install in projects…\" {multi-install-button}",
+    "    button \"Install in Projects...\" {multi-install-button}",
     "    tablist \"Details sections\" {details-tab-bar}",
     "      tab \"Details\" [selected] {details-tab-details}",
     "      tab \"README\" {details-tab-readme}",
@@ -84,6 +84,6 @@
     "    listitem \"Utility.csproj /home/runner/work/nuiget/nuiget/src/test/ui/fixtures/dense-workspace/tools/Utility/Utility.csproj\"",
     "      checkbox \"Utility.csproj\" [unchecked]",
     "  button \"Cancel\" [focused]",
-    "  button \"Install in # projects\" [disabled]"
+    "  button \"Install in # Projects\" [disabled]"
   ]
 }

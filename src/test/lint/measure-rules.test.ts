@@ -159,8 +159,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.14's 220 px width closed at UX-P2.7a.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toBeUndefined();
         expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' });
-        // UX-P3.11 (design-advisor opening ruling DO 7): the side bar placeholder clause, pending on P3.11.
-        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', placeholder: { pending: 'P3.11' } });
+        // UX-P3.11 (design-advisor opening ruling DO 7): the side bar placeholder clause, hard since UX-P3.11 push B.
+        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', placeholder: 'hard' });
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
@@ -1117,8 +1117,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // A composed id outside its state and a below-the-fold id are not required; the row's padding differs and passes.
         expect(at('list', list)).toMatchObject({ pass: true, status: 'hard', value: '3/3 within 1; composed (main-details-readme): row-action-uninstall; below the fold: section-header-transitive' });
         expect(at('list', { ...list, 'package-row-first': element(0, 247, 327, 72) })).toMatchObject({ pass: false, value: expect.stringContaining('off: package-row-first Δy 72') });
-        // An id a later item owns prints and leaves the verdict.
-        expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: true, value: expect.stringContaining('pending P3.11: uninstall-selected-button Δw -1.4') });
+        // UX-P3.11 push B: the button's Title Case label reads within 1 on CI, so no item owns it any more; 1.4 px narrow is off.
+        expect(at('list', { ...list, 'uninstall-selected-button': element(164, 117, 145.6, 26) })).toMatchObject({ pass: false, value: expect.stringContaining('off: uninstall-selected-button Δw -1.4') });
         // The later scopes print on their owners.
         // UX-P3.9 (follow-up 6, push B): the panel and every child are read absolutely; a panel 2.2 or 3 px right reads off.
         expect(at('details', { 'package-details-panel': element(330.2, 77, 601.8, 726) })).toMatchObject({ pass: false, status: 'hard', value: '0/1 within 1; composed (main-details-readme): uninstall-button; off: package-details-panel Δx 2.2 Δw -2.2 Δinset 2.2' });
@@ -1523,7 +1523,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         const page = (cells: Record<string, unknown>, width = 300) => layout({ width, endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });
         const name = 'DS-OVERFLOW-2@sidebar-sections/placeholder';
         expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search or type @ to filter', width: 160, room: 236 } }), name))
-            .toMatchObject({ pass: true, status: { pending: 'P3.11' }, value: 'placeholder "Search or type @ to filter" 160 of 236 px' });
+            .toMatchObject({ pass: true, status: 'hard', value: 'placeholder "Search or type @ to filter" 160 of 236 px' });
         expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search, or filter: @installed, @updates', width: 250, room: 236 } }), name)?.pass).toBe(false);
         expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search or type @ to filter', width: 160, room: 106 } }, 170), name))
             .toMatchObject({ pass: true, value: 'placeholder "Search or type @ to filter" 160 of 106 px (printed at 170)' });

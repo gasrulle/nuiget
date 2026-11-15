@@ -26,7 +26,7 @@
     "  separator \"Resize the Installed and Updates sections\" {sash}",
     "  heading \"Updates #\"",
     "    button \"Updates #\" [expanded] {section-header-updates}",
-    "  button \"Update all (#)\" {sidebar-update-all-button}",
+    "  button \"Update All (#)\" {sidebar-update-all-button}",
     "  listbox \"Updates\" {sidebar-updates-list}",
     "    option \"Dapper # → #\"",
     "    option \"FluentValidation # → #\"",

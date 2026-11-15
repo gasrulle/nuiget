@@ -129,8 +129,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
         primaryWhy = 'This version is installed';
     }
 
-    // A disabled button says why: the visible note when it shows, the tooltip when it does not (DS-STATE-7). The busy
-    // sentence is the placeholder P3.11's microcopy reviews.
+    // A disabled button says why: the visible note when it shows, the tooltip when it does not (DS-STATE-7).
     const noteShown = primaryWhy !== undefined && primaryWhy !== 'This version is installed';
     const busyWhy = busy ? 'An operation on this package is running.' : undefined;
 

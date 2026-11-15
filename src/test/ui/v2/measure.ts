@@ -347,8 +347,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] }, scopeExceptStates: { sidebar: SIDEBAR_NO_TRAILER_STATES } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     // UX-P3.11 (design-advisor opening ruling DO 7): `placeholder`, the side bar search box's placeholder fits its text room at
-    // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170.
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: { pending: 'P3.11' } }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections'] } }),
+    // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170; hard since UX-P3.11 push B.
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections'] } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -417,7 +417,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'uninstall-selected-button': 'P3.11' } }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'] }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
