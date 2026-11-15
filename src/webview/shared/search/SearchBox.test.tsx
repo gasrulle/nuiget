@@ -127,12 +127,12 @@ describe('SearchBox', () => {
     it('Clear empties the box and keeps focus; Filters opens the prefix list', async () => {
         const user = userEvent.setup();
         const { container } = render(<Harness />);
-        expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Clear Search' })).toBeNull();
         await user.type(box(), 'serilog');
-        await user.click(screen.getByRole('button', { name: 'Clear search' }));
+        await user.click(screen.getByRole('button', { name: 'Clear Search' }));
         expect(box()).toHaveValue('');
         expect(box()).toHaveFocus();
-        expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Clear Search' })).toBeNull();
 
         await user.click(screen.getByRole('button', { name: 'Filters' }));
         expect(box()).toHaveValue('@');
@@ -207,7 +207,7 @@ describe('SearchBox', () => {
         const { rerender } = render(<Harness onSubmit={onSubmit} extra={{ pending: true }} />);
         await user.type(box(), 'seri');
         const [loading] = screen.getAllByRole('option');
-        expect(loading).toHaveTextContent('Searching…');
+        expect(loading).toHaveTextContent('Searching...');
         expect(loading).toHaveAttribute('data-testid', 'search-suggestions-loading');
         expect(loading).toHaveAttribute('aria-disabled', 'true');
         await user.keyboard('{ArrowDown}');

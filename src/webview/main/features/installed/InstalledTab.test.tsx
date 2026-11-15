@@ -126,7 +126,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => failing.respond(failing.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         await hostSays(() => failing.fail(failing.requests('installed/get')[0], 'failed', 'The project file could not be read.'));
         const banner = screen.getByTestId('installed-error');
-        expect(banner).toHaveTextContent('Installed packages of App could not be loaded: The project file could not be read.');
+        expect(banner).toHaveTextContent('The installed packages of App could not be loaded: The project file could not be read.');
         expect(banner.querySelector('.nuiget-banner-text')?.textContent?.endsWith('read.')).toBe(true);
         expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
         expect(screen.queryByTestId('group-row-direct')).toBeNull();
@@ -149,7 +149,7 @@ describe('main panel: Installed tab', () => {
         const request = host.requests('allProjects/installed')[0];
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: { ...installed(A, THREE), fidelity: 'provisional' } } }));
         const header = (): HTMLElement => screen.getByTestId('section-header-project-app').closest('.nuiget-section-header') as HTMLElement;
-        expect(within(header()).getByText('provisional')).toBeInTheDocument();
+        expect(within(header()).getByText('Provisional')).toBeInTheDocument();
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, THREE) } }));
         expect(within(header()).queryByText('provisional')).toBeNull();
     });
@@ -159,7 +159,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
         await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), fidelity: 'provisional' }, 1));
-        expect(within(screen.getByTestId('group-row-direct')).getByTestId('installed-provisional')).toHaveTextContent('provisional');
+        expect(within(screen.getByTestId('group-row-direct')).getByTestId('installed-provisional')).toHaveTextContent('Provisional');
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
 
         // The evaluation finishes: the host invalidates the key and the authoritative list replaces the provisional one.
@@ -175,22 +175,22 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByTestId('installed-toolbar')).toHaveAttribute('role', 'toolbar');
         expect(screen.getByTestId('installed-toolbar')).toContainElement(screen.getByTestId('select-all-button'));
         expect(uninstallSelected()).toBeDisabled();
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
         await user.click(screen.getByTestId('select-all-button'));
         expect(screen.getByTestId('select-all-button')).toHaveAttribute('aria-pressed', 'true');
         // A centrally managed row is removable: an uninstall keeps its central entry (ADR-004).
         expect(['Serilog', 'Moq', 'Newtonsoft.Json'].map(id => optionOf(id).getAttribute('aria-selected'))).toEqual(['true', 'true', 'true']);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (3)');
         // A second press clears.
         await user.click(screen.getByTestId('select-all-button'));
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
         // Space on the central row selects it.
         optionOf('Newtonsoft.Json').focus();
         await user.keyboard(' ');
         expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-selected', 'true');
         optionOf('Moq').focus();
         await user.keyboard(' ');
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (2)');
     });
 
     it('Enter, ArrowLeft and ArrowRight collapse and expand a group row; its rows leave and return and the bulk set survives', async () => {
@@ -202,7 +202,7 @@ describe('main panel: Installed tab', () => {
         await user.keyboard('{Enter}');
         expect(group()).toHaveAttribute('aria-expanded', 'false');
         expect(names()).toEqual([]);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (3)');
         await user.keyboard('{ArrowRight}');
         expect(group()).toHaveAttribute('aria-expanded', 'true');
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
@@ -226,7 +226,7 @@ describe('main panel: Installed tab', () => {
         await user.keyboard(' ');
         expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
         await waitFor(() => expect(said()).toBe('An operation on this package is running.'));
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
     });
 
     it('the dialog lists the selected packages; Escape and Cancel send nothing', async () => {
@@ -245,7 +245,7 @@ describe('main panel: Installed tab', () => {
         expect(screen.queryByRole('alertdialog')).toBeNull();
         expectFocusAfterClose('installed-bulk-uninstall-cancel');
         expect(host.requests('ops/bulkRemove')).toHaveLength(0);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (3)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (3)');
     });
 
     it('Confirm asks ops/bulkRemove with exactly the listed ids, closes the dialog, and the rows are busy until the request settles', async () => {
@@ -261,7 +261,7 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Newtonsoft.Json')).toHaveAttribute('aria-busy', 'true');
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
         const done: BulkOutcome = { opId: 'op1', status: 'completed', results: [], restores: [] };
         await hostSays(() => host.respond(host.requests('ops/bulkRemove')[0], done));
         for (const id of ['Serilog', 'Moq', 'Newtonsoft.Json']) {
@@ -304,7 +304,7 @@ describe('main panel: Installed tab', () => {
         expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
         await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
         await user.click(optionOf('xunit').querySelector('.nuiget-row-check') as Element);
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (2)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (2)');
         await user.click(uninstallSelected());
         expect(screen.getByRole('alertdialog')).toHaveTextContent('From App:SerilogFrom Lib:xunit');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
@@ -348,7 +348,7 @@ describe('main panel: Installed tab', () => {
         transitiveRows()[0].focus();
         await user.keyboard(' ');
         await waitFor(() => expect(said()).toBe('Transitive packages cannot be selected: they come with the packages that require them.'));
-        expect(uninstallSelected()).toHaveTextContent('Uninstall selected (0)');
+        expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (0)');
         expect(transitiveRows()[0]).toHaveAttribute('aria-selected', 'false');
         await user.keyboard('{Delete}');
         await waitFor(() => expect(said()).toBe('Transitive packages cannot be uninstalled: uninstall the package that requires them.'));
@@ -364,7 +364,7 @@ describe('main panel: Installed tab', () => {
             expect(element.compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         };
         await hostSays(() => host.fail(host.requests('transitive/get')[0], 'unsupported', 'broken'));
-        aboveTree(screen.getByText('The transitive packages could not be listed: broken'));
+        aboveTree(screen.getByText('The transitive packages could not be listed: broken.'));
         await user.click(screen.getByRole('button', { name: 'Retry' }));
         await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, dataSourceAvailable: true, frameworks: [], errorKind: 'parse-failed' }, 2));
         aboveTree(screen.getByText('The assets file of the project could not be read'));
@@ -440,7 +440,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('section-header-transitive'));
         expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
         expect(transitiveRows()).toHaveLength(0);
-        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive packages$/);
+        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive Packages$/);
         expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
         await user.click(screen.getByTestId('section-header-transitive'));
         expect(transitiveRows()).toHaveLength(1);
@@ -475,7 +475,7 @@ describe('main panel: Installed tab', () => {
         await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', error: 'assets file unreadable' } }));
         results = await axe(document.body);
         expect(results).toHaveNoViolations();
-        expect(screen.getByRole('alert')).toHaveTextContent('Installed packages of Lib could not be loaded: assets file unreadable');
+        expect(screen.getByRole('alert')).toHaveTextContent('The installed packages of Lib could not be loaded: assets file unreadable');
         // The tree holds no control: its rows' actions are hidden siblings, and the errored project's Retry is above it.
         const tree = screen.getByTestId('installed-list');
         expect(tree.contains(screen.getByRole('alert'))).toBe(false);
@@ -513,7 +513,7 @@ describe('main panel: Installed tab', () => {
             expect(box().querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 3');
             expect(box().querySelector('.nuiget-badge--count')).toBeNull();
         };
-        expect(screen.getByTestId('section-header-direct')).toHaveTextContent(/^Direct packages$/);
+        expect(screen.getByTestId('section-header-direct')).toHaveTextContent(/^Direct Packages$/);
         counted();
         await user.type(screen.getByTestId('search-input'), '@installed ser');
         filtered();
@@ -560,7 +560,7 @@ describe('main panel: Installed tab', () => {
         const result: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
         await hostSays(() => host.respond(host.requests('transitive/get')[0], result, 1));
         const header = screen.getByTestId('section-header-transitive');
-        expect(header).toHaveTextContent(/^Transitive packages$/);
+        expect(header).toHaveTextContent(/^Transitive Packages$/);
         expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
         expect(header.closest('.nuiget-section-header')).toHaveTextContent('net8.0');
         // The installed rows ask their own metadata too: answer the ask of the transitive rows.
@@ -613,10 +613,10 @@ describe('main panel: Installed tab', () => {
             { targetFramework: 'net8.0', packages: [entry('A.Core')] },
             { targetFramework: 'net6.0', packages: [entry('B.Core')] },
         ] }, 1));
-        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive packages$/);
+        expect(screen.getByTestId('section-header-transitive')).toHaveTextContent(/^Transitive Packages$/);
         for (const tfm of ['net8.0', 'net6.0']) {
             const header = screen.getByTestId(`section-header-transitive-${tfm}`);
-            expect(header).toHaveTextContent(/^Transitive packages$/);
+            expect(header).toHaveTextContent(/^Transitive Packages$/);
             expect(screen.getByTestId(`section-box-transitive-${tfm}`).querySelector('.nuiget-badge--count')).toHaveTextContent('1');
             expect(header.closest('.nuiget-section-header')).toHaveTextContent(tfm);
             expect(groupItem(`transitive-${tfm}`)).toHaveAttribute('aria-level', '2');

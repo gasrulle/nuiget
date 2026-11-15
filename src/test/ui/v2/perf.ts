@@ -157,8 +157,8 @@ export const INSTALLED_ROW = `document.querySelector('${INSTALLED_LIST} .nuiget-
 export const installedRowOf = (ids: readonly string[]): string =>
     `[...document.querySelectorAll('${INSTALLED_LIST} [data-testid^="package-row-"]')].some(row => ${JSON.stringify(ids)}.includes(row.dataset.testid.slice('package-row-'.length)))`;
 
-/** The single project's header carries the `provisional` badge (the list from the project files, before evaluation). */
-export const PROVISIONAL = `[...document.querySelectorAll('[data-testid="section-box-direct"] .nuiget-badge')].some(badge => badge.textContent.includes('provisional'))`;
+/** The single project's header carries the `Provisional` badge (the list from the project files, before evaluation). */
+export const PROVISIONAL = `[...document.querySelectorAll('[data-testid="section-box-direct"] .nuiget-badge')].some(badge => badge.textContent.includes('Provisional'))`;
 
 /** The Installed list is revalidating: the list `aria-busy`, or the spinner in its header. */
 export const REVALIDATING = `document.querySelector('${INSTALLED_LIST}[aria-busy="true"], [data-testid="section-box-direct"] .nuiget-spinner') !== null`;

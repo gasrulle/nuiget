@@ -9,7 +9,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 ![The Installed tab with two package cards and the README of the selected package](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-installed-readme.png)
 
-![The Updates tab with Update all and each card showing the installed and the new version](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-updates.png)
+![The Updates tab with Update All and each card showing the installed and the new version](https://raw.githubusercontent.com/gasrulle/nuiget/main/docs/images/nuiget-updates.png)
 
 ## ✨ Features
 
@@ -27,15 +27,15 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   split between them. Every row has an actions menu (right-click or Shift+F10): install the latest or a chosen
   version, update, uninstall, copy the package ID, or view the package in the main panel. A line above the search
   box names the active package source. The title bar holds the restore and prerelease switches and the project and
-  source pickers; Refresh and Open Full Manager are in its `...` menu, and the Updates header has Update all.
+  source pickers; Refresh and Open Full Manager are in its `...` menu, and the Updates header has Update All.
 - **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
   Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several. Each row acts on
-  its own project, Update all covers every project, and a search result can be installed into several projects at
-  once. From a single project, the details pane of a search result also offers Install in projects….
+  its own project, Update All covers every project, and a search result can be installed into several projects at
+  once. From a single project, the details pane of a search result also offers Install in Projects....
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
   top-level packages that require it. A project that has not been restored shows a Restore banner instead.
-- **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update all,
-  Update selected or Uninstall selected. A confirmation dialog lists exactly the packages that will change.
+- **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update All,
+  Update Selected or Uninstall Selected. A confirmation dialog lists exactly the packages that will change.
 - **Central Package Management.** Centrally managed packages carry a CPM badge. Before the central version of a
   package changes, nUIget lists every project that the change reaches and asks you to confirm (the details button and Ctrl+Enter: a dialog;
   the row's actions menu, in the main panel and the sidebar: a confirmation). Installing a package that already has a central entry is previewed
@@ -43,7 +43,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   alone. Uninstall removes the project's reference and keeps the central entry. An install into several projects
   leaves out the projects where the package has a central entry and says so.
 - **Provisional, then evaluated.** The installed list appears at once, read from the project files, and is marked
-  "provisional". MSBuild evaluation then replaces it with the authoritative list (conditions, imported props files,
+  "Provisional". MSBuild evaluation then replaces it with the authoritative list (conditions, imported props files,
   references the SDK adds). A version nUIget cannot determine shows as "unresolved", and nUIget does not change that
   package.
 - **Package sources.** The gear next to the source selector opens the NuGet sources dialog: enable or disable a
@@ -62,7 +62,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 - **Operation queue.** One operation runs at a time and up to five wait behind it; the status bar shows how many are
   running and queued. A bulk operation shows a progress notification, and every operation ends with a toast that says
   how it went.
-- **Restore after operations.** On by default, per workspace. Turn it off with the checkbox in the main panel header
+- **Restore After Operations.** On by default, per workspace. Turn it off with the checkbox in the main panel header
   or the shield button in the sidebar's title bar (filled when on); it applies to operations from both views. In a Central Package Management project an
   install or update always restores.
 - **Automatic refresh.** Changes to project files, `Directory.Build.props`, `Directory.Packages.props`,
@@ -128,7 +128,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
 | `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
-| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct packages, Transitive packages and a target framework inside it, a project under All Projects); sidebar under All Projects: expand or collapse a workspace folder or a project |
+| `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct Packages, Transitive Packages and a target framework inside it, a project under All Projects); sidebar under All Projects: expand or collapse a workspace folder or a project |
 | `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
 | `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists; in the sidebar also an installed search result of the selected project) |
 | `Space` | Main panel: select the row for a bulk action, or clear it |
@@ -149,7 +149,7 @@ When the configuration has a `<packageSourceMapping>`, a request that names a pa
 sources whose winning pattern matches that package. If those sources are disabled or missing, nUIget asks no source
 about the package.
 
-**Add source** in the sources dialog writes to the file you choose:
+**Add Source...** in the sources dialog writes to the file you choose:
 
 - **User:** `~/.nuget/NuGet/NuGet.Config` (macOS and Linux) or `%APPDATA%\NuGet\NuGet.Config` (Windows)
 - **Workspace:** the `nuget.config` of the first workspace folder, created when it does not exist
@@ -241,7 +241,7 @@ See [Microsoft's security best practices](https://learn.microsoft.com/en-us/nuge
 | "Unsupported project" | nUIget manages SDK-style projects with `PackageReference`. `packages.config` and non-SDK-style projects are listed as unsupported. |
 | An install or update is refused because of unsaved changes | Save or close the project file or `Directory.Packages.props` in the editor. |
 | A version shows "unresolved" | nUIget could not determine the version from the project files. Edit that reference by hand. |
-| Transitive packages are missing | Expand **Transitive packages** and click **Restore** in the banner above the list; the project has not been restored. |
+| Transitive packages are missing | Expand **Transitive Packages** and click **Restore** in the banner above the list; the project has not been restored. |
 | Sidebar not showing | It appears only when the workspace contains a `.csproj`, `.fsproj` or `.vbproj` file. |
 | Nothing happens at all | nUIget does not run in Restricted Mode or in a virtual workspace. Trust the workspace and open it from disk. |
 

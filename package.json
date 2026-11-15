@@ -86,27 +86,27 @@
             },
             {
                 "command": "nuiget.refreshPackages",
-                "title": "nUIget: Refresh Packages",
+                "title": "Refresh Packages",
                 "icon": "$(refresh)"
             },
             {
                 "command": "nuiget.sidebar.selectSource",
-                "title": "nUIget: Select Package Source",
+                "title": "Select Package Source...",
                 "icon": "$(remote)"
             },
             {
                 "command": "nuiget.sidebar.selectProject",
-                "title": "nUIget: Select Project",
+                "title": "Select Project...",
                 "icon": "$(project)"
             },
             {
                 "command": "nuiget.sidebar.togglePrerelease",
-                "title": "nUIget: Include Pre-release",
+                "title": "Include Pre-Release",
                 "icon": "$(beaker)"
             },
             {
                 "command": "nuiget.sidebar.togglePrereleaseOff",
-                "title": "nUIget: Exclude Pre-release",
+                "title": "Exclude Pre-Release",
                 "icon": {
                     "dark": "resources/beaker-filled.svg",
                     "light": "resources/beaker-filled-light.svg"
@@ -114,22 +114,22 @@
             },
             {
                 "command": "nuiget.sidebar.toggleRestore",
-                "title": "nUIget: Restore after operations",
+                "title": "Restore After Operations",
                 "icon": "$(verified)"
             },
             {
                 "command": "nuiget.sidebar.toggleRestoreOff",
-                "title": "nUIget: Skip restore after operations",
+                "title": "Skip Restore After Operations",
                 "icon": "$(verified-filled)"
             },
             {
                 "command": "nuiget.sidebar.refresh",
-                "title": "nUIget: Refresh Sidebar",
+                "title": "Refresh Sidebar",
                 "icon": "$(refresh)"
             },
             {
                 "command": "nuiget.sidebar.openFullView",
-                "title": "nUIget: Open Full Manager",
+                "title": "Open Full Manager",
                 "icon": "$(link-external)"
             },
             {

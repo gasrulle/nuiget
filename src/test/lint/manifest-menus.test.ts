@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 interface MenuEntry { command: string; when?: string; group?: string }
 
 const manifest = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as {
-    contributes: { commands: { command: string }[]; menus: Record<string, MenuEntry[]> };
+    contributes: { commands: { command: string; title: string }[]; menus: Record<string, MenuEntry[]> };
 };
 const menus = manifest.contributes.menus;
 
@@ -104,5 +104,16 @@ describe('package.json menus', () => {
         // What the palette offers: the manager and the two cache commands.
         const offered = manifest.contributes.commands.map(entry => entry.command).filter(command => !hidden.includes(command));
         expect(offered.sort()).toEqual(['nuiget.clearHttpCache', 'nuiget.clearSdkVersionCache', 'nuiget.openManager']);
+    });
+
+    it('names a palette-hidden command without the "nUIget: " prefix and a palette command with it; the palette titles stay (UX-P3.11)', () => {
+        const hidden = new Set((menus.commandPalette ?? []).filter(entry => entry.when === 'false').map(entry => entry.command));
+        for (const { command, title } of manifest.contributes.commands) {
+            expect(title.startsWith('nUIget: '), `${command}: ${title}`).toBe(!hidden.has(command));
+        }
+        const titleOf = (command: string): string | undefined => manifest.contributes.commands.find(entry => entry.command === command)?.title;
+        expect(titleOf('nuiget.openManager')).toBe('nUIget: Manage NuGet Packages');
+        expect(titleOf('nuiget.clearHttpCache')).toBe('nUIget: Clear NuGet HTTP Cache');
+        expect(titleOf('nuiget.clearSdkVersionCache')).toBe('nUIget: Clear SDK Version Cache');
     });
 });

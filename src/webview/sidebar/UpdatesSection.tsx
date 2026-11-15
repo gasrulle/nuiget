@@ -10,8 +10,9 @@ import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
-import { sentence } from '../shared/updates/sentence';
+import { failure, sentence } from '../shared/updates/sentence';
 import { UpdateAllDialog } from '../shared/updates/UpdateAllDialog';
+import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
 import { ProjectUpdates } from './ProjectUpdates';
 import { useUpdateRows, visibleUpdates } from './updateRows';
 
@@ -34,14 +35,14 @@ export interface UpdatesSectionProps {
 
 /**
  * The empty sentence of one project's list. A check that could not be made is its banner alone, never an empty list (UX-P3.10).
- * An unsupported project without a package list, under the view's banner, is not "up to date": the pane says it has nothing to show,
- * as the Installed pane does (UX-P3.10 push E design ruling, point 4; the final wording is P3.11's).
+ * An unsupported project without a package list, under the view's banner, is not "up to date": the pane says its updates cannot
+ * be checked (UX-P3.10 push E design ruling, point 4; the wording UX-P3.11's).
  */
 function emptyMessage(total: number, filter: string, unreadable = false): string {
     if (total > 0 && filter.length > 0) {
         return `No updates match "${filter}".`;
     }
-    return unreadable ? 'No updates to show.' : 'No updates available.';
+    return unreadable ? 'Updates cannot be checked for this project.' : 'No updates available.';
 }
 
 type TreeItem =
@@ -88,7 +89,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
                 list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'unsupported', marker, text: `Unsupported project: ${sentence(installed.unsupported.message)}` });
             } else if (chunk.updates.length === 0 && filter.trim() === '') {
                 const text = sourcesUnavailable
-                    ? 'Updates could not be checked.'
+                    ? failure('The updates', 'checked')
                     : installed !== undefined && installed.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
                 list.push({ kind: 'message', id: `${id}\nmessage`, cell: 'empty', marker, text });
             }
@@ -204,7 +205,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     const shownOf = (list: ReadonlyArray<{ id: string }>): number => list.filter(entry => entry.id.toLowerCase().includes(needle)).length;
     let busy = updates.status === 'loading' || updates.revalidating;
     let content: React.ReactNode;
-    // What Update all takes, per project (one group outside All Projects).
+    // What Update All takes, per project (one group outside All Projects).
     let groups: Array<{ projectPath: string; projectName: string; updates: PackageUpdate[] }> = [];
     if (all.active) {
         const stream = all.updates;
@@ -224,10 +225,10 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 {stream.sourcesUnavailable
                     ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>Some package sources could not be checked.</Banner>
                     : null}
-                {stream.error ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates could not be checked: ${sentence(stream.error.message)}`}</Banner> : null}
+                {stream.error ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{failure('The updates', 'checked', stream.error.message)}</Banner> : null}
                 {chunks.filter(chunk => chunk.error !== undefined).map(chunk => (
                     <Fragment key={chunk.projectPath}>
-                        <Banner severity="error" data-testid={`sidebar-updates-error-${(projectGroups.get(chunk.projectPath) ?? `${PROJECT_GROUP}${chunk.projectPath.toLowerCase()}`).slice(PROJECT_GROUP.length)}`} action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{`Updates of ${chunk.projectName} could not be checked: ${sentence(chunk.error ?? 'unknown error')}`}</Banner>
+                        <Banner severity="error" data-testid={`sidebar-updates-error-${(projectGroups.get(chunk.projectPath) ?? `${PROJECT_GROUP}${chunk.projectPath.toLowerCase()}`).slice(PROJECT_GROUP.length)}`} action={{ label: 'Retry', onClick: stream.refreshUpdates }}>{failure(`The updates of ${chunk.projectName}`, 'checked', chunk.error)}</Banner>
                     </Fragment>
                 ))}
                 {chunks.length === 0
@@ -263,7 +264,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                     ? <Banner severity="warning" data-testid="sidebar-updates-unavailable" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked.</Banner>
                     : null}
                 {updates.error
-                    ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${sentence(updates.error.message)}`}</Banner>
+                    ? <Banner severity="error" data-testid="sidebar-updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{failure('The updates', 'checked', updates.error.message)}</Banner>
                     : null}
                 {bannerAlone ? null : <ProjectUpdates
                     projectPath={projectPath}
@@ -315,7 +316,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 // The header's spinner is the first load's; a revalidation is the pane's bar alone (UX-P3.10 push E, follow-up 1).
                 busy={loadingFirst}
                 actions={count !== undefined && count > 0 && (all.active || installed.result?.unsupported === undefined) ? (
-                    <IconButton label={`Update all (${candidates.length})`} data-testid="sidebar-update-all-button" disabled={candidates.length === 0} onClick={() => setConfirming(true)}>
+                    <IconButton label={(all.active ? allProjectsKnowledge(all.updates) : singleKnowledge(updates)) === 'known' ? `Update All (${candidates.length})` : 'Update All'} data-testid="sidebar-update-all-button" disabled={candidates.length === 0} onClick={() => setConfirming(true)}>
                         <ArrowUpIcon />
                     </IconButton>
                 ) : undefined}

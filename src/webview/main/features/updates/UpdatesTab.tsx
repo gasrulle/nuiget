@@ -15,7 +15,8 @@ import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { AllProjectsUpdates } from './AllProjectsUpdates';
 import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
-import { sentence } from '../../../shared/updates/sentence';
+import { failure, sentence } from '../../../shared/updates/sentence';
+import { bulkUpdateButton, noCandidateWhy, singleKnowledge } from '../../../shared/updates/updateAll';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
@@ -115,7 +116,7 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
             return next;
         }),
         render: (item, placement) => (item.kind === 'group'
-            ? <SectionHeader presentation="content" title="Direct packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
+            ? <SectionHeader presentation="content" title="Direct Packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
             : null),
     }), [collapsed]);
     // A bulk update takes the rows shown that both surfaces' rule admits (installed and resolvable, not central, not busy;
@@ -279,22 +280,25 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         );
     }
 
+    // A count on the primary only while the list is known (MU6; UX-P3.11, the opening ruling's table).
+    const knowledge = singleKnowledge(updates);
+    const primary = bulkUpdateButton(chosen.length, candidates.length, knowledge);
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={toUpdate.length === 0} title={toUpdate.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setConfirming(true)}>
-                {chosen.length > 0 ? `Update selected (${chosen.length})` : `Update all (${candidates.length})`}
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={primary.disabled} title={primary.title} onClick={() => setConfirming(true)}>
+                {primary.label}
             </Button>}>
-                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={bulk.selectAll}>
-                    Select all
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidates.length === 0} title={candidates.length === 0 ? noCandidateWhy(knowledge) : undefined} onClick={bulk.selectAll}>
+                    Select All
                 </Button>
             </Toolbar>
             {/* The Installed tab's form: the reason above the read-only rows (UX-P3.10, UX-P3.1b hand-off). */}
             {unsupported ? <Banner severity="warning" data-testid="updates-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner> : null}
             {updates.sourcesUnavailable
-                ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked; the list may be incomplete.</Banner>
+                ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refresh }}>Some package sources could not be checked.</Banner>
                 : null}
             {updates.error
-                ? <Banner severity="error" data-testid="updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{`Updates could not be checked: ${sentence(updates.error.message)}`}</Banner>
+                ? <Banner severity="error" data-testid="updates-error" action={{ label: 'Retry', onClick: updates.refresh }}>{failure('The updates', 'checked', updates.error.message)}</Banner>
                 : null}
             <div className="nuiget-installed-lists">{bar}{body}</div>
             <UpdateAllDialog open={confirming && toUpdate.length > 0} updates={toUpdate} onConfirm={confirm} onCancel={() => setConfirming(false)} />

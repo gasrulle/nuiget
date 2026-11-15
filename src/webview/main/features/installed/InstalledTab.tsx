@@ -18,6 +18,7 @@ import { directCount, InstalledRow, statusBadges, visibleRows } from './Installe
 import { parseRowId, rowId, type Section, type TreeItem } from './installedTree';
 import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
 import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
+import { failure } from '../../../shared/updates/sentence';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
@@ -202,7 +203,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 const shown = visibleRows(result, metadata, filter, vulnerableOnly);
                 const nothing = result.unsupported !== undefined && result.packages.length === 0;
                 const count = nothing ? undefined : directCount(result.packages.length, shown.items.length, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
-                list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct packages', count, section, variant: 'group' });
+                list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct Packages', count, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
             list.push(...transitivePart.items);
@@ -320,7 +321,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {!allMode && section.result?.unsupported ? <Banner severity="warning" data-testid="installed-unsupported">{`Unsupported project: ${sentence(section.result.unsupported.message)}`}</Banner> : null}
-                        {failed(section) ? <Banner severity="error" data-testid={allMode ? `installed-error-${markerOf(section)}` : 'installed-error'} action={{ label: 'Retry', onClick: section.onRetry }}>{`Installed packages of ${section.projectName} could not be loaded: ${sentence(section.error ?? 'unknown error')}`}</Banner> : null}
+                        {failed(section) ? <Banner severity="error" data-testid={allMode ? `installed-error-${markerOf(section)}` : 'installed-error'} action={{ label: 'Retry', onClick: section.onRetry }}>{failure(`The installed packages of ${section.projectName}`, 'loaded', section.error)}</Banner> : null}
                     </Fragment>
                 ))}
                 {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} data-testid="installed-empty" /> : null}
@@ -379,10 +380,10 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
     return (
         <div className="nuiget-installed">
             <Toolbar label="Bulk actions" data-testid="installed-toolbar" end={<Button data-testid="uninstall-selected-button" disabled={count === 0} title={count === 0 ? 'Select packages to uninstall them together.' : undefined} onClick={() => setConfirming(true)}>
-                {`Uninstall selected (${count})`}
+                {`Uninstall Selected (${count})`}
             </Button>}>
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} title={candidateCount === 0 ? 'No package in this list can join a bulk action.' : undefined} onClick={selectAll}>
-                    Select all
+                    Select All
                 </Button>
             </Toolbar>
             {/* The tree is the tab's scroller (D48, UX-P2.1e). */}

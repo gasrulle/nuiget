@@ -159,7 +159,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.14's 220 px width closed at UX-P2.7a.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingWidths).toBeUndefined();
         expect(scopes('DS-INSET-3')).toEqual({ rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' });
-        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
+        // UX-P3.11 (design-advisor opening ruling DO 7): the side bar placeholder clause, pending on P3.11.
+        expect(scopes('DS-OVERFLOW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', placeholder: { pending: 'P3.11' } });
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
@@ -1516,6 +1517,17 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
             .toMatchObject({ pass: false, status: 'hard', value: '1 line: height 22, line 22 (target 22); 2 lines: height 44, line 22 (target 40.2, line 18.2)' });
         expect(lineOf('sidebar-all-projects-updates', withCells({ messageLeaves: [{ lineHeight: 18.2, height: 22, lines: 1 }, { lineHeight: 18.2, height: 40.2, lines: 2 }] }), name)?.pass).toBe(true);
         expect(lineOf('sidebar-all-projects-tools', withCells({ messageLeaves: [] }), 'DS-TYPE-4@sidebar-all-projects-tools/message-leaf')).toMatchObject({ pass: false, value: 'not measurable (no compact message leaf)' });
+    });
+
+    it('reads the side bar placeholder against the search box\'s text room, asserted at 300 and printed narrower (DS-OVERFLOW-2 placeholder, UX-P3.11)', () => {
+        const page = (cells: Record<string, unknown>, width = 300) => layout({ width, endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });
+        const name = 'DS-OVERFLOW-2@sidebar-sections/placeholder';
+        expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search or type @ to filter', width: 160, room: 236 } }), name))
+            .toMatchObject({ pass: true, status: { pending: 'P3.11' }, value: 'placeholder "Search or type @ to filter" 160 of 236 px' });
+        expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search, or filter: @installed, @updates', width: 250, room: 236 } }), name)?.pass).toBe(false);
+        expect(lineOf('sidebar-sections', page({ placeholderFit: { text: 'Search or type @ to filter', width: 160, room: 106 } }, 170), name))
+            .toMatchObject({ pass: true, value: 'placeholder "Search or type @ to filter" 160 of 106 px (printed at 170)' });
+        expect(lineOf('sidebar-sections', page({}), name)).toMatchObject({ pass: false, value: 'not measurable (no search box placeholder)' });
     });
 
     it('reads the side bar pane headers\' spinners in DS-STATE-2: printed in every side bar cell, 0 asserted where it revalidates (UX-P3.10 push E)', () => {

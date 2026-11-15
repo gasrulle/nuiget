@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { PackageDependencyGroup as Group, PackageMetadata } from '../../../../protocol';
 import { Banner, EmptyState, GroupCaption, ProgressBar, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
-import { sentence } from '../../../shared/updates/sentence';
+import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
@@ -79,7 +79,7 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
             <SectionHeader
                 level={4}
                 variant="level"
-                title={group.targetFramework || 'Any framework'}
+                title={group.targetFramework || 'Any Framework'}
                 count={group.dependencies.length}
                 titleId={titleId}
                 contentId={contentId}
@@ -122,7 +122,7 @@ export function DetailsInfo(): React.JSX.Element {
         );
     }
     if (metadata.status === 'error') {
-        return <Banner severity="error" data-testid="details-error" action={{ label: 'Retry', onClick: retryMetadata }}>{`Details could not be loaded: ${sentence(metadata.error?.message ?? 'unknown error')}`}</Banner>;
+        return <Banner severity="error" data-testid="details-error" action={{ label: 'Retry', onClick: retryMetadata }}>{failure('The details', 'loaded', metadata.error?.message)}</Banner>;
     }
     const value = metadata.value;
     const toggle = (framework: string): void => setExpanded(previous => {

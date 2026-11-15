@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Banner, EmptyState, ProgressBar, Skeleton } from '../../../shared/primitives';
-import { sentence } from '../../../shared/updates/sentence';
+import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages } from './markdown';
 
@@ -69,7 +69,7 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
         );
     }
     if (readme.status === 'error') {
-        return <Banner severity="error" data-testid="readme-error" action={{ label: 'Retry', onClick: retryReadme }}>{`The README could not be loaded: ${sentence(readme.error?.message ?? 'unknown error')}`}</Banner>;
+        return <Banner severity="error" data-testid="readme-error" action={{ label: 'Retry', onClick: retryReadme }}>{failure('The README', 'loaded', readme.error?.message)}</Banner>;
     }
     if (html === null) {
         return <EmptyState data-testid="readme-empty" message="No README available." />;

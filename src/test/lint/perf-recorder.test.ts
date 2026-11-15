@@ -46,7 +46,7 @@ describe('the perf recorder (UX-P0.26)', () => {
     });
 
     it('records a mark present when it starts as an upper bound, and a flag that held', async () => {
-        document.body.innerHTML = `<div id="root" data-package-icon="data:default"><div data-testid="section-box-direct"><span class="nuiget-badge">provisional</span></div><div data-testid="installed-list"><div class="nuiget-row nuiget-row--comfortable" data-row-kind="group"></div>${row('serilog')}</div></div>`;
+        document.body.innerHTML = `<div id="root" data-package-icon="data:default"><div data-testid="section-box-direct"><span class="nuiget-badge">Provisional</span></div><div data-testid="installed-list"><div class="nuiget-row nuiget-row--comfortable" data-row-kind="group"></div>${row('serilog')}</div></div>`;
         run(perfRecorder(PANEL_OPEN, '#root'));
         expect(read()!.marks['first row']?.when).toBe('install');
         expect(read()!.flags.provisional).toBeDefined();
@@ -139,7 +139,7 @@ describe('the perf recorder (UX-P0.26)', () => {
         expect(read()).toBeNull();
         const before = JSON.stringify(current);
         // What would stamp `icons` and the provisional flag if anything still observed.
-        document.getElementById('root')!.insertAdjacentHTML('afterbegin', '<div data-testid="section-box-direct"><span class="nuiget-badge">provisional</span></div>');
+        document.getElementById('root')!.insertAdjacentHTML('afterbegin', '<div data-testid="section-box-direct"><span class="nuiget-badge">Provisional</span></div>');
         list().innerHTML = row('polly', 'data:own');
         list().querySelector('.nuiget-row-icon')!.insertAdjacentHTML('afterend', '<span class="nuiget-row-authors">App vNext</span>');
         expect(run<boolean>(`return (${icons(INSTALLED_ROW)}) && (${PROVISIONAL});`)).toBe(true);
@@ -172,7 +172,7 @@ describe('the perf predicates (UX-P0.26)', () => {
     });
 
     it('reads the evaluated list from the absence of the provisional badge', () => {
-        document.body.innerHTML = `<div data-testid="section-box-direct"><span class="nuiget-badge">provisional</span></div><div data-testid="installed-list">${row('serilog')}</div>`;
+        document.body.innerHTML = `<div data-testid="section-box-direct"><span class="nuiget-badge">Provisional</span></div><div data-testid="installed-list">${row('serilog')}</div>`;
         expect(holds(authoritative(INSTALLED_ROW))).toBe(false);
         document.querySelector('.nuiget-badge')!.remove();
         expect(holds(authoritative(INSTALLED_ROW))).toBe(true);

@@ -15,6 +15,7 @@ import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
 import type { DetailsView } from '../../MainShell';
 import { TransitiveDetails } from './TransitiveDetails';
+import { failure } from '../../../shared/updates/sentence';
 
 type DetailsTab = 'details' | 'readme';
 
@@ -195,7 +196,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         disabled={versions.status === 'loading' && list.length === 0}
                         onChange={chooseVersion}
                     >
-                        {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions…)` : chosen}</option>}
+                        {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions...)` : chosen}</option>}
                         {list.map(candidate => <option key={candidate} value={candidate}>{candidate === installedVersion ? `${candidate} (installed)` : candidate}</option>)}
                     </Select>
                     <Button
@@ -205,17 +206,17 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         aria-describedby={noteShown ? noteId : undefined}
                         onClick={changeVersion}
                     >
-                        {busy ? 'Working…' : pickProjects ? 'Install…' : action}
+                        {busy ? 'Working...' : pickProjects ? 'Install...' : action}
                     </Button>
                     {offerPicker ? (
                         <Button
                             variant="secondary"
                             data-testid="multi-install-button"
                             disabled={busy || asking}
-                            title="Install this version into several projects"
+                            title="Install this version into several projects."
                             onClick={() => setPicking(true)}
                         >
-                            Install in projects…
+                            Install in Projects...
                         </Button>
                     ) : null}
                 </div>
@@ -230,7 +231,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                             : 'No versions were found on the package sources.'}
                     </p>
                 ) : null}
-                {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{`Versions could not be listed: ${versions.error.message}`}</Banner> : null}
+                {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{failure('The versions', 'listed', versions.error.message)}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections" data-testid="details-tab-bar">
                 {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView announce={announce} />}

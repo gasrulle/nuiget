@@ -121,8 +121,8 @@ describe('main panel shell', () => {
         expect(screen.getByTestId('main-header')).toContainElement(search());
         expect(screen.getByTestId('refresh-button').parentElement).toHaveClass('nuiget-main-actions');
         expect(screen.getByRole('search')).toContainElement(search());
-        expect(screen.getByRole('checkbox', { name: 'Restore after operations' })).toBeChecked();
-        expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).not.toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Restore After Operations' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Include Pre-Release' })).not.toBeChecked();
         expect(screen.getByRole('tablist', { name: 'Package lists' })).toHaveAttribute('data-testid', 'tab-bar');
         expect(screen.getByTestId('installed-tab')).toHaveAttribute('aria-selected', 'true');
         expect(screen.getByRole('tabpanel', { name: 'Installed' })).toHaveTextContent('Installed list');
@@ -140,7 +140,7 @@ describe('main panel shell', () => {
     it('unchecking Restore after operations asks the host once and shows the choice at once', async () => {
         const user = userEvent.setup();
         const { host } = await mountReady();
-        const restore = screen.getByRole('checkbox', { name: 'Restore after operations' });
+        const restore = screen.getByRole('checkbox', { name: 'Restore After Operations' });
         await user.click(restore);
         expect(host.requests('session/set').map(request => request.payload)).toEqual([{ restoreEnabled: false }]);
         expect(restore).not.toBeChecked();
@@ -154,9 +154,9 @@ describe('main panel shell', () => {
     it('the selectors wait for the session; the project selector lists the projects and All Projects', async () => {
         const { host } = mount();
         expect(screen.getByTestId('project-selector')).toBeDisabled();
-        expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).toBeDisabled();
+        expect(screen.getByRole('checkbox', { name: 'Include Pre-Release' })).toBeDisabled();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
-        expect(screen.getByTestId('project-selector')).toHaveDisplayValue('Loading projects…');
+        expect(screen.getByTestId('project-selector')).toHaveDisplayValue('Loading projects...');
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
         const selector = screen.getByRole('combobox', { name: 'Project' });
         expect(selector).toBeEnabled();
@@ -170,9 +170,9 @@ describe('main panel shell', () => {
         await user.selectOptions(screen.getByTestId('project-selector'), B);
         expect(host.requests('session/set').map(request => request.payload)).toEqual([{ selectedProject: B }]);
         expect(screen.getByTestId('project-selector')).toHaveValue(B);
-        await user.click(screen.getByRole('checkbox', { name: 'Include prerelease' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Include Pre-Release' }));
         expect(host.requests('session/set').map(request => request.payload)).toEqual([{ selectedProject: B }, { includePrerelease: true }]);
-        expect(screen.getByRole('checkbox', { name: 'Include prerelease' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Include Pre-Release' })).toBeChecked();
     });
 
     it('the source selector shows the session source and offers no other yet', async () => {
@@ -440,7 +440,7 @@ describe('main panel shell', () => {
         const { host } = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
         await hostSays(() => host.fail(host.requests('projects/list')[0], 'failed', 'no workspace'));
-        expect(screen.getByRole('alert')).toHaveTextContent('Projects could not be listed: no workspace');
+        expect(screen.getByRole('alert')).toHaveTextContent('The projects could not be listed: no workspace');
     });
 
     it('announces the outcome of an operation of either surface once', async () => {

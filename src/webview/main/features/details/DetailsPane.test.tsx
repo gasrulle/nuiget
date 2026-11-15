@@ -399,7 +399,7 @@ describe('main panel: details', () => {
         expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
         const dialog = screen.getByTestId('multi-install-dialog');
         await user.click(within(dialog).getByRole('checkbox', { name: 'Lib' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 Project' }));
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
         expect(screen.queryByTestId('multi-install-dialog')).toBeNull();
         expectFocusAfterClose('details-multi-install-confirm');
@@ -515,7 +515,7 @@ describe('main panel: details', () => {
         expect(screen.getByTestId('details-progress')).toHaveAccessibleName('Loading details');
         await hostSays(() => host.fail(metadataOf(host)[0], 'failed', 'the feed is down'));
         expect(screen.queryByTestId('details-progress')).toBeNull();
-        expect(screen.getByTestId('details-error')).toHaveTextContent('Details could not be loaded: the feed is down.');
+        expect(screen.getByTestId('details-error')).toHaveTextContent('The details could not be loaded: the feed is down.');
         await user.click(screen.getByTestId('details-tab-readme'));
         expect(screen.getByTestId('readme-progress')).toHaveAccessibleName('Loading the README');
         await hostSays(() => host.fail(host.requests('package/readme')[0], 'failed', 'timeout.'));
@@ -566,18 +566,18 @@ describe('main panel: details', () => {
         await hostSays(() => host.respond(host.requests('search/query')[0], { query: 'polly', results: [{ id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: FEED }] }));
         await user.click(option('browse-list', 'Polly'));
 
-        expect(primary()).toHaveTextContent('Install…');
+        expect(primary()).toHaveTextContent('Install...');
         await user.click(primary());
         const dialog = screen.getByTestId('multi-install-dialog');
         expect(within(dialog).getByRole('checkbox', { name: 'App' })).toBeDisabled();
-        expect(dialog).toHaveTextContent('8.4.2 installed');
-        expect(dialog).toHaveTextContent('installed: 7.2.4');
-        expect(within(dialog).getByRole('button', { name: 'Install in 0 projects' })).toBeDisabled();
+        expect(dialog).toHaveTextContent('This version is installed');
+        expect(dialog).toHaveTextContent('Installed: 7.2.4');
+        expect(within(dialog).getByRole('button', { name: 'Install in 0 Projects' })).toBeDisabled();
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
         await user.click(within(dialog).getByRole('checkbox', { name: 'Lib' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 Project' }));
 
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [B], packageId: 'Polly', version: '8.4.2' }]);
         expect(screen.queryByTestId('multi-install-dialog')).toBeNull();

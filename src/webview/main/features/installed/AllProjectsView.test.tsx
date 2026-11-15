@@ -191,7 +191,7 @@ describe('main panel: All Projects', () => {
         expect(list.querySelectorAll('.nuiget-row-option')).toHaveLength(2);
         expect(within(list).queryAllByTestId('row-action-uninstall')).toHaveLength(0);
         await user.click(screen.getByTestId('select-all-button'));
-        expect(screen.getByTestId('uninstall-selected-button')).toHaveTextContent('Uninstall selected (0)');
+        expect(screen.getByTestId('uninstall-selected-button')).toHaveTextContent('Uninstall Selected (0)');
     });
 
     it('a packages.config project is a group row with the Unsupported badge and no rows; a message leaf under it says why', async () => {
@@ -237,10 +237,10 @@ describe('main panel: All Projects', () => {
 
         const tree = screen.getByTestId('installed-list');
         expect(within(tree).getByTestId('installed-empty-lib')).toHaveTextContent('No packages installed.');
-        expect(within(tree).getByTestId('installed-provisional-app')).toHaveTextContent('provisional');
+        expect(within(tree).getByTestId('installed-provisional-app')).toHaveTextContent('Provisional');
         const banner = screen.getByTestId('installed-error-tool');
         expect(tree.contains(banner)).toBe(false);
-        expect(banner).toHaveTextContent('Installed packages of Tool could not be loaded: the project file is locked.');
+        expect(banner).toHaveTextContent('The installed packages of Tool could not be loaded: the project file is locked.');
         expect(within(banner).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     });
 

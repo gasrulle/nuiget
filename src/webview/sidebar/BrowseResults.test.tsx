@@ -293,7 +293,7 @@ describe('sidebar: search modes and browse', () => {
         expect(document.querySelector('.nuiget-skeleton')).toBeNull();
         expect(screen.queryByTestId('sidebar-browse-list')).toBeNull();
         await hostSays(() => host.fail(queries(host)[0], 'failed', 'The package source could not be read.'));
-        expect(screen.getByTestId('sidebar-browse-error')).toHaveTextContent('The search failed: The package source could not be read.Retry');
+        expect(screen.getByTestId('sidebar-browse-error')).toHaveTextContent('The packages could not be searched: The package source could not be read.Retry');
         expect(screen.queryByTestId('sidebar-browse-progress')).toBeNull();
 
         await user.click(within(screen.getByTestId('sidebar-browse-error')).getByRole('button', { name: 'Retry' }));

@@ -272,7 +272,7 @@ describe('main panel: typing in the search box', () => {
         await user.type(box(), 'ser');
         await waitFor(() => expect(autocompletes(host)).toHaveLength(1));
         const loading = within(screen.getByRole('listbox', { name: 'Suggestions' })).getByRole('option');
-        expect(loading).toHaveTextContent('Searching…');
+        expect(loading).toHaveTextContent('Searching...');
         expect(loading).toHaveAttribute('aria-disabled', 'true');
         await hostSays(() => host.respond(autocompletes(host)[0], { query: 'ser', groups: [{ sourceName: 'nuget.org', sourceUrl: FEED, packageIds: ['Serilog'] }] }));
 

@@ -19,6 +19,7 @@ import { SourcesControl } from './features/sources/SourcesControl';
 import { FirstUsefulRenderMark } from './FirstUsefulRenderMark';
 import { MainTabs } from './MainTabs';
 import { clampTo, useSplitBounds } from './useSplitBounds';
+import { failure } from '../shared/updates/sentence';
 
 export type MainTab = 'installed' | 'updates';
 
@@ -197,11 +198,11 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                     <div className="nuiget-main-controls">
                         <label className="nuiget-main-toggle">
                             <Checkbox checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={checked => set({ restoreEnabled: checked })} />
-                            Restore after operations
+                            Restore After Operations
                         </label>
                         <label className="nuiget-main-toggle">
                             <Checkbox checked={session?.includePrerelease ?? false} disabled={!hasSession} onChange={checked => set({ includePrerelease: checked })} />
-                            Include prerelease
+                            Include Pre-Release
                         </label>
                         <Select
                             data-testid="project-selector"
@@ -210,7 +211,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                             disabled={!hasSession || supported.length === 0}
                             onChange={value => set({ selectedProject: value })}
                         >
-                            {supported.length === 0 ? <option value={session?.selectedProject ?? ''}>{projects === undefined ? 'Loading projects…' : 'No projects'}</option> : null}
+                            {supported.length === 0 ? <option value={session?.selectedProject ?? ''}>{projects === undefined ? 'Loading projects...' : 'No projects'}</option> : null}
                             {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                             {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                         </Select>
@@ -242,7 +243,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                 </div>
                 <FirstUsefulRenderMark />
             </header>
-            {projectsError ? <Banner severity="error">{`Projects could not be listed: ${projectsError.message}`}</Banner> : null}
+            {projectsError ? <Banner severity="error">{failure('The projects', 'listed', projectsError.message)}</Banner> : null}
             <div className="nuiget-main-split" ref={splitRef} style={cssVars({ '--nuiget-split': `${shownSplit}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
                     {browsing ? browse?.({ text: query, announce, install: installAction }) : (

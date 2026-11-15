@@ -216,7 +216,7 @@ describe('main panel: browse', () => {
         await user.keyboard('{Enter}');
         await hostSays(() => host.fail(queries(host)[1], 'failed', 'dotnet failed'));
         // One sentence with one full stop, Retry its one button, under its marker (DS-STATE-4, UX-P3.2).
-        expect(screen.getByTestId('browse-error')).toHaveTextContent('The search failed: dotnet failed.');
+        expect(screen.getByTestId('browse-error')).toHaveTextContent('The packages could not be searched: dotnet failed.');
         expect(within(screen.getByTestId('browse-error')).getAllByRole('button').map(button => button.textContent)).toEqual(['Retry']);
     });
 
@@ -301,7 +301,7 @@ describe('main panel: browse', () => {
         await searchFor(host, 'polly', [result('Polly', '8.4.2')]);
         option('Polly').focus();
         await user.keyboard('{Control>}{Enter}{/Control}');
-        await waitFor(() => expect(said()).toBe('Under All Projects, Install… in the details picks the projects.'));
+        await waitFor(() => expect(said()).toBe('Under All Projects, Install... in the details picks the projects.'));
         expect(option('Polly')).toHaveAttribute('aria-selected', 'true');
         expect(host.requests('ops/install')).toHaveLength(0);
     });

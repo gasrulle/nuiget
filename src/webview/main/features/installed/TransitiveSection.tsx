@@ -4,6 +4,7 @@ import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, Banner, EmptyState, ProgressBar, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
+import { failure } from '../../../shared/updates/sentence';
 
 type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 
@@ -15,7 +16,7 @@ const ERRORS: Record<string, string> = {
 
 /**
  * The packages the project gets through its references (interaction model §7), as rows of the tab's tree, asked for
- * shortly after the installed list. The collapsed group row reads `Transitive packages (N)` with the target framework; a
+ * shortly after the installed list. The collapsed group row reads `Transitive Packages (N)` with the target framework; a
  * project with several frameworks has a group row per framework inside. Rows show the icon, authors and Verified mark of
  * the lite metadata and no description (D14) and open a read-only details view with what requires them. When the project
  * has not been restored, a banner above the tree offers Restore.
@@ -33,7 +34,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         kind: 'group',
         id: 'transitive',
         level: 1,
-        title: 'Transitive packages',
+        title: 'Transitive Packages',
         count: usable && !several ? total : undefined,
         variant: 'group',
         tfm: !several && frameworks.length === 1 ? frameworks[0].targetFramework : undefined,
@@ -45,7 +46,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         const tfm = framework.targetFramework;
         const groupId = `transitive-${tfm}`;
         if (several) {
-            items.push({ kind: 'group', id: groupId, level: 2, title: 'Transitive packages', count: framework.packages.length, variant: 'level', tfm });
+            items.push({ kind: 'group', id: groupId, level: 2, title: 'Transitive Packages', count: framework.packages.length, variant: 'level', tfm });
         }
         if (!several || !collapsed.has(groupId)) {
             for (const entry of framework.packages) {
@@ -57,7 +58,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
     let message: React.ReactNode = null;
     if (result === undefined) {
         message = state.error
-            ? <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: state.refresh }}>{`The transitive packages could not be listed: ${state.error.message}`}</Banner>
+            ? <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: state.refresh }}>{failure('The transitive packages', 'listed', state.error.message)}</Banner>
             : <Skeleton density="comfortable" />;
     } else if (!result.dataSourceAvailable) {
         message = (

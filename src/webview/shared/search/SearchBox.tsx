@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, FilterIcon, IconButton, TextField } from '../primitives';
 import './search.css';
+import { failure } from '../updates/sentence';
 
 /** A package id the quick-search offers while the user types, with the source that knows it. */
 export interface Suggestion {
@@ -112,7 +113,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
     } else if (suggestions.length > 0) {
         options = groups.flatMap(group => group.suggestions.map((suggestion): Option => ({ kind: 'suggestion', suggestion })));
     } else if (pending) {
-        options = [{ kind: 'note', text: 'Searching…', 'data-testid': 'search-suggestions-loading' }];
+        options = [{ kind: 'note', text: 'Searching...', 'data-testid': 'search-suggestions-loading' }];
     } else if (suggestError) {
         options = [{ kind: 'note', text: 'The suggestions could not be loaded. Press → to retry.', 'data-testid': 'search-suggestions-error' }];
     }
@@ -121,9 +122,9 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
     if (versionLevel) {
         const listed = versions.versions.slice(0, VERSION_LIMIT);
         if (versions.status === 'loading') {
-            versionOptions = [{ kind: 'note', text: 'Loading versions…' }];
+            versionOptions = [{ kind: 'note', text: 'Loading versions...' }];
         } else if (versions.status === 'error') {
-            versionOptions = [{ kind: 'note', text: `${versions.message ?? 'The versions could not be listed'}. Press → to retry.` }];
+            versionOptions = [{ kind: 'note', text: `${failure('The versions', 'listed', versions.message)} Press → to retry.` }];
         } else if (listed.length === 0) {
             versionOptions = [{ kind: 'note', text: 'No versions available' }];
         } else {
@@ -347,7 +348,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
             />
             {/* Pointer helpers only: Escape clears and `@` lists the filters from the keyboard (§2). */}
             <span className="nuiget-search-actions">
-                {value !== '' ? <IconButton label="Clear search" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change('')}><CloseIcon /></IconButton> : null}
+                {value !== '' ? <IconButton label="Clear Search" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change('')}><CloseIcon /></IconButton> : null}
                 <IconButton label="Filters" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change(prefixMode ? '' : '@')}><FilterIcon /></IconButton>
             </span>
             {open ? (

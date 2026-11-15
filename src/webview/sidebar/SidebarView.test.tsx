@@ -103,7 +103,7 @@ describe('sidebar: Installed section', () => {
     it('provisional: the section carries a badge that says the evaluation is pending', async () => {
         await mountWith([pkg('Serilog')], { fidelity: 'provisional' });
         const badge = screen.getByTestId('sidebar-installed-provisional');
-        expect(badge).toHaveTextContent('provisional');
+        expect(badge).toHaveTextContent('Provisional');
         expect(badge).toHaveAttribute('title', expect.stringContaining('evaluation is pending'));
         // Actions stay available on provisional data.
         expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toBeInTheDocument();
@@ -351,7 +351,7 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.fail(host.requests('installed/get')[0], 'failed', 'dotnet is not installed'));
         const banner = screen.getByTestId('sidebar-installed-error');
         expect(banner).toHaveAttribute('role', 'alert');
-        expect(banner).toHaveTextContent('Error: Installed packages could not be loaded: dotnet is not installed');
+        expect(banner).toHaveTextContent('Error: The installed packages could not be loaded: dotnet is not installed');
         // Loading has ended.
         expect(skeletonRows()).toHaveLength(0);
 
@@ -454,7 +454,7 @@ describe('sidebar: Installed section', () => {
 
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 3');
         // SB10 (UX-P3.7b): a provisional project's header says so under All Projects; an authoritative one does not.
-        expect(screen.getByTestId('sidebar-installed-provisional-lib')).toHaveTextContent('provisional');
+        expect(screen.getByTestId('sidebar-installed-provisional-lib')).toHaveTextContent('Provisional');
         expect(screen.queryByTestId('sidebar-installed-provisional-app')).toBeNull();
         // D48 (UX-P3.7c): one tree, a folder row per workspace folder at level 1, its projects at level 2, their packages at level 3.
         const tree = screen.getByRole('tree');

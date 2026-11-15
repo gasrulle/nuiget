@@ -11,6 +11,7 @@ import { useOps } from '../../../shared/store/ops';
 import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import type { BrowseView } from '../../MainShell';
+import { failure } from '../../../shared/updates/sentence';
 
 interface Item {
     id: string;
@@ -18,9 +19,6 @@ interface Item {
 }
 
 const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project. Shift+F10 opens the actions menu.';
-
-/** A reason from the host as the end of a sentence with one full stop (DS-COPY-3). */
-const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
 
 /** The 2 px bar over the list area's top edge while the search runs or runs again (DS-STATE-2, UX-P3.2). */
 const bar = (label: string): React.JSX.Element => <div className="nuiget-installed-progress"><ProgressBar label={label} data-testid="browse-progress" /></div>;
@@ -102,15 +100,15 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
         return <div className="nuiget-browse">{bar('Searching')}</div>;
     }
     if (status === 'error') {
-        return <div className="nuiget-browse"><Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error?.message ?? 'unknown error')}`}</Banner></div>;
+        return <div className="nuiget-browse"><Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{failure('The packages', 'searched', search.error?.message)}</Banner></div>;
     }
     return (
         <div className="nuiget-browse">
             {search.revalidating ? bar('Searching again') : null}
             {sourcesUnavailable
-                ? <Banner severity="warning" data-testid="browse-unavailable-banner" action={{ label: 'Retry', onClick: search.retry }}>Some package sources could not be searched; the results may be incomplete.</Banner>
+                ? <Banner severity="warning" data-testid="browse-unavailable-banner" action={{ label: 'Retry', onClick: search.retry }}>Some package sources could not be searched.</Banner>
                 : null}
-            {search.error ? <Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error.message)}`}</Banner> : null}
+            {search.error ? <Banner severity="error" data-testid="browse-error" action={{ label: 'Retry', onClick: search.retry }}>{failure('The packages', 'searched', search.error.message)}</Banner> : null}
             <Listbox
                 items={items}
                 label={`Search results for ${query}`}
@@ -125,7 +123,7 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
                 onSecondaryActivate={item => {
                     makeCurrent(item.result);
                     if (allMode) {
-                        announce('Under All Projects, Install… in the details picks the projects.');
+                        announce('Under All Projects, Install... in the details picks the projects.');
                         return;
                     }
                     install.install({ packageId: item.result.id, version: item.result.version, sourceUrl: item.result.sourceUrl });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { Banner, cssVars, LiveStatus, Sash } from '../shared/primitives';
-import { sentence } from '../shared/updates/sentence';
+import { failure, sentence } from '../shared/updates/sentence';
 import { parseSearchQuery } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useConfig } from '../shared/store/config';
@@ -164,7 +164,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                         inputRef={searchRef}
                         testId="sidebar-search-input"
                         label="Search packages, or filter with @installed or @updates"
-                        placeholder="Search, or filter: @installed, @updates"
+                        placeholder="Search or type @ to filter"
                         prefixes={PREFIXES}
                         value={query}
                         onChange={setQuery}
@@ -183,7 +183,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                     {/* The Updates pane alone says it with its own banner (UX-P3.10): one message per fact. */}
                     {unsupported && mode !== 'updates' ? <Banner severity="warning" data-testid="sidebar-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner> : null}
                     {installed.error && mode !== 'updates'
-                        ? <Banner severity="error" data-testid="sidebar-installed-error" action={{ label: 'Retry', onClick: installed.refresh }}>{`Installed packages could not be loaded: ${installed.error.message}`}</Banner>
+                        ? <Banner severity="error" data-testid="sidebar-installed-error" action={{ label: 'Retry', onClick: installed.refresh }}>{failure('The installed packages', 'loaded', installed.error.message)}</Banner>
                         : null}
                     {mode !== 'updates' ? (
                         <InstalledSection

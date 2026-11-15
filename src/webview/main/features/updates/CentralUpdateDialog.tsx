@@ -4,6 +4,7 @@ import type { CpmImpactPreview } from '../../../../protocol';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Button, Dialog, DialogGroups } from '../../../shared/primitives';
 import { useProjects } from '../../../shared/store/projects';
+import { failure } from '../../../shared/updates/sentence';
 
 /** The central change the user asked for; the owner of the dialog runs it on confirm. */
 export interface CentralUpdateRequest {
@@ -41,7 +42,7 @@ function describeChange(request: CentralUpdateRequest): string {
 /**
  * What updating a centrally managed package changes (interaction model §5, "CPM central change"): the host's preview
  * (`cpm/preview`) lists every project the central version applies to before anything is submitted, and the one action
- * is *Update central version* (overriding the version in one project is not offered: no `dotnet` command writes a
+ * is *Update Central Version* (overriding the version in one project is not offered: no `dotnet` command writes a
  * `VersionOverride`; an existing one updates in place, N74). The request is cancelled when the dialog closes.
  */
 export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpdateDialogProps): React.JSX.Element | null {
@@ -75,11 +76,11 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
 
     let body: React.ReactNode;
     if (state.status === 'loading') {
-        body = 'Looking up the projects that use the central version…';
+        body = 'Looking up the projects that use the central version...';
     } else if (state.status === 'error') {
         body = (
             <div role="alert" className="nuiget-central-preview-error">
-                {`The projects this change reaches could not be listed: ${state.message}`}
+                {failure('The projects this change reaches', 'listed', state.message)}
                 <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>
             </div>
         );
@@ -100,7 +101,7 @@ export function CentralUpdateDialog({ request, onClose, onConfirm }: CentralUpda
             data-testid="cpm-preview-dialog"
             footer={<>
                 <Button variant="secondary" ref={cancelRef} onClick={onClose}>Cancel</Button>
-                <Button data-testid="cpm-preview-confirm" disabled={state.status !== 'ready'} onClick={onConfirm}>Update central version</Button>
+                <Button data-testid="cpm-preview-confirm" disabled={state.status !== 'ready'} onClick={onConfirm}>Update Central Version</Button>
             </>}
         >
             {body}

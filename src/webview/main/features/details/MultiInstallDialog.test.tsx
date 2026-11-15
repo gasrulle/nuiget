@@ -83,21 +83,21 @@ describe('main panel: Install in All Projects', () => {
         // UX-P3.5: the list is busy while a preview is unanswered, which a capture reach waits on.
         expect(within(dialog).getByRole('list', { name: 'Projects' })).toHaveAttribute('aria-busy', 'true');
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
-        expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeDisabled();
+        expect(within(dialog).getByRole('button', { name: 'Install in 1 Project' })).toBeDisabled();
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
         await waitFor(() => expect(host.requests('cpm/preview')).toHaveLength(2));
         expect(host.requests('cpm/preview')[1].payload).toEqual({ projectPath: C, packageId: 'Polly', version: '8.4.2' });
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: null }));
 
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Lib' })).toBeDisabled());
-        expect(dialog).toHaveTextContent('centrally managed: install it from the project to see the preview');
+        expect(dialog).toHaveTextContent('Centrally managed: install it from the project to see the preview');
         expect(within(dialog).getByRole('list', { name: 'Projects' })).toHaveAttribute('aria-busy', 'false');
         // UX-P3.5 (design-advisor follow-up 3): a project that cannot be picked reads disabled, a pickable one does not.
         expect(within(dialog).getByRole('checkbox', { name: 'Lib' }).closest('li')).toHaveClass('nuiget-multi-install-row--blocked');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' }).closest('li')).not.toHaveClass('nuiget-multi-install-row--blocked');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled();
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 2 Projects' }));
         expectFocusAfterClose('multi-install-two-projects');
 
         expect(host.requests('ops/bulkInstall').map(request => request.payload)).toEqual([{ projectPaths: [A, C], packageId: 'Polly', version: '8.4.2' }]);
@@ -113,9 +113,9 @@ describe('main panel: Install in All Projects', () => {
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: null }));
 
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Lib' })).toBeDisabled());
-        expect(dialog).toHaveTextContent('preview failed');
+        expect(dialog).toHaveTextContent('Could not be previewed');
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 Project' }));
         expectFocusAfterClose('multi-install-one-project');
 
         expect(host.requests('ops/bulkInstall')).toHaveLength(1);
@@ -127,11 +127,11 @@ describe('main panel: Install in All Projects', () => {
         const host = await openPicker('withheld');
         const dialog = screen.getByTestId('multi-install-dialog');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeDisabled();
-        expect(dialog).toHaveTextContent('not listed yet');
+        expect(dialog).toHaveTextContent('Not listed yet');
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
         // A listed project that is not CPM waits for nobody.
-        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeEnabled());
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Install in 1 Project' })).toBeEnabled());
         expect(host.requests('cpm/preview').map(request => request.payload.projectPath)).toEqual([B]);
 
         const stream = host.requests('allProjects/installed')[0];
@@ -140,13 +140,13 @@ describe('main panel: Install in All Projects', () => {
         // The late chunk changes the set of CPM targets: the previews are asked again, one after the other, and Install
         // waits for them.
         await waitFor(() => expect(host.requests('cpm/preview').filter(request => request.payload.projectPath === B)).toHaveLength(2));
-        expect(within(dialog).getByRole('button', { name: 'Install in 1 project' })).toBeDisabled();
+        expect(within(dialog).getByRole('button', { name: 'Install in 1 Project' })).toBeDisabled();
         await hostSays(() => host.respond(host.requests('cpm/preview').filter(request => request.payload.projectPath === B)[1], { preview: null }));
         await waitFor(() => expect(host.requests('cpm/preview').some(request => request.payload.projectPath === C)).toBe(true));
         await hostSays(() => host.respond(host.requests('cpm/preview').filter(request => request.payload.projectPath === C)[0], { preview: null }));
         await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled());
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 2 projects' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 2 Projects' }));
         expectFocusAfterClose('multi-install-after-retry');
         expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A, C]]);
     });
@@ -157,10 +157,10 @@ describe('main panel: Install in All Projects', () => {
         const dialog = screen.getByTestId('multi-install-dialog');
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeDisabled();
-        expect(dialog).toHaveTextContent('could not be read');
+        expect(dialog).toHaveTextContent('Could not be read');
         expect(host.requests('cpm/preview').filter(request => request.payload.projectPath === C)).toHaveLength(0);
         await user.click(within(dialog).getByRole('checkbox', { name: 'App' }));
-        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 project' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Install in 1 Project' }));
         expectFocusAfterClose('multi-install-errored-project');
         expect(host.requests('ops/bulkInstall').map(request => request.payload.projectPaths)).toEqual([[A]]);
     });

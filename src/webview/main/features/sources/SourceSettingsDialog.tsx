@@ -4,6 +4,7 @@ import type { NuGetSource, RequestPayload } from '../../../../protocol';
 import { Banner, Button, Checkbox, ChevronDownIcon, ChevronRightIcon, ConfirmDialog, Dialog, EmptyState, IconButton, ProgressBar, Select, TextField, TrashIcon } from '../../../shared/primitives';
 import { useConfig } from '../../../shared/store/config';
 import { useSources } from '../../../shared/store/sources';
+import { failure } from '../../../shared/updates/sentence';
 
 export interface SourceSettingsDialogProps {
     open: boolean;
@@ -13,9 +14,6 @@ export interface SourceSettingsDialogProps {
 }
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
-
-/** A message as one sentence: one full stop at its end. */
-const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
 
 /** The test id of a source's row: its name lower-cased. */
 export const sourceRowId = (name: string): string => `source-row-${name.toLowerCase()}`;
@@ -30,7 +28,7 @@ function SourceRow({ source, fileLabel, announce, onRemove }: { source: NuGetSou
     const toggle = (): void => {
         setEnabled(source.name, !source.enabled).then(
             () => announce(`${source.name} ${source.enabled ? 'disabled' : 'enabled'}`),
-            (error: unknown) => announce(`${source.name} could not be ${source.enabled ? 'disabled' : 'enabled'}: ${messageOf(error)}`),
+            (error: unknown) => announce(failure(source.name, source.enabled ? 'disabled' : 'enabled', messageOf(error))),
         );
     };
 
@@ -181,7 +179,7 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             ) : null}
             <div className="nuiget-add-source-actions">
                 <Button variant="secondary" onClick={onDone}>Back</Button>
-                <Button type="submit" data-testid="add-source-submit" disabled={adding}>{adding ? 'Adding…' : 'Add source'}</Button>
+                <Button type="submit" data-testid="add-source-submit" disabled={adding}>{adding ? 'Adding...' : 'Add Source'}</Button>
             </div>
         </form>
     );
@@ -234,7 +232,7 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
         queueMicrotask(() => (next ?? addButton.current)?.focus());
         remove(source.name, source.configFile).then(
             () => announce(`${source.name} removed`),
-            (removeError: unknown) => announce(`${source.name} could not be removed: ${messageOf(removeError)}`),
+            (removeError: unknown) => announce(failure(source.name, 'removed', messageOf(removeError))),
         );
     };
 
@@ -249,9 +247,9 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             <div className="nuiget-sources">
                 {loading ? <div className="nuiget-sources-progress"><ProgressBar label="Loading sources" data-testid="source-settings-progress" /></div> : null}
                 {error !== undefined && !revalidating
-                    ? <Banner severity="error" data-testid="source-settings-error" action={{ label: 'Retry', onClick: refresh }}>{`The sources could not be listed: ${sentence(error.message)}`}</Banner>
+                    ? <Banner severity="error" data-testid="source-settings-error" action={{ label: 'Retry', onClick: refresh }}>{failure('The package sources', 'listed', error.message)}</Banner>
                     : null}
-                {sources === undefined && error === undefined ? <div role="status">Loading sources…</div> : null}
+                {sources === undefined && error === undefined ? <div role="status">Loading sources...</div> : null}
                 {sources?.length === 0 ? <EmptyState message="No package sources." data-testid="source-settings-empty" /> : null}
                 {sources !== undefined && sources.length > 0 ? (
                     <ul ref={listRef} className="nuiget-source-list" data-testid="source-settings-list" aria-label="NuGet sources" aria-busy={revalidating || undefined}>
@@ -270,7 +268,7 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             description={adding ? undefined : 'Sources of the selected project\'s config files. Remove deletes a source from the file that declares it.'}
             closeLabel="Close NuGet sources"
             data-testid="source-settings-modal"
-            footer={adding ? undefined : <Button ref={addButton} data-testid="add-source-button" onClick={() => setAdding(true)}>Add source</Button>}
+            footer={adding ? undefined : <Button ref={addButton} data-testid="add-source-button" onClick={() => setAdding(true)}>Add Source...</Button>}
         >
             {body}
             <ConfirmDialog

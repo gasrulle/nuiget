@@ -36,8 +36,8 @@ when none is selected), and the title-bar actions show the restore and pre-relea
 pickers (four actions, DS-OVERFLOW-4); Refresh and Open Full Manager are items of its `...` menu. A sidebar section
 header shows its actions on the section's hover and focus, as the workbench's pane headers do (UX-P3.7b).
 
-The main panel header shows the title "Manage NuGet packages", the Restore after operations and
-Include prerelease check boxes, the project and source selectors (a source the host could not reach
+The main panel header shows the title "Manage NuGet packages", the Restore After Operations and
+Include Pre-Release check boxes, the project and source selectors (a source the host could not reach
 is marked "(unreachable)", and a warning button beside the gear retries it) and a refresh button
 that is disabled while it runs. Its controls have the workbench's sizes (buttons and selects 26 px with a 12 px label,
 check boxes 18 px). When it does not fit, it wraps and every control line ends at the inset.
@@ -103,7 +103,7 @@ Every screen defines each state below that can occur on it, with a marker (§8) 
 |---|---|---|
 | **Loading (first)** | A 2 px indeterminate progress bar along the top edge of the region that waits (a list, a section, the details pane, the README). Installed, Updates, Transitive and the details pane add three skeleton rows under the bar on a first load (DS-STATE-2, T-16); the live region announces the load once (P4.6). Browse results show their rows as soon as the search answers, under the same bar, and each row's icon and authors fill in as the metadata arrives (round 2, F3a; MB3, X23, X34); every other region shows no rows until its data is there | Only when there is no previous data for the key. The bar shows where the work is, never in a shared place, and stays until the last part of the region has arrived. |
 | **Revalidating** | Existing rows stay under the same 2 px bar; the list is `aria-busy` | When a displayed resource was invalidated and is being recomputed. Never blank the list; a provisional answer never replaces rows already shown (X7). |
-| **Provisional** | A "Provisional" badge on the group row or pane header it applies to (each All Projects project row, the main panel's Direct packages row, the sidebar's Installed pane header), at the end inset, never over a border; its tooltip explains that the evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
+| **Provisional** | A "Provisional" badge on the group row or pane header it applies to (each All Projects project row, the main panel's Direct Packages row, the sidebar's Installed pane header), at the end inset, never over a border; its tooltip explains that the evaluation is pending | `fidelity: 'provisional'`. Actions remain enabled except for `unresolved` packages. |
 | **Unresolved** | Version cell shows "unresolved" with tooltip; row actions disabled | `declaration: 'unresolved'`; excluded from update checks. |
 | **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update of a `central` row shows the projects it affects first (main panel, the details button and Ctrl+Enter: dialog; the actions menu on either surface: VS Code's modal); a `central-override` row updates in its project alone without a preview (its badge says so) and joins Update all; an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a CPM dialog. |
 | **Pending op** | The row's actions give way to a spinner and the row is `aria-busy`; in the details pane the buttons are disabled and the running one reads "Installing", "Updating" or "Uninstalling" | From the moment the action is taken (the `ops/*` call, or `ops/progress` with `queued` or `running` for an operation the host started) until the terminal outcome. |
@@ -130,7 +130,7 @@ in "..."; each surface writes counts one way.
 |---|---|---|
 | Install / Update to version | Details panel button; the row's hover/focus action; Ctrl+Enter on a Browse or Updates row; the actions menu | None. Progress shows on the row and in the pane where it started; success shows in place (§4). |
 | Uninstall (single) | Details button, row action, the Delete key on an Installed or Updates row and on an installed Browse row of one project in the sidebar (UX-P3.8), the actions menu | The Delete key asks first, as the Explorer's Delete does: "Uninstall <id> from <project>?" with Uninstall, Cancel and "Do not ask me again". The button, the row action and the menu item name the action and do not ask. |
-| Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update all) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. The sidebar keeps the in-panel dialog, the same body as the main panel's (UX-P3.7d); a central change stays the host's modal (ADR-013). |
+| Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update All) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. The sidebar keeps the in-panel dialog, the same body as the main panel's (UX-P3.7d); a central change stays the host's modal (ADR-013). |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project | Main panel details button and Ctrl+Enter: the pane asks `cpm/preview` first and opens the **Dialog** (`cpm-preview-dialog`) only when an entry exists, listing the projects the central version applies to; choice: *Update Central Version* / Cancel. The actions menu, on either surface: VS Code's modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no CPM confirmation (the central entry stays). |
 | Remove source | Source settings | **ConfirmDialog** (`alertdialog`) over the sources dialog: 'Remove <name>?', "Removes <name> from <file>. This cannot be undone."; Remove / Cancel, focus on Cancel. |
 | Restore project(s) | Transitive banner | None. Whether Restore becomes a command, a menu item or a header button is a feature-phase decision (X39). |
@@ -273,7 +273,7 @@ project has several and one block per project in All Projects; no version select
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |
-| `add-source-button`, `add-source-url`, `add-source-credentials`, `add-source-password`, `add-source-submit`, `add-source-error`, `add-source-clear-text` | The sources dialog's Add source button, the add form's URL field, Credentials toggle, password field and submit button, its inline error under the URL field and the clear-text sentence of a `%VAR%` password (UX-P3.6) |
+| `add-source-button`, `add-source-url`, `add-source-credentials`, `add-source-password`, `add-source-submit`, `add-source-error`, `add-source-clear-text` | The sources dialog's Add Source... button, the add form's URL field, Credentials toggle, password field and submit button, its inline error under the URL field and the clear-text sentence of a `%VAR%` password (UX-P3.6) |
 | `source-settings-list`, `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The sources dialog's list (`aria-busy` while it refreshes), its progress bar over the top, its empty state and its inline error with Retry above the kept list (UX-P3.6) |
 | `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
 | `status-live` | `role="status"` live region |
@@ -288,7 +288,7 @@ project has several and one block per project in All Projects; no version select
 | `updates-unsupported` | Banner of a single unsupported project above its read-only update rows on the Updates tab, the Installed tab's `installed-unsupported` form (UX-P3.10) |
 | `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
 | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' 2 px progress bar (over the list area's top edge: alone on a first search, over the rows while it asks again), empty state ("No results for "x"."; never when a source could not be searched, which `browse-unavailable-banner` says) and inline error with Retry (UX-P3.2) |
-| `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching…" row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
+| `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching..." row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
@@ -304,7 +304,7 @@ State markers (§4) and layer roots:
 | `sidebar-browse-empty`, `sidebar-browse-error` | The sidebar's Browse empty state ("No results for "x".") and inline error with Retry (UX-P3.8) |
 | `updates-unavailable-banner`, `sidebar-updates-unavailable`, `browse-unavailable-banner`, `sidebar-browse-unavailable` | A source could not be read (updates, search) |
 | `sidebar-unsupported` | Banner of a project the 2.0 surfaces cannot change |
-| `sidebar-installed-provisional` | The "provisional" badge of the sidebar's installed section |
+| `sidebar-installed-provisional` | The "Provisional" badge of the sidebar's installed section |
 | `sidebar-installed-provisional-<name>` | The same badge on one project's header under All Projects (UX-P3.7b; on the project's group row since UX-P3.7c) |
 | `sidebar-source` | The sidebar header line that names the active source (UX-P3.7b) |
 | `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog`, `multi-install-button` | Dialog roots (central package management preview, install into several projects), the preview's *Update Central Version* button and the details pane's *Install in Projects...* |
@@ -317,7 +317,7 @@ All Projects (§3; `<name>` = project name lower-cased):
 | `sidebar-updates-empty-<name>`, `sidebar-updates-unsupported-<name>`, `sidebar-updates-error-<name>` | One project's message leaf (empty, unsupported) or error banner in the sidebar's Updates tree under All Projects (UX-P3.7d) |
 | `section-header-updates-project-<name>` | The title of a project's group row in the sidebar's Updates tree (UX-P3.7d) |
 | `sidebar-installed-empty-<name>`, `sidebar-installed-unsupported-<name>`, `sidebar-installed-error-<name>` | One project's message leaf (empty, unsupported) or error banner in the sidebar's Installed tree under All Projects (UX-P3.7c) |
-| `sidebar-update-all-button` | Update all in the sidebar's Updates header |
+| `sidebar-update-all-button` | Update All in the sidebar's Updates header (its count only while the list is known, UX-P3.11) |
 | `section-header-project-<name>` | The title of a project's group row in the Installed and Updates tabs (the Updates tab since UX-P3.1b) and in the sidebar's Installed tree (UX-P3.7c) |
 
 Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).

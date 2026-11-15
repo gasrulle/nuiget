@@ -25,7 +25,7 @@ type CentralBlock = 'central' | 'failed';
  * Management project where the package has a central entry (or whose preview fails) cannot be picked either (N76):
  * installing there changes the central version for every project that uses it, which the single install shows first.
  * A project whose installed list has not arrived, or carries an error, cannot be picked either (P7 phase review).
- * Under All Projects it reads the slice's lists; from a single project (Install in projects…, P9.8) it streams
+ * Under All Projects it reads the slice's lists; from a single project (Install in Projects..., P9.8) it streams
  * `allProjects/installed` itself while it is open, with the slice's reducer, and never activates the slice.
  */
 export function MultiInstallDialog({ open, packageId, version, onClose, onInstall }: MultiInstallDialogProps): React.JSX.Element | null {
@@ -138,7 +138,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
             footer={(
                 <>
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button disabled={picked.size === 0 || previewing} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'project' : 'projects'}`}</Button>
+                    <Button disabled={picked.size === 0 || previewing} onClick={() => onInstall([...picked])}>{`Install in ${picked.size} ${picked.size === 1 ? 'Project' : 'Projects'}`}</Button>
                 </>
             )}
         >
@@ -150,15 +150,15 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                     const id = `${baseId}-${project.path}`;
                     let note = '';
                     if (unsupported(project.path)) {
-                        note = 'unsupported';
+                        note = 'Unsupported project';
                     } else if (!listed(project.path)) {
-                        note = source.chunks.get(project.path)?.error !== undefined ? 'could not be read' : 'not listed yet';
+                        note = source.chunks.get(project.path)?.error !== undefined ? 'Could not be read' : 'Not listed yet';
                     } else if (centralBlock === 'central') {
-                        note = 'centrally managed: install it from the project to see the preview';
+                        note = 'Centrally managed: install it from the project to see the preview';
                     } else if (centralBlock === 'failed') {
-                        note = 'preview failed';
+                        note = 'Could not be previewed';
                     } else if (current !== undefined) {
-                        note = current === version ? `${current} installed` : `installed: ${current}`;
+                        note = current === version ? 'This version is installed' : `Installed: ${current}`;
                     }
                     return (
                         <li key={project.path} className={blocked ? 'nuiget-multi-install-row nuiget-multi-install-row--blocked' : 'nuiget-multi-install-row'}>

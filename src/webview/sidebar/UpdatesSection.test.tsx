@@ -136,7 +136,7 @@ describe('sidebar: Updates section', () => {
         const host = await mountWith();
         await hostSays(() => host.fail(host.requests('updates/get')[0], 'failed', 'the feed is down'));
         const error = screen.getByTestId('sidebar-updates-error');
-        expect(error).toHaveTextContent('Updates could not be checked: the feed is down.');
+        expect(error).toHaveTextContent('The updates could not be checked: the feed is down.');
         expect(screen.queryByTestId('sidebar-updates-empty')).toBeNull();
         expect(screen.queryByTestId('sidebar-updates-progress')).toBeNull();
         await user.click(within(error).getByRole('button', { name: 'Retry' }));
@@ -166,7 +166,7 @@ describe('sidebar: Updates section', () => {
         expect(screen.queryByTestId('sidebar-update-all-button')).toBeNull();
     });
 
-    it('an unsupported project with no package list: its banner alone in @updates mode; under the view\'s banner the pane says "No updates to show." (UX-P3.10)', async () => {
+    it('an unsupported project with no package list: its banner alone in @updates mode; under the view\'s banner the pane says its updates cannot be checked (UX-P3.10, UX-P3.11)', async () => {
         const user = userEvent.setup();
         const host = createFakeHost();
         render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
@@ -178,7 +178,7 @@ describe('sidebar: Updates section', () => {
         // Both panes open: the view's one banner, and the Updates pane's neutral sentence (design-advisor push E ruling, point 4).
         expect(banners()).toHaveLength(1);
         expect(screen.getByTestId('sidebar-unsupported')).toBeInTheDocument();
-        expect(screen.getByTestId('sidebar-updates-empty')).toHaveTextContent('No updates to show.');
+        expect(screen.getByTestId('sidebar-updates-empty')).toHaveTextContent('Updates cannot be checked for this project.');
         expect(screen.queryByText('No updates available.')).toBeNull();
         // @updates mode: the pane's banner alone, no empty sentence and no list.
         await user.type(screen.getByTestId('sidebar-search-input'), '@updates ');
@@ -258,7 +258,7 @@ describe('sidebar: Updates section', () => {
         expect(within(screen.getByTestId('package-row-moq')).queryByTestId('row-action-update')).toBeNull();
         // A failed project is a banner above the tree, never inside a treeitem, and its group row has no count.
         const banner = screen.getByTestId('sidebar-updates-error-bad');
-        expect(banner).toHaveTextContent('Updates of Bad could not be checked: boom.');
+        expect(banner).toHaveTextContent('The updates of Bad could not be checked: boom.');
         expect(updatesList()).not.toContainElement(banner);
         expect(within(screen.getByTestId('group-row-updates-project-bad')).queryByText(/\d/)).toBeNull();
         await user.click(within(banner).getByRole('button', { name: 'Retry' }));
@@ -314,9 +314,9 @@ describe('sidebar: Updates section', () => {
     it('update all button runs bulk update', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: UPDATES });
-        // Newtonsoft.Json is set centrally: it goes through its own preview, not Update all (N76).
+        // Newtonsoft.Json is set centrally: it goes through its own preview, not Update All (N76).
         const button = screen.getByTestId('sidebar-update-all-button');
-        expect(button).toHaveAccessibleName('Update all (1)');
+        expect(button).toHaveAccessibleName('Update All (1)');
         await user.click(button);
         const dialog = screen.getByTestId('confirm-dialog');
         expect(dialog).toHaveTextContent('Serilog: 3.0.0 → 3.1.0');
@@ -334,7 +334,7 @@ describe('sidebar: Updates section', () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [...UPDATES, update('Moq', '4.20.0', '4.20.72')] }, [...PACKAGES, pkg('Moq', '', { versionType: 'unresolved', declaration: 'unresolved' })]);
         expect(within(updatesList()).getByTestId('package-row-moq')).toBeInTheDocument();
-        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update all (1)');
+        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update All (1)');
         await user.click(screen.getByTestId('sidebar-update-all-button'));
         expect(screen.getByTestId('confirm-dialog')).not.toHaveTextContent('Moq');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
@@ -395,7 +395,7 @@ describe('sidebar: Updates section', () => {
         cleanup();
         await allProjects(true);
         expect(screen.getByTestId('sidebar-updates-unavailable')).toBeInTheDocument();
-        expect(screen.getByTestId('sidebar-updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
+        expect(screen.getByTestId('sidebar-updates-empty-lib')).toHaveTextContent('The updates could not be checked.');
         expect(screen.queryByText('No updates available.')).toBeNull();
         expect(within(screen.getByTestId('group-row-updates-project-lib')).queryByText(/\d/)).toBeNull();
     });
@@ -413,7 +413,7 @@ describe('sidebar: Updates section', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
 
-        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update all (1)');
+        expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update All (1)');
         await user.click(screen.getByTestId('sidebar-update-all-button'));
         const dialog = screen.getByTestId('confirm-dialog');
         expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0');

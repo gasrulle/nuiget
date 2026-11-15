@@ -27,7 +27,7 @@ export type RuleStatus = 'hard' | { pending: string };
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -346,7 +346,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] }, scopeExceptStates: { sidebar: SIDEBAR_NO_TRAILER_STATES } }),
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: inGroups('hard', 'main-installed', 'details', 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES] }),
+    // UX-P3.11 (design-advisor opening ruling DO 7): `placeholder`, the side bar search box's placeholder fits its text room at
+    // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170.
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: { pending: 'P3.11' } }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections'] } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -529,7 +531,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
         // skeleton bars and compact message leaves.
         case 'sidebar':
-            return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf'];
+            // UX-P3.11 (design-advisor opening ruling DO 7): the search box's placeholder fits its text room.
+            return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf', 'placeholder'];
         default:
             return ['chrome'];
     }
@@ -932,6 +935,8 @@ export interface StateCells {
     skeletonBars?: number[];
     /** The spinners in the pane headers (`section-header-*`): a first load's cue, never a revalidation's (UX-P3.10 push E). */
     headerSpinners?: number;
+    /** The side bar search box's placeholder: its text, its width in the box's computed font, and the box's text room (UX-P3.11). */
+    placeholderFit?: { text: string; width: number; room: number };
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
     detailsSkeletonMarks?: number[];
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
@@ -1757,6 +1762,14 @@ const stateCells = {
                 paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
+                placeholderFit: (() => {
+                    const input = document.querySelector('[data-testid="sidebar-search-input"]');
+                    if (input === null || !input.placeholder) return undefined;
+                    const style = getComputedStyle(input);
+                    const context = document.createElement('canvas').getContext('2d');
+                    context.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+                    return { text: input.placeholder, width: round(context.measureText(input.placeholder).width), room: round(input.clientWidth - px(style.paddingLeft) - px(style.paddingRight)) };
+                })(),
                 // The first painted mark of every skeleton row in the details pane's tab panel, whatever its density: a comfortable
                 // row's tile (::before), a compact row's bar (::after); from the pane's left (push D ruling, D 11).
                 detailsSkeletonMarks: (() => {
@@ -3591,6 +3604,8 @@ const COMPACT_ROW = 22;
 const COMPACT_LINE = 18.2;
 /** The level-1 row name's x from the side bar pane's edge, per look (DO 4: Modern UI 28, classic 20). */
 const SIDEBAR_NAME_X = { modern: 28, classic: 20 } as const;
+/** The side bar width at which the placeholder clause asserts (UX-P3.11). */
+const PLACEHOLDER_WIDTH = 300;
 /** The details pane's content inset, where its title and tab label start in both looks (DS-INSET-4; UX-P3.10 fix ruling, DEFECTS 1). */
 const DETAILS_CONTENT_X = 20;
 
@@ -3599,7 +3614,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf') || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder');
     if (!own) {
         return undefined;
     }
@@ -3616,6 +3631,15 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
             value: `disabled labels ${labels.length}: colour ${tally(labels.map(label => label.colour))}, opacity ${tally(labels.map(label => label.opacity))} (target ${target}, 1): ${labels.map(label => label.label).join(', ')}`,
             pass: labels.every(label => label.colour === target && label.opacity === '1'),
         };
+    }
+    if (definition.id === 'DS-OVERFLOW-2') {
+        const fit = cells.placeholderFit;
+        if (fit === undefined) {
+            return notMeasurable('no search box placeholder');
+        }
+        // Asserted at the side bar's 300 px; the narrower cells print the reading (P3.7b DO 9a binds the primary width).
+        const asserted = layout.width >= PLACEHOLDER_WIDTH;
+        return { value: `placeholder "${fit.text}" ${fit.width} of ${fit.room} px${asserted ? '' : ` (printed at ${layout.width})`}`, pass: !asserted || fit.width <= fit.room };
     }
     if (definition.id === 'DS-INSET-1' && scope === 'details-skeleton') {
         const marks = cells.detailsSkeletonMarks ?? [];

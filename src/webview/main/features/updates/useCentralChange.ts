@@ -11,7 +11,7 @@ export interface CentralChange {
     ask: (request: CentralUpdateRequest) => void;
     /** Cancel: nothing is sent. */
     close: () => void;
-    /** *Update central version*: runs the request's install or update with its version, then closes. */
+    /** *Update Central Version*: runs the request's install or update with its version, then closes. */
     confirm: () => void;
 }
 

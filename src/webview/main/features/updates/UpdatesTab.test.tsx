@@ -73,14 +73,14 @@ describe('main panel: Updates tab', () => {
     it('lists the updates under the Direct packages group row of one grouped list, with their versions, counts them on the tab and passes axe', async () => {
         await mountWith();
         const list = screen.getByTestId('updates-list');
-        // One grouped list per view (D48, UX-P3.1a): a tree whose first item is the Direct packages group row.
+        // One grouped list per view (D48, UX-P3.1a): a tree whose first item is the Direct Packages group row.
         expect(list).toHaveAttribute('role', 'tree');
         expect(list).toHaveAttribute('aria-multiselectable', 'true');
         expect(list).toHaveAccessibleName('Updates');
         const group = within(screen.getByTestId('group-row-direct')).getByRole('treeitem');
         expect(group).toHaveAttribute('aria-level', '1');
         expect(group).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.getByTestId('section-box-direct')).toHaveTextContent('Direct packages');
+        expect(screen.getByTestId('section-box-direct')).toHaveTextContent('Direct Packages');
         expect(optionOf('Serilog')).toHaveAttribute('aria-level', '2');
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         expect(screen.getByTestId('package-row-serilog')).toHaveTextContent('3.0.0 → 3.1.0');
@@ -130,7 +130,7 @@ describe('main panel: Updates tab', () => {
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         await user.keyboard(' ');
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('An operation on this package is running.'));
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (1)');
     });
 
     it('Enter or the row button updates one package to its latest version, and the row is busy until the outcome', async () => {
@@ -150,7 +150,7 @@ describe('main panel: Updates tab', () => {
         const host = await mountWith();
         // The toolbar box of the measurements (UX-P0.10).
         expect(screen.getByTestId('updates-toolbar')).toContainElement(screen.getByTestId('update-all-button'));
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (2)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (2)');
         expect(screen.getByTestId('update-all-button')).not.toHaveAttribute('title');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
@@ -173,11 +173,11 @@ describe('main panel: Updates tab', () => {
             pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' }),
         ]);
         expect(names()).toContain('Moq');
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (1)');
         await user.click(optionOf('Moq'));
         await user.keyboard(' ');
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq cannot be updated: its reference could not be resolved'));
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (1)');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 1 package?' });
         expect(within(dialog).queryByText(/Moq/)).toBeNull();
@@ -191,7 +191,7 @@ describe('main panel: Updates tab', () => {
         const host = await mountWith();
         await user.click(optionOf('Moq'));
         await user.keyboard(' ');
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
         await user.click(optionOf('Newtonsoft.Json'));
         await user.keyboard(' ');
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Newtonsoft.Json is centrally managed'));
@@ -206,15 +206,15 @@ describe('main panel: Updates tab', () => {
         await mountWith();
         await user.click(optionOf('Moq'));
         await user.keyboard(' ');
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
         await user.type(screen.getByTestId('search-input'), '@updates Se');
         await waitFor(() => expect(names()).toEqual(['Serilog']));
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (1)');
         await user.clear(screen.getByTestId('search-input'));
         await waitFor(() => expect(names()).toHaveLength(3));
         // The bulk set keeps only candidates (UX-P2.1c): Moq came back unselected.
         expect(optionOf('Moq')).toHaveAttribute('aria-selected', 'false');
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (2)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (2)');
     });
 
     it('a centrally managed package asks for the preview, lists the projects it changes and updates only when confirmed', async () => {
@@ -247,7 +247,7 @@ describe('main panel: Updates tab', () => {
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, A, [pkg('Moq', { version: '4.18.0', declaration: 'central-override' })]);
         await user.click(optionOf('Moq'));
         await user.keyboard(' ');
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
         expect(screen.getByTestId('status-live')).not.toHaveTextContent('centrally managed');
         await user.keyboard('{Enter}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
@@ -371,7 +371,12 @@ describe('main panel: Updates tab', () => {
             await hostSays(() => host.fail(host.requests('updates/get')[0], 'failed', 'The feed did not answer'));
             await user.click(screen.getByTestId('updates-tab'));
             const banner = screen.getByTestId('updates-error');
-            expect(banner).toHaveTextContent('Updates could not be checked: The feed did not answer.');
+            expect(banner).toHaveTextContent('The updates could not be checked: The feed did not answer.');
+            // The count leaves the primary while the list is unknown, and the disabled controls say why (UX-P3.11).
+            expect(screen.getByTestId('update-all-button')).toHaveTextContent(/^Update All$/);
+            expect(screen.getByTestId('update-all-button')).toBeDisabled();
+            expect(screen.getByTestId('update-all-button')).toHaveAttribute('title', 'The updates could not be checked.');
+            expect(screen.getByTestId('select-all-button')).toHaveAttribute('title', 'The updates could not be checked.');
             expect(screen.queryByTestId('updates-progress')).toBeNull();
             expect(screen.queryByTestId('updates-list')).toBeNull();
             await user.click(within(banner).getByRole('button', { name: 'Retry' }));
@@ -451,7 +456,7 @@ describe('main panel: Updates tab', () => {
 
             await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
             await user.click(optionOf('Moq').querySelector('.nuiget-row-check') as Element);
-            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (2)');
+            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (2)');
             await user.click(screen.getByTestId('update-all-button'));
             expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
             await user.click(screen.getByTestId('confirm-dialog-confirm'));
@@ -481,7 +486,7 @@ describe('main panel: Updates tab', () => {
             const host = await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Moq', { version: '4.20.0', declaration: 'central-override' })] });
             await user.click(optionOf('Moq'));
             await user.keyboard(' ');
-            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update selected (1)');
+            expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
             await user.keyboard('{Enter}');
             expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
             expect(host.requests('cpm/preview')).toHaveLength(0);
@@ -492,7 +497,7 @@ describe('main panel: Updates tab', () => {
             await mountAll({ sourcesUnavailable: true });
             expect(screen.getAllByTestId('updates-unavailable-banner')).toHaveLength(1);
             // Lib's group: its message leaf says the updates are unknown.
-            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
+            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('The updates could not be checked.');
             expect(screen.queryByText('No updates available.')).toBeNull();
             expect(screen.getByTestId('updates-tab')).not.toHaveAccessibleName(/\d/);
         });
@@ -509,7 +514,7 @@ describe('main panel: Updates tab', () => {
             const user = userEvent.setup();
             const host = await mountAll({}, undefined, undefined, { updates: [], error: 'The feed did not answer' });
             const banner = screen.getByTestId('updates-error-lib');
-            expect(banner).toHaveTextContent('Updates of Lib could not be checked: The feed did not answer.');
+            expect(banner).toHaveTextContent('The updates of Lib could not be checked: The feed did not answer.');
             expect(screen.getByTestId('updates-list')).not.toContainElement(banner);
             expect(screen.getByTestId('group-row-project-lib').querySelector('.nuiget-badge--count')).toBeNull();
             await user.click(within(banner).getByRole('button', { name: 'Retry' }));
@@ -568,7 +573,7 @@ describe('main panel: Updates tab', () => {
             expect(screen.queryByTestId('updates-empty-lib')).toBeNull();
             await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
             expect(screen.queryByTestId('updates-progress')).toBeNull();
-            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('Updates could not be checked.');
+            expect(screen.getByTestId('updates-empty-lib')).toHaveTextContent('The updates could not be checked.');
         });
 
         it('has no axe violations with the All Projects tree and the Update all dialog open', async () => {
@@ -615,7 +620,7 @@ describe('main panel: Updates tab', () => {
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByTestId('update-all-button')).toBeDisabled();
-        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update all (0)');
+        expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (0)');
         await hostSays(() => host.respond(request, { opId: 'op1', status: 'completed', results: [], restores: [] }));
         expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
         expect(optionOf('Moq')).not.toHaveAttribute('aria-busy');

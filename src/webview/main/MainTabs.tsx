@@ -5,6 +5,7 @@ import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useSession } from '../shared/store/session';
 import { useUpdates } from '../shared/store/updates';
+import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
 import type { MainTab } from './MainShell';
 
 const TABS: ReadonlyArray<TabItem<MainTab>> = [
@@ -24,9 +25,10 @@ export function MainTabs({ selected, onSelect, children }: { selected: MainTab; 
     const allProjects = useAllProjects();
     const all = allProjects.updates;
     // All Projects: the sum of the rows once every listed project has answered and every source was checked.
-    const allCount = all.status === 'ready' && !all.sourcesUnavailable && (all.projects ?? []).every(project => all.chunks.get(project.path)?.error === undefined && all.chunks.has(project.path)) ? [...all.chunks.values()].reduce((count, chunk) => count + chunk.updates.length, 0) || undefined : undefined;
+    // The one rule of a known list the toolbars share (UX-P3.11).
+    const allCount = allProjectsKnowledge(all) === 'known' ? [...all.chunks.values()].reduce((count, chunk) => count + chunk.updates.length, 0) || undefined : undefined;
     // No `0` (MU6): an empty answer leaves the tab without a number.
-    const updateCount = session?.selectedProject === ALL_PROJECTS ? allCount : updatesSlice.status === 'ready' && !updatesSlice.sourcesUnavailable ? updatesSlice.rows.length || undefined : undefined;
+    const updateCount = session?.selectedProject === ALL_PROJECTS ? allCount : singleKnowledge(updatesSlice) === 'known' ? updatesSlice.rows.length || undefined : undefined;
     // The Installed badge counts the packages the host listed: no number while loading, for an unsupported project
     // without packages, or for none at all (the Updates rule, MU6). All Projects counts once every project answered.
     const allListed = allProjects.status === 'ready' && (allProjects.projects ?? []).every(project => allProjects.chunks.get(project.path)?.result !== undefined);

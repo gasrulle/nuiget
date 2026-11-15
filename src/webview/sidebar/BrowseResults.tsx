@@ -8,7 +8,7 @@ import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
-import { sentence } from '../shared/updates/sentence';
+import { failure } from '../shared/updates/sentence';
 import { usePackageRows } from './packageRows';
 import { useRowRequests } from './rowRequests';
 
@@ -147,7 +147,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
     if (status === 'error') {
         return (
             <div className="nuiget-sidebar-browse">
-                <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error?.message ?? 'unknown error')}`}</Banner>
+                <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{failure('The packages', 'searched', search.error?.message)}</Banner>
             </div>
         );
     }
@@ -157,7 +157,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
             {search.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="sidebar-browse-unavailable" action={{ label: 'Retry', onClick: search.retry }}>Some package sources could not be searched.</Banner>
                 : null}
-            {search.error ? <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{`The search failed: ${sentence(search.error.message)}`}</Banner> : null}
+            {search.error ? <Banner severity="error" data-testid="sidebar-browse-error" action={{ label: 'Retry', onClick: search.retry }}>{failure('The packages', 'searched', search.error.message)}</Banner> : null}
             <Listbox
                 items={items}
                 label={`Search results for ${query}`}

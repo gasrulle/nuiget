@@ -100,7 +100,7 @@ describe('CentralUpdateDialog', () => {
         expect(dialog()).toHaveAccessibleDescription('Installing it sets the central version in Directory.Packages.props for every project that uses it: 8.4.2.');
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: null }));
         expect(dialog()).toHaveTextContent('The central entry was not found; the change reaches this project only.');
-        expect(confirmButton()).toHaveTextContent('Update central version');
+        expect(confirmButton()).toHaveTextContent('Update Central Version');
     });
 
     it('Cancel closes the dialog and cancels the request', async () => {

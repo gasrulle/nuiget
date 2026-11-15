@@ -4,6 +4,7 @@ import type { AllProjectsState } from '../../../shared/store/allProjects';
 import { metadataKey } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 import { aggregateTransitive, describeOrigins } from './transitiveAggregate';
+import { failure } from '../../../shared/updates/sentence';
 
 type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 
@@ -16,7 +17,7 @@ type GroupItem = Extract<TreeItem, { kind: 'group' }>;
  */
 export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boolean, restore: (projectPaths: string[]) => void): { items: TreeItem[]; message: React.ReactNode } {
     const { transitive } = all;
-    const items: TreeItem[] = [{ kind: 'group', id: 'transitive', level: 1, title: 'Transitive packages', variant: 'group' }];
+    const items: TreeItem[] = [{ kind: 'group', id: 'transitive', level: 1, title: 'Transitive Packages', variant: 'group' }];
     if (!expanded) {
         return { items, message: null };
     }
@@ -25,7 +26,7 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
         return { items, message: <><ProgressBar label="Loading transitive packages" data-testid="transitive-progress" /><Skeleton density="comfortable" /></> };
     }
     if (transitive.status === 'error' && chunks.length === 0) {
-        return { items, message: <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: transitive.refresh }}>{`The transitive packages could not be listed: ${transitive.error?.message ?? 'unknown error'}`}</Banner> };
+        return { items, message: <Banner severity="error" data-testid="transitive-error" action={{ label: 'Retry', onClick: transitive.refresh }}>{failure('The transitive packages', 'listed', transitive.error?.message)}</Banner> };
     }
     const rows = aggregateTransitive(transitive.chunks.values());
     for (const row of rows) {

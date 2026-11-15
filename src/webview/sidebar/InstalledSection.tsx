@@ -3,7 +3,7 @@ import type React from 'react';
 import type { InstalledPackage, InstalledResult, ProjectInstalledChunk } from '../../protocol';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
-import { sentence } from '../shared/updates/sentence';
+import { failure, sentence } from '../shared/updates/sentence';
 import { Badge, Banner, cssVars, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
@@ -118,7 +118,7 @@ function AllProjectsTree({ chunks, filter, announce, revalidating, labelledBy, o
                     count={result === undefined || (result.unsupported !== undefined && result.packages.length === 0) ? undefined : result.packages.length}
                     // SB10 (UX-P3.7b): a provisional project says so under All Projects too (interaction model §4).
                     badges={result?.fidelity === 'provisional'
-                        ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid={`sidebar-installed-provisional-${name}`}><Badge label="provisional" tone="info" /></span>
+                        ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid={`sidebar-installed-provisional-${name}`}><Badge label="Provisional" tone="info" /></span>
                         : undefined}
                 />
             );
@@ -134,7 +134,7 @@ function AllProjectsTree({ chunks, filter, announce, revalidating, labelledBy, o
         <>
             {chunks.filter(chunk => chunk.result === undefined).map(chunk => (
                 <Fragment key={chunk.projectPath}>
-                    <Banner severity="error" data-testid={`sidebar-installed-error-${chunk.projectName.toLowerCase()}`} action={{ label: 'Retry', onClick: onRetry }}>{`Installed packages of ${chunk.projectName} could not be loaded: ${chunk.error ?? 'unknown error'}`}</Banner>
+                    <Banner severity="error" data-testid={`sidebar-installed-error-${chunk.projectName.toLowerCase()}`} action={{ label: 'Retry', onClick: onRetry }}>{failure(`The installed packages of ${chunk.projectName}`, 'loaded', chunk.error)}</Banner>
                 </Fragment>
             ))}
             <Listbox
@@ -194,7 +194,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
         );
         if (chunks.length === 0) {
             content = all.status === 'error'
-                ? <Banner severity="error" action={{ label: 'Retry', onClick: all.refresh }}>{`The projects could not be listed: ${all.error?.message ?? 'unknown error'}`}</Banner>
+                ? <Banner severity="error" action={{ label: 'Retry', onClick: all.refresh }}>{failure('The projects', 'listed', all.error?.message)}</Banner>
                 : <Skeleton density="compact" />;
         } else {
             content = <AllProjectsTree chunks={chunks} filter={filter} announce={announce} revalidating={all.revalidating} labelledBy={titleId} onRetry={all.refresh} />;
@@ -228,7 +228,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
                 count={count}
                 busy={loadingFirst}
                 badges={!all.active && result?.fidelity === 'provisional'
-                    ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="provisional" tone="info" /></span>
+                    ? <span className="nuiget-sidebar-fidelity" title="Versions come from the project files; a full evaluation is pending." data-testid="sidebar-installed-provisional"><Badge label="Provisional" tone="info" /></span>
                     : undefined}
             />
             {expanded ? (

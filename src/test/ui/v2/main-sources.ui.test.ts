@@ -35,7 +35,7 @@ describe('2.0 main panel: sources', () => {
         }, 'at least one source row', 60_000);
         expect(rows.length).to.be.greaterThan(0);
 
-        const add = await dialog.findElement(By.xpath('.//button[normalize-space()="Add source"]'));
+        const add = await dialog.findElement(By.xpath('.//button[normalize-space()="Add Source..."]'));
         await add.click();
         const panel = await findByTestId('add-source-panel', 10_000);
         await (await panel.findElement(By.xpath('.//button[normalize-space()="Back"]'))).click();

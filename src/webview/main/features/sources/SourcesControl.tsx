@@ -52,10 +52,10 @@ export function SourcesControl({ announce, end }: SourcesControlProps): React.JS
                 ))}
             </Select>
             <span className="nuiget-main-actions">
-                <IconButton label="NuGet sources" data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
+                <IconButton label="Manage Package Sources..." data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
                 {failed.length > 0 ? (
                     <span className="nuiget-source-health"><IconButton
-                        label={`${failed.length} source${failed.length === 1 ? '' : 's'} unreachable. Retry`}
+                        label={`Retry ${failed.length} Unreachable Source${failed.length === 1 ? '' : 's'}`}
                         data-testid="source-health-indicator"
                         onClick={() => {
                             bus.request('sources/refresh', {}).catch(() => undefined);

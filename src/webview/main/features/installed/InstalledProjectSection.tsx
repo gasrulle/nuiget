@@ -86,11 +86,11 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             status={busy ? busyStatus(entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
             badges={<>
                 {entry.isImplicit ? <Badge label="SDK" title="Added by the .NET SDK; cannot be uninstalled" /> : null}
-                {entry.declaration === 'props' ? <Badge label="props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}
+                {entry.declaration === 'props' ? <Badge label="Props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}
                 {central ? <Badge label="CPM" title="Centrally managed" /> : null}
                 {entry.versionType === 'floating'
-                    ? <Badge label="floating" title="Floating version pattern" />
-                    : entry.versionType === 'range' ? <Badge label="range" title="Version range" /> : null}
+                    ? <Badge label="Floating" title="Floating version pattern" />
+                    : entry.versionType === 'range' ? <Badge label="Range" title="Version range" /> : null}
                 {isVulnerable(metadata, entry.id) ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
             </>}
             actions={readOnly ? null : (
@@ -119,7 +119,7 @@ export function statusBadges(result: InstalledResult | undefined, marker?: strin
     return (
         <>
             {result?.unsupported ? <Badge label="Unsupported" tone="warning" title={result.unsupported.message} /> : null}
-            {result?.fidelity === 'provisional' ? <Badge label="provisional" tone="info" data-testid={marker === undefined ? 'installed-provisional' : `installed-provisional-${marker}`} title="Versions come from the project files; a full evaluation is pending." /> : null}
+            {result?.fidelity === 'provisional' ? <Badge label="Provisional" tone="info" data-testid={marker === undefined ? 'installed-provisional' : `installed-provisional-${marker}`} title="Versions come from the project files; a full evaluation is pending." /> : null}
         </>
     );
 }

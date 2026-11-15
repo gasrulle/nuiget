@@ -13,7 +13,8 @@ import type { ListView } from '../../MainShell';
 import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
-import { sentence } from '../../../shared/updates/sentence';
+import { failure, sentence } from '../../../shared/updates/sentence';
+import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
 
 const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
@@ -121,7 +122,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
             if (chunk === undefined) {
                 // Its group row spins while the stream runs; after it, no chunk means the updates are unknown, never none.
                 if (!loading) {
-                    list.push({ ...message, cell: 'empty', text: 'Updates could not be checked.' });
+                    list.push({ ...message, cell: 'empty', text: failure('The updates', 'checked') });
                 }
                 return;
             }
@@ -131,7 +132,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
             } else if (chunk.updates.length === 0 && !filtering) {
                 // Empty is not unknown (a source could not be checked), and nothing installed is not "up to date" (MU10).
                 const text = updates.sourcesUnavailable
-                    ? 'Updates could not be checked.'
+                    ? failure('The updates', 'checked')
                     : section.installed !== undefined && section.installed.packages.length === 0 ? 'No packages installed.' : 'No updates available.';
                 list.push({ ...message, cell: 'empty', text });
             }
@@ -278,7 +279,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {section.chunk?.error !== undefined
-                            ? <Banner severity="error" data-testid={`updates-error-${markerOf(section)}`} action={{ label: 'Retry', onClick: updates.refreshUpdates }}>{`Updates of ${section.projectName} could not be checked: ${sentence(section.chunk.error)}`}</Banner>
+                            ? <Banner severity="error" data-testid={`updates-error-${markerOf(section)}`} action={{ label: 'Retry', onClick: updates.refreshUpdates }}>{failure(`The updates of ${section.projectName}`, 'checked', section.chunk.error)}</Banner>
                             : null}
                     </Fragment>
                 ))}
@@ -342,20 +343,23 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
         );
     }
 
+    // A count on the primary only while every project's list is known (MU6; UX-P3.11, the opening ruling's table).
+    const knowledge = allProjectsKnowledge(updates);
+    const primary = bulkUpdateButton(chosenCount, candidateTotal, knowledge);
     return (
         <div className="nuiget-installed nuiget-updates">
-            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={total === 0} title={total === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={() => setConfirming(true)}>
-                {chosenCount > 0 ? `Update selected (${chosenCount})` : `Update all (${candidateTotal})`}
+            <Toolbar label="Bulk actions" data-testid="updates-toolbar" end={<Button data-testid="update-all-button" disabled={total === 0 || primary.disabled} title={primary.title ?? (total === 0 ? noCandidateWhy(knowledge) : undefined)} onClick={() => setConfirming(true)}>
+                {primary.label}
             </Button>}>
-                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={bulk.allSelected} disabled={candidateTotal === 0} title={candidateTotal === 0 ? 'No update in this list can join a bulk update.' : undefined} onClick={bulk.selectAll}>
-                    Select all
+                <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={bulk.allSelected} disabled={candidateTotal === 0} title={candidateTotal === 0 ? noCandidateWhy(knowledge) : undefined} onClick={bulk.selectAll}>
+                    Select All
                 </Button>
             </Toolbar>
             {updates.sourcesUnavailable
-                ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>Some package sources could not be checked; the lists may be incomplete.</Banner>
+                ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>Some package sources could not be checked.</Banner>
                 : null}
             {updates.error
-                ? <Banner severity="error" data-testid="updates-error" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>{`Updates could not be checked: ${sentence(updates.error.message)}`}</Banner>
+                ? <Banner severity="error" data-testid="updates-error" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>{failure('The updates', 'checked', updates.error.message)}</Banner>
                 : null}
             {/* The tree is the tab's scroller (D48). */}
             <div className="nuiget-installed-lists">{body}</div>

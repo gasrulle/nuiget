@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sidebar's Updates section shows a loading bar, a banner for an unsupported project, and one message when updates could not be checked**
 - **The package details and README show a loading bar while they load**
 - **The Updates tab says why an unsupported project's updates cannot be applied**
+- **Buttons, tabs, badges and group headers use Title Case, as VS Code's own do**
+- **A list that could not be loaded, checked or searched says so in one form, with the reason as the source gave it**
+- **Update All shows a count only once the updates are known, and says why it is disabled while they are not**
+- **The sidebar's title bar labels no longer start with "nUIget:"**
+- **The sidebar's search box placeholder fits the box**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**
 - **Installed packages are listed alphabetically**

@@ -131,7 +131,7 @@ describe('main panel: sources', () => {
         expect(row('Contoso')).toBeInTheDocument();
         await hostSays(() => host.fail(host.requests('sources/list')[1], 'failed', 'The NuGet configuration could not be read'));
         const error = screen.getByTestId('source-settings-error');
-        expect(error).toHaveTextContent('The sources could not be listed: The NuGet configuration could not be read.');
+        expect(error).toHaveTextContent('The package sources could not be listed: The NuGet configuration could not be read.');
         expect(screen.queryByTestId('source-settings-progress')).toBeNull();
         expect(error.compareDocumentPosition(screen.getByTestId('source-settings-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         await user.click(within(error).getByRole('button', { name: 'Retry' }));
@@ -159,7 +159,7 @@ describe('main panel: sources', () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await openDialog();
-        await user.click(within(dialog()).getByRole('button', { name: 'Add source' }));
+        await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
         expect(dialog()).toHaveAccessibleName('Add a NuGet source');
         await hostSays(() => host.respond(host.requests('sources/configFiles')[0], { configFiles: [{ path: '/w/nuget.config', label: 'Workspace' }, { path: '/home/me/NuGet.Config', label: 'User' }] }));
 
@@ -185,7 +185,7 @@ describe('main panel: sources', () => {
         expect(axeRuleOutcome(await axe(document.body), 'aria-valid-attr-value')).toBe('passes');
         await user.type(within(panel).getByLabelText('Username'), 'me');
         await user.type(within(panel).getByLabelText('Password'), '%TOKEN%');
-        await user.click(within(panel).getByRole('button', { name: 'Add source' }));
+        await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
 
         expect(host.requests('sources/add').map(request => request.payload)).toEqual([{ url: 'https://pkgs.example/v3/index.json', name: 'Example', configFile: '/home/me/NuGet.Config', username: 'me', password: '%TOKEN%', storeEncrypted: false }]);
         await hostSays(() => host.respond(host.requests('sources/add')[0], { sources: [...SOURCES, { name: 'Example', url: 'https://pkgs.example/v3/index.json', enabled: true }] }, 2));
@@ -199,7 +199,7 @@ describe('main panel: sources', () => {
         await openDialog();
         await waitFor(() => expect(host.requests('config/get').length).toBeGreaterThan(0));
         await hostSays(() => host.respond(host.requests('config/get')[0], { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 16, isWindows: true }));
-        await user.click(within(dialog()).getByRole('button', { name: 'Add source' }));
+        await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
         const panel = screen.getByTestId('add-source-panel');
         await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');
         await user.click(within(panel).getByRole('button', { name: 'Credentials' }));
@@ -212,7 +212,7 @@ describe('main panel: sources', () => {
         const box = within(panel).getByRole('checkbox', { name: /Stored in clear text/ });
         expect(box).not.toBeChecked();
         expect(box).toBeDisabled();
-        await user.click(within(panel).getByRole('button', { name: 'Add source' }));
+        await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
         expect(host.requests('sources/add')[0].payload.storeEncrypted).toBe(false);
         expect(host.requests('sources/add')[0].payload.password).toBe('pre%TOKEN%post');
     });
@@ -225,14 +225,14 @@ describe('main panel: sources', () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await openDialog();
-        await user.click(within(dialog()).getByRole('button', { name: 'Add source' }));
+        await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
         const panel = screen.getByTestId('add-source-panel');
         expect(within(panel).getByLabelText('URL')).toHaveFocus();
         await user.type(within(panel).getByLabelText('URL'), 'http://feed.local/v3/index.json');
         // UX-P3.6: the warning is a Banner, the option a check box field under it.
         expect(within(panel).getByText('This source uses HTTP, which is not encrypted.')).toBeInTheDocument();
         await user.click(within(panel).getByRole('checkbox', { name: /insecure/ }));
-        await user.click(within(panel).getByRole('button', { name: 'Add source' }));
+        await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
         expect(host.requests('sources/add')[0].payload).toEqual({ url: 'http://feed.local/v3/index.json', allowInsecure: true });
 
         await hostSays(() => host.fail(host.requests('sources/add')[0], 'failed', 'A source with this URL exists'));
@@ -242,7 +242,7 @@ describe('main panel: sources', () => {
         await user.click(within(panel).getByRole('button', { name: 'Back' }));
         expect(dialog()).toHaveAccessibleName('NuGet sources');
         // Focus stays in the dialog, on the button that opened the form.
-        expect(within(dialog()).getByRole('button', { name: 'Add source' })).toHaveFocus();
+        expect(within(dialog()).getByRole('button', { name: 'Add Source...' })).toHaveFocus();
     });
 
     it('an empty or malformed URL is refused inline with aria-invalid and the description (UX-P3.6)', async () => {
@@ -290,7 +290,7 @@ describe('main panel: sources', () => {
         expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org (unreachable)', 'Contoso']);
         expect(selector().options[1]).toHaveAttribute('title', 'ECONNREFUSED');
         const indicator = screen.getByTestId('source-health-indicator');
-        expect(indicator).toHaveAccessibleName('1 source unreachable. Retry');
+        expect(indicator).toHaveAccessibleName('Retry 1 Unreachable Source');
         expect(await axe(container)).toHaveNoViolations();
 
         await userEvent.setup().click(indicator);

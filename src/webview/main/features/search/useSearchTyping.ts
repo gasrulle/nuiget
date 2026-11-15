@@ -6,6 +6,7 @@ import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
 import type { InstallAction } from '../details/useInstallAction';
+import { failure } from '../../../shared/updates/sentence';
 
 /** How long typing pauses before a quick-search, and before a full search when the setting asks for one. */
 export const QUICK_SEARCH_DELAY_MS = 150;
@@ -176,7 +177,7 @@ export function useSearchTyping({ text, setText, browsing, focused, announce, in
             } else {
                 installVersion(versions[0]);
             }
-        }, (error: unknown) => announce(`Versions of ${suggestion.id} could not be listed: ${error instanceof Error ? error.message : String(error)}`));
+        }, (error: unknown) => announce(failure(`The versions of ${suggestion.id}`, 'listed', error instanceof Error ? error.message : String(error))));
     };
 
     const flat = useMemo<Suggestion[]>(

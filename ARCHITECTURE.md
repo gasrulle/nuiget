@@ -609,13 +609,13 @@ links.
   (`AllProjectsTree`, `Listbox` with `groups`); both render their rows through `usePackageRows` (`packageRows.tsx`).
 - `UpdatesSection.tsx` is the Updates section (`section-header-updates`, `sidebar-updates-list`): the committed project's flat `Listbox`
   (`ProjectUpdates`), or under All Projects one compact tree (`AllProjectsUpdatesTree`); both render their rows through `useUpdateRows`
-  (`updateRows.tsx`), and Update all opens the shared `UpdateAllDialog` (UX-P3.7d).
+  (`updateRows.tsx`), and Update All opens the shared `UpdateAllDialog` (UX-P3.7d).
 
 | State (interaction model §4) | What the section shows |
 |---|---|
 | Loading (first) | The 2 px bar over the top of the list area and three skeleton rows in the row's anatomy, in the `Listbox`'s `empty` slot, with no group row; "Loading installed packages" in the live region |
 | Revalidating | The rows stay; the list is `aria-busy`; the 2 px bar over the top of the list area, which moves no row (the header's bar stays for Updates) |
-| Provisional | A "provisional" badge beside the section title, with a tooltip |
+| Provisional | A "Provisional" badge beside the section title, with a tooltip |
 | Unresolved | Version "unresolved" with a tooltip (`Row.versionTitle`, `UNRESOLVED_HINT`), status "Its reference could not be resolved.", the row disabled and without action |
 | Centrally managed | A "CPM" badge read as "Centrally managed"; uninstalls from this project (the central entry stays); an update goes through the host's actions menu and its modal preview (P6.4) |
 | Unsupported project | A warning banner "Unsupported project: <reason>"; the rows are listed without actions |
@@ -657,10 +657,10 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 | Part | Behaviour |
 |---|---|
 | Title | `h1` "Manage NuGet packages"; it takes the free space, so the controls sit at the end of the header |
-| Restore after operations | A checkbox bound to the session (`session/set { restoreEnabled }`); the sidebar's shield shows the same value |
+| Restore After Operations | A checkbox bound to the session (`session/set { restoreEnabled }`); the sidebar's shield shows the same value |
 | Project selector (`project-selector`) | The projects slice; "All Projects (N)" with two or more; disabled until the session has arrived. A choice is a `session/set` intent, shown at once |
 | Source selector (`source-selector`) | The session's source; `SourcesControl` lists the enabled sources and marks one in `useSources().failed` "(unreachable)" with its error as the tooltip; while any is failed, `source-health-indicator` beside the gear sends `sources/refresh`, which resets the health tracker, and the slice follows through `sources/health` |
-| Include prerelease | A checkbox bound to the session (`session/set { includePrerelease }`) |
+| Include Pre-Release | A checkbox bound to the session (`session/set { includePrerelease }`) |
 | Refresh | `refresh/all` once, disabled with a loading icon until it is answered; "Refreshed" or "Refresh failed" in the live region. A `ProgressBar` lies over the bottom of the search area while the refresh runs or the shown tab's list revalidates (Browse draws its own) |
 | Search box | `parseSearchQuery` (`src/webview/shared/search`): `@installed` and `@vulnerable` select Installed, `@updates` selects Updates, and the text after the prefix is the list's filter; a plain text is a browse search, which changes nothing here until the search feature runs it. Escape clears a box with text and leaves an empty one. Clear (with text) and Filters (`@`, or back to empty) are buttons inside the box with `tabIndex={-1}` that keep the focus in it, on both surfaces. Choosing the other tab ends a filter mode |
 | Tabs | `Tabs`; `ui/selectProject` with `initialTab` selects it (the host applied the project already); `ui/focusSearch` focuses the box. The chosen tab is kept in the webview state (`viewState`, `src/webview/shared/viewState.ts`) and restored when the panel reopens. Installed carries the count and, once the lite metadata is known, a vulnerability badge (`TabItem.badge`, tone `error`) |
@@ -672,11 +672,11 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
 
 - **One tree.** Each view is one `Listbox` with `groups` (`installed-list`, `role="tree"`, D48, UX-P2.1d): for a
-  single project the `direct` group row (`Direct packages`, its count badge at the end inset; the text `k of N` while a filter is on, the total while the
+  single project the `direct` group row (`Direct Packages`, its count badge at the end inset; the text `k of N` while a filter is on, the total while the
   vulnerability data of `@vulnerable` is unknown) over its packages; in All Projects a `project-<name>` group row per
   project from the `allProjects` slice, under a `folder-<folder>` group row with two or more workspace folders. Enter,
   Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
-  `Unsupported` and `provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
+  `Unsupported` and `Provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
   presentation; its error with Retry is a `Banner` above the tree, because a tree owns treeitems only; an action-less
   sentence (empty, unsupported) is a text-only message leaf of its group under All Projects. The Transitive group comes last. The tree is the tab's scroller, with real virtualization
   (UX-P2.1e); a group row past the rendered window is not in the document until the list scrolls to it. A list as high as its rows
@@ -728,7 +728,7 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
   reported, so a per-step report does not drop the others. Enter or the button sends
   `ops/update` with the row's `sourceUrl`; the row is busy from the request on and leaves with the host's next
   list. `@updates <text>` filters by id.
-- **Bulk flow.** `select-all-button` and `update-all-button` ("Update all (n)" or "Update selected (n)") take the rows
+- **Bulk flow.** `select-all-button` and `update-all-button` ("Update All (n)" or "Update Selected (n)"; "Update All" without a count while the list is not known, its title saying why, by the one rule of `src/webview/shared/updates/updateAll.ts` that the tab badge, both main toolbars and the sidebar's Update All read, UX-P3.11) take the rows
   that `updateCandidates` (`src/webview/shared/installed/rules.ts`, both surfaces' one rule, UX-P3.7d) admits: installed and
   resolvable, not `central`, not busy, not an unsupported project's; `UpdateAllDialog` (`src/webview/shared/updates/`, the sidebar's body too) lists `id: from → to` and Confirm sends `ops/bulkUpdate`.
 - **Centrally managed packages.** Enter or the button on a package whose version `Directory.Packages.props` sets
@@ -738,7 +738,7 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
 - **Unknown is not empty.** `sourcesUnavailable` is a warning banner with Retry over the list
   (`updates-unavailable-banner`); when no row came back the banner is the cell's one message (no list, no sentence:
   `sourcesUnavailable` cannot tell a partial answer from none; UX-P3.1b), and only the All Projects leaf of a project says
-  "Updates could not be checked."; "No updates available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9, UX-P3.1b): one
+  "The updates could not be checked."; "No updates available." only follows a complete answer. In All Projects the tab is `AllProjectsUpdates` (P5.9, UX-P3.1b): one
   tree over the `allProjects/updates` stream, a group row per project (`group-row-project-<name>`, ids from
   `shared/allProjects/folderGroups.tsx`'s `projectGroupIds`, as the Installed tab's) under a group row per workspace
   folder when there are two or more; a project's action-less sentence (no updates, nothing installed, unknown, an
@@ -749,7 +749,7 @@ complete (not while loading, not with `sourcesUnavailable`, never `0`).
 - **State cells (UX-P3.1b).** The tab draws its own 2 px bar over the list area's top edge while the list loads or asks
   again (`updates-progress`; under Browse the Refresh button's busy state is the cue, UX-P3.10), three skeleton rows on a first load, the
   empty state `updates-empty` ("No packages installed." or "No updates available.") and the inline error
-  `updates-error` with Retry; a host's reason ends as one sentence (`sentence`, `src/webview/shared/updates/sentence.ts`, UX-P3.7d).
+  `updates-error` with Retry; a host's reason ends as one sentence (`sentence`, `src/webview/shared/updates/sentence.ts`, UX-P3.7d), and every read that failed says so in one form, `failure(what, verb, reason?)` beside it: "The <what> could not be <verb>: <reason>." with the host's reason as written, or without it when there is none (UX-P3.11).
 
 The sidebar's `UpdatesSection` (`src/webview/sidebar`) reads the same slice: compact rows in
 `sidebar-updates-list` under `section-header-updates`, the count only when known, Enter and the row button
@@ -780,7 +780,7 @@ is why it is not a dialog.
   found becomes the current row. A navigation that names a version (View details of a sidebar row) carries it in
   the search slice (`version`), and the details select that version rather than the latest found (P7.5a). Leaving browse clears the search and cancels its request.
   The suggestions are grouped per source in the order the answer names them, under a header when two or more
-  sources answered (`role="group"`); while the first answer is on its way a disabled `Searching…` row shows, and later
+  sources answered (`role="group"`); while the first answer is on its way a disabled `Searching...` row shows, and later
   answers replace the list in place (P9.6). ArrowRight on a suggestion asks `package/versions` of the suggestion's
   source under the committed prerelease flag and shows its five newest versions under a `‹ <id>` header; ArrowLeft
   goes back, Enter on a version shows the details at that version. Ctrl+Enter installs the highlighted suggestion's
@@ -798,10 +798,10 @@ is why it is not a dialog.
   Updates pane on a first load and a revalidation; a pane header's spinner shows on a first load only, a revalidation being the
   pane's bar alone with the rows kept and the list `aria-busy` (UX-P3.10). The Updates pane's failed check is
   `sidebar-updates-error`, and an unsupported project's `sidebar-updates-unsupported` banner shows in `@updates` mode, above the
-  read-only rows or alone when the project lists no package; under the view's banner such a pane says "No updates to show."
+  read-only rows or alone when the project lists no package; under the view's banner such a pane says "Updates cannot be checked for this project."
   (UX-P3.10). `sidebar-browse-empty` and `sidebar-browse-error` mark the other Browse cells. The sidebar asks no suggestions; it enables the sources slice (`sources/list`, then `sources/health` and the sources invalidations) to name the active source on its `sidebar-source` header line, and asks `config/get` once, for `workbench.tree.indent` (UX-P3.7b). Its pane headers show no count badge at 0 and `k of N` while a filter is on (`directCount`, `src/webview/shared/counts.ts`); an All Projects project header carries the provisional badge (`sidebar-installed-provisional-<name>`); a filter mode opens its section without writing the kept layout.
   Installed and Updates rows are sorted by id, as the main panel's (P9.10), and an update row passes `nextVersion`.
-  Update all in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
+  Update All in the Updates header (`sidebar-update-all-button`, an arrow `IconButton` beside the count) opens a
   `UpdateAllDialog`, the main panel's body, that lists the updates (per project under All Projects) and sends `ops/bulkUpdate`, or one
   `ops/bulkUpdateAllProjects`; it takes the rows of `updateCandidates`, the main panel's rule (installed and
   resolvable, not `central` (N76), not busy, not an unsupported project's; UX-P3.7d). The project rows of both All Projects trees carry no tooltip (UX-P3.7c, UX-P3.7d).
@@ -860,10 +860,10 @@ is known; a choice is `session/set { selectedSource }`) and the gear (`source-se
 source (`source-row-<name>`) with an enable checkbox named by the source and described by its URL and the config file
 that declares it (by its label), and Remove (`source-row-remove-<name>`), which asks in one `ConfirmDialog` stacked over
 the dialog (interaction model §5). The list's cells are a progress bar over the top while it loads or refreshes (the rows
-kept, the list `aria-busy`), "No package sources." and an inline error with Retry above the kept list (UX-P3.6). Add source switches the dialog to a form (`add-source-panel`): the
+kept, the list `aria-busy`), "No package sources." and an inline error with Retry above the kept list (UX-P3.6). Add Source... switches the dialog to a form (`add-source-panel`): the
 config file (`sources/configFiles`, nearest first), URL, name, and credentials (password encryption on Windows only);
 an `http:` URL needs the insecure option, which SDK 10 requires. Focus moves to the URL field when the form opens and
-back to Add source when it closes.
+back to Add Source... when it closes.
 
 The host answers `sources/list`, `sources/refresh` and the four mutations with each source's `configFile`:
 `Catalog.sources(dir, signal, { configFiles: true })` attributes the cached listing at read time with `withConfigFiles`
