@@ -2,12 +2,12 @@ import { useCallback } from 'react';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 
 export interface RowRequests {
-    /** Ctrl+Enter (Cmd+Enter on macOS): the package in the full view, at this version. */
+    /** Ctrl+Enter (Cmd+Enter on macOS): the package in the main panel, at this version. */
     viewDetails: (packageId: string, version: string | undefined) => void;
 }
 
 /**
- * The row request the sidebar's lists share: "View package details" (`ui/viewPackage`, which opens the main panel on the
+ * The row request the sidebar's lists share: "View Package Details" (`ui/viewPackage`, which opens the main panel on the
  * package); a failed request is said through the view's live region. The actions menu is VS Code's (ADR-013 Decision 4).
  */
 export function useRowRequests(announce: (message: string) => void): RowRequests {

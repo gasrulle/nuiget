@@ -44,7 +44,7 @@ export class MainPanelHost extends WebviewHost {
         return MainPanelHost.current;
     }
 
-    /** Open the panel and navigate to a package (used by the sidebar's "View package details"). */
+    /** Open the panel and navigate to a package (used by the sidebar's "View Package Details"). */
     public static navigateToPackage(services: HostServices, packageId: string, version?: string): void {
         MainPanelHost.createOrShow(services).sendOrQueue('ui/navigateToPackage', { packageId, version });
     }

@@ -39,7 +39,7 @@ describe('pickProject', () => {
 
     it('says that there are no projects and answers nothing', async () => {
         await expect(pickProject([], '')).resolves.toBeUndefined();
-        expect(information).toHaveBeenCalledWith('No .NET project files found in the workspace.');
+        expect(information).toHaveBeenCalledWith('nUIget: No .NET projects found in this workspace.');
     });
 
     it('several projects: All Projects first, then the projects by name, the current one active; accept answers its value', async () => {
@@ -69,7 +69,7 @@ describe('pickSource', () => {
 describe('pickVersion', () => {
     it('says that there are no versions and answers nothing', async () => {
         await expect(pickVersion('Serilog', [])).resolves.toBeUndefined();
-        expect(information).toHaveBeenCalledWith('No versions found for Serilog');
+        expect(information).toHaveBeenCalledWith('nUIget: No versions of Serilog were found.');
         expect(showQuickPick).not.toHaveBeenCalled();
     });
 
@@ -103,7 +103,7 @@ describe('pickSingleProject', () => {
         expect(showQuickPick).not.toHaveBeenCalled();
         showQuickPick.mockImplementationOnce(async items => (items as Item[])[1]);
         await expect(pickSingleProject('t', 'p', [{ projectPath: '/b', projectName: 'B', version: '2.0.0' }, { projectPath: '/a', projectName: 'A' }])).resolves.toBe('/b');
-        expect(shownItems().map(item => [item.label, item.description])).toEqual([['A', ''], ['B', 'v2.0.0']]);
+        expect(shownItems().map(item => [item.label, item.description])).toEqual([['A', ''], ['B', '2.0.0']]);
     });
 });
 

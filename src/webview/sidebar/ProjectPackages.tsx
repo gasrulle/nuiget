@@ -38,8 +38,8 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
             items={items}
             labelledBy={labelledBy}
             hint={readOnly
-                ? 'Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'
-                : 'Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
+                ? 'Read-only. Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.'
+                : 'Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.'}
             testId={testId}
             density="compact"
             selectedId={selectedId}

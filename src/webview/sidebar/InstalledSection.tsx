@@ -141,7 +141,7 @@ function AllProjectsTree({ chunks, filter, announce, revalidating, labelledBy, o
                 items={items}
                 groups={groups}
                 labelledBy={labelledBy}
-                hint="Enter or Delete uninstalls from the row's project; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
+                hint="Enter or Delete uninstalls from the row's project; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu."
                 testId="sidebar-installed-list"
                 density="compact"
                 selectedId={selectedId}

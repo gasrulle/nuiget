@@ -33,7 +33,7 @@ owned by the host (`SessionStore`). Changing it in one surface changes it in the
 broadcast. The active project and source are always visible: in the main panel as the header's selectors; in the
 sidebar the view title names the project, the header line under it names the source (`sidebar-source`; "All sources"
 when none is selected), and the title-bar actions show the restore and pre-release state and the project and source
-pickers (four actions, DS-OVERFLOW-4); Refresh and Open Full Manager are items of its `...` menu. A sidebar section
+pickers (four actions, DS-OVERFLOW-4); Refresh and Manage NuGet Packages are items of its `...` menu. A sidebar section
 header shows its actions on the section's hover and focus, as the workbench's pane headers do (UX-P3.7b).
 
 The main panel header shows the title "Manage NuGet packages", the Restore After Operations and
@@ -108,7 +108,7 @@ Every screen defines each state below that can occur on it, with a marker (§8) 
 | **Centrally managed** | "CPM" badge on the row; version cell shows central version | `declaration: 'central' \| 'central-override'`. An update of a `central` row shows the projects it affects first (main panel, the details button and Ctrl+Enter: dialog; the actions menu on either surface: VS Code's modal); a `central-override` row updates in its project alone without a preview (its badge says so) and joins Update all; an uninstall removes the project's reference only and keeps the central entry (ADR-004), without a CPM dialog. |
 | **Pending op** | The row's actions give way to a spinner and the row is `aria-busy`; in the details pane the buttons are disabled and the running one reads "Installing", "Updating" or "Uninstalling" | From the moment the action is taken (the `ops/*` call, or `ops/progress` with `queued` or `running` for an operation the host started) until the terminal outcome. |
 | **Succeeded op** | In place: the row and the pane show the new state (the version, the button label, the row leaving or joining a list); the live region announces it; the status bar item shows the operation while it runs | No toast for a single operation (D50, round 1). A bulk operation shows a progress notification (N of M) while it runs and a summary toast. |
-| **Partial / failed op** | Warning toast (VS Code notification) with Show output, the output channel revealed on failure, + row returns to its real state after invalidation | Never leave optimistic state on failure. |
+| **Partial / failed op** | Warning toast (VS Code notification) with Show Output, the output channel revealed on failure, + row returns to its real state after invalidation | Never leave optimistic state on failure. |
 | **Stale selection** | Details header shows the project the selection belongs to; actions disabled until re-validated | When the active project changes while a package is selected, the details panel keeps its content but becomes read-only until the new installed data confirms the package (then it re-enables) or clears it (package not in new project). |
 | **Empty** | Welcome-style, as the workbench's empty views: one sentence at the region's content inset, start-aligned, ending with a period, and at most one button under it; never centred | e.g. "No packages installed.", "No updates available.", "No results for "x"." |
 | **Offline / sources unreachable** | Warning banner at the top of the affected list with "Retry" | `sourcesUnavailable: true` on updates/search; never render as "no updates". |
@@ -210,7 +210,7 @@ same rules; the Installed list has no Ctrl+Enter action.
   runs an exact Browse search for the id and selects it (`ui/navigateToPackage`: the search box is filled with the
   id, browse mode runs, the package is selected and the Details tab shows). The actions menu reaches the right tab
   through the row's context and `ui/selectProject`; a key on the row carries only the id (`ui/viewPackage`) and lands
-  in Browse until the UX plan's contract item adds the project to that request. Open Full Manager only reveals the
+  in Browse until the UX plan's contract item adds the project to that request. Manage NuGet Packages in the sidebar's `...` menu only reveals the
   panel.
 - Source settings open in the main panel (`ui/openSourceSettings`) even when triggered from the
   sidebar.

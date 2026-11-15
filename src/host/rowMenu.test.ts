@@ -69,9 +69,9 @@ describe('the row menu commands (UX-P2.9a)', () => {
         const ask = vi.mocked(vscode.window.showWarningMessage);
         ask.mockResolvedValueOnce(undefined);
         await commands.get('nuiget.row.updateLatest')?.(row({ webviewSection: 'updateRow', 'nuiget.central': true }));
-        expect(ask).toHaveBeenCalledWith(expect.stringContaining('central version'), expect.objectContaining({ modal: true, detail: expect.stringContaining('A') }), 'Update central version');
+        expect(ask).toHaveBeenCalledWith(expect.stringContaining('central version'), expect.objectContaining({ modal: true, detail: expect.stringContaining('A') }), 'Update Central Version');
         expect(handlers.submitFromHost).not.toHaveBeenCalled();
-        ask.mockResolvedValueOnce('Update central version' as never);
+        ask.mockResolvedValueOnce('Update Central Version' as never);
         await commands.get('nuiget.row.updateLatest')?.(row({ webviewSection: 'updateRow', 'nuiget.central': true }));
         expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
     });
@@ -132,7 +132,7 @@ describe('the row menu commands (UX-P2.9a)', () => {
         expect(pickers.pickProjectsForInstall).toHaveBeenCalled();
         expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
         await commands.get('nuiget.row.uninstall')?.(row({ projectPath: ALL_PROJECTS }));
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Select a specific project for this action.');
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('nUIget: Select a specific project for this action.');
         expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
     });
 });

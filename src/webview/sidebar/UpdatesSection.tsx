@@ -153,7 +153,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
             items={items}
             groups={groups}
             labelledBy={labelledBy}
-            hint="Enter updates to the latest version in the row's project (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
+            hint="Enter updates to the latest version in the row's project (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu."
             testId="sidebar-updates-list"
             density="compact"
             selectedId={selectedId}

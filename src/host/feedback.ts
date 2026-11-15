@@ -34,6 +34,11 @@ const TITLES: Record<OperationKind, string> = {
 };
 
 const PREFIX = 'nUIget: ';
+/** The button of a failure toast, compared with the choice it returns. */
+const SHOW_OUTPUT = 'Show Output';
+
+/** A host reason inside a sentence that ends with its own period: the reason's trailing periods go (verbatim otherwise). */
+const bare = (reason: string): string => reason.replace(/\.+$/, '');
 
 const plural = (count: number, one: string, many = `${one}s`): string => `${count} ${count === 1 ? one : many}`;
 
@@ -69,7 +74,7 @@ function attempt(outcome: OperationOutcome): string {
         case 'update':
             return `Update of ${id} in ${project}`;
         case 'remove':
-            return `Uninstall of ${id} in ${project}`;
+            return `Uninstall of ${id} from ${project}`;
         default:
             return `Restore of ${project}`;
     }
@@ -94,8 +99,8 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
     const open = new Map<string, OpenNotification>();
 
     const warn = (text: string): void => {
-        void vscode.window.showWarningMessage(PREFIX + text, 'Show output').then(choice => {
-            if (choice === 'Show output') {
+        void vscode.window.showWarningMessage(PREFIX + text, SHOW_OUTPUT).then(choice => {
+            if (choice === SHOW_OUTPUT) {
                 deps.output.show(true);
             }
         });
@@ -160,7 +165,7 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
             const kind = outcome.results[0]?.kind ?? 'restore';
             const packageId = outcome.results[0]?.packageId;
             if (outcome.status === 'rejected') {
-                warn(`The operation was not started: ${outcome.message ?? 'the queue is full'}`);
+                warn(`The operation was not started: ${bare(outcome.message ?? 'the queue is full')}.`);
             } else if (outcome.status === 'completed') {
                 inform(`${bulkSentence(kind, packageId, total, total)}.`);
             } else {
@@ -172,16 +177,16 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
         }
         switch (outcome.status) {
             case 'completed':
-                inform(doneSentence(outcome));
+                inform(`${doneSentence(outcome)}.`);
                 return;
             case 'partial':
-                warn(`${doneSentence(outcome)}, but the restore failed: ${outcome.restore?.error ?? outcome.message ?? 'unknown error'}`);
+                warn(`${doneSentence(outcome)}, but the restore failed: ${bare(outcome.restore?.error ?? outcome.message ?? 'unknown error')}.`);
                 return;
             case 'failed':
-                warn(`${attempt(outcome)} failed: ${outcome.message ?? outcome.edit?.error ?? 'unknown error'}`);
+                warn(`${attempt(outcome)} failed: ${bare(outcome.message ?? outcome.edit?.error ?? 'unknown error')}.`);
                 return;
             case 'rejected':
-                warn(`${attempt(outcome)} was not started: ${outcome.message ?? 'the queue is full'}`);
+                warn(`${attempt(outcome)} was not started: ${bare(outcome.message ?? 'the queue is full')}.`);
                 return;
             default:
         }

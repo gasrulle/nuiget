@@ -13,7 +13,7 @@ export function visiblePackages(result: InstalledResult, filter: string): Instal
 
 /**
  * The actions and the row of an installed package, shared by the single project's list and the All Projects tree (UX-P3.7c):
- * Enter, Delete or the row's button uninstalls from the row's own project, Ctrl+Enter opens the full view, Shift+F10 the
+ * Enter, Delete or the row's button uninstalls from the row's own project, Ctrl+Enter opens the main panel, Shift+F10 the
  * actions menu. A package that cannot be uninstalled has no button and Enter says why; a centrally managed one uninstalls
  * from this project and keeps its central entry.
  */

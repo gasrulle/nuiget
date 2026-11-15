@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update All shows a count only once the updates are known, and says why it is disabled while they are not**
 - **The sidebar's title bar labels no longer start with "nUIget:"**
 - **The sidebar's search box placeholder fits the box**
+- **Consistent wording in menus, pickers and notifications**
 - **The sidebar's actions menu is VS Code's own**
 - **The sidebar's All Projects updates are one tree with folder and project rows**
 - **Installed packages are listed alphabetically**

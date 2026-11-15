@@ -163,7 +163,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                 label={`Search results for ${query}`}
                 hint={all.active
                     ? 'Enter chooses what to do and the projects to install into or uninstall from; Delete names the actions menu (Shift+F10), which uninstalls.'
-                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Delete uninstalls an installed package from it; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.'}
+                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Delete uninstalls an installed package from it; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.'}
                 testId="sidebar-browse-list"
                 density="compact"
                 busy={search.revalidating}

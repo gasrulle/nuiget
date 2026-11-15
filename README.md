@@ -27,7 +27,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   split between them. Every row has an actions menu (right-click or Shift+F10): install the latest or a chosen
   version, update, uninstall, copy the package ID, or view the package in the main panel. A line above the search
   box names the active package source. The title bar holds the restore and prerelease switches and the project and
-  source pickers; Refresh and Open Full Manager are in its `...` menu, and the Updates header has Update All.
+  source pickers; Refresh and Manage NuGet Packages are in its `...` menu, and the Updates header has Update All.
 - **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
   Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several. Each row acts on
   its own project, Update All covers every project, and a search result can be installed into several projects at

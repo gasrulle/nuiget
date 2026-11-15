@@ -1,6 +1,6 @@
 /**
  * Sidebar host: the Activity Bar `WebviewView`. Registers the shared handlers plus the
- * requests that only the host's own UI serves (the retired context menu request until P4.1, open full view), keeps the view title in sync with the
+ * requests that only the host's own UI serves (the retired context menu request until P4.1, open the main panel), keeps the view title in sync with the
  * active project, and exposes the title-bar command implementations (pickers/toggles).
  */
 
@@ -98,13 +98,13 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     async togglePrerelease(): Promise<void> {
         const next = !this.services.session.snapshot.includePrerelease;
         await this.services.session.apply({ includePrerelease: next }, 'sidebar');
-        vscode.window.setStatusBarMessage(`nUIget: Pre-release ${next ? 'enabled' : 'disabled'}`, 2000);
+        vscode.window.setStatusBarMessage(`nUIget: Pre-release versions are ${next ? 'included' : 'excluded'}.`, 2000);
     }
 
     async toggleRestore(): Promise<void> {
         const next = !this.services.session.snapshot.restoreEnabled;
         await this.services.session.apply({ restoreEnabled: next }, 'sidebar');
-        vscode.window.setStatusBarMessage(`nUIget: Restore after operations ${next ? 'enabled' : 'disabled'}`, 2000);
+        vscode.window.setStatusBarMessage(`nUIget: Restore after operations is ${next ? 'on' : 'off'}.`, 2000);
     }
 
     refresh(): void {
@@ -116,7 +116,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     private async showContextMenu(request: ContextMenuRequest): Promise<boolean> {
         const isAllProjectsBrowse = (!request.projectPath || request.projectPath === ALL_PROJECTS) && request.context === 'browse';
         if ((!request.projectPath || request.projectPath === ALL_PROJECTS) && !isAllProjectsBrowse) {
-            void vscode.window.showWarningMessage('Select a specific project for this action.');
+            void vscode.window.showWarningMessage('nUIget: Select a specific project for this action.');
             return false;
         }
         const action = await pickContextMenuAction({

@@ -54,7 +54,7 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
     switch (action) {
         case 'copy-id':
             await vscode.env.clipboard.writeText(request.packageId);
-            vscode.window.setStatusBarMessage(`Copied "${request.packageId}" to clipboard`, 2000);
+            vscode.window.setStatusBarMessage(`nUIget: Copied "${request.packageId}" to the clipboard.`, 2000);
             return true;
         case 'view-details':
             MainPanelHost.navigateToPackage(services, request.packageId, request.latestVersion ?? request.installedVersion);
@@ -66,13 +66,13 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
     // After copying and showing, which need no project: a transitive row under All Projects has none.
     const isAllProjectsBrowse = (!request.projectPath || request.projectPath === ALL_PROJECTS) && request.context === 'browse';
     if ((!request.projectPath || request.projectPath === ALL_PROJECTS) && !isAllProjectsBrowse) {
-        void vscode.window.showWarningMessage('Select a specific project for this action.');
+        void vscode.window.showWarningMessage('nUIget: Select a specific project for this action.');
         return false;
     }
 
     // An install without a version writes a floating `*` (gotcha "A webview install without a version").
     if (action === 'install-latest' && !request.latestVersion) {
-        void vscode.window.showWarningMessage(`No latest version of ${request.packageId} is known`);
+        void vscode.window.showWarningMessage(`nUIget: No latest version of ${request.packageId} is known.`);
         return false;
     }
 
@@ -84,7 +84,7 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
             const { versions, sourcesUnavailable } = await services.catalog.versions(sourceDirectory(services), request.packageId, sourceUrl, snapshot.includePrerelease, new AbortController().signal);
             // Empty is not unknown: with no source reached, there is nothing to pick and nothing is submitted.
             if (versions.length === 0 && sourcesUnavailable) {
-                void vscode.window.showWarningMessage('No package source could be reached for this package');
+                void vscode.window.showWarningMessage('nUIget: No package source could be reached for this package.');
                 return undefined;
             }
             return pickVersion(request.packageId, versions.slice(0, 50), request.installedVersion);
@@ -171,6 +171,9 @@ export async function runRowAction(services: HostServices, action: ContextMenuAc
     }
 }
 
+/** The modal's one button, compared with the choice it returns. */
+const UPDATE_CENTRAL_VERSION = 'Update Central Version';
+
 /**
  * A change of a centrally managed version reaches every project that uses the central entry (ADR-004 tier 3): the
  * user confirms it in a modal that lists them before anything is submitted. No preview (not CPM, no central entry
@@ -195,9 +198,9 @@ async function confirmCentralChange(services: HostServices, projectPath: string,
     const choice = await vscode.window.showWarningMessage(
         `Update the central version of ${packageId}?`,
         { modal: true, detail: `${preview.fromVersion ?? '(none)'} → ${version} in ${path.basename(preview.centralPropsPath)} applies to: ${names.join(', ')}` },
-        'Update central version',
+        UPDATE_CENTRAL_VERSION,
     );
-    return choice === 'Update central version';
+    return choice === UPDATE_CENTRAL_VERSION;
 }
 
 /**
@@ -224,7 +227,7 @@ async function withoutCentralEntries(services: HostServices, targets: string[], 
     }
     if (left.length > 0) {
         const names = left.map(target => projects.find(project => project.path === target)?.name ?? path.basename(target));
-        void vscode.window.showInformationMessage(`Not installed in ${names.join(', ')}: ${packageId} has a central entry there; install it from the project to see the preview`);
+        void vscode.window.showInformationMessage(`nUIget: Not installed in ${names.join(', ')}: ${packageId} has a central entry there. Install it from the project to see the preview.`);
     }
     return kept;
 }

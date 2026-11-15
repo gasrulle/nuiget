@@ -422,7 +422,7 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     });
     host.on('ui/copyToClipboard', async ({ text }) => {
         await vscode.env.clipboard.writeText(text);
-        vscode.window.setStatusBarMessage(`Copied "${text}" to clipboard`, 2000);
+        vscode.window.setStatusBarMessage(`nUIget: Copied "${text}" to the clipboard.`, 2000);
         return {};
     });
     host.on('ui/openExternal', async ({ url }) => {

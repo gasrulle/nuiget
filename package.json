@@ -129,7 +129,7 @@
             },
             {
                 "command": "nuiget.sidebar.openFullView",
-                "title": "Open Full Manager",
+                "title": "Manage NuGet Packages",
                 "icon": "$(link-external)"
             },
             {

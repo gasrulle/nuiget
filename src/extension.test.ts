@@ -376,7 +376,7 @@ describe('extension (2.0 composition root)', () => {
         expect(response).toMatchObject({ ok: true, result: { status: 'failed' } });
 
         await vi.waitFor(() => expect(mockWindow.showWarningMessage).toHaveBeenCalledTimes(1));
-        expect(mockWindow.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('nUIget: Install of Serilog in App failed'), 'Show output');
+        expect(mockWindow.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('nUIget: Install of Serilog in App failed'), 'Show Output');
         expect(channel().show).toHaveBeenCalledWith(true);
         expect(mockWindow.showInformationMessage).not.toHaveBeenCalled();
         expect(mockWindow.withProgress).not.toHaveBeenCalled();

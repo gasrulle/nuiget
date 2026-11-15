@@ -65,7 +65,7 @@ describe('package.json menus', () => {
             'nuiget.sidebar.toggleRestore', 'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.selectProject', 'nuiget.sidebar.selectSource',
         ]);
         expect(new Set(navigation.map(entry => entry.group)).size).toBeLessThanOrEqual(4);
-        // Refresh and Open Full Manager are items of the view's `...` menu, one non-navigation group, in that order.
+        // Refresh and Manage NuGet Packages are items of the view's `...` menu, one non-navigation group, in that order.
         const more = entries.filter(entry => !/^navigation@/.test(entry.group ?? '')).map(entry => `${entry.group}:${entry.command}`);
         expect(more).toEqual(['1_more@1:nuiget.sidebar.refresh', '1_more@2:nuiget.sidebar.openFullView']);
         // Each switch shows one of its two commands: the one that turns it on while the key is false, and back.

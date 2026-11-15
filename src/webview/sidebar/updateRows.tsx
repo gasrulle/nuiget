@@ -16,7 +16,7 @@ const entryOf = (installed: InstalledResult | undefined, id: string) => installe
 /**
  * The actions and the row of an update, shared by the single project's list and the All Projects tree (UX-P3.7d): Enter or the
  * row's button updates the package in the row's own project to its latest version with the row's source; Ctrl+Enter opens the
- * full view, Shift+F10 VS Code's actions menu. A centrally managed package opens the actions menu instead, where the host
+ * main panel, Shift+F10 VS Code's actions menu. A centrally managed package opens the actions menu instead, where the host
  * confirms the central change in a modal listing the projects it reaches; a row with a `VersionOverride` updates in its project
  * alone, without a preview (N74); an unsupported project is read-only.
  */

@@ -28,7 +28,7 @@ export interface ProjectUpdatesProps {
 
 /**
  * The updates of one project as compact rows: Enter or the row's button updates the package in this project to its
- * latest version with the row's source; Ctrl+Enter opens the full view, Shift+F10 VS Code's actions menu. A centrally
+ * latest version with the row's source; Ctrl+Enter opens the main panel, Shift+F10 VS Code's actions menu. A centrally
  * managed package opens the actions menu instead, where the host confirms the central change in a modal listing the
  * projects it reaches; a row with a `VersionOverride` updates in this project alone, without a preview (N74); an
  * unsupported project is read-only.
@@ -42,7 +42,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
         <Listbox
             items={items}
             labelledBy={labelledBy}
-            hint="Enter updates to the latest version (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu."
+            hint="Enter updates to the latest version (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu."
             testId={testId}
             density="compact"
             selectedId={selectedId}

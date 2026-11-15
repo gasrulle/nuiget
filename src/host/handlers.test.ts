@@ -803,12 +803,12 @@ describe('SidebarHost', () => {
         vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(centralPreview([appPath, libPath]));
         vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
         const warning = vi.mocked(vscode.window.showWarningMessage);
-        warning.mockResolvedValueOnce('Update central version' as never);
+        warning.mockResolvedValueOnce('Update Central Version' as never);
         const { sidebar, send } = resolvedSidebar(services);
         expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: true });
         expect(services.contextFor).toHaveBeenCalledWith(appPath);
         expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: appPath }), 'X', '2.0.0');
-        expect(warning).toHaveBeenCalledWith('Update the central version of X?', { modal: true, detail: '1.0.0 → 2.0.0 in Directory.Packages.props applies to: App.csproj, Lib.csproj' }, 'Update central version');
+        expect(warning).toHaveBeenCalledWith('Update the central version of X?', { modal: true, detail: '1.0.0 → 2.0.0 in Directory.Packages.props applies to: App.csproj, Lib.csproj' }, 'Update Central Version');
         expect(workflows.single).toHaveBeenCalledTimes(1);
         expect(workflows.single).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: 'update', projectPath: appPath, packageId: 'X', version: '2.0.0' }), { skipRestore: false });
         sidebar.dispose();
@@ -842,13 +842,13 @@ describe('SidebarHost', () => {
         const { services, catalog, queue } = makeServices();
         const submit = vi.spyOn(queue, 'submit');
         catalog.versions.mockResolvedValueOnce({ versions: [], sourcesUnavailable: true });
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to version…', action: 'update-version' } as never);
+        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: '$(list-ordered) Update to Version...', action: 'update-version' } as never);
         const warning = vi.mocked(vscode.window.showWarningMessage);
         warning.mockClear();
         const { sidebar, send } = resolvedSidebar(services);
 
         expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: false });
-        expect(warning).toHaveBeenCalledWith('No package source could be reached for this package');
+        expect(warning).toHaveBeenCalledWith('nUIget: No package source could be reached for this package.');
         // No version list was shown and nothing was submitted.
         expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
         expect(submit).not.toHaveBeenCalled();
@@ -861,12 +861,12 @@ describe('SidebarHost', () => {
         const { sidebar, send } = resolvedSidebar(services);
         const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [{ projectPath: libPath, projectName: 'Lib.csproj', version: '1.0.0' }] };
 
-        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => (items as unknown as Array<{ detail: string; picked: boolean }>).filter(item => item.picked) as never);
         expect(await send(request, 'one')).toEqual({ handled: true });
         expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
 
-        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => items as never);
         expect(await send(request, 'two')).toEqual({ handled: true });
         const [, projects, packageId, version] = workflows.bulkInstall.mock.calls.at(-1) as unknown as [unknown, Array<{ path: string } | string>, string, string];
@@ -884,12 +884,12 @@ describe('SidebarHost', () => {
         const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [] };
         vi.mocked(services.mutator.previewCpmImpact).mockImplementation(async context => (context.projectPath === libPath ? centralPreview([libPath]) : undefined));
 
-        pick.mockResolvedValueOnce({ label: 'Install latest', action: 'install-latest' } as never);
+        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => items as never);
         expect(await send(request, 'bulk')).toEqual({ handled: true });
 
         expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: libPath }), 'X', '2.0.0');
-        expect(info).toHaveBeenCalledWith('Not installed in Lib.csproj: X has a central entry there; install it from the project to see the preview');
+        expect(info).toHaveBeenCalledWith('nUIget: Not installed in Lib.csproj: X has a central entry there. Install it from the project to see the preview.');
         // One target remains: the single path, without a modal (no preview there), and no bulk install.
         expect(workflows.bulkInstall).not.toHaveBeenCalled();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();

@@ -21,7 +21,7 @@ function setup() {
     return { progress, completed, output, disposable };
 }
 
-/** Lets the `then` of a warning's Show output button run. */
+/** Lets the `then` of a warning's Show Output button run. */
 const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('operation feedback', () => {
@@ -36,7 +36,7 @@ describe('operation feedback', () => {
         warning.mockResolvedValue(undefined);
     });
 
-    it('one toast per outcome: information on completed, warning with Show output on partial, failed and rejected, none on cancelled', () => {
+    it('one toast per outcome: information on completed, warning with Show Output on partial, failed and rejected, none on cancelled', () => {
         const { completed } = setup();
         completed.fire(single({ status: 'completed' }));
         completed.fire(single({ opId: 'op-2', kind: 'update', status: 'completed', affectedProjects: [LIB] }));
@@ -44,25 +44,28 @@ describe('operation feedback', () => {
         completed.fire(single({ opId: 'op-4', status: 'failed', message: 'exit code 1' }));
         completed.fire(single({ opId: 'op-5', kind: 'update', status: 'rejected', message: 'the queue is full' }));
         completed.fire(single({ opId: 'op-6', status: 'cancelled' }));
+        // A host reason that ends in its own period keeps one final period (UX-P3.11b, design-advisor follow-up 2).
+        completed.fire(single({ opId: 'op-7', kind: 'remove', status: 'failed', message: 'The project file is locked.' }));
 
         expect(information.mock.calls).toEqual([
-            ['nUIget: Installed Serilog 4.0.0 in App'],
-            ['nUIget: Updated Serilog to 4.0.0 in App; also restored 1 other project'],
+            ['nUIget: Installed Serilog 4.0.0 in App.'],
+            ['nUIget: Updated Serilog to 4.0.0 in App; also restored 1 other project.'],
         ]);
         expect(warning.mock.calls).toEqual([
-            ['nUIget: Uninstalled Serilog from App, but the restore failed: NU1101', 'Show output'],
-            ['nUIget: Install of Serilog in App failed: exit code 1', 'Show output'],
-            ['nUIget: Update of Serilog in App was not started: the queue is full', 'Show output'],
+            ['nUIget: Uninstalled Serilog from App, but the restore failed: NU1101.', 'Show Output'],
+            ['nUIget: Install of Serilog in App failed: exit code 1.', 'Show Output'],
+            ['nUIget: Update of Serilog in App was not started: the queue is full.', 'Show Output'],
+            ['nUIget: Uninstall of Serilog from App failed: The project file is locked.', 'Show Output'],
         ]);
     });
 
-    it('a failed outcome reveals the output channel and Show output reveals it for a partial one', async () => {
+    it('a failed outcome reveals the output channel and Show Output reveals it for a partial one', async () => {
         const { completed, output } = setup();
         completed.fire(single({ status: 'failed', message: 'exit code 1' }));
         expect(output.show).toHaveBeenCalledTimes(1);
         expect(output.show).toHaveBeenCalledWith(true);
 
-        warning.mockResolvedValueOnce('Show output' as never);
+        warning.mockResolvedValueOnce('Show Output' as never);
         completed.fire(single({ opId: 'op-2', status: 'partial', restore: { ok: false, error: 'NU1101' } }));
         await settle();
         expect(output.show).toHaveBeenCalledTimes(2);
@@ -93,7 +96,7 @@ describe('operation feedback', () => {
             'nUIget: Updated 1 of 2 packages; 1 failed; 1 restore failed.',
             'nUIget: Updated 2 packages; 1 restore failed.',
             'nUIget: Uninstalled 0 of 1 packages; 1 failed.',
-            'nUIget: The operation was not started: the queue is full',
+            'nUIget: The operation was not started: the queue is full.',
         ]);
         expect(output.show).toHaveBeenCalledTimes(1);
     });

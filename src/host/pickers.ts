@@ -9,7 +9,7 @@ import { projectDisplayName } from './services';
 
 export async function pickProject(projects: Project[], current: string): Promise<string | undefined> {
     if (projects.length === 0) {
-        void vscode.window.showInformationMessage('No .NET project files found in the workspace.');
+        void vscode.window.showInformationMessage('nUIget: No .NET projects found in this workspace.');
         return undefined;
     }
     const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name));
@@ -43,7 +43,7 @@ export async function pickSource(sources: NuGetSource[], current: string): Promi
     const items: Array<vscode.QuickPickItem & { value: string }> = [
         { label: 'All Sources', description: 'Search across all enabled sources', value: 'all', picked: current === 'all' },
         ...enabled.map(source => ({ label: source.name, description: source.url, value: source.url, picked: current === source.url })),
-        { label: '$(gear) Manage NuGet Sources…', alwaysShow: true, value: MANAGE_SOURCES },
+        { label: '$(gear) Manage Package Sources...', alwaysShow: true, value: MANAGE_SOURCES },
     ];
     const selected = await vscode.window.showQuickPick(items, { placeHolder: 'Select package source', title: 'nUIget — Package Source' });
     return selected?.value;
@@ -51,12 +51,12 @@ export async function pickSource(sources: NuGetSource[], current: string): Promi
 
 export async function pickVersion(packageId: string, versions: string[], installedVersion?: string): Promise<string | undefined> {
     if (versions.length === 0) {
-        void vscode.window.showInformationMessage(`No versions found for ${packageId}`);
+        void vscode.window.showInformationMessage(`nUIget: No versions of ${packageId} were found.`);
         return undefined;
     }
     const selected = await vscode.window.showQuickPick(
         versions.map(v => ({ label: v, description: v === installedVersion ? '(installed)' : '' })),
-        { placeHolder: `Select version for ${packageId}`, title: `nUIget — ${packageId} versions` },
+        { placeHolder: `Select version for ${packageId}`, title: `nUIget — ${packageId} Versions` },
     );
     return selected?.label;
 }
@@ -84,7 +84,7 @@ export async function pickSingleProject(title: string, placeHolder: string, cand
         return candidates[0].projectPath;
     }
     const selected = await vscode.window.showQuickPick(
-        [...candidates].sort((a, b) => a.projectName.localeCompare(b.projectName)).map(c => ({ label: c.projectName, description: c.version ? `v${c.version}` : '', detail: c.projectPath })),
+        [...candidates].sort((a, b) => a.projectName.localeCompare(b.projectName)).map(c => ({ label: c.projectName, description: c.version ?? '', detail: c.projectPath })),
         { placeHolder, title },
     );
     return selected?.detail;
@@ -101,29 +101,29 @@ export async function pickContextMenuAction(options: { packageId: string; contex
     const { context, installedVersion, latestVersion } = options;
     if (context === 'browse') {
         if (options.partiallyInstalled && installedVersion) {
-            items.push({ label: '$(add) Install latest', description: latestVersion ?? '', action: 'install-latest' });
-            items.push({ label: '$(list-ordered) Install version…', action: 'install-version' });
+            items.push({ label: '$(add) Install Latest Version', description: latestVersion ?? '', action: 'install-latest' });
+            items.push({ label: '$(list-ordered) Install Version...', action: 'install-version' });
             items.push({ label: '$(close) Uninstall', description: installedVersion, action: 'uninstall' });
-            items.push({ label: '$(list-ordered) Change version…', action: 'change-version' });
+            items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
         } else if (installedVersion) {
             items.push({ label: '$(close) Uninstall', description: installedVersion, action: 'uninstall' });
-            items.push({ label: '$(list-ordered) Change version…', action: 'change-version' });
+            items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
         } else {
-            items.push({ label: '$(add) Install latest', description: latestVersion ?? '', action: 'install-latest' });
-            items.push({ label: '$(list-ordered) Install version…', action: 'install-version' });
+            items.push({ label: '$(add) Install Latest Version', description: latestVersion ?? '', action: 'install-latest' });
+            items.push({ label: '$(list-ordered) Install Version...', action: 'install-version' });
         }
     } else if (context === 'installed') {
-        items.push({ label: '$(list-ordered) Change version…', action: 'change-version' });
+        items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
         items.push({ label: '$(close) Uninstall', description: installedVersion ?? '', action: 'uninstall' });
     } else {
         if (!options.floatingOrRange) {
             items.push({ label: `$(arrow-up) Update to ${latestVersion ?? 'latest'}`, action: 'update-latest' });
         }
-        items.push({ label: '$(list-ordered) Update to version…', action: 'update-version' });
+        items.push({ label: '$(list-ordered) Update to Version...', action: 'update-version' });
         items.push({ label: '$(close) Uninstall', description: installedVersion ?? '', action: 'uninstall' });
     }
-    items.push({ label: '$(clippy) Copy package ID', description: options.packageId, action: 'copy-id' });
-    items.push({ label: '$(eye) View package details', description: 'Open in the full view', action: 'view-details' });
+    items.push({ label: '$(clippy) Copy Package ID', description: options.packageId, action: 'copy-id' });
+    items.push({ label: '$(eye) View Package Details', description: 'Open in the main panel', action: 'view-details' });
     const selected = await vscode.window.showQuickPick(items, { placeHolder: `${options.packageId} — actions`, title: `nUIget — ${options.packageId}` });
     return selected?.action;
 }

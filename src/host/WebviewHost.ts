@@ -203,7 +203,7 @@ function toProtocolError(error: unknown): ProtocolError {
 function safeDescribe(value: unknown): string {
     try {
         const text = JSON.stringify(value);
-        return text.length > 200 ? `${text.slice(0, 200)}…` : text;
+        return text.length > 200 ? `${text.slice(0, 200)}...` : text;
     } catch {
         return typeof value;
     }

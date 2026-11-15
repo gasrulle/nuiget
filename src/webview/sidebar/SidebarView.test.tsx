@@ -95,7 +95,7 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
         // A pane box of the measurements (UX-P0.10).
         expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
-        expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.');
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
         expect(sectionSpinner()).toBeNull();
     });
@@ -164,7 +164,7 @@ describe('sidebar: Installed section', () => {
         expect(banner).toHaveTextContent('Warning: Unsupported project: requires .NET SDK 10 or newer');
         expect(names()).toEqual(['Moq', 'Serilog']);
         expect(screen.queryAllByTestId('row-action-uninstall')).toHaveLength(0);
-        expect(list()).toHaveAccessibleDescription('Read-only. Ctrl+Enter (Cmd+Enter) opens the full view; Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Read-only. Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.');
         await userEvent.click(option('Serilog'));
         await userEvent.keyboard('{Enter}');
         expect(removals(host)).toHaveLength(0);
