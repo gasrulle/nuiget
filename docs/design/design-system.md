@@ -433,7 +433,7 @@ Every container that holds a row of controls, its minimum width and its behaviou
 | Sidebar section header | 170 | title ellipsis; the count badge and the actions stay | title ellipsis holds; Update all touches the edge (V3) |
 | Sidebar compact row | 170 | version ellipsis first, then the name (DS-ROW-5); actions stay | holds |
 | Main header (title, check boxes, selects, gear, refresh) | 220 (editor minimum) | wraps; every control line ends at the inset | wraps (UX-P2.7a) |
-| Tab strip (Installed/Updates) | 170 (`--nuiget-list-pane-min`) | count badges hide below 250 first, then labels ellipsize; never a sideways scroll | badges hide below 250 (UX-P2.7b) |
+| Tab strip (Installed/Updates) | 170 (`--nuiget-list-pane-min`) | the badges leave the strip below 250 and stay in the tab's name; then the labels ellipsize; never a sideways scroll | the badges leave the strip below 250 (UX-P3.fix-13; from UX-P2.7b until then they still showed and the labels ellipsized first) |
 | Bulk toolbar | 170 (`--nuiget-list-pane-min`) | the primary action stays at the end; Select All collapses to its glyph below 250 | Select All shows its glyph alone below 250, 34×26 (UX-P3.fix-12; from UX-P2.7b until then the glyph never showed and the box was empty); under about 217 px of pane the primary wraps to its own line |
 | Main-list group header | 170 (`--nuiget-list-pane-min`) | title ellipsis; badges keep the 16 px end inset and may ellipsize their text | badges reach the edge (V3) |
 | Comfortable row | 170 (`--nuiget-list-pane-min`) | ≤ 250 px icon 24, ≤ 200 px icon hidden; name ellipsis last; actions stay | no breakpoint |
