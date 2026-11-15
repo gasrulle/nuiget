@@ -134,7 +134,7 @@ describe('main panel shell', () => {
 
     it('renders the title as the heading of the panel', async () => {
         await mountReady();
-        expect(screen.getByRole('heading', { level: 1, name: 'Manage NuGet packages' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1, name: 'Manage NuGet Packages' })).toBeInTheDocument();
     });
 
     it('unchecking Restore after operations asks the host once and shows the choice at once', async () => {
@@ -189,7 +189,7 @@ describe('main panel shell', () => {
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         expect([...screen.getByTestId('project-selector').querySelectorAll('option')].map(option => option.textContent)).toEqual(['App']);
         await hostSays(() => host.event('projects/changed', { projects: [] }));
-        expect(screen.getByTestId('project-selector')).toHaveDisplayValue('No projects');
+        expect(screen.getByTestId('project-selector')).toHaveDisplayValue('No Projects');
         expect(screen.getByTestId('project-selector')).toBeDisabled();
     });
 

@@ -152,7 +152,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
         <main className="nuiget-sidebar" data-testid="nuiget-sidebar" style={cssVars({ '--nuiget-tree-indent': `${config?.treeIndent ?? 8}px` })}>
             <div className="nuiget-sidebar-header">
                 {sourceName === undefined
-                    ? <p className="nuiget-sidebar-context" data-testid="sidebar-source">All sources</p>
+                    ? <p className="nuiget-sidebar-context" data-testid="sidebar-source">All Sources</p>
                     : (
                         <p className="nuiget-sidebar-context" data-testid="sidebar-source" title={selectedSource}>
                             <span className="nuiget-visually-hidden">Package source </span>

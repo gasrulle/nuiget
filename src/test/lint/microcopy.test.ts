@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { hostLabelsOf, hostTextsOf, isHostLabel, isName, isNotification, isSentence, isTitleCase, labelsOf, lintHostSource, lintSource, OPENS_UI } from './microcopy';
+import { hostLabelsOf, hostTextsOf, isHostLabel, isName, isNotification, isSentence, isTitleCase, labelsOf, lintHostSource, lintSource, OPENS_UI, PROGRESS } from './microcopy';
 
 /**
  * UX-P3.11 (DS-COPY-1, DS-COPY-4; design-advisor opening ruling of 2026-11-15, DO 6): the webviews' microcopy, read from
@@ -40,8 +40,8 @@ describe('the webviews\' microcopy (DS-COPY-1, DS-COPY-4; UX-P3.11)', () => {
             expect(label.endsWith('...'), label).toBe(true);
             expect(labels.has(label), `${label} is rendered`).toBe(true);
         }
-        // A progress label ("Working...", "Adding...") ends in three periods too, and opens nothing.
-        expect([...labels].filter(label => label.endsWith('...') && !/^[A-Z][a-z]+ing\.\.\.$/.test(label) && !OPENS_UI.includes(label))).toEqual([]);
+        // A progress text ("Working...", "Loading projects...") ends in three periods too, and opens nothing (UX-P3.11c).
+        expect([...labels].filter(label => label.endsWith('...') && !PROGRESS.test(label) && !OPENS_UI.includes(label))).toEqual([]);
     });
 
     it('titles the manifest\'s commands in Title Case without U+2026', () => {
@@ -120,6 +120,29 @@ describe('the microcopy rules (negative cases)', () => {
         const kinds = lintSource('probe.tsx', source).map(finding => `${finding.line} ${finding.kind}`);
         expect(kinds).toEqual(expect.arrayContaining(['1 label', '2 sentence', '3 label', '4 name', '5 sentence', '5 label', '6 ellipsis', '7 failure-form', '8 failed-in-banner', '9 unclassified', '10 label', '11 sentence']));
         expect(lintSource('clean.tsx', 'const a = <Button title="Updates are being checked.">Update All</Button>;')).toEqual([]);
+    });
+
+    it('reports an option "All sources" in sentence case (UX-P3.11c)', () => {
+        expect(lintSource('probe.tsx', 'const a = <option value="all">All sources</option>;').map(finding => finding.kind)).toEqual(['label']);
+        expect(lintSource('clean.tsx', 'const a = <option value="all">All Sources</option>;')).toEqual([]);
+    });
+
+    it('reports an option "No projects" in a condition, and reads a progress text and a trailing annotation as such (UX-P3.11c)', () => {
+        const findings = lintSource('probe.tsx', "const a = <option>{none ? 'Loading projects...' : 'No projects'}</option>;").map(finding => finding.text);
+        expect(findings).toEqual(['No projects']);
+        expect(lintSource('clean.tsx', "const a = <option>{none ? 'Loading projects...' : 'No Projects'}</option>;")).toEqual([]);
+        expect(lintSource('clean.tsx', 'const a = <option>{loading ? `${v} (loading versions...)` : `${v} (installed)`}</option>;')).toEqual([]);
+    });
+
+    it('reports an option "Add source..." in sentence case, and lists option texts for DS-COPY-4 (UX-P3.11c)', () => {
+        expect(lintSource('probe.tsx', 'const a = <option>Add source...</option>;').map(finding => finding.kind)).toEqual(['label']);
+        expect(labelsOf('probe.tsx', 'const a = <option>Add Source...</option>;')).toEqual(['Add Source...']);
+    });
+
+    it('reports a button reading "Loading projects...": the progress form holds in an option only (UX-P3.11c)', () => {
+        expect(lintSource('probe.tsx', 'const a = <Button>Loading projects...</Button>;').map(finding => finding.kind)).toEqual(['label']);
+        expect(PROGRESS.test('Loading projects...')).toBe(true);
+        expect(PROGRESS.test('Add source...')).toBe(false);
     });
 
     it('reads a function imported into a shown text as data, and the same function of the same file by its returns', () => {

@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42483294360",
+  "run": "43722806484",
   "composition": "The window is the product's at scrollTop 480: past the Direct Packages group row, the Transitive Packages group row focused at its bottom, the net8.0 and netstandard2.0 framework rows and their packages below the fold. The Newtonsoft.Json row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed are compared in main-installed-details only. The capture's pointer rests on the Transitive Packages row after the click that expanded it, so the golden shows a hover tint under the ring; the state is the expanded row with focus, and the tint is not drawn.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [

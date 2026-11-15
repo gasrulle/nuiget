@@ -25,7 +25,7 @@ describe('2.0 main panel: sources', () => {
         this.timeout(180_000);
         const selector = await findByTestId('source-selector', 60_000);
         await poll(async () => ((await selector.getAttribute('disabled')) === null ? true : undefined), 'the source selector to be enabled', 60_000);
-        expect(await selector.getAttribute('textContent')).to.contain('All sources');
+        expect(await selector.getAttribute('textContent')).to.contain('All Sources');
 
         await (await findByTestId('source-settings')).click();
         const dialog = await findByTestId('source-settings-modal', 10_000);

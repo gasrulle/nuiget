@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42483294360",
+  "run": "43722806484",
   "composition": "The Microsoft.Extensions.DependencyInjection.Abstractions row, the sixth in id order, is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 594,
+          "x": 593,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 601,
+        "inset": 600,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 759,
+          "x": 758,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 766,
+        "inset": 765,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -443,12 +443,12 @@
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 594,
+          "x": 593,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 601,
+        "inset": 600,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -463,12 +463,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 759,
+          "x": 758,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 766,
+        "inset": 765,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [

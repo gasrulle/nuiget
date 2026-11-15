@@ -13,7 +13,7 @@ export interface SourcesControlProps {
 }
 
 /**
- * The source of the shared context in the main panel's header (interaction model §1): a selector over All sources
+ * The source of the shared context in the main panel's header (interaction model §1): a selector over All Sources
  * and every enabled source, disabled until the list is known, and the button that opens the NuGet sources dialog,
  * which the host can also open (`ui/openSourceSettings`, from the sidebar or a command). A source the host could not
  * reach is marked "(unreachable)" with its error as the tooltip, and a warning button retries through `sources/refresh`,
@@ -43,7 +43,7 @@ export function SourcesControl({ announce, end }: SourcesControlProps): React.JS
                 disabled={session === undefined || status !== 'ready'}
                 onChange={value => set({ selectedSource: value })}
             >
-                <option value="all">All sources</option>
+                <option value="all">All Sources</option>
                 {selected !== 'all' && !known ? <option value={selected}>{selected}</option> : null}
                 {enabled.map(source => (
                     <option key={source.url} value={source.url} title={failedByUrl.get(source.url) ?? source.url}>

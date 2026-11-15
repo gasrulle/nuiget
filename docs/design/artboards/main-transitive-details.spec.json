@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42483294360",
+  "run": "43722806484",
   "composition": "The window is the product's at scrollTop 580: Microsoft.Extensions.Configuration 8.0.0 under net8.0 is the last full row and current (its band is the render's colour sample), and its read-only details fill the pane (interaction model §7): the id with the Transitive badge, Version and Authors, Required by per target framework; no tabs, no actions, no README.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [

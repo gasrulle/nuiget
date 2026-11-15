@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42483294360",
+  "run": "43722806484",
   "composition": "The state's own scene, nothing composed: the window is the product's at the list's end (scrollTop 480, classic 458; UX-P3.fix-1): the direct rows in id order, Microsoft.Extensions.Http cut at the top, the collapsed Transitive Packages group row at the bottom. Newtonsoft.Json 12.0.1, the eleventh row, is the current row (its band is the render's colour sample) and the Details tab shows its description, properties, vulnerability and dependency groups. The other rows' actions are drawn hidden, as the product renders them until a row is hovered or current.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -663,12 +663,12 @@
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -683,12 +683,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [

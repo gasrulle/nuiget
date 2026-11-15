@@ -658,7 +658,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 
 | Part | Behaviour |
 |---|---|
-| Title | `h1` "Manage NuGet packages"; it takes the free space, so the controls sit at the end of the header |
+| Title | `h1` "Manage NuGet Packages"; it takes the free space, so the controls sit at the end of the header |
 | Restore After Operations | A checkbox bound to the session (`session/set { restoreEnabled }`); the sidebar's shield shows the same value |
 | Project selector (`project-selector`) | The projects slice; "All Projects (N)" with two or more; disabled until the session has arrived. A choice is a `session/set` intent, shown at once |
 | Source selector (`source-selector`) | The session's source; `SourcesControl` lists the enabled sources and marks one in `useSources().failed` "(unreachable)" with its error as the tooltip; while any is failed, `source-health-indicator` beside the gear sends `sources/refresh`, which resets the health tracker, and the slice follows through `sources/health` |
@@ -855,7 +855,7 @@ host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `C
 
 ### Sources feature (main)
 
-`features/sources/SourcesControl.tsx` is the source part of the header: the selector (`source-selector`, All sources
+`features/sources/SourcesControl.tsx` is the source part of the header: the selector (`source-selector`, All Sources
 and every enabled source by name, the session's URL kept as an option when it is not listed, disabled until the list
 is known; a choice is `session/set { selectedSource }`) and the gear (`source-settings`) that opens
 `SourceSettingsDialog` (`source-settings-modal`), which `ui/openSourceSettings` opens too. The dialog lists every

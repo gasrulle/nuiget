@@ -31,12 +31,12 @@ does. Rows, buttons, inputs, selects, check boxes and icons are the same in both
 Both surfaces show the **same active context** — project, source, prerelease, restore toggle —
 owned by the host (`SessionStore`). Changing it in one surface changes it in the other within one
 broadcast. The active project and source are always visible: in the main panel as the header's selectors; in the
-sidebar the view title names the project, the header line under it names the source (`sidebar-source`; "All sources"
+sidebar the view title names the project, the header line under it names the source (`sidebar-source`; "All Sources"
 when none is selected), and the title-bar actions show the restore and pre-release state and the project and source
 pickers (four actions, DS-OVERFLOW-4); Refresh and Manage NuGet Packages are items of its `...` menu. A sidebar section
 header shows its actions on the section's hover and focus, as the workbench's pane headers do (UX-P3.7b).
 
-The main panel header shows the title "Manage NuGet packages", the Restore After Operations and
+The main panel header shows the title "Manage NuGet Packages", the Restore After Operations and
 Include Pre-Release check boxes, the project and source selectors (a source the host could not reach
 is marked "(unreachable)", and a warning button beside the gear retries it) and a refresh button
 that is disabled while it runs. Its controls have the workbench's sizes (buttons and selects 26 px with a 12 px label,

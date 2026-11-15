@@ -384,9 +384,9 @@ describe('sidebar: Installed section', () => {
         expect(host.requests('installed/get')).toHaveLength(1);
     });
 
-    it('the header line names the active source: "All sources", a source by its name, an unknown one by its URL (X15, UX-P3.7b)', async () => {
+    it('the header line names the active source: "All Sources", a source by its name, an unknown one by its URL (X15, UX-P3.7b)', async () => {
         const host = await mountWith([pkg('Serilog')]);
-        expect(screen.getByTestId('sidebar-source')).toHaveTextContent('All sources');
+        expect(screen.getByTestId('sidebar-source')).toHaveTextContent('All Sources');
         // The line is no part of the search landmark.
         expect(screen.getByRole('search')).not.toContainElement(screen.getByTestId('sidebar-source'));
         await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: [{ name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true }], failed: [] }));

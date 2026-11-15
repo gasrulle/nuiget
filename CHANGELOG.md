@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Adding a package source checks the URL in place, and Credentials shows whether its fields are open**
 - **Side bar package rows are as compact as VS Code's own tree rows, and a long version gives way before the package name**
 - **Sidebar section titles line up with the package names below them**
-- **The sidebar title bar keeps four buttons, with Refresh and Open Full Manager in its menu**
+- **The sidebar title bar keeps four buttons, with Refresh and Manage NuGet Packages in its menu**
 - **Filtering the sidebar opens a collapsed section and counts the matches**
 - **Under All Projects, a sidebar project whose packages are still being read says provisional**
 - **Under All Projects, the sidebar's Installed list is one tree of folders and projects that fold with the arrow keys**

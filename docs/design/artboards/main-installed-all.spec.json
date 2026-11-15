@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "42483294360",
+  "run": "43722806484",
   "composition": "The window is the product's at the Tools folder row (scrollTop 2100, classic 2082); the rows above it are a spacer of their height. Unresolved.csproj's Newtonsoft.Json row is drawn current (list.activeSelectionBackground band, focus outline, its action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed are compared in main-installed-details only. The Installed tab keeps the focus the state's setup leaves on it.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -512,12 +512,12 @@
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 862,
+          "x": 861,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 869,
+        "inset": 868,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -532,12 +532,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1027,
+          "x": 1026,
           "y": 8,
-          "w": 101,
+          "w": 102,
           "h": 26
         },
-        "inset": 1034,
+        "inset": 1033,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [

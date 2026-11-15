@@ -135,7 +135,7 @@ export function DetailsInfo(): React.JSX.Element {
     if (value === null || value === undefined) {
         return <EmptyState message={failed.length > 0 ? 'No details: a package source could not be reached.' : 'No package source has details for this version.'} />;
     }
-    // Report abuse is nuget.org's: the answering source, else the row's, else All sources with nuget.org among them.
+    // Report abuse is nuget.org's: the answering source, else the row's, else All Sources with nuget.org among them.
     const from = value.sourceUrl ?? selection?.sourceUrl;
     const onNuGetOrg = from !== undefined ? isNuGetOrg(from) : allSources && (sources ?? []).some(source => source.enabled && isNuGetOrg(source.url));
     const reportAbuse = onNuGetOrg ? `https://www.nuget.org/packages/${encodeURIComponent(value.id)}/${encodeURIComponent(value.version)}/ReportAbuse` : undefined;

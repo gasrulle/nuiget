@@ -194,7 +194,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
         <main className="nuiget-main" data-testid="nuiget-app">
             <header className="nuiget-main-header" data-testid="main-header">
                 <div className="nuiget-main-header-row">
-                    <h1 className="nuiget-main-title">Manage NuGet packages</h1>
+                    <h1 className="nuiget-main-title">Manage NuGet Packages</h1>
                     <div className="nuiget-main-controls">
                         <label className="nuiget-main-toggle">
                             <Checkbox checked={session?.restoreEnabled ?? true} disabled={!hasSession} onChange={checked => set({ restoreEnabled: checked })} />
@@ -211,7 +211,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                             disabled={!hasSession || supported.length === 0}
                             onChange={value => set({ selectedProject: value })}
                         >
-                            {supported.length === 0 ? <option value={session?.selectedProject ?? ''}>{projects === undefined ? 'Loading projects...' : 'No projects'}</option> : null}
+                            {supported.length === 0 ? <option value={session?.selectedProject ?? ''}>{projects === undefined ? 'Loading projects...' : 'No Projects'}</option> : null}
                             {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                             {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                         </Select>

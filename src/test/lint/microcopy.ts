@@ -73,6 +73,18 @@ export function isName(text: string): boolean {
 
 const passes: Record<Kind, (text: string) => boolean> = { label: isTitleCase, sentence: isSentence, name: isName };
 
+/** A progress text: a gerund in sentence case ending in three periods ("Searching...", "Loading projects..."); it opens nothing. */
+export const PROGRESS = /^[A-Z][a-z]+ing( [a-z]+)*\.\.\.$/;
+
+/**
+ * An `<option>`'s text (UX-P3.11c; design-advisor opening ruling of 2026-11-15, Q2): one trailing parenthetical is an
+ * annotation ("(installed)", "(unreachable)"), and the rest is a label in Title Case or a progress text.
+ */
+export function isOptionLabel(text: string): boolean {
+    const bare = text.replace(/\s*\([^)]*\)$/, '');
+    return isTitleCase(bare) || PROGRESS.test(bare);
+}
+
 /** The texts an expression can show: literals, templates (slots for interpolations), both branches of a condition, the right of `??`. */
 export function textsOf(node: ts.Node | undefined): string[] {
     if (node === undefined) {
@@ -199,6 +211,13 @@ export function lintSource(file: string, source: string): Finding[] {
                     }
                 }
             }
+            if (ts.isJsxElement(node) && tag === 'option') {
+                for (const { node: child, text } of childTexts(node)) {
+                    if (!isOptionLabel(text)) {
+                        findings.push({ file, line: lineOf(child), kind: 'label', text });
+                    }
+                }
+            }
         }
         // A group row's title and a tab's label in an object literal: `{ kind: 'group', title }`, `{ id, label, 'data-testid' }`.
         if (ts.isObjectLiteralExpression(node)) {
@@ -228,7 +247,7 @@ export function labelsOf(file: string, source: string): string[] {
             if (TITLE_LABELS.has(tag)) {
                 labels.push(...textsOf(attribute(opening, 'label')?.initializer));
             }
-            if (ts.isJsxElement(node) && tag === 'Button') {
+            if (ts.isJsxElement(node) && (tag === 'Button' || tag === 'option')) {
                 labels.push(...childTexts(node).map(entry => entry.text));
             }
         }

@@ -44,7 +44,7 @@ async function openDialog(): Promise<void> {
 }
 
 describe('main panel: sources', () => {
-    it('the selector waits for the list, then offers All sources and every enabled source, and asks the host for the choice', async () => {
+    it('the selector waits for the list, then offers All Sources and every enabled source, and asks the host for the choice', async () => {
         const host = createFakeHost();
         render(<StoreProvider bus={host.bus}><MainShell /></StoreProvider>);
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
@@ -52,7 +52,7 @@ describe('main panel: sources', () => {
         await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: SOURCES, failed: [] }, 1));
 
         expect(selector()).toBeEnabled();
-        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org', 'Contoso']);
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All Sources', 'nuget.org', 'Contoso']);
         await userEvent.setup().selectOptions(selector(), CONTOSO);
         expect(host.requests('session/set').map(request => request.payload)).toEqual([{ selectedSource: CONTOSO }]);
         expect(selector()).toHaveValue(CONTOSO);
@@ -87,7 +87,7 @@ describe('main panel: sources', () => {
         expect(within(row('Contoso')).getByRole('checkbox')).not.toBeChecked();
         await waitFor(() => expect(said()).toBe('Contoso disabled'));
         // The selector follows the list: a disabled source is no choice.
-        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org']);
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All Sources', 'nuget.org']);
     });
 
     it('Remove asks in the dialog first and removes from the file that declares the source; Cancel keeps it', async () => {
@@ -287,7 +287,7 @@ describe('main panel: sources', () => {
         await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         await hostSays(() => host.respond(host.requests('sources/list')[0], { sources: SOURCES, failed: [{ url: NUGET, error: 'ECONNREFUSED' }] }, 1));
 
-        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org (unreachable)', 'Contoso']);
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All Sources', 'nuget.org (unreachable)', 'Contoso']);
         expect(selector().options[1]).toHaveAttribute('title', 'ECONNREFUSED');
         const indicator = screen.getByTestId('source-health-indicator');
         expect(indicator).toHaveAccessibleName('Retry 1 Unreachable Source');
@@ -298,7 +298,7 @@ describe('main panel: sources', () => {
         expect(host.requests('sources/list')).toHaveLength(1);
         // The reset health tracker reports no failed source.
         await hostSays(() => host.event('sources/health', { failed: [] }));
-        expect([...selector().options].map(option => option.textContent)).toEqual(['All sources', 'nuget.org', 'Contoso']);
+        expect([...selector().options].map(option => option.textContent)).toEqual(['All Sources', 'nuget.org', 'Contoso']);
         expect(screen.queryByTestId('source-health-indicator')).toBeNull();
     });
 
