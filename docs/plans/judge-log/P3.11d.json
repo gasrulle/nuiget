@@ -1,0 +1,382 @@
+{
+  "item": "P3.11d",
+  "runs": [
+    {
+      "runId": "43731497246",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "44431c8 (commit 1, the reading run; product unchanged since 27791f9)",
+      "look": "modern",
+      "workflow": "wf_892edfeb-730",
+      "note": "The reading run's product crops against the artboards and specs copied from that run's artifact (UX-P3.11d DO 4-5). Single-judge findings are informational; each with its owner.",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/43731497246/main-installed-single.dark-modern.932.png",
+          "sha256": "d7b317440c39117fc70c672749abf02d931270ee85e79c8c6322e2ab54214914",
+          "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png",
+          "artboardSha256": "57d1c95ec3e3a507d73bca811a63e037bd8a259b4403db29e7af551518eeabf8"
+        },
+        "main-installed-details": {
+          "png": "captures/43731497246/main-installed-details.dark-modern.1200.png",
+          "sha256": "8a3790ba8d00d58f73ba722791946dd9afca9d91758419aecf708aecf0af62d4",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "50bdfb36a93742cc28b3efbd2a66aac5b394670bae6bd0ce470c0d1b533cb9b4"
+        },
+        "main-installed-all": {
+          "png": "captures/43731497246/main-installed-all.dark-modern.1200.png",
+          "sha256": "2c30699b22a379f8a02bc9f2e7bb0af224cea75f38e64c8dc7c298164a173daa",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "8391775be9372fcfc006383a44166ee3f86d0794d010e82744d8d5189e6ecf34"
+        },
+        "main-transitive-details": {
+          "png": "captures/43731497246/main-transitive-details.dark-modern.1200.png",
+          "sha256": "555e6815c448ad2bd1325cc642b90de22c38fe371f1e4029238a3e9569ffd136",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png",
+          "artboardSha256": "d277db70514c5b0cc913e7a96b2ec032c150c70f605b7c3847e5c1c03fdedf01"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/43731497246/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "ca9e14cb456d046fb11831beb354103c707c99b353c82d14fa10bdbe158f4ab6",
+          "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png",
+          "artboardSha256": "278e861e19b6a1e42bcb06362c75bb6bf265d7c2a518c93e0e69ee3195d9186d"
+        },
+        "main-updates": {
+          "png": "captures/43731497246/main-updates.dark-modern.1200.png",
+          "sha256": "12fea2f37efcbefdcd9ce960ec78dd3a2aabaa51cf99f2aec7f088b032970953",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "3a43ecbfa07caa9b2317efd31aafcbb24438819677e148cae1732fc1896ab0ad"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 11,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 4,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] In the details pane's Authors row, the 12 px Verified mark sits about 2 px above the centre of the 'James Newton-King' text line (mark y 317–326 against the artboard's 319–328, with the text at the same y in both). The row is also about 2 px shorter than the artboard's Authors row, so every property, Vulnerabilities and Dependencies line below it moves up 2 px. The same mark beside the author in the list rows is centred, as the artboard draws it here. | [geometry] The Authors property row of the details pane is about 2 px shorter than the artboard's: the Authors label's ink top is 319 against the artboard's 320 and the License row's is 340 against 342. Every block below it (License through Report abuse, Vulnerabilities, Dependencies and its rows) therefore sits 2 px higher than the artboard. The capture's row pitches read 24/21/22/22/22/24 against the artboard's 25/22/22/22/22/24.",
+          "severity": "minor",
+          "box": [
+            441,
+            313,
+            253,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "In the details pane's Authors row, the 12 px Verified mark sits about 2 px above the centre of the 'James Newton-King' text line (mark y 317–326 against the artboard's 319–328, with the text at the same y in both). The row is also about 2 px shorter than the artboard's Authors row, so every property, Vulnerabilities and Dependencies line below it moves up 2 px. The same mark beside the author in the list rows is centred, as the artboard draws it here.",
+              "severity": "minor",
+              "box": [
+                552,
+                317,
+                140,
+                14
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop the Verified mark's ink spans y 317–326 (centre 321.5) while the 'James Newton-King' ink sits at 318–327 in both images; the artboard's mark spans 319–328 (centre 323.5), so the capture's mark sits about 2 px high against the text. The spec declares nothing for the Authors row, and no hard measurement covers this vertical alignment: DS-ALIGN-1 'value left spread 0' measures left edges only.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "The Authors property row of the details pane is about 2 px shorter than the artboard's: the Authors label's ink top is 319 against the artboard's 320 and the License row's is 340 against 342. Every block below it (License through Report abuse, Vulnerabilities, Dependencies and its rows) therefore sits 2 px higher than the artboard. The capture's row pitches read 24/21/22/22/22/24 against the artboard's 25/22/22/22/22/24.",
+              "severity": "minor",
+              "box": [
+                441,
+                313,
+                253,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the label column, ink rows in the capture against the artboard read: Authors 318 against 319, License 340 against 342, and every later label (Vulnerabilities and Dependencies included) 2 px higher, so the Authors row is about 2 px shorter. This is the same Authors-line defect as native-1, and no hard measurement covers this row pitch (DS-TYPE-4 reads line height 18.2, target 18.2).",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.12",
+          "evidence": "captures/43731497246/main-installed-details.dark-modern.1200.png 441,313,253,22: the details Authors row about 2 px shorter than the artboard (pitches 24/21/22/22/22/24 against 25/22/22/22/22/24); no source change in UX-P3.11d",
+          "ruling": "design-advisor follow-up 2 of 2026-11-15 (docs/plans/handoff/P3.11d.md, \"2026-11-15, UX-P3.11d, design-advisor, follow-up 2 (the standing finding)\"): fixed, owner P3.12, which states the pitch as a measurement before it fixes it"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[states] The source-settings icon button in the header draws a cog (the settings-gear codicon) where the approved artboard's source-settings element (spec rect 1136,10,22,22) draws a different, radial sun-like glyph. Every other header element matches. docs/design/icons.json maps the settings icon to settings-gear, so the artboard drawing may be the stale side of this difference.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "The source-settings icon button in the header draws a cog (the settings-gear codicon) where the approved artboard's source-settings element (spec rect 1136,10,22,22) draws a different, radial sun-like glyph. Every other header element matches. docs/design/icons.json maps the settings icon to settings-gear, so the artboard drawing may be the stale side of this difference.",
+              "severity": "minor",
+              "box": [
+                1136,
+                10,
+                22,
+                22
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "At rect 1136,10,22,22 the capture draws the settings-gear codicon (a cog) and the artboard draws a different glyph, a circle with eight stroked rays from a hand-written SVG in round3/main-installed-details.dc.html. The glyphs visibly differ, but docs/design/icons.json maps the settings icon to settings-gear, so the artboard is the stale side: this is an artboard/reference disagreement (spec-conflict class), not a product regression.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "none, informational (rubric §6: the artboard draws a placeholder glyph; the product draws the codicon settings-gear)"
+        },
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] In the NETStandard.Library row, the SDK and Props label badges sit 4 px apart and the SDK badge starts about 7 px after the name. The artboard draws both gaps at 8 to 9 px, so the capture's badge cluster looks cramped beside the artboard's (Newtonsoft.Json's Vulnerable badge also starts 2 px earlier than drawn).",
+          "severity": "minor",
+          "box": [
+            244,
+            259,
+            93,
+            21
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-transitive-details",
+              "finding": "In the NETStandard.Library row, the SDK and Props label badges sit 4 px apart and the SDK badge starts about 7 px after the name. The artboard draws both gaps at 8 to 9 px, so the capture's badge cluster looks cramped beside the artboard's (Newtonsoft.Json's Vulnerable badge also starts 2 px earlier than drawn).",
+              "severity": "minor",
+              "box": [
+                244,
+                259,
+                93,
+                21
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "A column scan of the NETStandard.Library row (y 262-277) shows the name ending at x 250, the SDK badge at 257-291 and Props at 296-336, so the gaps are 6 px and 4 px. The artboard draws the same badges at 259-293 and 302-342, gaps 8 and 8. The cluster is visibly tighter side by side, and the spec declares no badge gap that would allow it.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (badge spacing, leftover stylesheet debt)"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[native] In the details pane's Authors line, the Verified mark (ink y 154-163) sits about 1.5 px above the vertical centre of the 'Microsoft' text (cap height y 156-164). The artboard draws the mark centred on that text (y 155-166), so in the capture it reads slightly raised.",
+          "severity": "minor",
+          "box": [
+            505,
+            153,
+            74,
+            12
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-transitive-details",
+              "finding": "In the details pane's Authors line, the Verified mark (ink y 154-163) sits about 1.5 px above the vertical centre of the 'Microsoft' text (cap height y 156-164). The artboard draws the mark centred on that text (y 155-166), so in the capture it reads slightly raised.",
+              "severity": "minor",
+              "box": [
+                505,
+                153,
+                74,
+                12
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "A row scan shows the Verified mark ink at y 154-163 (centre 158.5) against the 'Microsoft' cap height at 156-164 (centre 160). In the artboard the mark sits at 156-165, centred on the same text, so in the capture the mark reads slightly raised. This is optical centring.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (the details Authors row and its Verified mark; same class as main-installed-details#D1)"
+        },
+        {
+          "id": "main-transitive-expanded#D1",
+          "state": "main-transitive-expanded",
+          "finding": "[geometry] In the NETStandard.Library row's name line, the label badges sit tighter than the artboard draws them: the capture puts SDK at x 257 (about 6 px after the name) and Props at x 296, 4 px after SDK ends at 292. The artboard puts SDK at x 259 and Props at x 302, 8 px after SDK ends at 294, so the two gaps in that one line differ (6 then 4) where the artboard has 8 and 8. The Vulnerable badge on the Newtonsoft.Json row has the same 2 px pull-in (x 226 in the capture, 228 in the artboard).",
+          "severity": "minor",
+          "box": [
+            250,
+            360,
+            93,
+            21
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-transitive-expanded",
+              "finding": "In the NETStandard.Library row's name line, the label badges sit tighter than the artboard draws them: the capture puts SDK at x 257 (about 6 px after the name) and Props at x 296, 4 px after SDK ends at 292. The artboard puts SDK at x 259 and Props at x 302, 8 px after SDK ends at 294, so the two gaps in that one line differ (6 then 4) where the artboard has 8 and 8. The Vulnerable badge on the Newtonsoft.Json row has the same 2 px pull-in (x 226 in the capture, 228 in the artboard).",
+              "severity": "minor",
+              "box": [
+                250,
+                360,
+                93,
+                21
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Pixel runs at y 372 show the gap between the SDK badge (x 257–291) and the Props badge (x 296–336) is 4 px in the capture; the artboard draws them at 259–293 and 302–342, an 8 px gap. Badge widths are the same in both (35 and 41 px). The spec declares no badge rect or gap, and DS-GRID-2a ('gaps 4, 8', hard) only checks that 4 is on the spacing ramp, so no measurement contradicts the finding. One detail in the finding is wrong: the name-to-SDK gap is 8 px in the capture (10 in the artboard), not 6.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "owner": "P3.12 (badge spacing, leftover stylesheet debt)"
+        },
+        {
+          "id": "main-updates#D1",
+          "state": "main-updates",
+          "finding": "[native] Seven of the nine visible update rows (Dapper, FluentValidation, Humanizer.Core, Microsoft.Extensions.AI.Abstractions, DependencyInjection.Abstractions, Http, Logging.Abstractions, Options.ConfigurationExtensions) fill the 36 px icon slot with the product's fallback bitmap, the saturated orange clip-art box of resources/package-icon.png. The artboard draws the fallback as a neutral grey tile with a monochrome package codicon, and the Extensions view's default icon is likewise a grey monochrome glyph. Here the icon column reads as decoration rather than a workbench placeholder.",
+          "severity": "major",
+          "box": [
+            46,
+            193,
+            36,
+            610
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-updates",
+              "finding": "Seven of the nine visible update rows (Dapper, FluentValidation, Humanizer.Core, Microsoft.Extensions.AI.Abstractions, DependencyInjection.Abstractions, Http, Logging.Abstractions, Options.ConfigurationExtensions) fill the 36 px icon slot with the product's fallback bitmap, the saturated orange clip-art box of resources/package-icon.png. The artboard draws the fallback as a neutral grey tile with a monochrome package codicon, and the Extensions view's default icon is likewise a grey monochrome glyph. Here the icon column reads as decoration rather than a workbench placeholder.",
+              "severity": "major",
+              "box": [
+                46,
+                193,
+                36,
+                610
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "The box lies inside the 1200x803 PNG (y 193+610=803). The crop shows 8 of the 9 icon slots filled with the saturated orange clip-art box, which is byte-for-byte the look of resources/package-icon.png; only Configuration.EnvironmentVariables shows a real (.NET) icon. The artboard crop draws every slot as a neutral grey tile with a monochrome package codicon. Geometry holds (DS-ROW-1 icon 36x36 x14, DS-RADIUS-2 icon 2px x14, both hard), so only the fallback's appearance differs. Which rows fall back is live content, but the fallback asset is the product's own, so §6's live-content exclusion does not cover it, and neither the spec nor any DS rule declares the difference.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "owner": "P7.4b (re-judges the fallback rows of the default package icon)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-single",
+          "finding": "At rest, the Installed tab is boxed by a 1 px focusBorder ring (#0078d4 at x 6 to 144, y 77 to 111), drawn as the DS-FOCUS-1 tab ring. The artboard's installed-tab draws only the 1 px active underline at y 111, so the tab strip reads as keyboard-focused when the state has no focus.",
+          "severity": "minor",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show a 1 px blue ring around the Installed tab, but this is the declared design, not a defect: the reach clicks the tab, main-installed-single is in FOCUSED_TAB_STATES, and DECISIONS.md rules that the main panel draws its focus ring on click too (2026-10-23, 'a ring after a click', UX-P2.5). The hard measurement reads 'DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target … offset -1)'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-installed-single",
+          "finding": "The list pane ends 1 px short of the redline: the split divider is at x=326 and the details pane starts at x=327, against the spec's tab-bar and installed-list width 327 and package-details-panel x 328 (the artboard puts the divider at x=327). The scrollbar (318-325 against 319-326), the Uninstall Selected button (163-309 against 164-310) and the Direct Packages count badge all move 1 px left with it, while the 16 px end inset holds.",
+          "severity": "minor",
+          "box": [
+            318,
+            77,
+            11,
+            726
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the scrollbar and the divider near x 318-327, but the claimed offset is 1 px, and the hard redline measurements put it within tolerance: 'SPEC@main-installed-single/list: 9/9 within 1' (tab-bar, installed-list, uninstall-selected-button), 'SPEC@…/details: 1/1 within 1' (package-details-panel), and MS-8 reads tab-bar 326.2 wide against the spec's 327.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-3",
+          "lens": "native",
+          "state": "main-transitive-details",
+          "finding": "The Source Settings action in the header shows a gear glyph, but the approved artboard draws a different glyph in the same 22 px slot (ink extents are identical, 14 x 14). The capture's gear is the workbench's usual settings glyph, so either the artboard or the product should be brought in line.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The capture draws the codicon settings-gear (docs/design/icons.json SettingsGearIcon), which the hard measurement confirms: DS-ICON-2 'glyph 16×16 ×3, colour icon.foreground ×3'. The artboard's glyph is a hand-drawn stroked SVG (a circle with 8 rays), not a codicon. The difference is the artboard's placeholder, not a defect in the capture.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "geometry-1",
+          "lens": "geometry",
+          "state": "main-transitive-details",
+          "finding": "In the details pane the Authors row sits 1 px higher than the artboard (Version-to-Authors pitch 22 px against the artboard's 23 px), and everything below it (Required by, net8.0, netstandard2.0 and their dependency lines) sits 2 px higher than the artboard draws it (Required by ink top at y 194 against 196, the last line at 321 against 323).",
+          "severity": "minor",
+          "box": [
+            441,
+            152,
+            375,
+            183
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The Authors text sits at the same y in both images (value ink 155-164), so only the Verified mark moved, which is native-2's defect. The capture's block gaps are on the ramp and equal by role (hard DS-GRID-2a: 'gaps 4, 8'). The artboard's extra 2 px below Authors (Required by 196 against 194) comes from its taller Authors line box, an inline-flex value, not from a declared gap or rect in the spec.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        }
+      ]
+    }
+  ]
+}
