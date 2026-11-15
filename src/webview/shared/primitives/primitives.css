@@ -426,10 +426,15 @@
     white-space: nowrap;
 }
 
+/* The separator carries its own spacing, cancelling the line's gap before it: a part that gave way to 0 takes nothing from the line (UX-P3.fix-14). */
+.nuiget-row-sep {
+    margin-inline-start: calc(var(--nuiget-space-3) * -1);
+}
+
 /* Generated content with an empty alternative: a span of only a symbol is undecided for axe's contrast rule, and the description stays as it was. */
 .nuiget-row-sep::before {
     content: "·" / "";
-    margin-inline-end: var(--nuiget-space-3);
+    margin-inline: var(--nuiget-space-3);
 }
 
 /* The Verified mark, wherever it stands beside an author (DS-ICON-4). */

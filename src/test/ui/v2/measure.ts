@@ -116,7 +116,9 @@ export function tabBadgesClause(tabs: TabBadges): { text: string; pass: boolean 
 
 /**
  * DS-OVERFLOW-3's collapsed-button clause: at a pane of at most 250 px the glyph shows alone, 16×16, inside the button and
- * centred on it within the containment tolerance, the label hidden and the name kept (its label, e.g. "Select All"; UX-P3.fix-14); above it the label
+ * centred on it within the containment tolerance, the label hidden and the name kept: read from the rendered label, so a
+ * literal belonged to one button; the names stay pinned by the ARIA snapshots and the feature tests (UX-P3.fix-14,
+ * follow-up 1); above it the label
  * shows and the glyph does not (UX-P3.fix-12).
  */
 export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { text: string; pass: boolean } {
