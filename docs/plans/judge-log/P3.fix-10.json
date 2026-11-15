@@ -1,0 +1,259 @@
+{
+  "item": "P3.fix-10",
+  "runs": [
+    {
+      "runId": "43705415149",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "df5ed63 (the proving push)",
+      "look": "modern",
+      "workflow": "wf_d915a260-18b",
+      "note": "No sidebar artboard: the two sidebar tree cells are judged against main-installed-all.dark-modern.1200.png and its spec, as UX-P3.8 and UX-P3.fix-5 did. The item moves no pixel by design (114 cells at 0 px in this run); the judge runs because the design-advisor kept it (opening ruling DO 10).",
+      "captures": {
+        "sidebar-all-projects-tools": {
+          "png": "captures/43705415149/sidebar-all-projects-tools.dark-modern.300.png",
+          "sha256": "cef506a92170bcd5df3cdb5ebc45f18845d187d77589697ed4cf692cb975df4a",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        },
+        "sidebar-all-projects-updates": {
+          "png": "captures/43705415149/sidebar-all-projects-updates.dark-modern.300.png",
+          "sha256": "b21dae97d195eb4b6742dc652e9bc81bb3f4191e21ba531eb88a1c0715112852",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "a127c0ca45cef78be52c61734629ed111d25c3122ecd0fe7271ceae6f32f9232"
+        }
+      },
+      "panel": {
+        "states": 2,
+        "candidates": 10,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 8,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "sidebar-all-projects-tools#D1",
+          "state": "sidebar-all-projects-tools",
+          "finding": "[geometry] The Installed list is scrolled: the thumb runs from y 388 to the bottom, and the first visible row, Microsoft.Extensions.Options, has its top under the pane header. Yet the list's top edge under the header (y 82 to 88) is flat background with no scroll shadow, so the clipped rows meet the 28 px Installed header with no separation.",
+          "severity": "major",
+          "box": [
+            0,
+            82,
+            292,
+            6
+          ],
+          "rule": "DS-SCROLL-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "sidebar-all-projects-tools",
+              "finding": "The Installed list is scrolled: the thumb runs from y 388 to the bottom, and the first visible row, Microsoft.Extensions.Options, has its top under the pane header. Yet the list's top edge under the header (y 82 to 88) is flat background with no scroll shadow, so the clipped rows meet the 28 px Installed header with no separation.",
+              "severity": "major",
+              "box": [
+                0,
+                82,
+                292,
+                6
+              ],
+              "rule": "DS-SCROLL-2",
+              "verdict": "confirmed",
+              "reason": "The crop of y 66 to 104 shows the list's top edge under the 28 px Installed header (DS-HEIGHT-1 28) as flat background with no inset shadow. The reach line shows the list scrolled to its end ('scrollTop 534 of 1251, client 717'), and the thumb geometry puts the scroller's top at y 82, so DS-SCROLL-2's scroll shadow is required there and is absent. No measurement or spec entry contradicts it: the rule is still pending for the sidebar.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "informational": "singleJudge, informational: the scrolled tree without the workbench scroll shadow (DS-SCROLL-2); owned by UX-P3.fix-6 (its row), unchanged by this item."
+        },
+        {
+          "id": "sidebar-all-projects-updates#D1",
+          "state": "sidebar-all-projects-updates",
+          "finding": "[native] The Updates tree is scrolled away from its start (scrollbar thumb at y 373–798 in a list whose top is y 82, and the first row's glyphs are cut at y 82), yet no scroll shadow is painted on the list's top edge under the section header: pixels at y 82–88 are the flat side-bar background (24,24,24). The workbench's SCM tree draws the inset `0 6px 6px -6px` scrollbar.shadow in that place.",
+          "severity": "major",
+          "box": [
+            0,
+            82,
+            300,
+            6
+          ],
+          "rule": "DS-SCROLL-2",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "sidebar-all-projects-updates",
+              "finding": "The Updates tree is scrolled away from its start (scrollbar thumb at y 373–798 in a list whose top is y 82, and the first row's glyphs are cut at y 82), yet no scroll shadow is painted on the list's top edge under the section header: pixels at y 82–88 are the flat side-bar background (24,24,24). The workbench's SCM tree draws the inset `0 6px 6px -6px` scrollbar.shadow in that place.",
+              "severity": "major",
+              "box": [
+                0,
+                82,
+                300,
+                6
+              ],
+              "rule": "DS-SCROLL-2",
+              "verdict": "confirmed",
+              "reason": "The crop shows the first row's glyphs starting cut at y 82 directly under the Updates header, with the flat side-bar background (24,24,24) above them and no darkened shadow band; the measurement agrees: DS-SCROLL-2 '[sidebar-updates-list] scrollTop 490, shadow none (token rgb(0, 0, 0) 0px 6px 6px -6px inset)' (pending P3.fix-6).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "informational": "singleJudge, informational: the scrolled tree without the workbench scroll shadow (DS-SCROLL-2); owned by UX-P3.fix-6 (its row), unchanged by this item."
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only the Provisional label badge and the count. The artboard's Unsupported.csproj header also draws the warning-outlined \"Unsupported\" badge before \"provisional\", so the sidebar drops the badge that matters most and keeps the lower-priority Provisional pill. The message leaf below still states the reason, so no information is lost.",
+          "severity": "major",
+          "box": [
+            16,
+            361,
+            268,
+            24
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the Unsupported.csproj group row with a Provisional pill and the count 3. But the reference artboard is the 1200 px main panel, and the same box there is its Serilog row, so it is another surface. Design System §9 gives the sidebar's unsupported state as sidebar-unsupported (the message leaf) with no group-row badge, and the hard DS-STATE-1 reads 'present: ... sidebar-installed-unsupported-unsupported.csproj; missing: none'.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "geometry-2",
+          "lens": "geometry",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The trailing counts in this pane end on two columns. The Installed pane header's count \"46\" ends at x 290, 10 px from the pane edge. Every project group row's count (0, 2, 3, 13) ends at x 282, 8 px further in, because the tree rows keep clear of the 8 px scrollbar at x 292 to 299 and the header does not. In the artboard all trailing counts in the list column share one end edge.",
+          "severity": "minor",
+          "box": [
+            263,
+            58,
+            28,
+            215
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show '46' ending further right than the group counts (DS-OVERFLOW-2: '46' 263.3–290 in a box ending at 296; group counts end at 282 in boxes ending at 288). Each end meets its own declared rule, though: hard DS-INSET-3 reads 'section headers 6 (target 6); group rows 6 ×4 (target 6)'. The 8 px offset is the scrollbar gutter that DS-SCROLL-1 declares ('[sidebar-installed-list] 8'), and the artboard compared with is the main panel, another surface.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only a 'Provisional' label badge and its count. The artboard's Unsupported.csproj header draws an 'Unsupported' warning label badge before the provisional badge, so the group row's unsupported badge is missing. The message leaf below still names the condition, so no information is lost.",
+          "severity": "major",
+          "box": [
+            36,
+            363,
+            250,
+            21
+          ],
+          "rule": "DS-STATE-1",
+          "verdict": "refuted",
+          "reason": "The cited rule DS-STATE-1 is measured hard as 'present: sidebar-installed-empty-empty.csproj, sidebar-installed-unsupported-unsupported.csproj; missing: none', and the crop shows the unsupported message leaf under the row. The 'Unsupported' badge appears only on the main-panel artboard (a 1200 px surface whose same box holds a different row), and the sidebar's §9 contract names no such badge.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The three package rows under Unsupported.csproj (Newtonsoft.Json, Polly, Serilog) show only name and version. The artboard draws a 'Read-only' status on each of these rows, and the capture has no read-only marker in the version slot. The unresolved Serilog row above does use that slot for its 'unresolved' status.",
+          "severity": "major",
+          "box": [
+            44,
+            427,
+            210,
+            60
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows compact 22 px sidebar rows (Newtonsoft.Json 13.0.3, Polly 8.4.2, Serilog 3.1.1) with only a name and a version. The artboard's 'Read-only' sits in the meta line of the main panel's comfortable rows (author · Read-only), on another surface with another row form. The sidebar's read-only condition is stated by the unsupported message leaf above these rows, so neither a rule nor a sidebar spec element requires a per-row marker.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-3",
+          "lens": "states",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The folder group header reads 'tools' in lower case, where the artboard's folder group row reads 'Tools' (group-header labels are Title Case).",
+          "severity": "minor",
+          "box": [
+            30,
+            233,
+            36,
+            14
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "'tools' is the folder's name as it is on disk, which is live content and not a label. Hard DS-TYPE-5 reads 'level ×6: 13px/600/none ×6 (target 13px/600/none)', so a sidebar group row applies no text transform by spec. The artboard's 'Tools' comes from the main panel's --nuiget-header-transform on another surface.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-2",
+          "lens": "native",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The count badges of the tree's group rows (Empty.csproj 0, Unresolved.csproj 1, Unsupported.csproj 3, Utility.csproj 13) end at x 280–281, 19 px from the pane edge. The Updates section header's 44 badge ends at x 289, 10 px from the edge, so the count column steps 8 px inward, by the width of the scrollbar gutter. Workbench trees overlay their scrollbar and keep one trailing edge for row badges.",
+          "severity": "major",
+          "box": [
+            262,
+            58,
+            28,
+            237
+          ],
+          "rule": "DS-INSET-3",
+          "verdict": "refuted",
+          "reason": "The group-row badges do end 8 px left of the header's 44 badge, but the hard measurements show both meet the rule: DS-INSET-3 reads 'section headers 6 (target 6); group rows 6 ×4 (target 6)'. The 8 px step is the list's scrollbar gutter, which DS-SCROLL-1 measures as '[sidebar-updates-list] 8 (target 8)' (DS-OVERFLOW-2: group badges end at 282 in rows ending at 288, the header badge at 290 in a box ending at 296).",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The folder group row reads \"tools\" in lower case, while the artboard draws the same folder group header as \"Tools\" and group-header labels are Title Case.",
+          "severity": "major",
+          "box": [
+            28,
+            254,
+            40,
+            17
+          ],
+          "rule": "DS-COPY-1",
+          "verdict": "refuted",
+          "reason": "The crop shows 'tools', the workspace folder's real name, which is live content under rubric §6. The hard measurement DS-TYPE-5 reads the sidebar's group titles as 'level ×6: 13px/600/none (target 13px/600/none)'. The artboard is the 1200 px main panel, where the Tools header sits at y 147 with its own header transform, so the box does not cover a matching element there.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        },
+        {
+          "id": "states-2",
+          "lens": "states",
+          "state": "sidebar-all-projects-updates",
+          "finding": "The Unsupported.csproj group row shows only its count badge \"3\". The artboard draws an \"Unsupported\" label badge on the same group row, and the state table says the group row's badge stays beside the unsupported message leaf. The \"Unsupported project: requires .NET SDK 10 or newer.\" message leaf is present, so no information is lost.",
+          "severity": "major",
+          "box": [
+            180,
+            364,
+            90,
+            18
+          ],
+          "rule": "DS-STATE-1",
+          "verdict": "refuted",
+          "reason": "The 'group row's badge stays' clause belongs to the Main · Installed (All Projects) row of the state table; the Sidebar · Updates row asks only for the read-only marker. The artboard crop at this box shows unrelated main-panel row text, not an Unsupported badge. The hard measurement DS-STATE-1 reads 'present: sidebar-updates-unsupported-unsupported.csproj, sidebar-updates-empty-empty.csproj; missing: none'.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        }
+      ]
+    }
+  ]
+}

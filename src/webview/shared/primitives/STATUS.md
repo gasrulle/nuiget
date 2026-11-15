@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared/primitives (UX-P3.fix-10)   commit 53e5e7f (base; the item's commit follows)   2026-11-15
+# STATUS — src/webview/shared/primitives (UX-P3.fix-10)   commit df5ed63 (proving push; the closing commit adds docs only)   2026-11-15
 
 git status --short src/webview/shared/primitives: ` M Listbox.tsx`, ` M Listbox.test.tsx`, `?? STATUS.md` (this note)
 
@@ -50,7 +50,36 @@ After the change (working tree on 53e5e7f):
 
 ## Visual evidence (UI items)
 
-Pending the proving push's CI run (the item moves no pixel by design; read: `[reach]` tab-stop lines, `[aria] sidebar-all-projects-tools` `equal`, `differs` 0, `[diff] summary`, `not reachable` 0, `[keys]`), then `design-judge` on `sidebar-all-projects-tools` and `sidebar-all-projects-updates` (design-advisor DO 10).
+Run 43705415149 (df5ed63), green on every job; `captures/43705415149/` (ui-log, ui-screenshots).
+
+```text
+[reach] sidebar-all-projects-updates: scrollTop 490 of 1207, client 717, tools row at 170, tab stop "group-row-updates-folder-app", stops 1
+[reach] sidebar-all-projects-tools: scrollTop 534 of 1251, client 717, tools row at 148, tab stop "group-row-folder-app", stops 1
+[aria] main-installed-all: 72 nodes, equal
+[aria] sidebar-all-projects: 47 nodes, equal
+[aria] sidebar-all-projects-updates: 48 nodes, equal
+[aria] sidebar-all-projects-tools: 47 nodes, equal
+[diff] summary: 114 compared, 114 at 0 px, 0 above tolerance, 0 without a golden, 0 refused
+classic: [reach] sidebar-all-projects-updates: scrollTop 470 of 1207, client 737, tools row at 190, tab stop "group-row-updates-folder-app", stops 1
+```
+
+- `grep -c differs` → 0 (Modern) and 0 (classic); `grep -c "not reachable"` → 0; `grep -c "pending P3.fix-10)"` → 0.
+- The four `[keys] <screen> tab:` walks (main-installed, main-updates, main-browse, sidebar) → `as expected (hard)`;
+  `KEYS_EXPECTED` unchanged.
+- `shasum -a 256 src/test/ui/v2/aria/sidebar-all-projects-tools.json` →
+  d0cec4c1bbf3727dcfac739911e85d02f99ee94e09fb777efc3e3deb7ed77355 (unchanged).
+- Judged captures: `captures/43705415149/sidebar-all-projects-tools.dark-modern.300.png` sha256
+  cef506a92170bcd5df3cdb5ebc45f18845d187d77589697ed4cf692cb975df4a;
+  `captures/43705415149/sidebar-all-projects-updates.dark-modern.300.png` sha256
+  b21dae97d195eb4b6742dc652e9bc81bb3f4191e21ba531eb88a1c0715112852; artboard
+  `docs/design/artboards/main-installed-all.dark-modern.1200.png` (no sidebar artboard; the UX-P3.8 and UX-P3.fix-5
+  precedent).
+- design-judge (wf_d915a260-18b): `{ states: 2, candidates: 10, standing: 0, blocking: 0, refuted: 8, singleJudge: 2,
+  incomplete: 0 }`; the two single-judge findings are DS-SCROLL-2 (no scroll shadow on the scrolled trees), owned by
+  UX-P3.fix-6 and unchanged by this item; dispositions in `docs/plans/judge-log/P3.fix-10.json`.
+- G-UI: step 1 lint tests green and `check-css-baseline` 0 entries; step 2 no pending rule names this item; step 3
+  every cell 0 px; step 4 above; step 5 `[axe]` and ARIA `equal` on every state, keys as expected; step 6 Tier A PNGs
+  in the artifact.
 
 ## Done (tested)
 
@@ -76,12 +105,16 @@ None.
 
 ## Not started
 
-- The closing commit: the gotcha sentence of the class removed from "Live content that moves a box or a count"
-  (`.github/copilot-instructions.md`), the class noted closed in the P3.10 and P3.11 rows, the tracker row `done`.
+None. The closing commit removed the class sentence from the gotcha "Live content that moves a box or a count"
+(`.github/copilot-instructions.md`), noted the class closed in the P3.10 and P3.11 rows and set the tracker row `done`;
+its run is the second reading of the same code (a run that prints the class reopens the item as a stop-and-ask).
 
 ## Deviations from contract/ADR/decision (file:line each)
 
-None.
+- Architecture-advisor follow-up 1 VERIFY 1 (`git diff --stat <proving>..<closing> -- src` → no output) is read with
+  this note excluded: the handoff note lives in this directory (plan §2.5), so the closing commit changes
+  `src/webview/shared/primitives/STATUS.md` and no other file under `src`
+  (`git diff --stat df5ed63..HEAD -- src ':(exclude)*.md'` → no output).
 
 ## Advisor decisions (date, item, question, answer verbatim)
 
@@ -294,4 +327,6 @@ objection to the design-advisor's `PIN_FACTS` form?
 
 ## Exact next step (one item ID)
 
-UX-P3.fix-10 (still `in-progress`): read the proving push's run against both advisors' VERIFY lists, run `design-judge`, then the closing commit (tracker `done`, the gotcha's class sentence removed, the class noted closed in the P3.10 and P3.11 rows; nothing under `src`).
+UX-P3.fix-10 is `done`. Its closing commit's run must read `[aria] sidebar-all-projects-tools … equal` and both
+tab-stop lines again (the second reading); if it prints the class or any `differs` on the cell, the item reopens as a
+stop-and-ask. Next item: UX-P3.11b.
