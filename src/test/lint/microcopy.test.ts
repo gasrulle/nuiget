@@ -22,7 +22,7 @@ function sources(dir: string): string[] {
 
 const FILES = sources(path.join(ROOT, 'src/webview')).map(file => ({ file: path.relative(ROOT, file), text: readFileSync(file, 'utf8') }));
 /** UX-P3.11b: every non-test source of `src/host` and the composition root. */
-const HOST_FILES = [...sources(path.join(ROOT, 'src/host')), path.join(ROOT, 'src/extension.ts')].map(file => ({ file: path.relative(ROOT, file), text: readFileSync(file, 'utf8') }));
+const HOST_FILES = [...sources(path.join(ROOT, 'src/host')), path.join(ROOT, 'src/extension.ts')].map(file => ({ file: path.relative(ROOT, file).split(path.sep).join('/'), text: readFileSync(file, 'utf8') }));
 
 describe('the webviews\' microcopy (DS-COPY-1, DS-COPY-4; UX-P3.11)', () => {
     it('reads every non-test source of src/webview', () => {
