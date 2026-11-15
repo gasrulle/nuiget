@@ -1,4 +1,4 @@
-# STATUS — src/webview/shared/primitives (UX-P3.fix-13)   commit de27fe0 (proving push; 2b9822b and the closing commit follow)   2026-11-15
+# STATUS — src/webview/shared/primitives (UX-P3.fix-13)   commit a99b76d (closing commit; this closing record adds docs only)   2026-11-15
 
 git status --short (closing commit): the four goldens with their sidecars and `index.json`, `measure.ts` (the DS-HEIGHT-10
 filter and the flip), `measure-collector.test.ts`, DECISIONS, the two judge logs, the tracker and this note
@@ -208,6 +208,17 @@ re-run on the final tree.
 Nothing. The closing run is the proof.
 
 ## Deviations from contract/ADR/decision (file:line each)
+
+- DS-RADIUS-2's count-badge count follows the filtered badge list (design-advisor follow-up 2): `src/test/ui/v2/measure.ts`,
+  the `heights.badges` collector that DS-HEIGHT-10 and DS-RADIUS-2 read. Closing run 43750395962 against proving run
+  43746892037, the four narrow cells (the radius verdict unchanged):
+
+```text
+< [measure] DS-RADIUS-2@main-installed-details/rows: band 4px ×13 (target 4px); icon hidden (target 2px); check 3px ×15 (target 3px); icon-button 4px ×4 (target 4px); count badge 9999px ×12 (target 9999px) (hard)
+> [measure] DS-RADIUS-2@main-installed-details/rows: band 4px ×13 (target 4px); icon hidden (target 2px); check 3px ×15 (target 3px); icon-button 4px ×4 (target 4px); count badge 9999px ×9 (target 9999px) (hard)
+< [measure] DS-RADIUS-2@main-installed-single/rows: band 4px ×12 (target 4px); icon hidden (target 2px); check 3px ×14 (target 3px); icon-button 4px ×3 (target 4px); count badge 9999px ×4 (target 9999px) (hard)
+> [measure] DS-RADIUS-2@main-installed-single/rows: band 4px ×12 (target 4px); icon hidden (target 2px); check 3px ×14 (target 3px); icon-button 4px ×3 (target 4px); count badge 9999px (target 9999px) (hard)
+```
 
 - The tracker row asks that "each tab label is wider than it was with them"; `tabBadgesClause` (`src/test/ui/v2/measure.ts`) prints
   the labels an ellipsis cuts and does not judge them, as the opening ruling's DO 2 rules (§8 allows the ellipsis second).
@@ -438,6 +449,58 @@ dispositions and owners for the judge's 11 findings.
 > - The "all other hard lines identical to run 43742201585" comparison and the classic output are from the brief. I confirmed only the DS-HEIGHT-10 lines, which read as you pasted them.
 > - The narrow-width accessible name is still read by no gate; the wide-width names in the snapshot are unchanged, which is what the clip form predicts but does not prove at 250 or under.
 
+## Closing run
+
+Run 43750395962 (a99b76d), green on every job; `captures/43750395962/` (ui-log): `[diff] summary: 114 compared, 114 at 0 px,
+0 above tolerance, 0 without a golden, 0 refused`; `grep -c 'pending P3.fix-13'` → 0; `grep 'DS-HEIGHT-10@main-installed' |
+grep -c '19×19 ×3'` → 0; `[aria] … differs` 0 and 0; details toolbars `not measurable` 0;
+`DS-HEIGHT-10@main-installed-single: count 26.7×20 (at least 19×19) (hard)` ×3, `DS-HEIGHT-10@main-installed-details: count
+20.4×20 ×9 (at least 19×19) (hard)` ×1, `DS-OVERFLOW-3@…/tabs: [tab-bar] 2/2 reachable; badges hidden 3, labels cut 0
+(hard)` ×4. Hard lines against the proving run: classic identical, Modern identical but DS-RADIUS-2 (Deviations, follow-up
+2). UX-P3.fix-13 is `done`.
+
+### 2026-11-15, UX-P3.fix-13, design-advisor, follow-up 2 (DS-RADIUS-2's count)
+
+Question (the GOLDEN ruling's DO 4 stop-and-ask): DS-RADIUS-2's count-badge count dropped by the three clipped tab badges.
+
+> Follow-up 2 ruling for UX-P3.fix-13: the DS-RADIUS-2 count change is accepted, and the item closes on run 43750395962 (a99b76d).
+>
+> The closing run's files match the brief: `[diff] summary: 114 compared, 114 at 0 px, 0 above tolerance, 0 without a golden, 0 refused`, `pending P3.fix-13` 0, the DS-HEIGHT-10 lines as ruled, and DS-RADIUS-2 reading `count badge 9999px ×9` at details 400 and `count badge 9999px` at the three narrow single cells.
+>
+> ```text
+> DECISION: Accept. The DS-RADIUS-2 count change is the same correction; UX-P3.fix-13 closes on run 43750395962.
+>
+> WHY: DS-RADIUS-2's badge part reads `layout.heights.badges` (measure.ts:2971-2972), the list the GOLDEN ruling's
+> step 2 filtered, so its count drops by exactly the three clipped tab badges (12 → 9 at details 400, 4 → 1 at the
+> three narrow single cells) and its verdict is unchanged: every counted badge is 9999px against the 9999px
+> target. A radius is a property of a badge the user sees, as a size is; one list read by both rules is the
+> right form, and a second unfiltered list for DS-RADIUS-2 would bring back the reading of hidden boxes. Wide
+> cells are unchanged (×12, ×4).
+>
+> DO:
+> 1. Record in the item's STATUS.md, under Deviations: "DS-RADIUS-2's count-badge count follows the filtered badge
+>    list (design-advisor follow-up 2)", with the two before/after lines.
+> 2. Extend the DECISIONS.md sentence from the GOLDEN ruling's step 3 to "DS-HEIGHT-10 and DS-RADIUS-2 read shown
+>    badges only." in the next commit that touches the docs; no new run is needed for it.
+> 3. Mark the item done on run 43750395962.
+>
+> DO NOT:
+> - Give DS-RADIUS-2 its own badge list, or revert the filter.
+> - Re-run or re-adopt anything for this.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY: `grep -c 'heights.badges' src/test/ui/v2/measure.ts` shows one collector list read by DS-HEIGHT-10,
+> DS-RADIUS-2 and the other badge rules; run 43750395962's `[diff] summary` reads 114 at 0 px.
+>
+> DEFECTS: none.
+> ```
+>
+> **Not checked**
+> - Two other rules read the same list at measure.ts:3315 and :3323. I did not check which rules those are; your sorted comparison says their lines did not change, and I am relying on that.
+> - I did not re-open any PNG for this follow-up: the question is about a count in a measurement line, and the diff is 0 px on all 114 cells.
+> - The classic output and the full hard-line comparison against run 43746892037 are taken from the brief; I confirmed only the DS-RADIUS-2 and DS-HEIGHT-10 lines of the two states.
+
 ## Exact next step (one item ID)
 
-UX-P3.fix-13 is `done` once the closing run reads the GOLDEN ruling's VERIFY. Next open row: P3.fix-14.
+UX-P3.fix-13 is `done` (closing run 43750395962). Next open row: P3.fix-14.
