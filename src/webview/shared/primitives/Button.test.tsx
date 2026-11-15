@@ -44,6 +44,10 @@ describe('Button', () => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
         expect(icon.nextElementSibling).toHaveClass('nuiget-button-label');
         const css = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8').replace(/\r\n/g, '\n');
+        // A query rule follows the base rule it narrows: at equal specificity the later rule wins (UX-P3.fix-12).
+        const base = css.search(/^\.nuiget-button-icon \{\n\s+display: none;/m);
+        expect(base).toBeGreaterThanOrEqual(0);
+        expect(base).toBeLessThan(css.indexOf('@container (max-width: 250px)'));
         const narrow = css.slice(css.indexOf('@container (max-width: 250px)'));
         expect(narrow).toMatch(/\.nuiget-button-icon \{\n\s+display: inline-flex;/);
         expect(narrow).toMatch(/\.nuiget-button-icon \+ \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);

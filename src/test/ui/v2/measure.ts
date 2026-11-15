@@ -23,6 +23,49 @@ import type { Lane } from './states';
 
 export type RuleStatus = 'hard' | { pending: string };
 
+/**
+ * A text button with a glyph (`Button`'s `icon`) in a list toolbar: the width of the list pane's container (`.nuiget-tabs`
+ * content box), the glyph's box and its centre against the button's when shown, whether the label shows, and the name.
+ */
+export interface CollapsibleButton {
+    pane: number | undefined;
+    glyph: { w: number; h: number; inside: boolean; dx: number; dy: number } | undefined;
+    labelShown: boolean;
+    name: string;
+}
+
+/**
+ * DS-OVERFLOW-3's collapsed-button clause in the `toolbars` scope (§8: Select All gives way to its glyph below a 250 px
+ * pane and keeps its name; UX-P3.fix-12, design-advisor opening ruling of 2026-11-15). Pending until that item's fix.
+ */
+export const COLLAPSED_GLYPH_STATUS: RuleStatus = { pending: 'P3.fix-12' };
+
+/** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
+const COLLAPSE_PANE = 250;
+
+/**
+ * DS-OVERFLOW-3's collapsed-button clause: at a pane of at most 250 px the glyph shows alone, 16×16, inside the button and
+ * centred on it within the containment tolerance, the label hidden and the name kept ("Select All"); above it the label
+ * shows and the glyph does not (UX-P3.fix-12).
+ */
+export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { text: string; pass: boolean } {
+    const narrow = buttons.filter(button => button.pane !== undefined && button.pane <= COLLAPSE_PANE);
+    const wide = buttons.filter(button => !(button.pane !== undefined && button.pane <= COLLAPSE_PANE));
+    const centred = (delta: number) => Math.abs(delta) <= TOLERANCES.containment;
+    const collapsedOk = (button: CollapsibleButton) => button.glyph !== undefined && button.glyph.w === 16 && button.glyph.h === 16 && button.glyph.inside
+        && centred(button.glyph.dx) && centred(button.glyph.dy) && !button.labelShown && button.name === 'Select All';
+    const parts: string[] = [];
+    if (narrow.length > 0) {
+        parts.push(`collapsed ${narrow.length}: ${narrow.map(button => button.glyph === undefined
+            ? `no glyph, name "${button.name}"`
+            : `glyph ${button.glyph.w}×${button.glyph.h}${button.glyph.inside ? '' : ' outside'}, centre dx ${button.glyph.dx} dy ${button.glyph.dy}${button.labelShown ? ', label shown' : ''}, name "${button.name}"`).join('; ')}`);
+    }
+    if (wide.length > 0) {
+        parts.push(`labelled ${wide.length}: ${wide.map(button => `${button.glyph === undefined ? 'icon hidden' : 'glyph shown'}, ${button.labelShown ? 'label shown' : 'label hidden'}`).join('; ')}`);
+    }
+    return { text: parts.join('; '), pass: narrow.every(collapsedOk) && wide.every(button => button.glyph === undefined && button.labelShown) };
+}
+
 /** The state groups of Appendix B ("main" is the main panel's Installed states). */
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
@@ -835,7 +878,7 @@ export interface EndOfP0 {
      * Per container, its controls: `out` counts a visible one outside its rect and, when no visible control opens a menu
      * (`aria-haspopup`), a hidden one; `hidden` counts the hidden ones.
      */
-    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number }>;
+    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number; collapsible?: CollapsibleButton[] }>;
     /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
     minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
     /** UX-P3.3b: the details pane's empty state's computed top padding (DS-INSET-4's empty clause). */
@@ -1659,7 +1702,27 @@ const controlsIn = (kind, container) => {
         const c = edgesOf(control);
         return c.left < r.left || c.right > r.right || c.top < r.top || c.bottom > r.bottom;
     }).length;
-    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length };
+    // UX-P3.fix-12: a glyph button's collapse, read against the container its query reads (the content box of .nuiget-tabs).
+    const collapsible = [...container.querySelectorAll('.nuiget-button')].filter(button => visible(button) && button.querySelector(':scope > .nuiget-button-icon')).map(button => {
+        const icon = button.querySelector(':scope > .nuiget-button-icon');
+        const text = button.querySelector(':scope > .nuiget-button-label');
+        const svg = icon.querySelector('svg');
+        const holder = button.closest('.nuiget-tabs');
+        const holderStyle = holder ? getComputedStyle(holder) : undefined;
+        const pane = holder ? round(holder.clientWidth - px(holderStyle.paddingLeft) - px(holderStyle.paddingRight)) : undefined;
+        const b = rectOf(button);
+        const g = svg && visible(icon) && visible(svg) ? rectOf(svg) : undefined;
+        // The collapse clips the label to a 1 px box; a label hidden outright would take the name with it (the glyph is aria-hidden).
+        const labelRendered = !!text && visible(text);
+        const labelShown = labelRendered && rectOf(text).width > 1 && rectOf(text).height > 1;
+        return {
+            pane,
+            glyph: g ? { w: round(g.width), h: round(g.height), inside: g.left >= b.left && g.right <= b.right && g.top >= b.top && g.bottom <= b.bottom, dx: round((g.left + g.right) / 2 - (b.left + b.right) / 2), dy: round((g.top + g.bottom) / 2 - (b.top + b.bottom) / 2) } : undefined,
+            labelShown,
+            name: (labelRendered ? text.textContent : '').trim(),
+        };
+    });
+    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible };
 };
 const controlsOut = [
     ...shown('[data-testid="main-header"]').map(el => controlsIn('main-header', el)),
@@ -2977,10 +3040,15 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 }
                 return notMeasurable(`no ${kind}`);
             }
-            return {
-                value: containers.map(entry => `${entry.label} ${entry.total - entry.out}/${entry.total} reachable${entry.hidden > 0 ? `, ${entry.hidden} hidden${entry.menu ? ' behind a menu' : ' and no menu'}` : ''}`).join('; '),
-                pass: containers.every(entry => entry.out === 0),
-            };
+            const reach = containers.map(entry => `${entry.label} ${entry.total - entry.out}/${entry.total} reachable${entry.hidden > 0 ? `, ${entry.hidden} hidden${entry.menu ? ' behind a menu' : ' and no menu'}` : ''}`).join('; ');
+            const reachable = containers.every(entry => entry.out === 0);
+            const collapsible = kind === 'toolbars' ? containers.flatMap(entry => entry.collapsible ?? []) : [];
+            if (collapsible.length === 0) {
+                return { value: reach, pass: reachable };
+            }
+            const collapsed = collapsedGlyphClause(collapsible);
+            const clause = collapsed.text + (COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ` (pending ${COLLAPSED_GLYPH_STATUS.pending})`);
+            return { value: `${reach}; ${clause}`, pass: reachable && (COLLAPSED_GLYPH_STATUS !== 'hard' || collapsed.pass) };
         }
         case 'DS-OVERFLOW-5': {
             const { toolbar, header } = facts.minContent;

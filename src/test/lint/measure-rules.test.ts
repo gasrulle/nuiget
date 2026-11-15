@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -630,6 +630,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: false })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0; version whole ×1' });
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: true })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 0; version whole ×0, 1 cut' });
         expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
+    });
+
+    it('reads a collapsed glyph button in a list toolbar: the glyph alone below 250, the label above (DS-OVERFLOW-3, UX-P3.fix-12)', () => {
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, ...overrides } as Layout['endOfP0'] });
+        const value = (state: string, built: Layout, name: string) => lineOf(state, built, name);
+        // Today's tree (c5102ad): the base rule hides the glyph after the query shows it, so the collapsed box is empty.
+        const today = { pane: 170, glyph: undefined, labelShown: false, name: 'Select All' };
+        expect(collapsedGlyphClause([today])).toEqual({ text: 'collapsed 1: no glyph, name "Select All"', pass: false });
+        const fixed = { pane: 170, glyph: { w: 16, h: 16, inside: true, dx: 0, dy: 0 }, labelShown: false, name: 'Select All' };
+        expect(collapsedGlyphClause([fixed])).toEqual({ text: 'collapsed 1: glyph 16×16, centre dx 0 dy 0, name "Select All"', pass: true });
+        expect(collapsedGlyphClause([{ ...fixed, glyph: { ...fixed.glyph, dy: 1 } }]).pass).toBe(false);
+        expect(collapsedGlyphClause([{ ...fixed, glyph: { ...fixed.glyph, inside: false } }]).pass).toBe(false);
+        expect(collapsedGlyphClause([{ ...fixed, name: '' }]).pass).toBe(false);
+        // Above the breakpoint the label shows and the glyph does not.
+        expect(collapsedGlyphClause([{ pane: 400, glyph: undefined, labelShown: true, name: 'Select All' }])).toEqual({ text: 'labelled 1: icon hidden, label shown', pass: true });
+        expect(collapsedGlyphClause([{ pane: 400, glyph: fixed.glyph, labelShown: true, name: 'Select All' }]).pass).toBe(false);
+        // The line keeps its reachability verdict and prints the clause with its status.
+        const line = value('main-installed-single', facts({ controlsOut: [{ container: 'toolbars', label: '[installed-toolbar]', out: 0, hidden: 0, menu: false, total: 2, collapsible: [today] }] }), 'DS-OVERFLOW-3@main-installed-single/toolbars');
+        const suffix = COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ' (pending ' + COLLAPSED_GLYPH_STATUS.pending + ')';
+        expect(line).toMatchObject({ value: '[installed-toolbar] 2/2 reachable; collapsed 1: no glyph, name "Select All"' + suffix, pass: COLLAPSED_GLYPH_STATUS !== 'hard' });
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

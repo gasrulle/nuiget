@@ -439,6 +439,15 @@
     margin-inline-end: var(--nuiget-space-2);
 }
 
+/* A Button's glyph shows only in a narrow toolbar. A query rule follows the base rule it narrows (UX-P3.fix-12). */
+.nuiget-button-icon {
+    display: none;
+}
+
+.nuiget-button-label {
+    min-inline-size: 0;
+}
+
 /* The Extensions breakpoints of the list pane (DS-ROW-6). css.at-rules.container: Chrome 105, inside the floor's 122. */
 @container (max-width: 250px) {
     /* §8's narrow pane, read from `.nuiget-tabs` (a container's query reads its content box: a padded toolbar would collapse at a 280 px pane): the tab strip's badges hide first, Select all gives way to its glyph and keeps its name. */
@@ -873,14 +882,6 @@
 }
 
 /* ── Button (the action of an empty state or a banner) ── */
-
-.nuiget-button-icon {
-    display: none;
-}
-
-.nuiget-button-label {
-    min-inline-size: 0;
-}
 
 .nuiget-button {
     --nuiget-button-rest-bg: var(--nuiget-color-button-bg);

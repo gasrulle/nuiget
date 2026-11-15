@@ -230,6 +230,28 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.rows[0]).toMatchObject({ check: undefined, checkOff: true });
     });
 
+    it('reads a glyph button of a list toolbar against its tab container: glyph box, centre, label and name (DS-OVERFLOW-3, UX-P3.fix-12)', () => {
+        const holder = document.querySelector('.nuiget-list') as HTMLElement;
+        holder.classList.add('nuiget-tabs');
+        holder.style.paddingLeft = '16px';
+        holder.style.paddingRight = '16px';
+        const width = (pane: number) => Object.defineProperty(holder, 'clientWidth', { configurable: true, value: pane + 32 });
+        const button = document.querySelector('[data-testid="select-all-button"]') as HTMLElement;
+        button.setAttribute('data-rect', '16,74,50,100');
+        button.innerHTML = '<span class="nuiget-button-icon" aria-hidden="true" data-rect="25,79,41,95"><svg data-rect="25,79,41,95"></svg></span><span class="nuiget-button-label" data-rect="33,87,34,88">Select All</span>';
+        const read = () => collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.collapsible;
+        width(170);
+        expect(read()).toEqual([{ pane: 170, glyph: { w: 16, h: 16, inside: true, dx: 0, dy: 0 }, labelShown: false, name: 'Select All' }]);
+        // Above the breakpoint the glyph is not displayed and the label has its box.
+        width(400);
+        (button.querySelector('.nuiget-button-icon') as HTMLElement).style.display = 'none';
+        (button.querySelector('.nuiget-button-label') as HTMLElement).setAttribute('data-rect', '29,76,87,98');
+        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: true, name: 'Select All' }]);
+        // A label hidden outright takes the name with it: the glyph is aria-hidden.
+        (button.querySelector('.nuiget-button-label') as HTMLElement).style.display = 'none';
+        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: false, name: '' }]);
+    });
+
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         const box = document.createElement('input');
