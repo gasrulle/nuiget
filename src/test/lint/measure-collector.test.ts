@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECT_LAYOUT, type Layout, type LookMeasure, MEASURE_LOOK, MEASURE_WIDGETS, RAMP, TOLERANCES, type WidgetMeasure } from '../ui/v2/measure';
 
 /**
@@ -323,6 +323,34 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         Object.defineProperty(version, 'scrollWidth', { configurable: true, value: 60 });
         expect(row().versionCut).toBe(true);
         expect(row().lineChildren).toContainEqual({ name: 'nuiget-row-version', sliced: false, plain: true });
+    });
+
+    it('reads the main split\'s panes against the panel and the main search box\'s placeholder (DS-OVERFLOW-5, DS-OVERFLOW-2, UX-P3.fix-15)', () => {
+        const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        app.insertAdjacentHTML('beforeend', '<div class="nuiget-main-split" style="--nuiget-list-pane-min: 170px; --nuiget-details-pane-min: 220px; --nuiget-line-width: 1px" data-rect="0,100,220,700"><div class="nuiget-main-list" data-rect="0,100,170,700"></div><div role="separator" data-rect="170,100,171,700"></div><section class="nuiget-main-details" data-rect="171,100,220,700"></section></div>');
+        const split = app.querySelector('.nuiget-main-split') as HTMLElement;
+        Object.defineProperty(split, 'clientWidth', { configurable: true, value: 220 });
+        expect(collect().endOfP0.splitFit).toEqual({ panel: 220, list: 170, details: 49, sash: true, listMin: 170, detailsMin: 220, line: 1 });
+        (split.querySelector('.nuiget-main-details') as HTMLElement).style.display = 'none';
+        (split.querySelector('[role="separator"]') as HTMLElement).style.display = 'none';
+        (split.querySelector('.nuiget-main-list') as HTMLElement).setAttribute('data-rect', '0,100,220,700');
+        expect(collect().endOfP0.splitFit).toMatchObject({ panel: 220, list: 220, details: undefined, sash: false });
+    });
+
+    it('reads the main search box\'s placeholder against its text room, and whether the box holds text (DS-OVERFLOW-2, UX-P3.fix-15)', () => {
+        const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        app.insertAdjacentHTML('beforeend', '<input data-testid="search-input" placeholder="Search packages, or filter: @installed, @updates, @vulnerable" style="padding-left: 4px; padding-right: 28px" data-rect="16,40,388,66">');
+        const input = app.querySelector('[data-testid="search-input"]') as HTMLInputElement;
+        Object.defineProperty(input, 'clientWidth', { configurable: true, value: 372 });
+        // jsdom has no canvas: the measured width stands in for Chromium's.
+        const canvas = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ font: '', measureText: () => ({ width: 372.4 }) } as unknown as CanvasRenderingContext2D);
+        try {
+            expect(collect().endOfP0.stateCells.placeholderFit).toEqual({ text: 'Search packages, or filter: @installed, @updates, @vulnerable', width: 372.4, room: 340, main: true, empty: true });
+            input.value = 'Newtonsoft';
+            expect(collect().endOfP0.stateCells.placeholderFit).toMatchObject({ main: true, empty: false });
+        } finally {
+            canvas.mockRestore();
+        }
     });
 
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {

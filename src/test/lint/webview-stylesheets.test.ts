@@ -182,6 +182,26 @@ describe('2.0 webview stylesheets', () => {
         expect(hits).toEqual([]);
     });
 
+    it('the main split hides the details pane and the sash below the sum of both pane minimums and the line, after the base rules (DS-OVERFLOW-5, UX-P3.fix-15)', () => {
+        const tokens = readFileSync(TOKENS, 'utf8');
+        const token = (name: string): number => {
+            const value = new RegExp(`${name}:\\s*([^;]+);`).exec(tokens)?.[1] ?? '';
+            return Number(/(\d+(?:\.\d+)?)px\)?\s*$/.exec(value)?.[1]);
+        };
+        const floor = token('--nuiget-list-pane-min') + token('--nuiget-details-pane-min') + token('--nuiget-line-width');
+        expect(floor).toBe(391);
+        const rules = parseRules(readFileSync('src/webview/main/main.css', 'utf8'));
+        const query = rules.findIndex(rule => /^@container nuiget-split \(max-width: \d+px\)$/.test(rule.prelude));
+        expect(Number(/(\d+)px/.exec(rules[query]?.prelude ?? '')?.[1])).toBe(floor - 1);
+        expect(rules.find(rule => rule.prelude === '.nuiget-main-split')?.declarations).toContain('container: nuiget-split / inline-size');
+        // A query rule gains no specificity: it comes after every base rule it narrows (UX-P3.fix-12's gotcha row).
+        for (const prelude of ['.nuiget-main-split', '.nuiget-main-list', '.nuiget-main-details']) {
+            expect(rules.findIndex(rule => rule.prelude === prelude)).toBeLessThan(query);
+        }
+        expect(rules[query + 1]).toEqual({ prelude: '.nuiget-main-details, .nuiget-main-split > .nuiget-sash', declarations: ['display: none'] });
+        expect(rules[query + 2]).toEqual({ prelude: '.nuiget-main-list', declarations: ['width: 100%'] });
+    });
+
     it('the roots of both surfaces paint the surface background (axe measures against white without one)', () => {
         const background = (file: string, prelude: string): string[] => parseRules(readFileSync(file, 'utf8')).find(rule => rule.prelude === prelude)?.declarations.filter(declaration => declaration.startsWith('background')) ?? [];
         expect(background('src/webview/main/main.css', '.nuiget-main')).toEqual(['background: var(--nuiget-color-bg)']);

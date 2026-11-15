@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -183,7 +183,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('sidebar-sections', layout({ viewTitleActions: 6 }), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: false });
         expect(lineOf('sidebar-sections', layout(), 'DS-OVERFLOW-4@sidebar-sections')).toMatchObject({ pass: false, value: 'not measurable (the suite read no view title)' });
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
-        expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard' });
+        expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard', split: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         // UX-P3.10 push C: the details cells with no facts block, by fact.
@@ -714,6 +714,46 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const authorsRow = (width: number) => ({ list: 'installed-list', compact: false, name: 'Dapper', nameCut: false, nameEllipsis: true, authors: { width, need: 266, room: 178 }, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined }) as RowFacts;
         expect(lineOf('main-installed-single', layout({ rows: [authorsRow(178)] }), 'PF-3a@main-installed-single')).toMatchObject({ value: '1 authors, none cut; 1 wider than its line, ellipsized (Dapper 266 > 178)', pass: true });
         expect(lineOf('main-installed-single', layout({ rows: [authorsRow(174)] }), 'PF-3a@main-installed-single')).toMatchObject({ value: expect.stringContaining('cut: Dapper (174 of 178)'), pass: false });
+    });
+
+    it('reads the main split below and above the sum of both pane minimums, and the main placeholder from 400 (DS-OVERFLOW-5, DS-OVERFLOW-2, UX-P3.fix-15)', () => {
+        const base = { listMin: 170, detailsMin: 220, line: 1 };
+        // Today's tree (9bb2976): at a 220 px panel the list keeps 170 and the details pane is squeezed to 49 beside the sash.
+        const today = { ...base, panel: 220, list: 170, details: 49, sash: true };
+        expect(splitClause(today)).toEqual({ text: 'split: panel 220 < 391, list 170, details 49, sash shown', pass: false });
+        expect(splitClause({ ...base, panel: 220, list: 220, details: undefined, sash: false })).toEqual({ text: 'split: details not shown (panel 220 < 391), list 220', pass: true });
+        expect(splitClause({ ...base, panel: 400, list: 172, details: 227, sash: true })).toEqual({ text: 'split: list 172, details 227', pass: true });
+        expect(splitClause({ ...base, panel: 400, list: 172, details: undefined, sash: false }).pass).toBe(false);
+        // The sash rules pass only where the sash is hidden by design.
+        expect(sashNotShown({ ...base, panel: 220, list: 220, details: undefined, sash: false })).toEqual({ value: 'sash not shown (panel below 391)', pass: true });
+        expect(sashNotShown({ ...base, panel: 400, list: 400, details: undefined, sash: false })).toBeUndefined();
+        expect(sashNotShown(undefined)).toBeUndefined();
+        // DS-INSET-4's declared pass: only while the details pane is hidden below the floor (ruling on the DO 6 stop).
+        expect(detailsNotShown({ ...base, panel: 220, list: 220, details: undefined, sash: false })).toEqual({ value: 'details not shown (panel below 391)', pass: true });
+        expect(detailsNotShown(today)).toBeUndefined();
+        expect(detailsNotShown({ ...base, panel: 400, list: 400, details: undefined, sash: false })).toBeUndefined();
+        const facts = (overrides: Record<string, unknown>, width = 1200) => ({ ...layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, ...overrides } as Layout['endOfP0'] }), width });
+        const splitSuffix = SPLIT_STATUS === 'hard' ? '' : ' (pending ' + SPLIT_STATUS.pending + ')';
+        expect(lineOf('main-installed-single', facts({ splitFit: today }, 220), 'DS-OVERFLOW-5@main-installed-single/split'))
+            .toMatchObject({ value: 'split: panel 220 < 391, list 170, details 49, sash shown' + splitSuffix, pass: SPLIT_STATUS !== 'hard' });
+        expect(lineOf('main-installed-single', facts({ splitFit: { ...today, list: 220, details: undefined, sash: false }, sashes: [] }, 220), 'DS-DIVIDER-6@main-installed-single/sash'))
+            .toMatchObject({ value: 'sash not shown (panel below 391)', pass: true });
+        const hidden = { ...today, list: 220, details: undefined, sash: false };
+        expect(lineOf('main-installed-single', facts({ splitFit: hidden, detailsHeader: undefined, detailsEmpty: undefined }, 220), 'DS-INSET-4@main-installed-single'))
+            .toMatchObject({ value: 'details not shown (panel below 391)', pass: true });
+        expect(lineOf('main-installed-single', facts({ splitFit: { ...hidden, panel: 400, list: 400 }, detailsHeader: undefined, detailsEmpty: undefined }, 400), 'DS-INSET-4@main-installed-single')?.value)
+            .toMatch(/^not measurable/);
+        expect(lineOf('main-installed-single', facts({ splitFit: today, detailsHeader: undefined, detailsEmpty: undefined }, 220), 'DS-INSET-4@main-installed-single')?.value)
+            .toMatch(/^not measurable/);
+        // Today's main copy at 400 does not fit its box; a box holding text shows no placeholder.
+        const cells = (fit: Record<string, unknown>) => ({ ...layout().endOfP0.stateCells, placeholderFit: fit });
+        const placeholderSuffix = MAIN_PLACEHOLDER_STATUS === 'hard' ? '' : ' (pending ' + MAIN_PLACEHOLDER_STATUS.pending + ')';
+        const long = { text: 'Search packages, or filter: @installed, @updates, @vulnerable', width: 372.4, room: 340, main: true, empty: true };
+        expect(lineOf('main-installed-single', facts({ stateCells: cells(long) }, 400), 'DS-OVERFLOW-2@main-installed-single/placeholder'))
+            .toMatchObject({ value: 'placeholder "Search packages, or filter: @installed, @updates, @vulnerable" 372.4 of 340 px' + placeholderSuffix, pass: MAIN_PLACEHOLDER_STATUS !== 'hard' });
+        expect(lineOf('main-installed-single', facts({ stateCells: cells({ ...long, text: 'Search or type @ to filter', width: 164 }) }, 220), 'DS-OVERFLOW-2@main-installed-single/placeholder'))
+            .toMatchObject({ value: 'placeholder "Search or type @ to filter" 164 of 340 px (printed at 220)' + placeholderSuffix, pass: true });
+        expect(lineOf('main-installed-details', facts({ stateCells: cells({ ...long, empty: false }) }), 'DS-OVERFLOW-2@main-installed-details/placeholder')).toMatchObject({ value: 'placeholder not shown (the box holds text)', pass: true });
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

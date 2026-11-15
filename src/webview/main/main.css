@@ -92,8 +92,12 @@ body {
     z-index: 1;
 }
 
-/* The list takes the share the sash reports; the details take the rest. */
+/*
+ * The list takes the share the sash reports; the details take the rest. A named container: below the sum of both pane minimums
+ * the details pane and the sash are not shown (UX-P3.fix-15).
+ */
 .nuiget-main-split {
+    container: nuiget-split / inline-size;
     display: flex;
     flex: 1;
     min-height: 0;
@@ -104,7 +108,7 @@ body {
     display: flex;
     flex: none;
     flex-direction: column;
-    /* The sash's share, clamped in px: the list keeps 170, the details 220 (UX-P3.3b); when both cannot fit, the list keeps its 170. */
+    /* The sash's share, clamped in px: the list keeps 170, the details 220 (UX-P3.3b); below 391 px the query below gives the list the split. */
     width: clamp(var(--nuiget-list-pane-min), var(--nuiget-split, 50%), calc(100% - var(--nuiget-details-pane-min) - var(--nuiget-line-width)));
     min-width: 0;
     min-inline-size: var(--nuiget-list-pane-min);
@@ -124,6 +128,22 @@ body {
     flex-direction: column;
     min-width: 0;
     overflow: auto;
+}
+
+/*
+ * Below the list minimum + the details minimum + the line (170 + 220 + 1) the two panes cannot both keep their minimums: the
+ * details pane and the sash are not shown and the list takes the split (DS-OVERFLOW-3's hide by priority; UX-P3.fix-15). After
+ * the base rules it narrows; the pane stays mounted, so its tab and scroll survive a resize.
+ */
+@container nuiget-split (max-width: 390px) {
+    .nuiget-main-details,
+    .nuiget-main-split > .nuiget-sash {
+        display: none;
+    }
+
+    .nuiget-main-list {
+        width: 100%;
+    }
 }
 
 /* ── Installed tab ── */

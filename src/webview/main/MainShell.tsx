@@ -223,7 +223,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         inputRef={searchRef}
                         testId="search-input"
                         label="Search packages, or filter with @installed, @updates or @vulnerable"
-                        placeholder="Search packages, or filter: @installed, @updates, @vulnerable"
+                        placeholder="Search or type @ to filter"
                         prefixes={FILTER_PREFIXES}
                         value={query}
                         onChange={setQuery}

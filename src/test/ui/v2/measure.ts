@@ -79,6 +79,68 @@ export const ROW_LINE_STATUS: RuleStatus = 'hard';
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
 
+/** The main split's panes against the panel (UX-P3.fix-15): the panel's and each shown pane's widths, the sash, the minimums. */
+export interface SplitFit {
+    panel: number;
+    list: number | undefined;
+    details: number | undefined;
+    sash: boolean;
+    listMin: number;
+    detailsMin: number;
+    line: number;
+}
+
+/**
+ * DS-OVERFLOW-5's `split` clause (§8's main split: below the list minimum + the details minimum + the line, the details pane and
+ * the sash are not shown and the list takes the panel; UX-P3.fix-15, design-advisor opening ruling of 2026-11-16). Pending
+ * until that item's fix.
+ */
+export const SPLIT_STATUS: RuleStatus = { pending: 'P3.fix-15' };
+
+/** DS-OVERFLOW-2's `placeholder` clause on the main search box (the sidebar's copy fits from 400; UX-P3.fix-15). Pending until that item's fix. */
+export const MAIN_PLACEHOLDER_STATUS: RuleStatus = { pending: 'P3.fix-15' };
+
+/** The main webview width from which the main search box's placeholder is judged; narrower cells print it (UX-P3.fix-15). */
+export const MAIN_PLACEHOLDER_WIDTH = 400;
+
+/** Below the sum of both minimums and the line, the details pane and the sash are not shown and the list takes the panel; else both panes keep their minimums. */
+export function splitClause(fit: SplitFit): { text: string; pass: boolean } {
+    const floor = fit.listMin + fit.detailsMin + fit.line;
+    if (fit.panel < floor) {
+        const hidden = fit.details === undefined && !fit.sash;
+        const text = hidden
+            ? `split: details not shown (panel ${fit.panel} < ${floor}), list ${fit.list ?? 'absent'}`
+            : `split: panel ${fit.panel} < ${floor}, list ${fit.list ?? 'absent'}, details ${fit.details ?? 'absent'}${fit.sash ? ', sash shown' : ''}`;
+        return { text, pass: hidden && fit.list !== undefined && Math.abs(fit.list - fit.panel) <= 0.5 };
+    }
+    return {
+        text: `split: list ${fit.list ?? 'absent'}, details ${fit.details ?? 'absent'}`,
+        pass: fit.list !== undefined && fit.details !== undefined && fit.list >= fit.listMin - 0.5 && fit.details >= fit.detailsMin - 0.5,
+    };
+}
+
+/**
+ * The sash rules' declared pass (UX-P3.fix-15, opening ruling DO 4): below the sum of both pane minimums the sash is not shown
+ * by design; an absent sash at any other width stays `not measurable`.
+ */
+export function sashNotShown(fit: SplitFit | undefined): { value: string; pass: boolean } | undefined {
+    if (fit === undefined || fit.sash || fit.panel >= fit.listMin + fit.detailsMin + fit.line) {
+        return undefined;
+    }
+    return { value: `sash not shown (panel below ${fit.listMin + fit.detailsMin + fit.line})`, pass: true };
+}
+
+/**
+ * DS-INSET-4's declared pass (UX-P3.fix-15, design-advisor ruling on the DO 6 stop): below the sum of both pane minimums the
+ * details pane is not shown by design; a missing header at any other width stays `not measurable`.
+ */
+export function detailsNotShown(fit: SplitFit | undefined): { value: string; pass: boolean } | undefined {
+    if (fit === undefined || fit.details !== undefined || fit.panel >= fit.listMin + fit.detailsMin + fit.line) {
+        return undefined;
+    }
+    return { value: `details not shown (panel below ${fit.listMin + fit.detailsMin + fit.line})`, pass: true };
+}
+
 /** No toolbar button is cut; at a pane of at most 250 px the toolbar's controls share one line. */
 export function toolbarFitClause(fits: readonly ToolbarFit[]): { text: string; pass: boolean } {
     const cut = fits.flatMap(fit => fit.cut);
@@ -143,7 +205,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -288,6 +350,20 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
  * 2026-11-15). Filled from the reaches, never from which states went red.
  */
 export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
+
+/**
+ * The main states whose search box is empty, where DS-OVERFLOW-2's `placeholder` scope reads the main box (UX-P3.fix-15); the
+ * Browse and filter states hold text in it.
+ */
+export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
+    'main-details-empty', 'main-details-error', 'main-details-loading', 'main-details-readme', 'main-details-readonly', 'main-details-unsupported',
+    'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-empty', 'main-installed-error', 'main-installed-focus',
+    'main-installed-hover', 'main-installed-hover-current', 'main-installed-loading', 'main-installed-refresh-hover', 'main-installed-revalidating',
+    'main-installed-single', 'main-installed-toolbar-hover', 'main-installed-unfocused', 'main-installed-unresolved', 'main-installed-unsupported',
+    'main-readme-error', 'main-readme-loading', 'main-transitive-details', 'main-transitive-expanded', 'main-updates', 'main-updates-all',
+    'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-hover', 'main-updates-loading', 'main-updates-revalidating',
+    'main-updates-unavailable', 'main-updates-unsupported',
+];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
@@ -471,7 +547,7 @@ export const RULES: readonly RuleDefinition[] = [
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     // UX-P3.11 (design-advisor opening ruling DO 7): `placeholder`, the side bar search box's placeholder fits its text room at
     // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170; hard since UX-P3.11 push B.
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections'] } }),
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections', ...MAIN_PLACEHOLDER_STATES] } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -521,7 +597,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-OVERFLOW-4', { helper: 6, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'], scopeExceptStates: { details: DETAILS_NO_HEADER_STATES } }),
-    rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment }),
+    // UX-P3.fix-15: `split`, the main split below and above the sum of both pane minimums (SPLIT_STATUS).
+    rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard', split: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_FACTS_STATES }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
@@ -643,13 +720,13 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', ...firstRow];
+            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'placeholder', 'split', ...firstRow];
         case 'browse':
             return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':
             // UX-P3.10 push D (design-advisor fix ruling of 2026-11-14, DEFECTS 1): the details and README skeleton's first mark.
             // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
-            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton'];
+            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split'];
         case 'dialogs':
             return ['chrome', 'layers', 'labels'];
         case 'sources':
@@ -972,6 +1049,8 @@ export interface EndOfP0 {
     detailsEmpty: { top: number } | undefined;
     /** UX-P3.3b: the split's width, its sash's percent bounds and width, and the two pane minimums (DS-OVERFLOW-5's bounds). */
     split: { width: number; sash: number; min: number; max: number; listMin: number; detailsMin: number } | undefined;
+    /** UX-P3.fix-15: the main split's panes against the panel (DS-OVERFLOW-5 `split`, the sash rules' declared pass). */
+    splitFit?: SplitFit;
     /**
      * UX-P3.9 (DS-DIVIDER-6, DS-COLOR-5 `sash`): every visible sash: its thickness across the split, its background, its band's
      * (`::before`) width, background and transition delay, the gap between the panes either side, and whether it draws the
@@ -1065,8 +1144,8 @@ export interface StateCells {
     skeletonBars?: number[];
     /** The spinners in the pane headers (`section-header-*`): a first load's cue, never a revalidation's (UX-P3.10 push E). */
     headerSpinners?: number;
-    /** The side bar search box's placeholder: its text, its width in the box's computed font, and the box's text room (UX-P3.11). */
-    placeholderFit?: { text: string; width: number; room: number };
+    /** The search box's placeholder: its text, its width in the box's computed font, and the box's text room (UX-P3.11); the main box too since UX-P3.fix-15 (`main`), and whether the box is empty. */
+    placeholderFit?: { text: string; width: number; room: number; main?: boolean; empty?: boolean };
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
     detailsSkeletonMarks?: number[];
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
@@ -1785,6 +1864,13 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
     }
     return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
 });
+// UX-P3.fix-15: the main split's panes against the panel; a hidden pane or sash reads as absent.
+const splitFit = splitEl && visible(splitEl) ? (() => {
+    const style = getComputedStyle(splitEl);
+    const listPane = splitEl.querySelector(':scope > .nuiget-main-list');
+    const detailsPane = splitEl.querySelector(':scope > .nuiget-main-details');
+    return { panel: round(splitEl.clientWidth), list: visible(listPane) ? round(rectOf(listPane).width) : undefined, details: visible(detailsPane) ? round(rectOf(detailsPane).width) : undefined, sash: visible(sashEl), listMin: px(style.getPropertyValue('--nuiget-list-pane-min')), detailsMin: px(style.getPropertyValue('--nuiget-details-pane-min')), line: px(style.getPropertyValue('--nuiget-line-width')) };
+})() : undefined;
 const splitFacts = splitEl && sashEl && visible(splitEl) ? (() => { const style = getComputedStyle(splitEl); return { width: round(splitEl.clientWidth), sash: round(sashEl.getBoundingClientRect().width), min: Number(sashEl.getAttribute('aria-valuemin')), max: Number(sashEl.getAttribute('aria-valuemax')), listMin: px(style.getPropertyValue('--nuiget-list-pane-min')), detailsMin: px(style.getPropertyValue('--nuiget-details-pane-min')) }; })() : undefined;
 // The root and every scroll container outside a list, scrolled sideways (DS-OVERFLOW-1).
 const sideways = [document.documentElement, ...scope.querySelectorAll('*')]
@@ -1942,12 +2028,12 @@ const stateCells = {
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
                 placeholderFit: (() => {
-                    const input = document.querySelector('[data-testid="sidebar-search-input"]');
+                    const input = document.querySelector('[data-testid="sidebar-search-input"], [data-testid="search-input"]');
                     if (input === null || !input.placeholder) return undefined;
                     const style = getComputedStyle(input);
                     const context = document.createElement('canvas').getContext('2d');
                     context.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
-                    return { text: input.placeholder, width: round(context.measureText(input.placeholder).width), room: round(input.clientWidth - px(style.paddingLeft) - px(style.paddingRight)) };
+                    return { text: input.placeholder, width: round(context.measureText(input.placeholder).width), room: round(input.clientWidth - px(style.paddingLeft) - px(style.paddingRight)), main: input.dataset.testid === 'search-input', empty: input.value === '' };
                 })(),
                 // The first painted mark of every skeleton row in the details pane's tab panel, whatever its density: a comfortable
                 // row's tile (::before), a compact row's bar (::after); from the pane's left (push D ruling, D 11).
@@ -2078,6 +2164,7 @@ const endOfP0 = {
     minContent: { toolbar: visible(toolbarEl) ? { scroll: toolbarEl.scrollWidth, client: toolbarEl.clientWidth } : undefined, header: visible(detailsHeaderEl) ? { scroll: detailsHeaderEl.scrollWidth, client: detailsHeaderEl.clientWidth } : undefined },
     detailsEmpty: visible(detailsEmptyEl) ? { top: round(px(getComputedStyle(detailsEmptyEl).paddingTop)) } : undefined,
     split: splitFacts,
+    splitFit,
     sashes,
     factLefts,
     fonts: { root: rootFont, others: [...otherFonts] },
@@ -2818,7 +2905,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 if (facts.detailsEmpty !== undefined) {
                     return { value: `empty top ${facts.detailsEmpty.top} (target ${DETAILS_INSET})`, pass: near(facts.detailsEmpty.top, DETAILS_INSET, tolerance) };
                 }
-                return notMeasurable('no details header or empty state');
+                return detailsNotShown(facts.splitFit) ?? notMeasurable('no details header or empty state');
             }
             const { start, end, top, bottom } = header.insets;
             // The transitive view has no tabs by design (interaction model §7): the title alone sets the x.
@@ -3057,7 +3144,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 // UX-P3.9 (DO 1b): an unfocused sash draws no focus ring (a solid focusBorder outline; the outline only, as P2.fix-1).
                 const sashes = facts.sashes ?? [];
                 if (sashes.length === 0) {
-                    return notMeasurable('no sash');
+                    return sashNotShown(facts.splitFit) ?? notMeasurable('no sash');
                 }
                 const painted = sashes.filter(sash => !sash.focused && sash.outlineFocus).length;
                 return { value: `sash: ${painted} of ${sashes.filter(sash => !sash.focused).length} unfocused in focusBorder`, pass: painted === 0 };
@@ -3087,7 +3174,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             // UX-P3.9 (DO 1a): the sash a 1 px line, its 4 px band transparent at rest, the panes 1 px apart; read at rest.
             const sashes = facts.sashes ?? [];
             if (sashes.length === 0) {
-                return notMeasurable('no sash');
+                return sashNotShown(facts.splitFit) ?? notMeasurable('no sash');
             }
             const clear = (colour: string) => colour === 'transparent' || colour === 'rgba(0, 0, 0, 0)';
             // The hit clause (follow-up 1, DO 2): every point the rule names reads as it says.
@@ -3187,6 +3274,14 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             return { value: parts.join('; '), pass };
         }
         case 'DS-OVERFLOW-5': {
+            // UX-P3.fix-15: the main split below and above the sum of both pane minimums.
+            if (scope === 'split') {
+                if (facts.splitFit === undefined) {
+                    return notMeasurable('no split');
+                }
+                const verdict = splitClause(facts.splitFit);
+                return { value: verdict.text + (SPLIT_STATUS === 'hard' ? '' : ` (pending ${SPLIT_STATUS.pending})`), pass: SPLIT_STATUS !== 'hard' || verdict.pass };
+            }
             const { toolbar, header } = facts.minContent;
             const split = facts.split;
             if (toolbar === undefined && header === undefined) {
@@ -3840,6 +3935,15 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         const fit = cells.placeholderFit;
         if (fit === undefined) {
             return notMeasurable('no search box placeholder');
+        }
+        // UX-P3.fix-15: the main box, judged from 400 px of webview and printed below; a box holding text shows no placeholder.
+        if (fit.main === true) {
+            if (fit.empty === false) {
+                return { value: 'placeholder not shown (the box holds text)', pass: true };
+            }
+            const judged = layout.width >= MAIN_PLACEHOLDER_WIDTH;
+            const suffix = MAIN_PLACEHOLDER_STATUS === 'hard' ? '' : ` (pending ${MAIN_PLACEHOLDER_STATUS.pending})`;
+            return { value: `placeholder "${fit.text}" ${fit.width} of ${fit.room} px${judged ? '' : ` (printed at ${layout.width})`}${suffix}`, pass: !judged || MAIN_PLACEHOLDER_STATUS !== 'hard' || fit.width <= fit.room };
         }
         // Asserted at the side bar's 300 px; the narrower cells print the reading (P3.7b DO 9a binds the primary width).
         const asserted = layout.width >= PLACEHOLDER_WIDTH;
