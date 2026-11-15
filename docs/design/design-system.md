@@ -434,7 +434,7 @@ Every container that holds a row of controls, its minimum width and its behaviou
 | Sidebar compact row | 170 | version ellipsis first, then the name (DS-ROW-5); actions stay | holds |
 | Main header (title, check boxes, selects, gear, refresh) | 220 (editor minimum) | wraps; every control line ends at the inset | wraps (UX-P2.7a) |
 | Tab strip (Installed/Updates) | 170 (`--nuiget-list-pane-min`) | count badges hide below 250 first, then labels ellipsize; never a sideways scroll | badges hide below 250 (UX-P2.7b) |
-| Bulk toolbar | 170 (`--nuiget-list-pane-min`) | the primary action stays at the end; Select All collapses to its glyph below 250 | Select all collapses below 250 (UX-P2.7b) |
+| Bulk toolbar | 170 (`--nuiget-list-pane-min`) | the primary action stays at the end; Select All collapses to its glyph below 250 | Select All shows its glyph alone below 250, 34×26 (UX-P3.fix-12; from UX-P2.7b until then the glyph never showed and the box was empty); under about 217 px of pane the primary wraps to its own line |
 | Main-list group header | 170 (`--nuiget-list-pane-min`) | title ellipsis; badges keep the 16 px end inset and may ellipsize their text | badges reach the edge (V3) |
 | Comfortable row | 170 (`--nuiget-list-pane-min`) | ≤ 250 px icon 24, ≤ 200 px icon hidden; name ellipsis last; actions stay | no breakpoint |
 | Details header (installed version, version select, buttons) | 220 (`--nuiget-details-pane-min`) | one column below 250 px: label, value and each button on its own row; the value column shrinks, the pane never scrolls sideways | done (UX-P3.3b) |
