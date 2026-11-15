@@ -252,6 +252,22 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: false, name: '' }]);
     });
 
+    it('reads the tab strip\'s badges and cut labels against its tab container (DS-OVERFLOW-3, UX-P3.fix-13)', () => {
+        const holder = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
+        holder.classList.add('nuiget-tabs');
+        Object.defineProperty(holder, 'clientWidth', { configurable: true, value: 170 });
+        const bar = document.querySelector('[data-testid="tab-bar"]') as HTMLElement;
+        bar.innerHTML = '<button role="tab" class="nuiget-tab" data-rect="6,45,80,70"><span class="nuiget-tab-label" data-rect="16,45,40,65">Installed</span> <span class="nuiget-tab-count" data-rect="42,46,43,47"><span class="nuiget-badge nuiget-badge--count">15</span></span> <span class="nuiget-tab-badge" data-rect="44,46,45,47"><span class="nuiget-badge nuiget-badge--count">1</span></span></button>';
+        const label = bar.querySelector('.nuiget-tab-label') as HTMLElement;
+        Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 52 });
+        Object.defineProperty(label, 'clientWidth', { configurable: true, value: 24 });
+        const read = () => collect().endOfP0.controlsOut.find(entry => entry.container === 'tabs')?.tabBadges;
+        expect(read()).toEqual({ pane: 170, badges: [{ w: 1, h: 1 }, { w: 1, h: 1 }], labelsCut: 1 });
+        (bar.querySelector('.nuiget-tab-count') as HTMLElement).setAttribute('data-rect', '42,46,60,64');
+        expect(read()?.badges[0]).toEqual({ w: 18, h: 18 });
+        expect(collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.tabBadges).toBeUndefined();
+    });
+
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         const box = document.createElement('input');

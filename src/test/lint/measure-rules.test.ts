@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -650,6 +650,31 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const line = value('main-installed-single', facts({ controlsOut: [{ container: 'toolbars', label: '[installed-toolbar]', out: 0, hidden: 0, menu: false, total: 2, collapsible: [today] }] }), 'DS-OVERFLOW-3@main-installed-single/toolbars');
         const suffix = COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ' (pending ' + COLLAPSED_GLYPH_STATUS.pending + ')';
         expect(line).toMatchObject({ value: '[installed-toolbar] 2/2 reachable; collapsed 1: no glyph, name "Select All"' + suffix, pass: COLLAPSED_GLYPH_STATUS !== 'hard' });
+    });
+
+    it('reads the tab strip\'s badges: clipped below 250, shown above, the cut labels printed (DS-OVERFLOW-3, UX-P3.fix-13)', () => {
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, ...overrides } as Layout['endOfP0'] });
+        const value = (state: string, built: Layout, name: string) => lineOf(state, built, name);
+        // Today's tree (ff69c51): at a 170 px pane the query's display: none loses to the later base rule, so all three show.
+        const today = { pane: 170, badges: [{ w: 18, h: 18 }, { w: 18, h: 18 }, { w: 18, h: 18 }], labelsCut: 2 };
+        expect(tabBadgesClause(today)).toEqual({ text: 'badges hidden 0, shown 3, labels cut 2', pass: false });
+        const fixed = { pane: 170, badges: [{ w: 1, h: 1 }, { w: 1, h: 1 }, { w: 1, h: 1 }], labelsCut: 0 };
+        expect(tabBadgesClause(fixed)).toEqual({ text: 'badges hidden 3, labels cut 0', pass: true });
+        expect(tabBadgesClause({ ...fixed, labelsCut: 2 }).pass).toBe(true);
+        expect(tabBadgesClause({ pane: 400, badges: [{ w: 18, h: 18 }, { w: 18, h: 18 }], labelsCut: 0 })).toEqual({ text: 'badges shown 2', pass: true });
+        expect(tabBadgesClause({ pane: 400, badges: [{ w: 1, h: 1 }], labelsCut: 0 })).toEqual({ text: 'badges shown 0, hidden 1', pass: false });
+        const line = value('main-installed-single', facts({ controlsOut: [{ container: 'tabs', label: '[tab-bar]', out: 0, hidden: 0, menu: false, total: 2, tabBadges: today }] }), 'DS-OVERFLOW-3@main-installed-single/tabs');
+        const suffix = TAB_BADGES_STATUS === 'hard' ? '' : ' (pending ' + TAB_BADGES_STATUS.pending + ')';
+        expect(line).toMatchObject({ value: '[tab-bar] 2/2 reachable; badges hidden 0, shown 3, labels cut 2' + suffix, pass: TAB_BADGES_STATUS !== 'hard' });
+        // A strip without badges keeps the reachability line alone.
+        expect(value('main-installed-single', facts({ controlsOut: [{ container: 'tabs', label: '[tab-bar]', out: 0, hidden: 0, menu: false, total: 2, tabBadges: { pane: 400, badges: [], labelsCut: 0 } }] }), 'DS-OVERFLOW-3@main-installed-single/tabs')).toMatchObject({ value: '[tab-bar] 2/2 reachable', pass: true });
+    });
+
+    it('measures the list toolbar beside a details pane, except where the pane opens from Browse (UX-P3.fix-13)', () => {
+        expect(DETAILS_BROWSE_STATES).toEqual(['main-browse-details']);
+        expect(elementGroups('details', 'main-browse-details')).not.toContain('toolbars');
+        expect(elementGroups('details', 'main-installed-details')).toContain('toolbars');
+        expect(elementGroups('details', 'main-transitive-details')).toContain('toolbars');
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

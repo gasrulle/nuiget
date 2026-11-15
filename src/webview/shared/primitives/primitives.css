@@ -450,16 +450,13 @@
 
 /* The Extensions breakpoints of the list pane (DS-ROW-6). css.at-rules.container: Chrome 105, inside the floor's 122. */
 @container (max-width: 250px) {
-    /* §8's narrow pane, read from `.nuiget-tabs` (a container's query reads its content box: a padded toolbar would collapse at a 280 px pane): the tab strip's badges hide first, Select all gives way to its glyph and keeps its name. */
-    .nuiget-tab-count,
-    .nuiget-tab-badge {
-        display: none;
-    }
-
+    /* §8's narrow pane, read from `.nuiget-tabs` (a container's query reads its content box: a padded toolbar would collapse at a 280 px pane): the tab strip's badges leave the pixels first and stay in the tab's name, Select All gives way to its glyph and keeps its name (UX-P3.fix-13). */
     .nuiget-button-icon {
         display: inline-flex;
     }
 
+    .nuiget-tab-count,
+    .nuiget-tab-badge,
     .nuiget-button-icon + .nuiget-button-label {
         position: absolute;
         inline-size: var(--nuiget-line-width);

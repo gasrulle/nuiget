@@ -41,8 +41,36 @@ export interface CollapsibleButton {
  */
 export const COLLAPSED_GLYPH_STATUS: RuleStatus = 'hard';
 
+/** The tab strip's count and vulnerable badges and its labels, against the list pane's container (UX-P3.fix-13). */
+export interface TabBadges {
+    pane: number | undefined;
+    badges: Array<{ w: number; h: number }>;
+    labelsCut: number;
+}
+
+/**
+ * DS-OVERFLOW-3's tab-badge clause in the `tabs` scope (§8: the strip's badges hide below a 250 px pane first, then the
+ * labels ellipsize; they leave the pixels by the primitive's clip form and stay in the tab's name; UX-P3.fix-13,
+ * design-advisor opening ruling of 2026-11-15). Pending until that item's fix.
+ */
+export const TAB_BADGES_STATUS: RuleStatus = { pending: 'P3.fix-13' };
+
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
+
+/**
+ * At a pane of at most 250 px every tab badge's box is at most 1×1 (clipped, still named); above it every present badge
+ * has a box. The labels cut (`scrollWidth > clientWidth`) are printed, not judged: §8 allows the ellipsis second.
+ */
+export function tabBadgesClause(tabs: TabBadges): { text: string; pass: boolean } {
+    const narrow = tabs.pane !== undefined && tabs.pane <= COLLAPSE_PANE;
+    const hidden = tabs.badges.filter(badge => badge.w <= 1 && badge.h <= 1).length;
+    const shown = tabs.badges.length - hidden;
+    const text = narrow
+        ? `badges hidden ${hidden}${shown > 0 ? `, shown ${shown}` : ''}, labels cut ${tabs.labelsCut}`
+        : `badges shown ${shown}${hidden > 0 ? `, hidden ${hidden}` : ''}`;
+    return { text, pass: narrow ? shown === 0 : hidden === 0 };
+}
 
 /**
  * DS-OVERFLOW-3's collapsed-button clause: at a pane of at most 250 px the glyph shows alone, 16×16, inside the button and
@@ -209,6 +237,13 @@ export function rule(id: string, options: Omit<RuleDefinition, 'id'>): RuleDefin
 const asGrid1 = { 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' } as const;
 /** DS-GRID-2b's scopes: as DS-GRID-1's but no browse, whose flat list and popup have no group header (UX-P3.2), no dialogs (UX-P3.5) and no sources dialog (UX-P3.6). */
 const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHeader, ...grid2b } = asGrid1;
+
+/**
+ * The details states whose pane opens from Browse (`main-browse-results`' reach in the capture suite): Browse has no bulk
+ * toolbar, so their `details` group has no `toolbars` element group (UX-P3.fix-13, design-advisor follow-up 1 of
+ * 2026-11-15). Filled from the reaches, never from which states went red.
+ */
+export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
@@ -559,6 +594,8 @@ const FIRST_ROW_STATES: readonly string[] = ['main-installed-single', 'main-upda
 /** The element groups measured in a state group (DS-INSET-2, DS-INSET-3, MS-8), and MS-8's first row in its two states. */
 export function elementGroups(group: StateGroup, state?: string): ElementGroup[] {
     const firstRow: ElementGroup[] = state !== undefined && FIRST_ROW_STATES.includes(state) ? ['first-row'] : [];
+    // UX-P3.fix-13 (follow-up 1): a details pane opened from Browse has no list toolbar beside it.
+    const detailsToolbars: ElementGroup[] = state !== undefined && DETAILS_BROWSE_STATES.includes(state) ? [] : ['toolbars'];
     switch (group) {
         case 'main-installed':
         case 'main-updates':
@@ -567,7 +604,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':
             // UX-P3.10 push D (design-advisor fix ruling of 2026-11-14, DEFECTS 1): the details and README skeleton's first mark.
-            return ['headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton'];
+            // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
+            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton'];
         case 'dialogs':
             return ['chrome', 'layers', 'labels'];
         case 'sources':
@@ -879,7 +917,7 @@ export interface EndOfP0 {
      * Per container, its controls: `out` counts a visible one outside its rect and, when no visible control opens a menu
      * (`aria-haspopup`), a hidden one; `hidden` counts the hidden ones.
      */
-    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number; collapsible?: CollapsibleButton[] }>;
+    controlsOut: Array<{ container: 'toolbars' | 'tabs' | 'details' | 'main-header'; label: string; out: number; hidden: number; menu: boolean; total: number; collapsible?: CollapsibleButton[]; tabBadges?: TabBadges }>;
     /** The list toolbar's and the details header's `scrollWidth` (min-content when it overflows) and `clientWidth`. */
     minContent: { toolbar: { scroll: number; client: number } | undefined; header: { scroll: number; client: number } | undefined };
     /** UX-P3.3b: the details pane's empty state's computed top padding (DS-INSET-4's empty clause). */
@@ -1704,13 +1742,12 @@ const controlsIn = (kind, container) => {
         return c.left < r.left || c.right > r.right || c.top < r.top || c.bottom > r.bottom;
     }).length;
     // UX-P3.fix-12: a glyph button's collapse, read against the container its query reads (the content box of .nuiget-tabs).
+    const holderWidth = el => { const holder = el.closest('.nuiget-tabs'); if (!holder) return undefined; const s = getComputedStyle(holder); return round(holder.clientWidth - px(s.paddingLeft) - px(s.paddingRight)); };
     const collapsible = [...container.querySelectorAll('.nuiget-button')].filter(button => visible(button) && button.querySelector(':scope > .nuiget-button-icon')).map(button => {
         const icon = button.querySelector(':scope > .nuiget-button-icon');
         const text = button.querySelector(':scope > .nuiget-button-label');
         const svg = icon.querySelector('svg');
-        const holder = button.closest('.nuiget-tabs');
-        const holderStyle = holder ? getComputedStyle(holder) : undefined;
-        const pane = holder ? round(holder.clientWidth - px(holderStyle.paddingLeft) - px(holderStyle.paddingRight)) : undefined;
+        const pane = holderWidth(button);
         const b = rectOf(button);
         const g = svg && visible(icon) && visible(svg) ? rectOf(svg) : undefined;
         // The collapse clips the label to a 1 px box; a label hidden outright would take the name with it (the glyph is aria-hidden).
@@ -1723,7 +1760,13 @@ const controlsIn = (kind, container) => {
             name: (labelRendered ? text.textContent : '').trim(),
         };
     });
-    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible };
+    // UX-P3.fix-13: the tab strip's badges (a clipped badge keeps a 1 px box) and the labels an ellipsis cuts.
+    const tabBadges = kind === 'tabs' ? {
+        pane: holderWidth(container),
+        badges: [...container.querySelectorAll('.nuiget-tab-count, .nuiget-tab-badge')].map(el => { const r = rectOf(el); return { w: round(r.width), h: round(r.height) }; }),
+        labelsCut: [...container.querySelectorAll('.nuiget-tab-label')].filter(el => el.scrollWidth > el.clientWidth).length,
+    } : undefined;
+    return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible, tabBadges };
 };
 const controlsOut = [
     ...shown('[data-testid="main-header"]').map(el => controlsIn('main-header', el)),
@@ -3043,6 +3086,12 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             }
             const reach = containers.map(entry => `${entry.label} ${entry.total - entry.out}/${entry.total} reachable${entry.hidden > 0 ? `, ${entry.hidden} hidden${entry.menu ? ' behind a menu' : ' and no menu'}` : ''}`).join('; ');
             const reachable = containers.every(entry => entry.out === 0);
+            const strips = kind === 'tabs' ? containers.map(entry => entry.tabBadges).filter((entry): entry is TabBadges => entry !== undefined && entry.badges.length > 0) : [];
+            if (strips.length > 0) {
+                const verdicts = strips.map(tabBadgesClause);
+                const clause = verdicts.map(verdict => verdict.text).join('; ') + (TAB_BADGES_STATUS === 'hard' ? '' : ` (pending ${TAB_BADGES_STATUS.pending})`);
+                return { value: `${reach}; ${clause}`, pass: reachable && (TAB_BADGES_STATUS !== 'hard' || verdicts.every(verdict => verdict.pass)) };
+            }
             const collapsible = kind === 'toolbars' ? containers.flatMap(entry => entry.collapsible ?? []) : [];
             if (collapsible.length === 0) {
                 return { value: reach, pass: reachable };

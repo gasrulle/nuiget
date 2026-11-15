@@ -51,7 +51,9 @@ describe('Button', () => {
         const narrow = css.slice(css.indexOf('@container (max-width: 250px)'));
         expect(narrow).toMatch(/\.nuiget-button-icon \{\n\s+display: inline-flex;/);
         expect(narrow).toMatch(/\.nuiget-button-icon \+ \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);
-        expect(narrow).toMatch(/\.nuiget-tab-count,\n\s+\.nuiget-tab-badge \{\n\s+display: none;/);
+        // The tab badges leave the strip by the clip form and stay in the tab's name; never `display: none` (UX-P3.fix-13).
+        expect(narrow).toMatch(/\.nuiget-tab-count,\n\s+\.nuiget-tab-badge,\n\s+\.nuiget-button-icon \+ \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);
+        expect(css).not.toMatch(/\.nuiget-tab-(count|badge)[^{]*\{[^}]*display: none/);
     });
 
     it('a button without an icon renders its children alone', () => {
