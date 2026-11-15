@@ -51,9 +51,10 @@ export interface TabBadges {
 /**
  * DS-OVERFLOW-3's tab-badge clause in the `tabs` scope (§8: the strip's badges hide below a 250 px pane first, then the
  * labels ellipsize; they leave the pixels by the primitive's clip form and stay in the tab's name; UX-P3.fix-13,
- * design-advisor opening ruling of 2026-11-15). Pending until that item's fix.
+ * design-advisor opening ruling of 2026-11-15). Hard since that item's closing commit (GOLDEN ruling, run 43746892037:
+ * `badges hidden 3, labels cut 0` at panes 170, 172, 172 and 210).
  */
-export const TAB_BADGES_STATUS: RuleStatus = { pending: 'P3.fix-13' };
+export const TAB_BADGES_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
@@ -1434,7 +1435,8 @@ const heights = {
         return { width: round(rect.width), height: round(rect.height), radius: style.borderTopLeftRadius, selected: selected ? { fill: style.backgroundColor, border: style.borderTopColor } : undefined, off };
     }),
     checkSelect: { fill: rootVars.getPropertyValue('--vscode-checkbox-selectBackground').trim(), border: rootVars.getPropertyValue('--vscode-checkbox-selectBorder').trim() },
-    badges: shown('.nuiget-badge').map(el => {
+    // UX-P3.fix-13 (GOLDEN ruling): a badge inside a tab span the 250 query clips to 1 px is not shown (the tabs clause's predicate).
+    badges: shown('.nuiget-badge').filter(el => { const span = el.closest('.nuiget-tab-count, .nuiget-tab-badge'); if (!span) return true; const r = rectOf(span); return !(r.width <= 1 && r.height <= 1); }).map(el => {
         const style = getComputedStyle(el);
         const rect = rectOf(el);
         const text = badgeLabel(el);

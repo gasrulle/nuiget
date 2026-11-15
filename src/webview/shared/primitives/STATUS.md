@@ -1,7 +1,7 @@
-# STATUS — src/webview/shared/primitives (UX-P3.fix-13)   commit ff69c51 (base; this commit is the proving push)   2026-11-15
+# STATUS — src/webview/shared/primitives (UX-P3.fix-13)   commit de27fe0 (proving push; 2b9822b and the closing commit follow)   2026-11-15
 
-git status --short: `primitives.css`, `Button.test.tsx`, `measure.ts`, `measure-rules.test.ts`, `measure-collector.test.ts`,
-the tracker and this note
+git status --short (closing commit): the four goldens with their sidecars and `index.json`, `measure.ts` (the DS-HEIGHT-10
+filter and the flip), `measure-collector.test.ts`, DECISIONS, the two judge logs, the tracker and this note
 
 Item: UX-P3.fix-13 ⚑-design "The tab strip's badges do not hide below a 250 px list pane", tracker row
 `docs/plans/STATUS-ux.md`. The one counted source directory is this one (`measure.ts` is a §2.1 UI file, the rest are
@@ -135,7 +135,56 @@ passing`, `21 failing`, the 21 known local-only (DS-SCROLL-1 ×15, SPEC `project
 
 ## Visual evidence (UI items)
 
-Not yet: the proving push (this commit).
+Proving run 43746892037 (de27fe0), green on every job; `captures/43746892037/`:
+
+```text
+[diff] summary: 114 compared, 110 at 0 px, 4 above tolerance, 0 without a golden, 0 refused
+[diff] main-installed-details.dark-modern.400: 1171 px (0.365 %, tolerance 0 %, 151636 px masked, above)
+[diff] main-installed-single.dark-modern.220: 1203 px (0.681 %, tolerance 0 %, above)
+[diff] main-installed-single.dark-modern.400: 1231 px (0.383 %, tolerance 0 %, above)
+[diff] main-installed-single.dark-modern.600: 1317 px (0.273 %, tolerance 0 %, 4440 px masked, above)
+[measure] DS-OVERFLOW-3@main-installed-single/tabs: [tab-bar] 2/2 reachable; badges hidden 3, labels cut 0 (pending P3.fix-13) (hard)   (×3)
+[measure] DS-OVERFLOW-3@main-installed-details/tabs: [tab-bar] 2/2 reachable; badges hidden 3, labels cut 0 (pending P3.fix-13) (hard)
+[measure] DS-OVERFLOW-3@main-installed-details/toolbars: [installed-toolbar] 2/2 reachable; collapsed 1: glyph 16×16, centre dx 0 dy 0, name "Select All" (hard)
+```
+
+Changed-pixel boxes (pixelmatch red of `compare()`, masks applied), all inside the tab strip: 220 `20,201,133,35`, 400
+`20,135,135,35`, details 400 `20,142,135,28`, 600 `35,137,158,35`. `grep -c '@main-browse-details/toolbars'` → 0; `grep
+'/toolbars' | grep details | grep -c 'not measurable'` → 0; 44 new details toolbars lines, all passing. Unchanged:
+`DS-COPY-5@main-installed-single: … tabs 2: count badges 3 (hard)` ×8, `[aria] … differs` 0 and 0, the four `[keys] … tab:`
+walks as expected (hard); the snapshots' tab names `tab "Installed # # package with known vulnerabilities"`, `tab "Updates
+#"`. Hard lines against run 43742201585 (sorted; the tabs clause text and the new details toolbars lines set aside):
+identical but DS-HEIGHT-10 at the four cells (the stop-and-ask of DO 5, ruled in the GOLDEN ruling):
+
+```text
+< [measure] DS-HEIGHT-10@main-installed-details: count 20.4×20 ×10, 26.7×20 ×2 (at least 19×19) (hard)
+> [measure] DS-HEIGHT-10@main-installed-details: count 19×19 ×3, 20.4×20 ×9 (at least 19×19) (hard)
+< [measure] DS-HEIGHT-10@main-installed-single: count 20.4×20, 26.7×20 ×3 (at least 19×19) (hard)   (×3)
+> [measure] DS-HEIGHT-10@main-installed-single: count 19×19 ×3, 26.7×20 (at least 19×19) (hard)   (×3)
+```
+
+sha256: `main-installed-single.dark-modern.220` 761c1a3df3d2315ba28759bd960a15c1a31a57cea69508c8adbce4559e99ed6a, `.400`
+413903616a6eb09332df91efba0449c360bed38e9ad34d2d56db2459b302f748, `.600` 1d55e3be6443e4139ef136794580ba55218fca301420cf802634b2ef0423f05f,
+`main-installed-details.dark-modern.400` 69aa5cb1c8a6f51cfaf9a3ce9e442e9d9896b88d51e1120d88339527dc368395.
+
+design-judge wf_2b6d085d-a5a (`captures/43746892037/judge-wf_2b6d085d-a5a.json`), the four cells against their committed
+goldens: `states 4, candidates 21, standing 6, blocking 2, refuted 0, singleJudge 5, incomplete 0`; dispositions in
+`docs/plans/judge-log/P3.fix-13.json` (11 entries): the golden's badges → fixed here; the version and "Addec" clips and
+the cut primary → P3.fix-14; the 49 px pane → P3.fix-15. P3.fix-12's four tab findings carry the re-run 43746892037 as
+evidence.
+
+Closing (G-UI): the four cells adopted from run 43746892037 only (`captures/43746892037/adopt-4/`): `compare-goldens: 4
+goldens adopted from run 43746892037 as approved`; `index.json` holds the four with that run, `approved` and the sha256
+above. DS-HEIGHT-10's collector leaves out a badge inside a tab span clipped to at most 1×1 (the tabs clause's predicate);
+`measure-collector.test.ts` "leaves a badge in a clipped tab span out of the badge sizes; a shown one stays (DS-HEIGHT-10,
+UX-P3.fix-13)". `TAB_BADGES_STATUS` is `'hard'`. §8's tab-strip row in its own commit 2b9822b; the DECISIONS row "Tab
+badges below 250 (UX-P3.fix-13)". Gates on the closing tree: `npx tsc --noEmit`, `npm run check-types`, `npx eslint src` →
+exit 0; `npx vitest run --project backend src/test/lint` → `Tests  486 passed (486)`; `npm test` → `Test Files  181 passed (181)`,
+`Tests  2581 passed | 9 skipped (2590)`, `[axe-coverage] 74 files, 42 rules passed somewhere, 0 missing`; `npm run bench` →
+exit 0. `precommit-review` on the closing commit (wf_0f5d6ef7-ecb) → 0 blocking, 2 non-blocking (these gate lines and the
+status line), both fixed before the commit. The closing run must read `114 at
+0 px`, `pending P3.fix-13` 0, no `19×19 ×3` on DS-HEIGHT-10, `DS-HEIGHT-10@main-installed-single: count 26.7×20` at the
+three narrow cells and `…@main-installed-details: count 20.4×20 ×9` at 400, `[aria] … differs` 0.
 
 ## Done (tested)
 
@@ -144,7 +193,7 @@ Not yet: the proving push (this commit).
 
 ## Done (untested)
 
-- The CSS change's effect on the four cells and the details toolbars lines (the reading and the proving run).
+None.
 
 ## Pre-commit review
 
@@ -156,7 +205,7 @@ re-run on the final tree.
 
 ## Not started
 
-The proving run (DO 5), the GOLDEN brief and the judge (DO 6), the closing commit (DO 7).
+Nothing. The closing run is the proof.
 
 ## Deviations from contract/ADR/decision (file:line each)
 
@@ -316,6 +365,79 @@ Question (DO 4 stop-and-ask): `main-browse-details` reads `not measurable` on th
 >
 > The opening ruling's steps 5 to 7 (the four predicted cells, the clause lines, the GOLDEN brief, the closing commit) stand unchanged.
 
+### 2026-11-15, UX-P3.fix-13, design-advisor, GOLDEN ruling
+
+Question: the DS-HEIGHT-10 value change (DO 5 stop-and-ask); are the four cells in the class (adopt and flip);
+dispositions and owners for the judge's 11 findings.
+
+> GOLDEN ruling for UX-P3.fix-13, proving run 43746892037 (de27fe0). The brief checks out: the four sha256 values match the files, `ui-diff.txt` shows exactly those four cells above tolerance, the clause prints `badges hidden 3, labels cut 0` four times, and both details-toolbars greps return 0. I opened all four captures: each tab strip reads "INSTALLED" and "UPDATES" whole with no badge, and nothing below the strip has moved. The CSS diff of de27fe0 is the ruled one (the two tab selectors joined to the clip rule, the `display: none` rule gone).
+>
+> ```text
+> DECISION: APPROVE the four cells. DS-HEIGHT-10's collector skips a clipped tab badge, in this item's closing
+> commit. Dispositions below.
+>
+> WHY: The cells are the opening ruling's step 5 prediction: four cells, changed pixels inside the tab strip only
+> (20,201,133,35 at 220; 20,135,135,35 and 20,142,135,28 at 400; 35,137,158,35 at 600), 110 cells at 0 px, the
+> clause green at panes 170, 172, 172 and 210, DS-COPY-5 and the ARIA snapshots unchanged. DS-HEIGHT-10 states
+> the size of a badge the user sees; `shown('.nuiget-badge')` (measure.ts:1437) now reports three badges at
+> 19×19 that are clipped to 1 px, which is a reading of nothing. It passes, so it blocks no adoption, but a
+> hard line that measures hidden boxes would also hide a real undersized badge behind a count; this item
+> created the case and owns measure.ts here, so it corrects the collector rather than leaving a row.
+>
+> DO:
+> 1. Adopt the four cells with `--status approved` from run 43746892037:
+>    main-installed-single.dark-modern.220 sha256 761c1a3df3d2315ba28759bd960a15c1a31a57cea69508c8adbce4559e99ed6a
+>    main-installed-single.dark-modern.400 sha256 413903616a6eb09332df91efba0449c360bed38e9ad34d2d56db2459b302f748
+>    main-installed-single.dark-modern.600 sha256 1d55e3be6443e4139ef136794580ba55218fca301420cf802634b2ef0423f05f
+>    main-installed-details.dark-modern.400 sha256 69aa5cb1c8a6f51cfaf9a3ce9e442e9d9896b88d51e1120d88339527dc368395
+> 2. measure.ts, the badge collector: leave out a badge whose `.nuiget-tab-count` or `.nuiget-tab-badge` ancestor
+>    has a rect of at most 1×1, using the same predicate the tabs clause uses. Add a collector unit case (a
+>    clipped tab badge is not in `badges`; a shown one is). Change no target, tolerance or rule.
+> 3. Flip TAB_BADGES_STATUS to 'hard'; write §8's tab-strip row and the DECISIONS.md row of the opening ruling's
+>    step 7; add to that row: "DS-HEIGHT-10 reads shown badges only."
+> 4. Expected in the closing run: `DS-HEIGHT-10@main-installed-single: count 26.7×20 (at least 19×19) (hard)` at
+>    the three narrow cells, `DS-HEIGHT-10@main-installed-details: count 20.4×20 ×9 (at least 19×19) (hard)` at
+>    400, the wide lines unchanged. A `not measurable` or any other changed hard line is a stop-and-ask.
+> 5. docs/plans/judge-log/P3.fix-13.json, 11 entries:
+>    - main-installed-single#D1, main-installed-single-400#D3, main-installed-details#D1,
+>      main-installed-single-600#D2 (golden draws the badges): fixed, owner P3.fix-13; the goldens are replaced
+>      by step 1.
+>    - main-installed-single#D2 (49 px details pane): fixed, owner P3.fix-15.
+>    - main-installed-single-400#D1, main-installed-single-600#D1, main-installed-single#D3 (version clipped by
+>      the facts line): fixed, owner P3.fix-14.
+>    - main-installed-single#D4, main-installed-single-400#D2 ("Uninstall Selecte..."): fixed, owner P3.fix-14.
+>    - main-installed-details#D2 ("2.0.3 · Addec" cut mid-glyph): fixed, owner P3.fix-14. Same class: a text of
+>      the facts line sliced by the line with no ellipsis.
+> 6. Add to P3.fix-14's row: the finding main-installed-details#D2 and its box (46,381,84,16 of the details-400
+>    cell), and that its helper clause reads every text child of the facts line, not the version alone.
+> 7. Set the four tab-badge findings of judge-log/P3.fix-12.json to their closing state per the judge-log rule.
+> 8. Push the closing commit; paste its `[diff] summary` and the lines of step 4.
+>
+> DO NOT:
+> - Make DS-HEIGHT-10 skip any badge other than one inside a clipped tab span, or lower its 19×19.
+> - Fix the version clip, the "Addec" clip, the Uninstall label or the 49 px pane here.
+> - Adopt a fifth cell or an ARIA snapshot.
+>
+> CONTRACT CHANGE: none.
+>
+> VERIFY:
+> - Closing run: `[diff] summary: 114 compared, 114 at 0 px, 0 above tolerance`; `grep -c 'pending P3.fix-13'` on
+>   ui-output.txt is 0; `grep 'DS-HEIGHT-10@main-installed' | grep -c '19×19 ×3'` is 0; `[aria] … differs` 0.
+> - `git diff --stat` under src/test/ui/v2/golden/: four PNGs, four sidecars, index.json.
+> - `node scripts/check-css-baseline.mjs --item P3.fix-13` prints `0 entries`.
+>
+> DEFECTS (none blocks approval; all predate this item):
+> - captures/43746892037/main-installed-details.dark-modern.400.png 46,381,84,16 DS-ROW-5 major: "2.0.3 · Addec"
+>   is sliced at the line's edge with no ellipsis; P3.fix-14.
+> - The version clip, the Uninstall label and the 49 px pane are as listed in P3.fix-12's GOLDEN ruling; owners
+>   P3.fix-14 and P3.fix-15.
+> ```
+>
+> **Not checked**
+> - I did not open the four committed goldens, the `diff/` images or the judge JSON; the finding ids, boxes and severities are taken from the brief.
+> - The "all other hard lines identical to run 43742201585" comparison and the classic output are from the brief. I confirmed only the DS-HEIGHT-10 lines, which read as you pasted them.
+> - The narrow-width accessible name is still read by no gate; the wide-width names in the snapshot are unchanged, which is what the clip form predicts but does not prove at 250 or under.
+
 ## Exact next step (one item ID)
 
-UX-P3.fix-13: the proving run (DO 5), then the GOLDEN brief (DO 6).
+UX-P3.fix-13 is `done` once the closing run reads the GOLDEN ruling's VERIFY. Next open row: P3.fix-14.

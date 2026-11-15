@@ -268,6 +268,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.tabBadges).toBeUndefined();
     });
 
+    it('leaves a badge in a clipped tab span out of the badge sizes; a shown one stays (DS-HEIGHT-10, UX-P3.fix-13)', () => {
+        const bar = document.querySelector('[data-testid="tab-bar"]') as HTMLElement;
+        bar.innerHTML = '<button role="tab" class="nuiget-tab" data-rect="6,45,120,70"><span class="nuiget-tab-label" data-rect="16,45,70,65">Installed</span> <span class="nuiget-tab-count" data-rect="72,46,73,47"><span class="nuiget-badge nuiget-badge--count" data-rect="72,46,91,65" data-text="76,48,87,63">15</span></span></button>';
+        const sizes = () => collect().heights.badges.map(badge => [badge.width, badge.height]);
+        expect(sizes()).not.toContainEqual([19, 19]);
+        (bar.querySelector('.nuiget-tab-count') as HTMLElement).setAttribute('data-rect', '72,46,91,65');
+        expect(sizes()).toContainEqual([19, 19]);
+    });
+
     it('a search box carrying the text field class counts once, as search, with its radius (UX-P2.4)', () => {
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         const box = document.createElement('input');

@@ -1,0 +1,679 @@
+{
+  "item": "P3.fix-13",
+  "runs": [
+    {
+      "runId": "43746892037",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "de27fe0 (the proving push)",
+      "look": "modern",
+      "workflow": "wf_2b6d085d-a5a",
+      "note": "The four moved cells, each against its committed golden as the artboard and its state's spec. D37 is not met: every finding carries a disposition and an owner (GOLDEN ruling DO 5).",
+      "captures": {
+        "main-installed-single": {
+          "png": "captures/43746892037/main-installed-single.dark-modern.220.png",
+          "sha256": "761c1a3df3d2315ba28759bd960a15c1a31a57cea69508c8adbce4559e99ed6a",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.220.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-single-400": {
+          "png": "captures/43746892037/main-installed-single.dark-modern.400.png",
+          "sha256": "413903616a6eb09332df91efba0449c360bed38e9ad34d2d56db2459b302f748",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.400.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-single-600": {
+          "png": "captures/43746892037/main-installed-single.dark-modern.600.png",
+          "sha256": "1d55e3be6443e4139ef136794580ba55218fca301420cf802634b2ef0423f05f",
+          "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.600.png (the committed golden before this item's adoption)"
+        },
+        "main-installed-details": {
+          "png": "captures/43746892037/main-installed-details.dark-modern.400.png",
+          "sha256": "69aa5cb1c8a6f51cfaf9a3ce9e442e9d9896b88d51e1120d88339527dc368395",
+          "artboard": "src/test/ui/v2/golden/main-installed-details.dark-modern.400.png (the committed golden before this item's adoption)"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 21,
+        "standing": 6,
+        "blocking": 2,
+        "refuted": 0,
+        "singleJudge": 5,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-single#D1",
+          "state": "main-installed-single",
+          "finding": "[native] The artboard draws count badges in the Installed/Updates tab strip (15, a red 1 and 14). The capture shows only the INSTALLED and UPDATES labels with no badges, so the red vulnerability-count marker is no longer visible at 220. DS-OVERFLOW-3's overflow table says count badges hide below 250, so the capture follows the rule and the artboard conflicts with it. Reported once as an artboard/rule conflict; outside the tab strip, the capture matches the artboard pixel for pixel. | [geometry] The approved 220 artboard draws count badges in the Installed/Updates tab strip ('I.. 15 1', 'U.. 14'), but the overflow table (§8, DS-OVERFLOW-3) hides tab-strip badges below 250 px. The capture follows the rule (INSTALLED and UPDATES whole, no badges), so the artboard and the rule disagree for this cell. | [states] In the tab strip the approved golden draws the Installed and Updates tabs as 'I..' and 'U..' with their count badges (15, a red-ringed 1 and 14). The capture shows full 'INSTALLED' and 'UPDATES' labels with no badges, which is what the DS-OVERFLOW-3 overflow table prescribes below 250 px ('count badges hide below 250 first, then labels ellipsize'). The artboard therefore contradicts the rule, and the rule wins.",
+          "severity": "minor",
+          "box": [
+            4,
+            200,
+            160,
+            36
+          ],
+          "rule": "DS-OVERFLOW-3, spec-conflict",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single",
+              "finding": "The artboard draws count badges in the Installed/Updates tab strip (15, a red 1 and 14). The capture shows only the INSTALLED and UPDATES labels with no badges, so the red vulnerability-count marker is no longer visible at 220. DS-OVERFLOW-3's overflow table says count badges hide below 250, so the capture follows the rule and the artboard conflicts with it. Reported once as an artboard/rule conflict; outside the tab strip, the capture matches the artboard pixel for pixel.",
+              "severity": "minor",
+              "box": [
+                6,
+                201,
+                144,
+                35
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows whole INSTALLED and UPDATES labels with no badges, while the golden at the same box draws 'I.. 15 (1)' and 'U.. 14'. The measured line 'DS-OVERFLOW-3/tabs: badges hidden 3, labels cut 0' and the §8 tab-strip row ('count badges hide below 250 first') side with the capture, so this is the rubric §6 artboard/rule disagreement, reported once as a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "The approved 220 artboard draws count badges in the Installed/Updates tab strip ('I.. 15 1', 'U.. 14'), but the overflow table (§8, DS-OVERFLOW-3) hides tab-strip badges below 250 px. The capture follows the rule (INSTALLED and UPDATES whole, no badges), so the artboard and the rule disagree for this cell.",
+              "severity": "minor",
+              "box": [
+                6,
+                201,
+                150,
+                35
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "This is the same tab-strip disagreement as native-1: the capture has whole labels and no badges (measured 'badges hidden 3, labels cut 0'), and the golden draws 'I.. 15 1' and 'U.. 14' with the labels cut. The §8 rule hides badges below 250, so this is a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "states-4",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "In the tab strip the approved golden draws the Installed and Updates tabs as 'I..' and 'U..' with their count badges (15, a red-ringed 1 and 14). The capture shows full 'INSTALLED' and 'UPDATES' labels with no badges, which is what the DS-OVERFLOW-3 overflow table prescribes below 250 px ('count badges hide below 250 first, then labels ellipsize'). The artboard therefore contradicts the rule, and the rule wins.",
+              "severity": "minor",
+              "box": [
+                4,
+                200,
+                160,
+                36
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "This is the same tab-strip conflict as native-1: the capture crop has full 'INSTALLED' and 'UPDATES' and no badges, matching the measured 'badges hidden 3, labels cut 0', while the golden draws 'I..', 'U..' and the badges 15, 1 and 14. It is a minor spec-conflict where the rule wins.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "evidence": "run 43746892037: the golden that drew the badges and the cut labels replaced by the capture (adopted in UX-P3.fix-13's closing commit); the closing run is the re-run",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-13"
+        },
+        {
+          "id": "main-installed-single#D2",
+          "state": "main-installed-single",
+          "finding": "[geometry] At 220 px the details pane is squeezed to 49 px (x 171-219, sash at x 170), far below its 220 px minimum (--nuiget-details-pane-min). Its empty-state sentence breaks inside words over nine lines ('Selec t a pack age ... detai ls.'), and the text starts 8 px from the sash where DS-INSET-1/DS-INSET-4 give the details pane a 20 px inset. | [states] The details pane's empty-state sentence 'Select a package to see its details.' is squeezed into a column about 45 px wide and breaks inside words ('Selec/t', 'pack/age', 'detai/ls.') over nine lines. The pane sits far below its declared 220 px minimum (DS-OVERFLOW-3 overflow table, details pane), and the welcome-view empty state of DS-STATE-3 does not read as sentences. The golden draws the same break.",
+          "severity": "major",
+          "box": [
+            171,
+            201,
+            49,
+            186
+          ],
+          "rule": "DS-OVERFLOW-5, DS-OVERFLOW-3",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single",
+              "finding": "At 220 px the details pane is squeezed to 49 px (x 171-219, sash at x 170), far below its 220 px minimum (--nuiget-details-pane-min). Its empty-state sentence breaks inside words over nine lines ('Selec t a pack age ... detai ls.'), and the text starts 8 px from the sash where DS-INSET-1/DS-INSET-4 give the details pane a 20 px inset.",
+              "severity": "major",
+              "box": [
+                171,
+                201,
+                49,
+                186
+              ],
+              "rule": "DS-OVERFLOW-5",
+              "verdict": "confirmed",
+              "reason": "The crop shows the details pane squeezed to about 49 px right of the sash at x 170, with its empty-state sentence broken inside words over nine lines ('Selec/t a/pack/age/to/see/its/detai/ls.') and its text starting about 8 px from the sash. No hard line contradicts this: DS-INSET-4 reads only 'empty top 20', no DS-OVERFLOW-5 line is printed for the state, and the spec declares nothing for 220.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            },
+            {
+              "id": "states-3",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The details pane's empty-state sentence 'Select a package to see its details.' is squeezed into a column about 45 px wide and breaks inside words ('Selec/t', 'pack/age', 'detai/ls.') over nine lines. The pane sits far below its declared 220 px minimum (DS-OVERFLOW-3 overflow table, details pane), and the welcome-view empty state of DS-STATE-3 does not read as sentences. The golden draws the same break.",
+              "severity": "major",
+              "box": [
+                174,
+                248,
+                42,
+                134
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "This is the same squeezed details pane as geometry-1: the crop shows 'Select a package to see its details.' broken inside words ('Selec/t', 'pack/age', 'detai/ls.') in a column about 45 px wide, far below the 220 px details-pane minimum of §8. The spec declares nothing for 220 and no hard measurement contradicts it. No information is lost, so it is major.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-15",
+          "evidence": "captures/43746892037 cell of main-installed-single box [171,201,49,186]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-15"
+        },
+        {
+          "id": "main-installed-single-400#D1",
+          "state": "main-installed-single-400",
+          "finding": "[native] The fourth row's version (9.5.0-preview.1.25262.9, whole in the 800 capture) is hard-clipped at x 127 to '9.5.0-preview.1' with no ellipsis, and the Verified mark and authors that its neighbours show on the facts line are absent. This contradicts the spec's composition note and DS-ROW-5, which say the version stays whole and the authors ellipsize after the Verified mark. | [geometry] In the fourth row (the Microsoft... row whose version is 9.5.0-preview.1), the facts-line version is cut mid-glyph at x 127, the same 128 px text-column edge where the name above it ellipsizes. The final '1' is sliced and no ellipsis is drawn. The redline's composition and DS-ROW-5 require the version to stay whole, with only the authors ellipsizing after it. | [states] In the fourth row (the Microsoft... row with a preview version), the facts line cuts the version '9.5.0-preview.1' at the text column's end edge with no ellipsis. The final '1' loses the right half of its base serif, and the Verified mark and authors are pushed out entirely. The spec's composition and DS-ROW-5 say the version stays whole and the authors ellipsize after the Verified mark, as they do in the rows above.",
+          "severity": "blocking",
+          "box": [
+            46,
+            518,
+            83,
+            14
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single-400",
+              "finding": "The fourth row's version (9.5.0-preview.1.25262.9, whole in the 800 capture) is hard-clipped at x 127 to '9.5.0-preview.1' with no ellipsis, and the Verified mark and authors that its neighbours show on the facts line are absent. This contradicts the spec's composition note and DS-ROW-5, which say the version stays whole and the authors ellipsize after the Verified mark.",
+              "severity": "blocking",
+              "box": [
+                46,
+                520,
+                83,
+                12
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "In the crop (magnified 4x) the fourth row's facts line reads '9.5.0-preview.1' and is cut through the last '1' with no ellipsis. The Verified mark and the authors that the rows above show ('2.14.1 • ✓ ...') are gone. This breaks the spec composition, which says 'the version stays whole' (DS-ROW-5). The hard line 'DS-ROW-5 ... version whole ×13' does not refute this: it reads the version element, and the crop shows the painted text clipped at the column edge.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single-400",
+              "finding": "In the fourth row (the Microsoft... row whose version is 9.5.0-preview.1), the facts-line version is cut mid-glyph at x 127, the same 128 px text-column edge where the name above it ellipsizes. The final '1' is sliced and no ellipsis is drawn. The redline's composition and DS-ROW-5 require the version to stay whole, with only the authors ellipsizing after it.",
+              "severity": "blocking",
+              "box": [
+                46,
+                520,
+                82,
+                11
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-1. The crop shows the fourth row's version cut mid-glyph after 'preview.1', with no ellipsis and no Verified mark. The spec composition requires the version to stay whole (DS-ROW-5). The measurement 'version whole ×13' reads the element box, not the painted clip.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "In the fourth row (the Microsoft... row with a preview version), the facts line cuts the version '9.5.0-preview.1' at the text column's end edge with no ellipsis. The final '1' loses the right half of its base serif, and the Verified mark and authors are pushed out entirely. The spec's composition and DS-ROW-5 say the version stays whole and the authors ellipsize after the Verified mark, as they do in the rows above.",
+              "severity": "blocking",
+              "box": [
+                46,
+                518,
+                83,
+                13
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "This is the same defect as native-1. The box covers the fourth row's facts line, where '9.5.0-preview.1' is clipped through its final '1' with no ellipsis. The Verified mark and authors are absent, against the spec's 'version stays whole' (DS-ROW-5).",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-single-400 box [46,518,83,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        },
+        {
+          "id": "main-installed-single-400#D3",
+          "state": "main-installed-single-400",
+          "finding": "[native] The approved 400 golden draws the tab strip as 'I.. 15 (1) / U.. 14': badges kept and labels ellipsized. The overflow table (§8, tab strip) says count badges hide below 250 first and labels ellipsize only after that, which is what the capture shows (INSTALLED / UPDATES, no badges). The artboard and the rule disagree. | [geometry] The approved artboard draws both tabs with their count badges at this 172 px list pane, with the labels cut to 'I..' and 'U..'. The capture follows the overflow table of DS-OVERFLOW-3 (below 250 px the badges hide first and the labels ellipsize after that) and shows 'INSTALLED' and 'UPDATES' whole, with no badges. The tabs have symmetric 10 px padding and the label starts 16 px from the pane edge. So the drawing and the declared rule disagree, and the rule wins. | [states] The approved 400 px artboard draws the Installed/Updates tab strip with count badges (15, a red-outlined 1, 14) and labels ellipsized to 'I...' and 'U...'. The capture hides the badges and shows the full INSTALLED and UPDATES labels, which is what the overflow table (§8, Tab strip: count badges hide below 250 first, then labels ellipsize) prescribes for this roughly 172 px list pane. The artboard and the rule disagree here, so the rule wins and only the conflict is reported.",
+          "severity": "minor",
+          "box": [
+            0,
+            134,
+            172,
+            37
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-3",
+              "lens": "native",
+              "state": "main-installed-single-400",
+              "finding": "The approved 400 golden draws the tab strip as 'I.. 15 (1) / U.. 14': badges kept and labels ellipsized. The overflow table (§8, tab strip) says count badges hide below 250 first and labels ellipsize only after that, which is what the capture shows (INSTALLED / UPDATES, no badges). The artboard and the rule disagree.",
+              "severity": "minor",
+              "box": [
+                0,
+                134,
+                172,
+                37
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture shows 'INSTALLED' and 'UPDATES' whole with no badges. The golden at the same box draws 'I.. 15 (1)' and 'U.. 14'. The capture follows the §8 tab-strip row (badges hide below 250 first), as measured by 'DS-OVERFLOW-3 .../tabs: badges hidden 3, labels cut 0'. The artboard and the rule disagree, which rubric §6 reports once as a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-single-400",
+              "finding": "The approved artboard draws both tabs with their count badges at this 172 px list pane, with the labels cut to 'I..' and 'U..'. The capture follows the overflow table of DS-OVERFLOW-3 (below 250 px the badges hide first and the labels ellipsize after that) and shows 'INSTALLED' and 'UPDATES' whole, with no badges. The tabs have symmetric 10 px padding and the label starts 16 px from the pane edge. So the drawing and the declared rule disagree, and the rule wins.",
+              "severity": "minor",
+              "box": [
+                6,
+                135,
+                150,
+                35
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "This is the same conflict as native-3. The capture shows both labels whole and no badges, and the golden at the same box shows badges with labels cut to 'I..' and 'U..'. The capture matches the §8 rule and the measured 'badges hidden 3, labels cut 0', so only the spec-conflict stands, as a minor finding.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single-400",
+              "finding": "The approved 400 px artboard draws the Installed/Updates tab strip with count badges (15, a red-outlined 1, 14) and labels ellipsized to 'I...' and 'U...'. The capture hides the badges and shows the full INSTALLED and UPDATES labels, which is what the overflow table (§8, Tab strip: count badges hide below 250 first, then labels ellipsize) prescribes for this roughly 172 px list pane. The artboard and the rule disagree here, so the rule wins and only the conflict is reported.",
+              "severity": "minor",
+              "box": [
+                0,
+                135,
+                172,
+                36
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "This is the same conflict as native-3. The golden draws the count badges 15, 1 (red outline) and 14 with ellipsized labels. The capture hides the badges and keeps 'INSTALLED' and 'UPDATES' whole, as §8 and the measured 'badges hidden 3, labels cut 0' prescribe. The artboard and the rule disagree, so this is a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "evidence": "run 43746892037: the golden that drew the badges and the cut labels replaced by the capture (adopted in UX-P3.fix-13's closing commit); the closing run is the re-run",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-13"
+        },
+        {
+          "id": "main-installed-single-600#D1",
+          "state": "main-installed-single-600",
+          "finding": "[native] In the Microsoft.* row with version 9.5.0-preview.1 (fourth package row), the facts line clips the version mid-glyph at about x 165 with no ellipsis, and the Verified mark and authors are pushed out of the line. The redline's composition says the version stays whole in the facts line and only the authors ellipsize after the Verified mark, as the other rows' '2.1.35 · ✓ ...' lines do. The artboard draws the same cut, so the artboard does not justify it. | [states] In the fourth package row the facts line cuts the version mid-glyph (\"9.5.0-preview.1\" ends in a sliced character with no ellipsis) and drops the Verified mark and authors that every other row shows, while the artboard draws that row's version whole followed by \"· ✓ M...\" and the redline composition says the version stays whole and only the authors ellipsize.",
+          "severity": "blocking",
+          "box": [
+            86,
+            519,
+            82,
+            14
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-single-600",
+              "finding": "In the Microsoft.* row with version 9.5.0-preview.1 (fourth package row), the facts line clips the version mid-glyph at about x 165 with no ellipsis, and the Verified mark and authors are pushed out of the line. The redline's composition says the version stays whole in the facts line and only the authors ellipsize after the Verified mark, as the other rows' '2.1.35 · ✓ ...' lines do. The artboard draws the same cut, so the artboard does not justify it.",
+              "severity": "blocking",
+              "box": [
+                86,
+                519,
+                82,
+                13
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "In the crop (enlarged 4x) the fourth row's facts line reads '9.5.0-preview.' with the final '1' sliced at the line's end, no ellipsis and no Verified mark or authors, while the row above reads '2.14.1 · ✓ ...'. The redline composition says the version stays whole (DS-ROW-5). The hard 'DS-ROW-5 ... version whole ×13' line does not refute this: it only compares the version element's own scrollWidth with its clientWidth (measure.ts:1500), so it cannot see the facts line clipping the element.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single-600",
+              "finding": "In the fourth package row the facts line cuts the version mid-glyph (\"9.5.0-preview.1\" ends in a sliced character with no ellipsis) and drops the Verified mark and authors that every other row shows, while the artboard draws that row's version whole followed by \"· ✓ M...\" and the redline composition says the version stays whole and only the authors ellipsize.",
+              "severity": "blocking",
+              "box": [
+                86,
+                519,
+                80,
+                14
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "Same crop and same defect as native-1: '9.5.0-preview.1' ends in a sliced glyph with no ellipsis, and the '· ✓ authors' part shown on the other rows is missing. The redline composition requires the version to stay whole. The 'version whole ×13' measurement reads the element's own overflow only, not the container's clip.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-single-600 box [86,519,82,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The approved artboard draws the Installed/Updates tab strip at this ~170 px list pane with ellipsized labels ('I...', 'U...') beside visible count badges (15, 1, 14), which contradicts the design system's overflow table (tab strip: count badges hide below 250 first, then labels ellipsize); the capture follows the rule (full 'INSTALLED' / 'UPDATES' labels, no badges, the active underline under INSTALLED), so the artboard, not the capture, is out of date. Apart from this strip the capture matches the artboard pixel for pixel. | [geometry] The Installed/Updates tab strip differs from the approved 400 px artboard. In the 172 px list pane the capture hides the count badges and shows the full labels INSTALLED and UPDATES, while the artboard draws the badges (15, 1, 14) beside the ellipsized labels \"I.\" and \"U.\". The capture follows DS-OVERFLOW-3's overflow table (§8 Tab strip: count badges hide below 250 first, then labels ellipsize), so the artboard is the outlier. Strip geometry still holds: 36 px with its bottom line (y 135-170), label start inset 16, underline under the active tab. | [states] The approved artboard draws the list pane's tab strip (about 172 px wide) with the count badges 15, 1 (error ring) and 14 and the labels cut to \"I..\" and \"U..\". The design system's overflow table (§8, Tab strip row, under DS-OVERFLOW-3) says the badges hide below 250 before any label is cut, and the capture follows it: it shows whole INSTALLED and UPDATES labels and no badges. The artboard and the rule disagree here, and the rule wins, so the capture is correct and this golden cell should be redrawn to match the rule.",
+          "severity": "minor",
+          "box": [
+            0,
+            134,
+            172,
+            37
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-installed-details",
+              "finding": "The approved artboard draws the Installed/Updates tab strip at this ~170 px list pane with ellipsized labels ('I...', 'U...') beside visible count badges (15, 1, 14), which contradicts the design system's overflow table (tab strip: count badges hide below 250 first, then labels ellipsize); the capture follows the rule (full 'INSTALLED' / 'UPDATES' labels, no badges, the active underline under INSTALLED), so the artboard, not the capture, is out of date. Apart from this strip the capture matches the artboard pixel for pixel.",
+              "severity": "minor",
+              "box": [
+                0,
+                134,
+                172,
+                37
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows whole INSTALLED and UPDATES labels with no badges and the underline under INSTALLED, while the golden crop at the same box draws 'I...' 15, 1 (red ring) and 'U...' 14. The capture follows the design system's tab-strip overflow row (badges hide below 250 first), which the measurement confirms: 'DS-OVERFLOW-3@main-installed-details/tabs: [tab-bar] 2/2 reachable; badges hidden 3, labels cut 0'. The capture is right and the golden is out of date, a minor spec-conflict under rubric §6.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "The Installed/Updates tab strip differs from the approved 400 px artboard. In the 172 px list pane the capture hides the count badges and shows the full labels INSTALLED and UPDATES, while the artboard draws the badges (15, 1, 14) beside the ellipsized labels \"I.\" and \"U.\". The capture follows DS-OVERFLOW-3's overflow table (§8 Tab strip: count badges hide below 250 first, then labels ellipsize), so the artboard is the outlier. Strip geometry still holds: 36 px with its bottom line (y 135-170), label start inset 16, underline under the active tab.",
+              "severity": "minor",
+              "box": [
+                0,
+                135,
+                172,
+                36
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "Same strip as native-1: the capture has full INSTALLED and UPDATES labels and no badges (measured 'badges hidden 3, labels cut 0'), and the golden has ellipsized labels with badges 15, 1 and 14. The capture follows the rule and the golden does not, a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            },
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-details",
+              "finding": "The approved artboard draws the list pane's tab strip (about 172 px wide) with the count badges 15, 1 (error ring) and 14 and the labels cut to \"I..\" and \"U..\". The design system's overflow table (§8, Tab strip row, under DS-OVERFLOW-3) says the badges hide below 250 before any label is cut, and the capture follows it: it shows whole INSTALLED and UPDATES labels and no badges. The artboard and the rule disagree here, and the rule wins, so the capture is correct and this golden cell should be redrawn to match the rule.",
+              "severity": "minor",
+              "box": [
+                0,
+                135,
+                172,
+                35
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "Same defect as native-1 and geometry-2: in the crop the capture's tab strip shows whole labels and no badges, as the tab-strip overflow row requires (measured 'badges hidden 3, labels cut 0'), while the golden still draws 'I...' and 'U...' with badges 15, 1 and 14.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "evidence": "run 43746892037: the golden that drew the badges and the cut labels replaced by the capture (adopted in UX-P3.fix-13's closing commit); the closing run is the re-run",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-13"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-single#D3",
+          "state": "main-installed-single",
+          "finding": "[states] The facts line of the fourth row shows the version '9.5.0-preview.1' cut off at the row's end, with no Verified mark or authors after it. The spec's composition and DS-ROW-5 say the version stays whole and the authors ellipsize after the Verified mark. The golden draws the same cut.",
+          "severity": "blocking",
+          "box": [
+            46,
+            590,
+            112,
+            14
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The facts line of the fourth row shows the version '9.5.0-preview.1' cut off at the row's end, with no Verified mark or authors after it. The spec's composition and DS-ROW-5 say the version stays whole and the authors ellipsize after the Verified mark. The golden draws the same cut.",
+              "severity": "blocking",
+              "box": [
+                46,
+                590,
+                112,
+                14
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "The 4x zoom shows the fourth row's facts line painted as '9.5.0-preview.' plus a sliver of a clipped final glyph, with no ellipsis, Verified mark or authors after it, while the fixture's version is '9.5.0-preview.1.25262.9' and the spec's composition says the version stays whole. The measured 'DS-ROW-5: version whole x12' reads only the version element's own scrollWidth against its clientWidth (measure.ts:1500), not a clip by an ancestor, so it does not contradict the painted clip.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-single box [46,590,112,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        },
+        {
+          "id": "main-installed-single#D4",
+          "state": "main-installed-single",
+          "finding": "[states] The primary bulk action's label is truncated to 'Uninstall Selecte...' inside its button. The bulk toolbar's overflow behaviour in DS-OVERFLOW-3 is that the primary stays at the end and wraps to its own line. It declares no label truncation, and the trailing '...' reads like the opens-UI ellipsis that the copy rules reserve. The golden draws the same truncation.",
+          "severity": "blocking",
+          "box": [
+            15,
+            271,
+            139,
+            25
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single",
+              "finding": "The primary bulk action's label is truncated to 'Uninstall Selecte...' inside its button. The bulk toolbar's overflow behaviour in DS-OVERFLOW-3 is that the primary stays at the end and wraps to its own line. It declares no label truncation, and the trailing '...' reads like the opens-UI ellipsis that the copy rules reserve. The golden draws the same truncation.",
+              "severity": "blocking",
+              "box": [
+                15,
+                271,
+                139,
+                25
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The crop shows the primary bulk button's label cut to 'Uninstall Selecte...' inside its box. §8's bulk-toolbar row declares only that the primary stays at the end and wraps to its own line, with no label truncation, and DS-OVERFLOW-2's '0 offending' measures rect collisions, not label ellipsis.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-single box [15,271,139,25]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        },
+        {
+          "id": "main-installed-single-400#D2",
+          "state": "main-installed-single-400",
+          "finding": "[native] The bulk toolbar's primary button is 139 px wide here, against the spec's 147 px at 932. Its label 'Uninstall Selected (0)' (as the 600 and 800 captures render it) is ellipsized to 'Uninstall Selected...', which loses the count and reads like the 'opens UI' suffix. The overflow table's bulk-toolbar row declares only the Select All glyph collapse and the primary wrapping to its own line, not truncation.",
+          "severity": "blocking",
+          "box": [
+            16,
+            205,
+            140,
+            26
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-single-400",
+              "finding": "The bulk toolbar's primary button is 139 px wide here, against the spec's 147 px at 932. Its label 'Uninstall Selected (0)' (as the 600 and 800 captures render it) is ellipsized to 'Uninstall Selected...', which loses the count and reads like the 'opens UI' suffix. The overflow table's bulk-toolbar row declares only the Select All glyph collapse and the primary wrapping to its own line, not truncation.",
+              "severity": "blocking",
+              "box": [
+                16,
+                205,
+                140,
+                26
+              ],
+              "rule": "DS-OVERFLOW-3",
+              "verdict": "confirmed",
+              "reason": "The wrapped primary button at y 205 reads 'Uninstall Selected...', where the 600 capture reads 'Uninstall Selected (0)', so the count is lost. The §8 bulk-toolbar row declares only the Select All glyph collapse and the primary wrapping to its own line, never truncation. The approved 400 golden shows the same ellipsis, so this is no regression. 'DS-OVERFLOW-3 ... 2/2 reachable' checks reachability, not label truncation.",
+              "method": "crop",
+              "refuterSeverity": "blocking"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-single-400 box [16,205,140,26]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        },
+        {
+          "id": "main-installed-single-600#D2",
+          "state": "main-installed-single-600",
+          "finding": "[geometry] The Installed/Updates tab strip departs from the approved artboard: the artboard draws both tabs with their count badges (15, 1 and 14) and ellipsized labels (\"INS...\", \"UP...\"), while the capture draws the labels whole with no badges. The capture follows the design system's overflow table (§8: tab-strip count badges hide below 250 px, and this list pane is about 210 px), so the artboard cell disagrees with the rule. Strip geometry still holds: strip 36 px with its bottom line at y 172, tab 35 px, padding 10/10, label start at 16.",
+          "severity": "minor",
+          "box": [
+            6,
+            137,
+            149,
+            36
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-single-600",
+              "finding": "The Installed/Updates tab strip departs from the approved artboard: the artboard draws both tabs with their count badges (15, 1 and 14) and ellipsized labels (\"INS...\", \"UP...\"), while the capture draws the labels whole with no badges. The capture follows the design system's overflow table (§8: tab-strip count badges hide below 250 px, and this list pane is about 210 px), so the artboard cell disagrees with the rule. Strip geometry still holds: strip 36 px with its bottom line at y 172, tab 35 px, padding 10/10, label start at 16.",
+              "severity": "minor",
+              "box": [
+                6,
+                137,
+                149,
+                36
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The artboard crop draws 'INS...' with badges 15 and 1 and 'UP...'. The capture crop draws 'INSTALLED' and 'UPDATES' whole with no badges, which follows the design system's §8 tab-strip row ('count badges hide below 250 first'). The measurement agrees: 'DS-OVERFLOW-3 .../tabs: badges hidden 3, labels cut 0'. Under rubric §6 this artboard–rule disagreement is reported once as a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-13",
+          "evidence": "run 43746892037: the golden that drew the badges and the cut labels replaced by the capture (adopted in UX-P3.fix-13's closing commit); the closing run is the re-run",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-13"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[geometry] The NETStandard.Library row's second line is cut mid-glyph at the list pane's text edge (x 127) and reads \"2.0.3 · Addec\" with no ellipsis, while every other row's facts line at the same edge ends in an ellipsis (\"M...\", \"S...\"). DS-ROW-5 lets this line ellipsize but does not allow a hard clip, and the spec declares no clip here.",
+          "severity": "major",
+          "box": [
+            46,
+            381,
+            84,
+            16
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-details",
+              "finding": "The NETStandard.Library row's second line is cut mid-glyph at the list pane's text edge (x 127) and reads \"2.0.3 · Addec\" with no ellipsis, while every other row's facts line at the same edge ends in an ellipsis (\"M...\", \"S...\"). DS-ROW-5 lets this line ellipsize but does not allow a hard clip, and the spec declares no clip here.",
+              "severity": "major",
+              "box": [
+                46,
+                381,
+                84,
+                16
+              ],
+              "rule": "DS-ROW-5",
+              "verdict": "confirmed",
+              "reason": "In the crop (upscaled 3x) the NETStandard.Library facts line reads '2.0.3 · Addec' and is hard-clipped mid-glyph at the pane's text edge with no ellipsis, while the Microsoft, Polly and Serilog rows end in 'M...' and 'S...'. DS-ROW-5 says the facts line ellipsizes, and the DS-ROW-5 measurement ('13 rows, 11 names cut; badges clipped 0; version whole ×13') does not check this line, so nothing contradicts the finding. The golden shows the same clip, so it is an existing defect, not a regression.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "owner": "P3.fix-14",
+          "evidence": "captures/43746892037 cell of main-installed-details box [46,381,84,16]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
+        }
+      ],
+      "refuted": []
+    }
+  ]
+}

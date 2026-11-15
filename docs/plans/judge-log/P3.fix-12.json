@@ -116,7 +116,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-13",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single box [6,201,154,35]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43746892037: no longer standing (DS-OVERFLOW-3 tabs `badges hidden 3, labels cut 0`, the cell adopted by UX-P3.fix-13)"
         },
         {
           "id": "main-installed-single#D2",
@@ -527,7 +527,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-13",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single-400 box [0,134,173,37]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43746892037: no longer standing (DS-OVERFLOW-3 tabs `badges hidden 3, labels cut 0`, the cell adopted by UX-P3.fix-13)"
         },
         {
           "id": "main-installed-single-600#D1",
@@ -664,7 +664,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-13",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single-600 box [6,137,190,35]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43746892037: no longer standing (DS-OVERFLOW-3 tabs `badges hidden 3, labels cut 0`, the cell adopted by UX-P3.fix-13)"
         },
         {
           "id": "main-installed-details#D1",
@@ -723,7 +723,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-13",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-13 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-details box [0,135,172,36]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43746892037: no longer standing (DS-OVERFLOW-3 tabs `badges hidden 3, labels cut 0`, the cell adopted by UX-P3.fix-13)"
         }
       ],
       "singleJudge": [
