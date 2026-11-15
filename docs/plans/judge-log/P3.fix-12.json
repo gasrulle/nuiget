@@ -194,7 +194,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-14",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single box [46,584,84,14]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)"
         },
         {
           "id": "main-installed-single#D3",
@@ -331,7 +331,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-14",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single box [16,271,138,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)"
         },
         {
           "id": "main-installed-single#D5",
@@ -449,7 +449,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-14",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single-400 box [46,519,84,13]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)"
         },
         {
           "id": "main-installed-single-400#D1",
@@ -805,7 +805,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-14",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-14 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single-400 box [16,205,140,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)"
         },
         {
           "id": "main-installed-single-400#D4",

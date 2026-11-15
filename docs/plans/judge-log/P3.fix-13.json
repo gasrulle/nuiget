@@ -252,7 +252,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-single-400 box [46,518,83,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         },
         {
@@ -389,7 +389,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-single-600 box [86,519,82,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         },
         {
@@ -509,7 +509,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-single box [46,590,112,14]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         },
         {
@@ -549,7 +549,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-single box [15,271,139,25]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         },
         {
@@ -589,7 +589,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-single-400 box [16,205,140,26]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         },
         {
@@ -669,7 +669,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-14",
-          "evidence": "captures/43746892037 cell of main-installed-details box [46,381,84,16]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43766722039: no longer standing as owned (UX-P3.fix-14: the primary collapses with Select All, nothing sliced in a row's line; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-14"
         }
       ],

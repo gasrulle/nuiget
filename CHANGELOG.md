@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 
 ### Fixed
+- **In a narrow package list the bulk buttons are no longer cut off and long versions end in an ellipsis instead of being sliced**
 - **A package of an unsupported project can no longer be installed or updated from the details pane**
 - **Sidebar text stays sharp while the search box has focus**
 - **A package stays marked busy while its operation waits in the queue**

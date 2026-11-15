@@ -157,9 +157,9 @@
   },
   "main-installed-details.dark-modern.400.png": {
     "status": "approved",
-    "run": "43746892037",
-    "sha256": "69aa5cb1c8a6f51cfaf9a3ce9e442e9d9896b88d51e1120d88339527dc368395",
-    "sidecarSha256": "876d69cca9f366084c6714b493c3535df0a0dc8c0a9b532e6a3c28cde66637e5"
+    "run": "43766722039",
+    "sha256": "8eb92b1c498cc32de6b7c6a1ca6ae4f6b34225435a8aab3718d2279e4f59729a",
+    "sidecarSha256": "9cda7fec5145ef6ff19d93e098c3f26e4485a96199bb7a08c8e726d54178dca0"
   },
   "main-installed-details.light-modern.1200.png": {
     "status": "approved",
@@ -271,21 +271,21 @@
   },
   "main-installed-single.dark-modern.220.png": {
     "status": "approved",
-    "run": "43746892037",
-    "sha256": "761c1a3df3d2315ba28759bd960a15c1a31a57cea69508c8adbce4559e99ed6a",
-    "sidecarSha256": "4043d5949c2fdb4739597f2ff282634a87781cf5b1a070004cc89d286e6311e9"
+    "run": "43766722039",
+    "sha256": "ec134e157a4aae9b60755048c85c30a18c93a1728350c501b397fadefb1976ed",
+    "sidecarSha256": "400837a5b8371f010cebbcaa4d5d7377c2b470310544a50df0e9e744c54c7a7c"
   },
   "main-installed-single.dark-modern.400.png": {
     "status": "approved",
-    "run": "43746892037",
-    "sha256": "413903616a6eb09332df91efba0449c360bed38e9ad34d2d56db2459b302f748",
-    "sidecarSha256": "1f0194f0b6f7758480435950424855a6fe5e25eddc6fdaf785429581b9927870"
+    "run": "43766722039",
+    "sha256": "ebb76f2e79d4aab2f93e5cd012393d7a063720f9c8a5f6f79443f42a464c2bfa",
+    "sidecarSha256": "a5a089d94c0178c35a72f5ac3cb0721d19755fe3e2545ebfe08300571df5728e"
   },
   "main-installed-single.dark-modern.600.png": {
     "status": "approved",
-    "run": "43746892037",
-    "sha256": "1d55e3be6443e4139ef136794580ba55218fca301420cf802634b2ef0423f05f",
-    "sidecarSha256": "cc23f84f085f3bcb358285cf82fe4d759990b64ae0712a8894bac87f3472a3a8"
+    "run": "43766722039",
+    "sha256": "1191e2aad36bc65266403ba98b02c957f6e6e747df4c0b02a6dc9dda4cd1403a",
+    "sidecarSha256": "8ba96cbcdf484827f447fa43fc93711ae4622c96b473f21e0cf242b55706c6c8"
   },
   "main-installed-single.dark-modern.800.png": {
     "status": "approved",

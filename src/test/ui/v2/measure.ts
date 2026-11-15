@@ -66,15 +66,15 @@ export interface ToolbarFit {
 /**
  * DS-OVERFLOW-3's toolbar-fit clause in the `toolbars` scope (§8: the bulk toolbar's labels are never cut; below a 250 px
  * pane Select All and the primary collapse to their glyphs on one line; UX-P3.fix-14, design-advisor opening ruling of
- * 2026-11-15). Pending until that item's fix.
+ * 2026-11-15). Hard since that item's closing commit (GOLDEN ruling 2, run 43766722039: `cut 0; lines 1` everywhere).
  */
-export const TOOLBAR_FIT_STATUS: RuleStatus = { pending: 'P3.fix-14' };
+export const TOOLBAR_FIT_STATUS: RuleStatus = 'hard';
 
 /**
  * DS-ROW-5's line clause for comfortable rows (a text of a row's line is never sliced by the line: it fits, or it
- * ellipsizes in its own box; UX-P3.fix-14). Pending until that item's fix.
+ * ellipsizes in its own box; UX-P3.fix-14). Hard since that item's closing commit (GOLDEN ruling 2, run 43766722039: `sliced 0`).
  */
-export const ROW_LINE_STATUS: RuleStatus = { pending: 'P3.fix-14' };
+export const ROW_LINE_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
