@@ -1,13 +1,13 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, Key, Workbench } from 'vscode-extension-tester';
+import { By, ContextMenu, EditorView, Key, SideBarView, Workbench } from 'vscode-extension-tester';
 import { enterMainWebview } from './mainWebview';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, waitForText } from './sidebarWebview';
 
 /**
  * Sidebar parity of the 2.0 sidebar in VS Code (plan item P5.10), on the VSIX that `npm run test:ui` packages: the sash
- * between the Installed and Updates sections moves with the keyboard; "Open Full Manager" opens the main panel beside
+ * between the Installed and Updates sections moves with the keyboard; "Manage NuGet Packages" in the view's ... menu opens the main panel beside
  * the sidebar; with the panel open, an uninstall from the sidebar is still announced in its live region (the condition
  * of finding N66). The fixture project is written back afterwards and the sidebar waits until it lists it again. All
  * Projects in the sidebar is proved in jsdom: the fixture has one project, which the host never groups.
@@ -85,11 +85,39 @@ describe('2.0 sidebar parity', () => {
         await poll(async () => (Number(await sash.getAttribute('aria-valuenow')) === 50 ? true : undefined), 'the sash back at 50', 10_000);
     });
 
-    it('Open Full Manager opens the main panel beside the sidebar', async function () {
+    it('Manage NuGet Packages in the view\'s ... menu opens the main panel beside the sidebar', async function () {
         this.timeout(180_000);
         await openSidebarView();
         await leaveWebview();
-        await new Workbench().executeCommand('nUIget: Open Full Manager');
+        // The precondition (UX-P3.fix-11): no main panel, so the menu item is what opens it, whatever the suites before left open.
+        await new EditorView().closeAllEditors().catch(() => undefined);
+        await poll(async () => ((await driverOf().findElements(By.css('iframe.webview'))).length === 1 ? true : undefined), 'the sidebar\'s webview alone', 60_000);
+        // ExTester's Workbench.openCommandPrompt (page-objects 1.25.1) presses Ctrl/Cmd+Shift with no key-up when no webview
+        // editor is open, so an earlier suite's palette command leaves them held: a menu key or a click on a menu item is then
+        // inert until a Release Actions (UX-P3.fix-11).
+        await driverOf().actions().clear();
+        // The item a user reaches: the view's ... (its 1_more group), not the command the palette hides, chosen in the open menu
+        // by keyboard (ExTester's select presses Escape when the menu stays open after its click).
+        const more = await poll(async () => {
+            for (const action of await new SideBarView().getTitlePart().getActions()) {
+                if (/more actions/i.test(await action.getTitle())) {
+                    return action;
+                }
+            }
+            return undefined;
+        }, 'the view\'s ... button', 30_000);
+        await more.click();
+        const menu = new ContextMenu(new Workbench());
+        const labels = await poll(async () => {
+            const shown = await Promise.all((await menu.getItems()).map(item => item.getLabel()));
+            return shown.includes('Manage NuGet Packages') ? shown : undefined;
+        }, 'the menu item', 10_000);
+        await driverOf().actions().sendKeys(...Array<string>(labels.indexOf('Manage NuGet Packages') + 1).fill(Key.ARROW_DOWN)).perform();
+        await poll(async () => {
+            const focused = await driverOf().executeScript<string[]>('return Array.from(document.querySelectorAll(".action-item.focused")).map(item => item.textContent ?? "");');
+            return focused.length === 1 && focused[0].trim() === 'Manage NuGet Packages' ? true : undefined;
+        }, 'the focus on Manage NuGet Packages', 10_000);
+        await driverOf().actions().sendKeys(Key.ENTER).perform();
         await poll(async () => ((await driverOf().findElements(By.css('iframe.webview'))).length >= 2 ? true : undefined), 'two webviews', 60_000);
         await enterMainWebview();
         await findByTestId('nuiget-app', 30_000);
