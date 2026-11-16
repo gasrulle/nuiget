@@ -198,11 +198,11 @@ export function badgeGapClause(rows: ReadonlyArray<{ badgeGaps?: BadgeGaps }>): 
     };
 }
 
-/** DS-DIVIDER-6 and DS-COLOR-5's sash scope on the sidebar (UX-P3.fix-9, design-advisor opening ruling of 2026-11-16). Pending until that item's fix. */
-export const SIDEBAR_SASH_STATUS: RuleStatus = { pending: 'P3.fix-9' };
+/** DS-DIVIDER-6 and DS-COLOR-5's sash scope on the sidebar (UX-P3.fix-9, design-advisor opening ruling of 2026-11-16). Hard since that item's closing (proving run 43807397727). */
+export const SIDEBAR_SASH_STATUS: RuleStatus = 'hard';
 
-/** DS-DIVIDER-6's hits at a second height on the vertical sash: the tab strip's and a shown banner's mid height (UX-P3.fix-9). Pending until that item's fix. */
-export const SASH_SECOND_Y_STATUS: RuleStatus = { pending: 'P3.fix-9' };
+/** DS-DIVIDER-6's hits at a second height on the vertical sash: the tab strip's and a shown banner's mid height (UX-P3.fix-9). Hard since that item's closing (proving run 43807397727). */
+export const SASH_SECOND_Y_STATUS: RuleStatus = 'hard';
 
 /** The sidebar's declared pass (UX-P3.fix-9): with fewer than two sections shown it has no sash; two panes and no sash stay `not measurable`. */
 export function sidebarSashNotShown(panes: number | undefined): { value: string; pass: boolean } | undefined {
