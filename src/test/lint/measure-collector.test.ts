@@ -898,7 +898,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         // without one every hit reads nothing; with one standing in for the page, the hit points read what it answers.
         expect(collect().endOfP0.sashes).toEqual([{ thickness: 4, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgb(43, 43, 43)', delay: '0s' }, gap: 4, focused: false, outlineFocus: false, hits: [
             { name: 'line -1', hit: 'nothing', ok: false }, { name: 'line +1', hit: 'nothing', ok: false }, { name: 'details content +3', hit: 'nothing', ok: false },
-        ] }]);
+        ], secondHits: [] }]);
         const sash = document.querySelector('.nuiget-sash') as Element;
         const details = document.querySelector('[data-testid="package-details-panel"]') as Element;
         (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = x => (x < 430 ? sash : details);
@@ -909,6 +909,33 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         } finally {
             delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
         }
+    });
+
+    it('reads the vertical sash again at the tab strip\'s and a banner\'s mid height, and counts the sidebar\'s shown sections (DS-DIVIDER-6, UX-P3.fix-9)', () => {
+        document.body.innerHTML = `
+<main data-testid="nuiget-app" data-rect="0,0,1200,800">
+  <div class="nuiget-main-split" data-rect="0,77,1200,800">
+    <div data-testid="installed-pane" data-rect="0,77,420,800"><div data-testid="tab-bar" data-rect="0,77,420,113">tabs</div><div class="nuiget-banner" data-rect="0,113,420,145">banner</div></div>
+    <div class="nuiget-sash" role="separator" aria-valuemin="20" aria-valuemax="80" data-rect="420,77,421,800" style="background-color: rgb(43, 43, 43); width: 1px"></div>
+    <div data-testid="package-details-panel" data-rect="421,77,1200,800">details</div>
+  </div>
+</main>`;
+        const sash = document.querySelector('.nuiget-sash') as Element;
+        const tabs = document.querySelector('[data-testid="tab-bar"]') as Element;
+        const details = document.querySelector('[data-testid="package-details-panel"]') as Element;
+        // The band takes 1 px either side of the line at every height but the banner's, where the pane's start wins.
+        (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = (x, y) => (x >= 419 && x <= 422 && !(y > 113 && y < 145 && x > 420) ? sash : x < 420 ? tabs : details);
+        try {
+            expect(collect().endOfP0.sashes?.[0].secondHits).toEqual([
+                { name: 'line -1 @tabs', hit: '.nuiget-sash', ok: true }, { name: 'line +1 @tabs', hit: '.nuiget-sash', ok: true },
+                { name: 'line -1 @banner', hit: '.nuiget-sash', ok: true }, { name: 'line +1 @banner', hit: '[package-details-panel]', ok: false },
+            ]);
+            expect(collect().endOfP0.sidebarPanes).toBeUndefined();
+        } finally {
+            delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+        }
+        document.body.innerHTML = '<main data-testid="nuiget-sidebar" data-rect="0,0,300,800"><section class="nuiget-sidebar-section" data-rect="0,40,300,400">a</section><section class="nuiget-sidebar-section" data-rect="0,404,300,800">b</section></main>';
+        expect(collect('nuiget-sidebar').endOfP0.sidebarPanes).toBe(2);
     });
 
     it('reads the list scrollbar\'s centre beside the vertical sash: the list keeps its presses (DS-DIVIDER-6, UX-P3.9)', () => {

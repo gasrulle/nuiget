@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -771,6 +771,31 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(badgeGapClause([{}])).toBeUndefined();
         expect(ALIGN_2_STATUS === 'hard' || ALIGN_2_STATUS.pending === 'P3.12').toBe(true);
         expect(BADGE_GAP_STATUS === 'hard' || BADGE_GAP_STATUS.pending === 'P3.12').toBe(true);
+    });
+
+    it('reads the sidebar\'s sash pending P3.fix-9 with a declared pass for one pane, and the vertical sash\'s second height as its own part (DS-DIVIDER-6, DS-COLOR-5, UX-P3.fix-9)', () => {
+        expect(sidebarSashNotShown(1)).toEqual({ value: 'sash not shown (one pane)', pass: true });
+        expect(sidebarSashNotShown(2)).toBeUndefined();
+        expect(sidebarSashNotShown(undefined)).toBeUndefined();
+        const hit = (name: string, ok: boolean) => ({ name, hit: ok ? '.nuiget-sash' : '[section-header-updates]', ok });
+        expect(secondYText([hit('line -1 @tabs', true), hit('line +1 @tabs', true), hit('line -1 @banner', true), hit('line +1 @banner', true)])).toEqual({ text: 'second y: @tabs 2/2, @banner 2/2', pass: true });
+        expect(secondYText([hit('line -1 @tabs', true), hit('line +1 @tabs', false)])).toEqual({ text: 'second y: @tabs 1/2 (missed line +1 @tabs on [section-header-updates])', pass: false });
+        expect(secondYText([])).toEqual({ text: '', pass: true });
+        const sash = (hits: Array<{ name: string; hit: string; ok: boolean }>, secondHits: Array<{ name: string; hit: string; ok: boolean }> = []) => ({ thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false, hits, secondHits });
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, ...overrides } as Layout['endOfP0'] });
+        const sidebarSuffix = SIDEBAR_SASH_STATUS === 'hard' ? '' : ' (pending ' + SIDEBAR_SASH_STATUS.pending + ')';
+        // A sidebar sash whose line +1 reads the Updates header fails once hard; pending it prints and passes.
+        const missed = lineOf('sidebar-sections', facts({ sashes: [sash([hit('line -1', true), { name: 'line +1', hit: '[section-header-updates]', ok: false }])], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash');
+        expect(missed?.value).toBe('sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 1/2 (missed line +1 on [section-header-updates])' + sidebarSuffix);
+        expect(missed?.pass).toBe(SIDEBAR_SASH_STATUS !== 'hard');
+        expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 1 }), 'DS-DIVIDER-6@sidebar-sections/sash')).toMatchObject({ value: 'sash not shown (one pane)', pass: true });
+        expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 1 }), 'DS-COLOR-5@sidebar-sections/sash')).toMatchObject({ value: 'sash not shown (one pane)', pass: true });
+        expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash')?.value).toMatch(/^not measurable/);
+        // The main sash's second height prints after the existing part, pending, and a miss there does not fail it until the flip.
+        const secondSuffix = SASH_SECOND_Y_STATUS === 'hard' ? '' : ' (pending ' + SASH_SECOND_Y_STATUS.pending + ')';
+        const main = lineOf('main-installed-single', facts({ sashes: [sash([hit('line -1', true), hit('line +1', true)], [hit('line -1 @tabs', true), hit('line +1 @tabs', false)])] }), 'DS-DIVIDER-6@main-installed-single/sash');
+        expect(main?.value).toBe('sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 2/2; second y: @tabs 1/2 (missed line +1 @tabs on [section-header-updates])' + secondSuffix);
+        expect(main?.pass).toBe(SASH_SECOND_Y_STATUS !== 'hard');
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

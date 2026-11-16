@@ -198,6 +198,31 @@ export function badgeGapClause(rows: ReadonlyArray<{ badgeGaps?: BadgeGaps }>): 
     };
 }
 
+/** DS-DIVIDER-6 and DS-COLOR-5's sash scope on the sidebar (UX-P3.fix-9, design-advisor opening ruling of 2026-11-16). Pending until that item's fix. */
+export const SIDEBAR_SASH_STATUS: RuleStatus = { pending: 'P3.fix-9' };
+
+/** DS-DIVIDER-6's hits at a second height on the vertical sash: the tab strip's and a shown banner's mid height (UX-P3.fix-9). Pending until that item's fix. */
+export const SASH_SECOND_Y_STATUS: RuleStatus = { pending: 'P3.fix-9' };
+
+/** The sidebar's declared pass (UX-P3.fix-9): with fewer than two sections shown it has no sash; two panes and no sash stay `not measurable`. */
+export function sidebarSashNotShown(panes: number | undefined): { value: string; pass: boolean } | undefined {
+    return panes !== undefined && panes < 2 ? { value: 'sash not shown (one pane)', pass: true } : undefined;
+}
+
+/** The second-height hits of the vertical sash as their own value part, by height (`@tabs 2/2, @banner 2/2`); empty without any. */
+export function secondYText(hits: ReadonlyArray<{ name: string; hit: string; ok: boolean }>): { text: string; pass: boolean } {
+    if (hits.length === 0) {
+        return { text: '', pass: true };
+    }
+    const heights = [...new Set(hits.map(hit => hit.name.replace(/^.* (@\w+)$/, '$1')))];
+    const parts = heights.map(height => {
+        const at = hits.filter(hit => hit.name.endsWith(height));
+        const missed = at.filter(hit => !hit.ok);
+        return `${height} ${at.length - missed.length}/${at.length}${missed.length === 0 ? '' : ` (missed ${missed.map(hit => `${hit.name} on ${hit.hit}`).join(', ')})`}`;
+    });
+    return { text: `second y: ${parts.join(', ')}`, pass: hits.every(hit => hit.ok) };
+}
+
 /** No toolbar button is cut; at a pane of at most 250 px the toolbar's controls share one line. */
 export function toolbarFitClause(fits: readonly ToolbarFit[]): { text: string; pass: boolean } {
     const cut = fits.flatMap(fit => fit.cut);
@@ -794,7 +819,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         // skeleton bars and compact message leaves.
         case 'sidebar':
             // UX-P3.11 (design-advisor opening ruling DO 7): the search box's placeholder fits its text room.
-            return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf', 'placeholder'];
+            // UX-P3.fix-9: the sidebar's sash (DS-DIVIDER-6, DS-COLOR-5), pending on the sidebar (SIDEBAR_SASH_STATUS).
+            return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf', 'placeholder', 'sash'];
         default:
             return ['chrome'];
     }
@@ -1117,7 +1143,9 @@ export interface EndOfP0 {
      * (`::before`) width, background and transition delay, the gap between the panes either side, and whether it draws the
      * focus role's solid `focusBorder` outline (DO 1b reads the outline only, never a colour string).
      */
-    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<{ name: string; hit: string; ok: boolean }> }>;
+    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<{ name: string; hit: string; ok: boolean }>; secondHits?: Array<{ name: string; hit: string; ok: boolean }> }>;
+    /** UX-P3.fix-9: the sidebar's shown sections, so a sidebar with one pane reads its sash as not shown by design. */
+    sidebarPanes?: number;
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
     /** UX-P3.12: per facts block of the details pane, its rows' heights and gaps and its marks (DS-ALIGN-2). */
@@ -1902,6 +1930,8 @@ const detailsEmptyEl = scope.querySelector('[data-testid="package-details-panel"
 const splitEl = scope.querySelector('.nuiget-main-split');
 const sashEl = splitEl ? splitEl.querySelector(':scope > [role="separator"]') : null;
 // UX-P3.9 (DS-DIVIDER-6, DS-COLOR-5 sash): every visible sash, read at rest; nothing is hovered or focused here.
+// UX-P3.fix-9: the sidebar's shown sections (one pane has no sash).
+const sidebarPanes = document.querySelector('[data-testid="nuiget-sidebar"]') ? [...document.querySelectorAll('.nuiget-sidebar-section')].filter(visible).length : undefined;
 const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(sash => {
     const box = rectOf(sash);
     const vertical = box.height >= box.width;
@@ -1911,6 +1941,7 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
     // The hit clause (UX-P3.9, follow-up 1 DO 2): what the page shows at the points the rule names.
     const at = (x, y) => (typeof document.elementFromPoint === 'function' ? document.elementFromPoint(x, y) : null);
     const hits = [];
+    const secondHits = [];
     const read = (name, x, y, ok) => { const el = at(x, y); hits.push({ name, hit: el ? label(el) : 'nothing', ok: Boolean(el) && ok(el) }); };
     const onSash = el => el.closest('.nuiget-sash') === sash;
     if (vertical) {
@@ -1920,6 +1951,14 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
         if (after && visible(after)) read('details content +3', rectOf(after).left + 20 + 3, mid, el => !onSash(el));
         const scroller = before ? [before, ...before.querySelectorAll('*')].find(el => visible(el) && /auto|scroll/.test(getComputedStyle(el).overflowY) && el.offsetWidth - el.clientWidth > 0) : undefined;
         if (scroller) { const r = rectOf(scroller); const bar = scroller.offsetWidth - scroller.clientWidth; read('list scrollbar', r.right - bar / 2, r.top + r.height / 2, el => el === scroller || (scroller.contains(el) && !onSash(el))); }
+        // UX-P3.fix-9: 1 px either side of the line at the tab strip's and at a shown banner's mid height.
+        const readSecond = (name, x, y) => { const el = at(x, y); secondHits.push({ name, hit: el ? label(el) : 'nothing', ok: Boolean(el) && onSash(el) }); };
+        const heightOf = el => { const r = rectOf(el); const y = r.top + r.height / 2; return y > box.top && y < box.bottom ? y : undefined; };
+        const tabBar = scope.querySelector('[data-testid="tab-bar"]');
+        const tabY = tabBar && visible(tabBar) ? heightOf(tabBar) : undefined;
+        if (tabY !== undefined) { readSecond('line -1 @tabs', box.left - 1, tabY); readSecond('line +1 @tabs', box.right + 1, tabY); }
+        const banner = [...scope.querySelectorAll('.nuiget-banner')].find(el => visible(el) && heightOf(el) !== undefined);
+        if (banner) { const y = heightOf(banner); readSecond('line -1 @banner', box.left - 1, y); readSecond('line +1 @banner', box.right + 1, y); }
     } else {
         const centre = box.left + box.width / 2;
         read('line -1', centre, box.top - 1, onSash);
@@ -1932,7 +1971,7 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
         const last = rows[rows.length - 1];
         if (last) read('last row -3', centre, rectOf(last).bottom - 3, el => last.contains(el) || el === last);
     }
-    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
+    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, secondHits, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
 });
 // UX-P3.fix-15: the main split's panes against the panel; a hidden pane or sash reads as absent.
 const splitFit = splitEl && visible(splitEl) ? (() => {
@@ -2256,6 +2295,7 @@ const endOfP0 = {
     split: splitFacts,
     splitFit,
     sashes,
+    sidebarPanes,
     factLefts,
     factRows,
     fonts: { root: rootFont, others: [...otherFonts] },
@@ -3238,11 +3278,13 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             if (scope === 'sash') {
                 // UX-P3.9 (DO 1b): an unfocused sash draws no focus ring (a solid focusBorder outline; the outline only, as P2.fix-1).
                 const sashes = facts.sashes ?? [];
+                const sidebar = state.startsWith('sidebar-');
+                const sidebarSuffix = !sidebar || SIDEBAR_SASH_STATUS === 'hard' ? '' : ` (pending ${SIDEBAR_SASH_STATUS.pending})`;
                 if (sashes.length === 0) {
-                    return sashNotShown(facts.splitFit) ?? notMeasurable('no sash');
+                    return (sidebar ? sidebarSashNotShown(facts.sidebarPanes) : sashNotShown(facts.splitFit)) ?? notMeasurable('no sash');
                 }
                 const painted = sashes.filter(sash => !sash.focused && sash.outlineFocus).length;
-                return { value: `sash: ${painted} of ${sashes.filter(sash => !sash.focused).length} unfocused in focusBorder`, pass: painted === 0 };
+                return { value: `sash: ${painted} of ${sashes.filter(sash => !sash.focused).length} unfocused in focusBorder${sidebarSuffix}`, pass: painted === 0 || sidebarSuffix !== '' };
             }
             if (scope === 'tabs') {
                 const tabs = layout.heights.tabs;
@@ -3268,8 +3310,10 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const SASH_BAND = 4;
             // UX-P3.9 (DO 1a): the sash a 1 px line, its 4 px band transparent at rest, the panes 1 px apart; read at rest.
             const sashes = facts.sashes ?? [];
+            const sidebar = state.startsWith('sidebar-');
+            const sidebarSuffix = !sidebar || SIDEBAR_SASH_STATUS === 'hard' ? '' : ` (pending ${SIDEBAR_SASH_STATUS.pending})`;
             if (sashes.length === 0) {
-                return sashNotShown(facts.splitFit) ?? notMeasurable('no sash');
+                return (sidebar ? sidebarSashNotShown(facts.sidebarPanes) : sashNotShown(facts.splitFit)) ?? notMeasurable('no sash');
             }
             const clear = (colour: string) => colour === 'transparent' || colour === 'rgba(0, 0, 0, 0)';
             // The hit clause (follow-up 1, DO 2): every point the rule names reads as it says.
@@ -3278,9 +3322,16 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 const missed = hits.filter(hit => !hit.ok);
                 return hits.length === 0 ? '; hits unread' : `; hits ${hits.length - missed.length}/${hits.length}${missed.length === 0 ? '' : ` (missed ${missed.map(hit => `${hit.name} on ${hit.hit}`).join(', ')})`}`;
             };
+            // UX-P3.fix-9: the vertical sash's second height as its own part, so the existing part stays as it was until the flip.
+            const secondText = (sash: (typeof sashes)[number]): string => {
+                const second = secondYText(sash.secondHits ?? []);
+                return second.text === '' ? '' : `; ${second.text}${SASH_SECOND_Y_STATUS === 'hard' ? '' : ` (pending ${SASH_SECOND_Y_STATUS.pending})`}`;
+            };
+            const own = sashes.every(sash => near(sash.thickness, 1, 0.5) && !clear(sash.background) && near(sash.band.width, SASH_BAND, 0.5) && clear(sash.band.background) && (sash.gap === undefined || near(sash.gap, sash.thickness, 0.5)) && (sash.hits ?? []).length > 0 && (sash.hits ?? []).every(hit => hit.ok));
+            const secondPass = SASH_SECOND_Y_STATUS !== 'hard' || sashes.every(sash => secondYText(sash.secondHits ?? []).pass);
             return {
-                value: sashes.map(sash => `sash ${sash.thickness} px in ${sash.background}; band ${sash.band.width} px in ${sash.band.background}, delay ${sash.band.delay || 'none'}; gap ${sash.gap ?? 'unread'}${hitText(sash)}`).join('; '),
-                pass: sashes.every(sash => near(sash.thickness, 1, 0.5) && !clear(sash.background) && near(sash.band.width, SASH_BAND, 0.5) && clear(sash.band.background) && (sash.gap === undefined || near(sash.gap, sash.thickness, 0.5)) && (sash.hits ?? []).length > 0 && (sash.hits ?? []).every(hit => hit.ok)),
+                value: sashes.map(sash => `sash ${sash.thickness} px in ${sash.background}; band ${sash.band.width} px in ${sash.band.background}, delay ${sash.band.delay || 'none'}; gap ${sash.gap ?? 'unread'}${hitText(sash)}${secondText(sash)}`).join('; ') + sidebarSuffix,
+                pass: (own || sidebarSuffix !== '') && secondPass,
             };
         }
         case 'DS-ROW-6': {
