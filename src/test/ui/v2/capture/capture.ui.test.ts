@@ -363,6 +363,20 @@ async function parkSidebarPointer(): Promise<void> {
 }
 
 /**
+ * Rests the pointer in the main header's start inset, at the title's centre line: no control, no title attribute and no hover
+ * rule there, so a non-hover main state is measured with nothing under the pointer (UX-P3.fix-18, design-advisor ruling of
+ * 2026-11-16: a tab left under the pointer read the hover colour on DS-COLOR-4). Moving to the window's corner leaves the
+ * webview's last :hover in place.
+ */
+async function parkMainPointer(): Promise<void> {
+    await enterMainWebview();
+    const title = await driverOf().findElement(By.css('[data-testid="main-header"] .nuiget-main-title'));
+    const { width } = await title.getRect();
+    await driverOf().actions().move({ origin: title, x: -Math.ceil(width / 2) - 8, y: 0 }).perform();
+    await until('document.querySelector(\'[role="tab"]:hover, .nuiget-row-option:hover, button:hover\') === null', 'nothing of the main panel under the pointer', 10_000);
+}
+
+/**
  * The side bar with Gateway selected and `text` typed and submitted with Enter in its box: a Browse search whose results
  * take the place of the sections (UX-P3.8). The box's own debounced search may have gone first; Enter asks again at once.
  */
@@ -2497,6 +2511,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                     const reason = error instanceof Error ? error.message : String(error);
                     console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
                     throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
+                }
+                if (state.surface === 'main' && !HOVER_STATES.includes(state.name)) {
+                    await parkMainPointer();
                 }
                 const { red, layout, overflowHard } = await measure(state, capture);
                 // In the webview still (measure entered it): the masks are read before the shot moves the pointer.
