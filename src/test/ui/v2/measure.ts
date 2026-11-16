@@ -92,13 +92,13 @@ export interface SplitFit {
 
 /**
  * DS-OVERFLOW-5's `split` clause (§8's main split: below the list minimum + the details minimum + the line, the details pane and
- * the sash are not shown and the list takes the panel; UX-P3.fix-15, design-advisor opening ruling of 2026-11-16). Pending
- * until that item's fix.
+ * the sash are not shown and the list takes the panel; UX-P3.fix-15, design-advisor opening ruling of 2026-11-16). Hard since
+ * that item's closing (proving run 43776489839).
  */
-export const SPLIT_STATUS: RuleStatus = { pending: 'P3.fix-15' };
+export const SPLIT_STATUS: RuleStatus = 'hard';
 
-/** DS-OVERFLOW-2's `placeholder` clause on the main search box (the sidebar's copy fits from 400; UX-P3.fix-15). Pending until that item's fix. */
-export const MAIN_PLACEHOLDER_STATUS: RuleStatus = { pending: 'P3.fix-15' };
+/** DS-OVERFLOW-2's `placeholder` clause on the main search box (the sidebar's copy fits from 400; UX-P3.fix-15). Hard since that item's closing (proving run 43776489839). */
+export const MAIN_PLACEHOLDER_STATUS: RuleStatus = 'hard';
 
 /** The main webview width from which the main search box's placeholder is judged; narrower cells print it (UX-P3.fix-15). */
 export const MAIN_PLACEHOLDER_WIDTH = 400;

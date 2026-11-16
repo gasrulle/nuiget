@@ -272,7 +272,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-15",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single box [171,201,49,189]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43776489839: no longer standing as owned (UX-P3.fix-15: below 391 px of panel the details pane and the sash are not shown and the list takes the split; `split: details not shown (panel 220 < 391), list 220`; adopted in its closing commit)"
         },
         {
           "id": "main-installed-single#D4",
@@ -387,10 +387,10 @@
               "refuterSeverity": "major"
             }
           ],
-          "disposition": "fixed",
+          "disposition": "accepted-as-design",
           "owner": "P3.fix-15",
-          "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single box [16,166,188,26]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under §8's main-header sentence (the hint fits by its copy from 228 px of panel; below, it is cut), owner P3.fix-15",
+          "evidence": "re-run 43776489839: the main box takes the short hint \"Search or type @ to filter\" (UX-P3.fix-15); at 220 it reads `164 of 156 px (printed at 220)`, the floor §8 declares (judge-log/P3.fix-15.json main-installed-single#D2, accepted-as-design); adopted in its closing commit"
         },
         {
           "id": "main-installed-single-400#D3",
@@ -845,7 +845,7 @@
           "disposition": "fixed",
           "owner": "P3.fix-15",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-12's commits): fixed, owner P3.fix-15 (pre-existing: unchanged from the committed golden outside the glyph box)",
-          "evidence": "captures/43739104739 cell of main-installed-single-400 box [20,103,338,18]: unchanged from the committed golden outside the glyph box; no source change for it in UX-P3.fix-12"
+          "evidence": "re-run 43776489839: no longer standing as owned (UX-P3.fix-15: the main box takes the short hint \"Search or type @ to filter\", `164 of 336 px` at 400; adopted in its closing commit)"
         },
         {
           "id": "main-installed-details#D2",

@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Under All Projects, a sidebar project whose packages are still being read says provisional**
 - **Under All Projects, the sidebar's Installed list is one tree of folders and projects that fold with the arrow keys**
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
+- **In a narrow editor the package details give way to the list**
 
 ### Fixed
 - **In a narrow package list the bulk buttons are no longer cut off and long versions end in an ellipsis instead of being sliced**
@@ -76,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **No second scrollbar on the Installed tab in All Projects or with the transitive section expanded**
 - **Update all no longer offers a package whose version could not be resolved**
 - **Tab into a package list lands on its first row, also when more rows arrived above while it loaded**
+- **The search hint is no longer cut off in a narrow editor, except at its narrowest width**
 
 ## [2.0.0] - 2026-10-17
 

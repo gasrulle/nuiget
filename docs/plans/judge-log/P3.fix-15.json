@@ -1,0 +1,383 @@
+{
+ "item": "P3.fix-15",
+ "runs": [
+  {
+   "runId": "43776489839",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "f553432 (proving push)",
+   "look": "modern",
+   "workflow": "wf_7afda995-1f8",
+   "note": "The 220 and 400 cells against their committed goldens; 932 and 1200 against the artboards (the artboard sources still draw the long search hint: a planning line in the tracker). D37 is not met: every finding carries a disposition and an owner (GOLDEN CLASS ruling DO 3).",
+   "captures": {
+    "main-installed-single": {
+     "png": "captures/43776489839/main-installed-single.dark-modern.220.png",
+     "sha256": "ddec523339d6542300549577491e548abcbac16a03b0eb2384579830fb0d32f9",
+     "artboard": "src/test/ui/v2/golden/main-installed-single.dark-modern.220.png (the committed golden before this item's adoption)"
+    },
+    "main-installed-single-932": {
+     "png": "captures/43776489839/main-installed-single.dark-modern.932.png",
+     "sha256": "9de4844cd1a3475ac62affe069fb5bdb6c966767e56a780a815da87f727f6f90",
+     "artboard": "docs/design/artboards/main-installed-single.dark-modern.932.png"
+    },
+    "main-installed-details": {
+     "png": "captures/43776489839/main-installed-details.dark-modern.400.png",
+     "sha256": "c7357d0a621b8fb7cb65601da7f3b3413691416bf3829777f41fdf5d1fafc14e",
+     "artboard": "src/test/ui/v2/golden/main-installed-details.dark-modern.400.png (the committed golden before this item's adoption)"
+    },
+    "main-installed-details-1200": {
+     "png": "captures/43776489839/main-installed-details.dark-modern.1200.png",
+     "sha256": "0508dc041a8a84812e121f404ea936ff07356ba6ad1c8bb6b17fb0dbabdb6da2",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 11,
+    "standing": 3,
+    "blocking": 0,
+    "refuted": 1,
+    "singleJudge": 3,
+    "incomplete": 0
+   },
+   "findings": [
+    {
+     "id": "main-installed-single#D1",
+     "state": "main-installed-single",
+     "finding": "[geometry] The approved 220 artboard (golden) draws the details pane's empty state ('Select a package to see its details.') in a pane about 49 px wide right of a sash at x=170, and the spec composition also calls for that empty state. The capture has no details pane: the list column, tab strip and bulk toolbar span the full 220 px. All header, tab, toolbar, section-header and row positions above and inside the list match the artboard pixel for pixel. DS-OVERFLOW-5 and the overflow table (list pane min 170, details pane min 220) do not allow both panes at this width, so the capture follows the rule and the artboard and spec disagree with it. Reported once as an artboard/spec conflict. | [states] The details pane and its empty state are missing at 220: the approved artboard draws a details pane right of the list (x 170 to 220, about 50 px wide) holding the empty-state sentence 'Select a package to see its details.', and the spec's composition says this rest state shows the details pane's empty state (package-details-panel is not marked composed). The capture draws only the list across the full width, so nothing tells the user how to see a package's details. Measured fact for the disposition: the artboard's pane is about 50 px wide, below the 220 px details-pane minimum of the overflow table (DS-OVERFLOW-5), and no spec entry or rule declares that the pane drops at this width.",
+     "severity": "minor",
+     "box": [
+      170,
+      197,
+      50,
+      606
+     ],
+     "rule": "spec-conflict, judge-only",
+     "lenses": [
+      "geometry",
+      "states"
+     ],
+     "members": [
+      {
+       "id": "geometry-1",
+       "lens": "geometry",
+       "state": "main-installed-single",
+       "finding": "The approved 220 artboard (golden) draws the details pane's empty state ('Select a package to see its details.') in a pane about 49 px wide right of a sash at x=170, and the spec composition also calls for that empty state. The capture has no details pane: the list column, tab strip and bulk toolbar span the full 220 px. All header, tab, toolbar, section-header and row positions above and inside the list match the artboard pixel for pixel. DS-OVERFLOW-5 and the overflow table (list pane min 170, details pane min 220) do not allow both panes at this width, so the capture follows the rule and the artboard and spec disagree with it. Reported once as an artboard/spec conflict.",
+       "severity": "minor",
+       "box": [
+        171,
+        201,
+        49,
+        602
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The artboard crop draws a pane about 50 px wide right of x 170 holding 'Select a package to see its details.' broken into word fragments, and the capture crop shows only list rows to the 220 edge. The measurement agrees with the capture: 'DS-OVERFLOW-5 ... details not shown (panel 220 < 391), list 220'. The 932 spec does not declare the drop and the overflow table sets a 220 px details-pane minimum, so this stands as a minor spec-conflict.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      },
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-installed-single",
+       "finding": "The details pane and its empty state are missing at 220: the approved artboard draws a details pane right of the list (x 170 to 220, about 50 px wide) holding the empty-state sentence 'Select a package to see its details.', and the spec's composition says this rest state shows the details pane's empty state (package-details-panel is not marked composed). The capture draws only the list across the full width, so nothing tells the user how to see a package's details. Measured fact for the disposition: the artboard's pane is about 50 px wide, below the 220 px details-pane minimum of the overflow table (DS-OVERFLOW-5), and no spec entry or rule declares that the pane drops at this width.",
+       "severity": "blocking",
+       "box": [
+        170,
+        197,
+        50,
+        606
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "This is the same visible difference as geometry-1: the artboard has a roughly 50 px details pane with its empty-state sentence broken into word fragments, and the capture has none. It is not blocking. The capture follows DS-OVERFLOW-5 (measured 'details not shown (panel 220 < 391), list 220'), and the artboard's pane is below the overflow table's 220 px details-pane minimum, so it is a minor spec-conflict and not a missing element.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.fix-15",
+     "evidence": "design-system.md §8 row \"Main split | 391\" (below it the details pane and the sash are not shown; the list takes the panel); DS-OVERFLOW-5; re-run 43776489839: `split: details not shown (panel 220 < 391), list 220`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under the opening ruling's Q1 and §8's new \"Main split | 391\" row"
+    },
+    {
+     "id": "main-installed-single-932#D1",
+     "state": "main-installed-single-932",
+     "finding": "[native] The main search box shows the short placeholder \"Search or type @ to filter\" at 932 px, while the artboard's search-input draws the full hint \"Search packages, or filter: @installed, @updates, @vulnerable\". At this width there is room for the full hint, so the box no longer names the filters the workbench-style hint promised. | [states] The main search box's placeholder reads \"Search or type @ to filter\", while the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\" at 932 px. The capture's hint no longer names the filters the box accepts, and the spec declares no change of copy or overflow for this element.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      900,
+      26
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "main-installed-single-932",
+       "finding": "The main search box shows the short placeholder \"Search or type @ to filter\" at 932 px, while the artboard's search-input draws the full hint \"Search packages, or filter: @installed, @updates, @vulnerable\". At this width there is room for the full hint, so the box no longer names the filters the workbench-style hint promised.",
+       "severity": "minor",
+       "box": [
+        16,
+        42,
+        900,
+        26
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The crop of the search box shows the placeholder \"Search or type @ to filter\", while the artboard crop at the same box draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The spec's search-input entry declares no copy or overflow change. The log shows the short hint uses 164 of 868 px, so the full hint would fit. The hint still says filtering exists, so this is wording a user notices only side by side.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      },
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-installed-single-932",
+       "finding": "The main search box's placeholder reads \"Search or type @ to filter\", while the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\" at 932 px. The capture's hint no longer names the filters the box accepts, and the spec declares no change of copy or overflow for this element.",
+       "severity": "major",
+       "box": [
+        22,
+        46,
+        412,
+        18
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "This is the same defect as native-1: the crop shows \"Search or type @ to filter\" where the artboard crop draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The spec declares nothing for it. The placeholder is not clipped (164 of 868 px) and still tells the user to type @ to filter, so no information is lost. That is minor, not major.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.fix-15",
+     "evidence": "design-system.md §8 main-header row (the placeholder fits by its copy from 228 px of panel); DECISIONS.md \"The main panel at the editor minimum (UX-P3.fix-15)\"; re-run 43776489839: `\"Search or type @ to filter\" 164 of 868 px` at 932, `164 of 1136 px` at 1200",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under the opening ruling's Q2 (one hint on both surfaces; the Filter button carries the filter names)"
+    },
+    {
+     "id": "main-installed-details-1200#D1",
+     "state": "main-installed-details-1200",
+     "finding": "[native] The main search box's placeholder reads the generic \"Search or type @ to filter\", where the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". At 1200 px there is plenty of room, yet the visible hint no longer names the three filters, unlike a built-in view's descriptive search hint (Extensions: \"Search Extensions in Marketplace\"). | [states] The main search box shows the short hint \"Search or type @ to filter\" at 1200 px, where the artboard's search-input draws the full hint \"Search packages, or filter: @installed, @updates, @vulnerable\"; the wide-pane copy that names the three filter keywords is lost.",
+     "severity": "major",
+     "box": [
+      16,
+      42,
+      444,
+      26
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "main-installed-details-1200",
+       "finding": "The main search box's placeholder reads the generic \"Search or type @ to filter\", where the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". At 1200 px there is plenty of room, yet the visible hint no longer names the three filters, unlike a built-in view's descriptive search hint (Extensions: \"Search Extensions in Marketplace\").",
+       "severity": "major",
+       "box": [
+        22,
+        46,
+        438,
+        18
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The capture crop shows the search box placeholder \"Search or type @ to filter\", while the artboard crop at the same box draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The spec.json search-input entry declares no copy difference, and the only measurement, DS-OVERFLOW-2/placeholder \"164 of 1136 px (pending P3.fix-15)\", shows that the hint fits but does not decide which copy is right.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      },
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-installed-details-1200",
+       "finding": "The main search box shows the short hint \"Search or type @ to filter\" at 1200 px, where the artboard's search-input draws the full hint \"Search packages, or filter: @installed, @updates, @vulnerable\"; the wide-pane copy that names the three filter keywords is lost.",
+       "severity": "major",
+       "box": [
+        16,
+        42,
+        420,
+        26
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The capture crop of the search box reads \"Search or type @ to filter\" at 1200 px, where the artboard draws the full hint that names @installed, @updates and @vulnerable. The spec does not declare the difference, and DS-OVERFLOW-2/placeholder (164 of 1136 px, pending) only shows that the hint fits.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.fix-15",
+     "evidence": "design-system.md §8 main-header row (the placeholder fits by its copy from 228 px of panel); DECISIONS.md \"The main panel at the editor minimum (UX-P3.fix-15)\"; re-run 43776489839: `\"Search or type @ to filter\" 164 of 868 px` at 932, `164 of 1136 px` at 1200",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under the opening ruling's Q2 (one hint on both surfaces; the Filter button carries the filter names)"
+    }
+   ],
+   "singleJudge": [
+    {
+     "id": "main-installed-single#D2",
+     "state": "main-installed-single",
+     "finding": "[states] The search box's placeholder is cut off mid-word, reading 'Search or type @ to filt' and ending against the Filter glyph with no ellipsis. The spec's search-input entry declares no truncation, and the overflow table for the header's control row gives no clipping behaviour (the sidebar box's rule says the placeholder fits by its copy). The approved artboard clips its own hint at this width too.",
+     "severity": "blocking",
+     "box": [
+      16,
+      166,
+      188,
+      26
+     ],
+     "rule": "DS-OVERFLOW-3",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-2",
+       "lens": "states",
+       "state": "main-installed-single",
+       "finding": "The search box's placeholder is cut off mid-word, reading 'Search or type @ to filt' and ending against the Filter glyph with no ellipsis. The spec's search-input entry declares no truncation, and the overflow table for the header's control row gives no clipping behaviour (the sidebar box's rule says the placeholder fits by its copy). The approved artboard clips its own hint at this width too.",
+       "severity": "blocking",
+       "box": [
+        16,
+        166,
+        188,
+        26
+       ],
+       "rule": "DS-OVERFLOW-3",
+       "verdict": "confirmed",
+       "reason": "The crop shows the placeholder cut mid-word as 'Search or type @ to filt' against the Filter glyph, with no ellipsis. The measurement agrees: 'DS-OVERFLOW-2 .../placeholder: \"Search or type @ to filter\" 164 of 156 px' (pending). The spec's search-input declares no truncation, and the artboard clipping too does not count as a declaration.",
+       "method": "crop",
+       "refuterSeverity": "blocking"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.fix-15",
+     "evidence": "design-system.md §8 main-header row (below 228 px of panel the placeholder is cut; no ellipsis is drawable); re-run 43776489839: `164 of 156 px (printed at 220)`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under §8's new main-header sentence, 164 of 156 px measured on this run"
+    },
+    {
+     "id": "main-installed-single#D3",
+     "state": "main-installed-single",
+     "finding": "[states] The search placeholder's wording differs from the artboard element: the capture reads 'Search or type @ to filter...' where the artboard reads 'Search packages, or filter: @installed, @updates, @vulnerable' (clipped to 'Search packages, or filt' at 220, and drawn whole in the 932 artboard). The new hint no longer names the filter keywords.",
+     "severity": "minor",
+     "box": [
+      16,
+      166,
+      188,
+      26
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-3",
+       "lens": "states",
+       "state": "main-installed-single",
+       "finding": "The search placeholder's wording differs from the artboard element: the capture reads 'Search or type @ to filter...' where the artboard reads 'Search packages, or filter: @installed, @updates, @vulnerable' (clipped to 'Search packages, or filt' at 220, and drawn whole in the 932 artboard). The new hint no longer names the filter keywords.",
+       "severity": "minor",
+       "box": [
+        16,
+        166,
+        188,
+        26
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The capture crop reads 'Search or type @ to filt' and the artboard crop reads 'Search packages, or filt'. The artboard source A-Extensions.dc.html sets the placeholder 'Search packages, or filter: @installed, @updates, @vulnerable', and the 932 measurement prints the short hint 'Search or type @ to filter', so the copy differs from the artboard element. The copy is correct, so this is minor.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.fix-15",
+     "evidence": "design-system.md §8 main-header row (the placeholder fits by its copy from 228 px of panel); DECISIONS.md \"The main panel at the editor minimum (UX-P3.fix-15)\"; re-run 43776489839: `\"Search or type @ to filter\" 164 of 868 px` at 932, `164 of 1136 px` at 1200",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): accepted-as-design under the opening ruling's Q2 (one hint on both surfaces; the Filter button carries the filter names)"
+    },
+    {
+     "id": "main-installed-details-1200#D2",
+     "state": "main-installed-details-1200",
+     "finding": "[geometry] In the NETStandard.Library row the label badges sit tighter than the artboard draws them. The name ends at x 250 in both images, but the SDK pill starts 2 px nearer the name (about 6 px against the artboard's 8). The space between the SDK and Props pills is about 4 px against the artboard's 8, so Props starts at x 296 instead of 302. | [geometry] In the current Newtonsoft.Json row the Vulnerable pill sits 2 px nearer the name than on the artboard. The name ends at x 217 in both images; the pill starts at x 224 (a gap of about 6 px) against the artboard's x 226 (about 8 px), and it ends at 292 against 294.",
+     "severity": "major",
+     "box": [
+      200,
+      360,
+      137,
+      92
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-1",
+       "lens": "geometry",
+       "state": "main-installed-details-1200",
+       "finding": "In the NETStandard.Library row the label badges sit tighter than the artboard draws them. The name ends at x 250 in both images, but the SDK pill starts 2 px nearer the name (about 6 px against the artboard's 8). The space between the SDK and Props pills is about 4 px against the artboard's 8, so Props starts at x 296 instead of 302.",
+       "severity": "major",
+       "box": [
+        230,
+        360,
+        107,
+        20
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "A pixel profile at y 362-378 shows the name ending at x 249/250 in both images. In the capture the SDK pill runs x 257-291 and Props starts at x 296, a 4 px gap. On the artboard SDK runs x 259-293 and Props starts at x 302, an 8 px gap. The spec declares no badge spacing and no hard measurement contradicts this.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      },
+      {
+       "id": "geometry-2",
+       "lens": "geometry",
+       "state": "main-installed-details-1200",
+       "finding": "In the current Newtonsoft.Json row the Vulnerable pill sits 2 px nearer the name than on the artboard. The name ends at x 217 in both images; the pill starts at x 224 (a gap of about 6 px) against the artboard's x 226 (about 8 px), and it ends at 292 against 294.",
+       "severity": "major",
+       "box": [
+        200,
+        432,
+        93,
+        20
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "A pixel profile at y 434-450 shows the name ending at x 217 in both images. The capture's Vulnerable pill starts at about x 224 and its label at x 231, against about x 227 and x 233 on the artboard, so the pill sits about 2 px nearer the name. This is the same tightened badge spacing as geometry-1, and at 2 px it is noticeable only side by side.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "captures/43776489839 main-installed-details.dark-modern.1200.png: changed pixels only inside the search-input rect (box 72,50,358,13), so the badges are those of the committed golden; no source change for them in UX-P3.fix-15",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): fixed, owner P3.12 (predates the item; P3.12 holds the badge-spacing findings of P3.11's log)"
+    }
+   ],
+   "refuted": [
+    {
+     "id": "geometry-1",
+     "lens": "geometry",
+     "state": "main-installed-single-932",
+     "finding": "The list/details split sits 1 px left of the redline: the sash line is at x=326 (artboard x=327), so the list column is 326 px wide against the spec's tab-bar and installed-list w=327, the details pane starts at x=327 against package-details-panel x=328, and everything right-aligned in the list column moves with it (Uninstall Selected 163-310 vs spec x=164, the Direct Packages count badge 275-302 vs 276-303, the scrollbar 318-325 vs 319-326). The 16 px end insets inside the column still hold.",
+     "severity": "minor",
+     "box": [
+      326,
+      77,
+      2,
+      726
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "The pixels do show the sash at x=326 against 327 in the artboard. But the hard measurements put the shift inside the 1 px tolerance: \"SPEC@main-installed-single/list: 9/9 within 1\", \"details: 1/1 within 1\", MS-8 tab-bar 326.2×36 against the spec's 327, and DS-OVERFLOW-5 list 326.2. In the top crop, Uninstall Selected and the 15 badge match the artboard crop to the eye.",
+     "method": "crop",
+     "refuterSeverity": "minor"
+    }
+   ]
+  }
+ ]
+}

@@ -174,7 +174,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.fix-15",
-          "evidence": "captures/43746892037 cell of main-installed-single box [171,201,49,186]: unchanged from the committed golden outside the tab strip; no source change for it in UX-P3.fix-13",
+          "evidence": "re-run 43776489839: no longer standing as owned (UX-P3.fix-15: below 391 px of panel the details pane and the sash are not shown and the list takes the split; `split: details not shown (panel 220 < 391), list 220`; adopted in its closing commit)",
           "ruling": "design-advisor GOLDEN ruling of 2026-11-15 (src/webview/shared/primitives/STATUS.md at UX-P3.fix-13's commits): fixed, owner P3.fix-15"
         },
         {
