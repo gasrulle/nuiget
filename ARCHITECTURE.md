@@ -403,8 +403,9 @@ mounted when it is scrolled out of view, so focus never falls out of the list. U
 streams in above it; a list without items is untouched again (UX-P3.fix-10). Once touched, the active row is remembered
 by item id. When its item disappears, the row now at its index takes over; when the list empties, the
 container around the empty state takes focus. The list never takes focus it did not have. Scrolled away from its start,
-the list's root carries `data-scrolled="true"`; no rule reads it yet: the workbench's scroll shadow (DS-SCROLL-2) waits for a
-form that keeps subpixel text, since both tried cost it somewhere (H27, UX-P3.9).
+the list's root carries `data-scrolled="true"`, which sets `--nuiget-listbox-shadow` to the token scroll shadow; the scroller
+paints it as its own inset `box-shadow` (DS-SCROLL-2). No box sits over the list: an overlay or a sticky box cost text painted
+after it its subpixel rendering (H27, UX-P3.fix-6).
 
 **Numbers reach the DOM as custom properties.** The Content Security Policy allows no `style` attribute in
 markup (ADR-006), and a virtualized row, a progress bar and a split need a number per element. `cssVars()`

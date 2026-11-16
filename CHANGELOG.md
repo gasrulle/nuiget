@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Works with the .NET 11 SDK** — Installing and updating packages in a Central Package Management project works on the .NET 11 SDK as it does on SDK 10.
 
 ### Changed
+- **A scrolled list shows a shadow along its top edge, as VS Code's own lists do**
 - **The sidebar's search box is ready for typing when the keyboard focus first moves into the sidebar view**
 - **The divider between the package list and the details is a thin line that highlights when you rest the pointer on it**
 - **The Refresh button uses VS Code's refresh icon**
