@@ -173,13 +173,16 @@ describe('2.0 webview stylesheets', () => {
         expect(setters).toEqual(['.nuiget-section-header[data-variant="pane"] { --nuiget-section-header-line: var(--nuiget-pane-header-line, transparent) }']);
     });
 
-    it('no rule reads the scrolled signal or draws a list\'s scroll shadow until P3.fix-6 adds one (DS-SCROLL-2, H27, UX-P3.9 follow-up 5)', () => {
-        // Both measured forms cost subpixel text somewhere (a sticky box in the scroller, an overlay on the list's root): the
-        // shadow is P3.fix-6's; Listbox keeps `data-scrolled` on its root as that item's starting point.
+    it('the scroll shadow is the scroller\'s own inset shadow, never a box over the list (DS-SCROLL-2, H27, UX-P3.fix-6)', () => {
+        // Both measured box forms cost subpixel text somewhere (a sticky box in the scroller, an overlay on the list's root):
+        // exactly two rules read the scrolled signal or its carrier, both in primitives.css (design-advisor reading ruling, DO 3).
         const hits = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8'))
             .filter(rule => rule.prelude.includes('data-scrolled') || rule.declarations.some(declaration => declaration.includes('--nuiget-listbox-shadow')))
-            .map(rule => `${file} ${rule.prelude}`));
-        expect(hits).toEqual([]);
+            .map(rule => `${file.split(/[\\/]/).pop()} ${rule.prelude}`));
+        expect(hits).toEqual(['primitives.css .nuiget-listbox', 'primitives.css .nuiget-listbox-root[data-scrolled="true"]']);
+        const listRules = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8'))).filter(rule => /\.nuiget-listbox(-root)?(?![\w-])/.test(rule.prelude));
+        expect(listRules.filter(rule => /::?(before|after)/.test(rule.prelude) && rule.declarations.some(declaration => declaration.startsWith('box-shadow'))).map(rule => rule.prelude)).toEqual([]);
+        expect(listRules.filter(rule => rule.declarations.some(declaration => /^position:\s*sticky/.test(declaration))).map(rule => rule.prelude)).toEqual([]);
     });
 
     it('the main split hides the details pane and the sash below the sum of both pane minimums and the line, after the base rules (DS-OVERFLOW-5, UX-P3.fix-15)', () => {

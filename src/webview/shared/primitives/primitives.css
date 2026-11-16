@@ -69,6 +69,16 @@
     overflow: auto;
     /* The carrier a context sets to its surface: Chromium keeps subpixel text on a composited scroller only when it is opaque (UX-P3.7c). */
     background-color: var(--nuiget-listbox-bg, transparent);
+    /*
+     * DS-SCROLL-2: the scroll shadow is the scroller's own inset shadow, set on the root while the list is scrolled. Never an
+     * overlay, a sibling or a sticky box over the list: a box there cost text painted after it its subpixel rendering (H27;
+     * UX-P3.fix-6, read on runs 43838219504 and 43842076263). It paints under row content, as the ruling accepts.
+     */
+    box-shadow: var(--nuiget-listbox-shadow, none);
+}
+
+.nuiget-listbox-root[data-scrolled="true"] {
+    --nuiget-listbox-shadow: var(--nuiget-color-scroll-shadow) 0 var(--nuiget-space-3) var(--nuiget-space-3) calc(var(--nuiget-space-3) * -1) inset;
 }
 
 /* As high as all rows together; the rows in view are placed inside it. */

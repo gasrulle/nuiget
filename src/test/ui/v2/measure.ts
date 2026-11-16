@@ -722,7 +722,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
     rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
-    rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': { pending: 'P3.fix-6' }, details: { pending: 'P3.fix-6' }, sidebar: { pending: 'P3.fix-6' } }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
+    rule('DS-SCROLL-2', { helper: 3, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-transitive-expanded', 'main-transitive-details', 'sidebar-all-projects-updates'] }),
     // UX-P1.1 (design-advisor ruling of 2026-10-30): the font ramp and the two weights, read off the visible text outside the
     // README; the details pane's headings set their weight since UX-P3.3a; the look's tokens hard since UX-P1.3 writes the attributes.
     rule('DS-TYPE-2', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.fontExact }),
@@ -734,8 +734,8 @@ export const RULES: readonly RuleDefinition[] = [
     // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
     // UX-P3.9 follow-ups 4-5: the text of a dialog, judged as the sidebar's (H27). Hard for the dialogs scope since UX-P3.fix-6's
-    // first push (opening ruling, DO 1-2); the dialog over the side bar stays pending until its first line is read.
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES }, pendingStates: { 'sidebar-update-all-dialog': 'P3.fix-6' } }),
+    // first push (opening ruling, DO 1-2); the dialog over the side bar since its proving push (26 lines, 0 greyscale on two runs).
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
 ];
 
 /** The state group of a named state, by its name. */
@@ -1193,8 +1193,13 @@ export interface LayerFacts {
     boxShadow: string;
     /** `--nuiget-color-shadow` as computed (transparent in high contrast). */
     shadowColour: string;
-    /** Every other visible element with a box-shadow, the quick-search popup excepted. */
+    /** Every other visible element with a box-shadow, the quick-search popup and the scroll shadows below excepted. */
     shadowed: string[];
+    /**
+     * The lists scrolled from their start that paint exactly the DS-SCROLL-2 shadow: counted and printed, never page elevation
+     * (UX-P3.fix-6, design-advisor follow-up 2). Optional: a layout recorded before UX-P3.fix-6 has none.
+     */
+    scrollShadows?: string[];
     scrim: string;
     /** The surface the scrim covers: `--nuiget-color-bg` in the main panel, `--nuiget-color-bg-sidebar` in the sidebar. */
     surface: string;
@@ -2219,12 +2224,17 @@ const layers = layerEl ? (() => {
     const footerEl = dialog.querySelector('.nuiget-dialog-footer');
     const footerStyle = footerEl ? getComputedStyle(footerEl) : null;
     const isLayer = el => el.classList.contains('nuiget-dialog') || el.classList.contains('nuiget-search-popup');
+    // UX-P3.fix-6 (follow-up 2): exactly the DS-SCROLL-2 shadow on a list scrolled from its start; any other value stays an offender.
+    const scrollShadow = computedColour('--nuiget-color-scroll-shadow') + ' 0px 6px 6px -6px inset';
+    const isScrollShadow = el => el.classList.contains('nuiget-listbox') && el.scrollTop > 0 && getComputedStyle(el).boxShadow === scrollShadow;
+    const cast = [...document.body.querySelectorAll('*')].filter(el => !isLayer(el) && getComputedStyle(el).boxShadow !== 'none' && visible(el));
     return {
         radius: style.borderTopLeftRadius,
         radiusTarget: lookValue('--nuiget-radius-layer'),
         boxShadow: style.boxShadow,
         shadowColour: computedColour('--nuiget-color-shadow'),
-        shadowed: [...document.body.querySelectorAll('*')].filter(el => !isLayer(el) && getComputedStyle(el).boxShadow !== 'none' && visible(el)).map(label),
+        shadowed: cast.filter(el => !isScrollShadow(el)).map(label),
+        scrollShadows: cast.filter(isScrollShadow).map(label),
         scrim: getComputedStyle(layerEl).backgroundColor,
         surface: computedColour(root.dataset.testid === 'nuiget-sidebar' ? '--nuiget-color-bg-sidebar' : '--nuiget-color-bg'),
         footer: footerStyle ? { left: px(footerStyle.paddingLeft), right: px(footerStyle.paddingRight), top: px(footerStyle.paddingTop), bottom: px(footerStyle.paddingBottom) } : undefined,
@@ -2355,7 +2365,8 @@ for (const el of document.body.querySelectorAll('*')) {
     scrollers.push({
         label: label(el), left: round(r.left), top: round(r.top), width: round(r.width), height: round(r.height), right: round(r.right - px(s.borderRightWidth)),
         size: round(el.offsetWidth - el.clientWidth - px(s.borderLeftWidth) - px(s.borderRightWidth)), thumb: round(el.clientHeight * el.clientHeight / el.scrollHeight), backdrop: backdrop(el),
-        // UX-P3.9 (DS-SCROLL-2): the scroll position and the shadow the scroller or the overlay of its list's root draws (follow-up 4).
+        // UX-P3.9 (DS-SCROLL-2): the scroll position and the shadow the scroller paints (UX-P3.fix-6). The root's ::after is still read
+        // as a guard: an overlay that came back would print in DS-SCROLL-2's line and fail it (follow-up 2, non-blocking 2).
         scrollTop: round(el.scrollTop), shadow: [s.boxShadow, el.parentElement && el.parentElement.classList.contains('nuiget-listbox-root') ? getComputedStyle(el.parentElement, '::after').boxShadow : ''].filter(shadow => shadow && shadow !== 'none').join(' / ') || 'none',
     });
 }
@@ -3882,8 +3893,11 @@ function evaluateLayers(definition: RuleDefinition, scope: Scope, layout: Layout
         const colour = layers.boxShadow.slice(0, layers.boxShadow.length - geometry.length).trim();
         const transparent = shadowColour !== null && shadowColour.a === 0;
         const layerOk = layers.boxShadow === 'none' ? transparent : geometry === '0px 2px 8px 0px' && (colour === layers.shadowColour || transparent);
+        const scroll = layers.scrollShadows ?? [];
         return {
-            value: `layer ${layers.boxShadow === 'none' ? 'none' : `${geometry} ${colour}`}; page ${layers.shadowed.length} shadowed${layers.shadowed.length === 0 ? '' : `: ${layers.shadowed.slice(0, 4).join(', ')}`}`,
+            // A list's own scroll shadow (DS-SCROLL-2) is counted beside the offenders, never among them (UX-P3.fix-6, follow-up 2).
+            value: `layer ${layers.boxShadow === 'none' ? 'none' : `${geometry} ${colour}`}; page ${layers.shadowed.length} shadowed${layers.shadowed.length === 0 ? '' : `: ${layers.shadowed.slice(0, 4).join(', ')}`}`
+                + `; scroll shadows ${scroll.length}${scroll.length === 0 ? '' : `: ${scroll.slice(0, 4).join(', ')}`}`,
             pass: layerOk && layers.shadowed.length === 0,
         };
     }

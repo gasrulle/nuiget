@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -143,11 +143,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect((['ui', 'matrix', 'floor', 'macos'] as const).map(lane => appliesTo(spec!, 'main-installed-single', 932, 'dark-modern', lane))).toEqual([true, false, false, false]);
         expect(appliesTo(spec!, 'main-installed-single', 932, 'dark-modern')).toBe(true);
         expect(RULES.filter(rule => rule.lanes !== undefined).map(rule => rule.id)).toEqual(['SPEC', 'DS-TYPE-10']);
-        // UX-P3.9 follow-ups 4-5: DS-TYPE-10 reads the bulk dialog's text too; hard since UX-P3.fix-6, the sidebar dialog pending until read.
+        // UX-P3.9 follow-ups 4-5: DS-TYPE-10 reads the bulk dialog's text too; hard on both dialogs since UX-P3.fix-6.
         expect(definition('DS-TYPE-10')?.scopes).toEqual({ sidebar: 'hard', dialogs: 'hard' });
-        expect(definition('DS-TYPE-10')?.pendingStates).toEqual({ 'sidebar-update-all-dialog': 'P3.fix-6' });
-        // UX-P3.9 follow-up 5: the scroll shadow moved to P3.fix-6 with its rule.
-        expect(definition('DS-SCROLL-2')?.scopes).toEqual({ 'main-installed': { pending: 'P3.fix-6' }, details: { pending: 'P3.fix-6' }, sidebar: { pending: 'P3.fix-6' } });
+        expect(definition('DS-TYPE-10')?.pendingStates).toBeUndefined();
+        // UX-P3.9 follow-up 5: the scroll shadow moved to P3.fix-6 with its rule; hard since UX-P3.fix-6's proving push.
+        expect(definition('DS-SCROLL-2')?.scopes).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
         expect(definition('DS-TYPE-10')?.scopeStates).toEqual({ dialogs: ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'] });
         const specLines = (lane: 'ui' | 'floor' | 'macos') => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 932, undefined, 'dark-modern', undefined, lane).filter(line => line.name.startsWith('SPEC@'));
         expect(specLines('ui').length).toBeGreaterThan(0);
@@ -1118,9 +1118,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const state = 'main-installed-bulk-dialog';
         expect(lineOf(state, dialog(), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: true, status: 'hard', value: 'layer 8 (target 8)' });
         expect(lineOf(state, dialog({ radius: '4px' }), `DS-RADIUS-2@${state}/layers`)).toMatchObject({ pass: false, value: 'layer 4 (target 8)' });
-        expect(lineOf(state, dialog(), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true, value: 'layer 0px 2px 8px 0px rgba(0, 0, 0, 0.36); page 0 shadowed' });
+        expect(lineOf(state, dialog(), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true, value: 'layer 0px 2px 8px 0px rgba(0, 0, 0, 0.36); page 0 shadowed; scroll shadows 0' });
+        // UX-P3.fix-6 (follow-up 2): a scrolled list's own DS-SCROLL-2 shadow is counted beside the offenders and passes.
+        expect(lineOf(state, dialog({ scrollShadows: ['[installed-list]'] }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true, value: 'layer 0px 2px 8px 0px rgba(0, 0, 0, 0.36); page 0 shadowed; scroll shadows 1: [installed-list]' });
         expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0.36) 0px 0px 8px 0px' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false });
         expect(lineOf(state, dialog({ shadowed: ['.nuiget-row'] }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false, value: expect.stringContaining('page 1 shadowed: .nuiget-row') });
+        expect(lineOf(state, dialog({ shadowed: ['.nuiget-row'], scrollShadows: ['[installed-list]'] }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: false, value: expect.stringContaining('page 1 shadowed: .nuiget-row; scroll shadows 1') });
         // High contrast: the shadow token is transparent.
         expect(lineOf(state, dialog({ boxShadow: 'rgba(0, 0, 0, 0) 0px 2px 8px 0px', shadowColour: 'rgba(0, 0, 0, 0)' }), `DS-DIVIDER-2@${state}/layers`)).toMatchObject({ pass: true });
         expect(lineOf(state, dialog(), `DS-DIVIDER-5@${state}`)).toMatchObject({ pass: true, status: 'hard', value: 'scrim rgba(0, 0, 0, 0.5) over #1f1f1f → #101010 (not lighter)' });
@@ -1624,11 +1627,31 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true, focused: true })]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, value: 'sash: 0 of 0 unfocused in focusBorder' });
     });
 
+    it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
+        // No product rule uses pendingStates since UX-P3.fix-6; the mechanism stays, so a synthetic rule keeps its branch tested.
+        const synthetic: RuleDefinition[] = [
+            rule('X-PENDING-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingStates: { 'main-installed-single': 'P9.9' } }),
+            rule('X-PENDING-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingStates: { 'main-installed-single': 'P9.9' } }),
+        ];
+        const rules = RULES as RuleDefinition[];
+        rules.push(...synthetic);
+        try {
+            const layoutLine = (state: string) => measureLines(state, layout(), 'modern').find(line => line.name === `X-PENDING-LAYOUT@${state}`);
+            expect(layoutLine('main-installed-single')?.status).toEqual({ pending: 'P9.9' });
+            expect(layoutLine('main-installed-empty')?.status).toBe('hard');
+            const pixelLine = (state: string) => pixelRuleLines(state, 1200, 'dark-modern', 'ui', { 'X-PENDING-PIXELS': { value: 'read', pass: true } }).find(line => line.name === `X-PENDING-PIXELS@${state}`);
+            expect(pixelLine('main-installed-single')).toEqual({ name: 'X-PENDING-PIXELS@main-installed-single', value: 'read', status: { pending: 'P9.9' }, pass: true });
+            expect(pixelLine('main-installed-empty')?.status).toBe('hard');
+        } finally {
+            rules.splice(rules.length - synthetic.length, synthetic.length);
+        }
+    });
+
     it('DS-SCROLL-2 asks the token shadow of a list scrolled from its top and none at its top, in its three states only', () => {
         const scroller = (scrollTop: number, shadow: string) => ({ label: '[installed-list]', left: 0, top: 0, width: 300, height: 200, right: 300, size: 8, thumb: 50, backdrop: 'rgb(30, 30, 30)', scrollTop, shadow });
         const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers, shadowColour: 'rgb(0, 0, 0)' } });
         const token = 'rgb(0, 0, 0) 0px 6px 6px -6px inset';
-        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: { pending: 'P3.fix-6' }, value: `[installed-list] scrollTop 120, shadow none (token ${token})` });
+        expect(lineOf('main-transitive-expanded', bars(scroller(120, 'none')), 'DS-SCROLL-2@main-transitive-expanded')).toMatchObject({ pass: false, status: 'hard', value: `[installed-list] scrollTop 120, shadow none (token ${token})` });
         expect(lineOf('main-transitive-expanded', bars(scroller(120, token)), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(true);
         // Another colour or geometry is not the token's.
         expect(lineOf('main-transitive-expanded', bars(scroller(120, 'rgb(255, 0, 0) 0px 6px 6px -6px inset')), 'DS-SCROLL-2@main-transitive-expanded')?.pass).toBe(false);
