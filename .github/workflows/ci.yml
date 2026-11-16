@@ -668,12 +668,14 @@ jobs:
   # goldens (plan §2.6). It runs on the free standard Intel runner and sets the display to 1440x900 (the per-push ui
   # job's window) before the run: macos-latest (arm64) has a 1024x768 display and refuses Anka's resolution call
   # (dispatch 39998544491), and macos-latest-large never started (dispatch 40011268413); the owner withdrew paid minutes
-  # on 2026-10-23.
+  # on 2026-10-23. The limit is 60 (UX-P3.fix-22): on run 43969019206 the setup took 3 min 20 s, the Modern pass 36 min, and the
+  # classic pass was cut at 45; any UI macOS job above 51 min is a stop-and-ask about running the two looks as two jobs, never a
+  # second raise and never a shorter classic pass.
   ui-macos:
     name: UI macOS
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
     runs-on: macos-26-intel
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       NUIGET_UI_LANE: macos
     steps:
