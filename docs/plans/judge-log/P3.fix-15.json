@@ -354,7 +354,7 @@
      ],
      "disposition": "fixed",
      "owner": "P3.12",
-     "evidence": "captures/43776489839 main-installed-details.dark-modern.1200.png: changed pixels only inside the search-input rect (box 72,50,358,13), so the badges are those of the committed golden; no source change for them in UX-P3.fix-15",
+     "evidence": "re-run 43790398405: no longer standing as owned (UX-P3.12: `badges: name gap 8 ×2, pill gap 4`, DS-ROW-1's badge clause; 4 between pills is the rule, premise P-1, the artboard's 8 its own deviation; adopted in its closing commit)",
      "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.fix-15.md): fixed, owner P3.12 (predates the item; P3.12 holds the badge-spacing findings of P3.11's log)"
     }
    ],

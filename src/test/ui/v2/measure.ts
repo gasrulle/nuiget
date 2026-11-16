@@ -156,11 +156,11 @@ export interface BadgeGaps {
     pills: number[];
 }
 
-/** DS-ALIGN-2, the facts rows' pitch (UX-P3.12, design-advisor opening ruling of 2026-11-16). Pending until that item's fix. */
-export const ALIGN_2_STATUS: RuleStatus = { pending: 'P3.12' };
+/** DS-ALIGN-2, the facts rows' pitch (UX-P3.12, design-advisor opening ruling of 2026-11-16). Hard since that item's closing (proving run 43790398405). */
+export const ALIGN_2_STATUS: RuleStatus = 'hard';
 
-/** DS-ROW-1's badge clause: 8 px from the name to the first badge, pills 4 apart (UX-P3.12). Pending until that item's fix. */
-export const BADGE_GAP_STATUS: RuleStatus = { pending: 'P3.12' };
+/** DS-ROW-1's badge clause: 8 px from the name to the first badge, pills 4 apart (UX-P3.12). Hard since that item's closing (proving run 43790398405). */
+export const BADGE_GAP_STATUS: RuleStatus = 'hard';
 
 const FACTS_GAP = 6;
 const FACTS_PITCH = 24;

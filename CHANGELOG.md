@@ -78,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update all no longer offers a package whose version could not be resolved**
 - **Tab into a package list lands on its first row, also when more rows arrived above while it loaded**
 - **The search hint is no longer cut off in a narrow editor, except at its narrowest width**
+- **Links in the package details are easier to hit**
 
 ## [2.0.0] - 2026-10-17
 

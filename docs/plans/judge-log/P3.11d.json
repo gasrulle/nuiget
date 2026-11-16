@@ -112,7 +112,7 @@
           ],
           "disposition": "fixed",
           "owner": "P3.12",
-          "evidence": "captures/43731497246/main-installed-details.dark-modern.1200.png 441,313,253,22: the details Authors row about 2 px shorter than the artboard (pitches 24/21/22/22/22/24 against 25/22/22/22/22/24); no source change in UX-P3.11d",
+          "evidence": "re-run 43790398405: no longer standing as owned (UX-P3.12: `DS-ALIGN-2@main-installed-details: rows 7: one-line height 18.2 ×7, spread 0; gap 6 ×6; pitch 24.2 ×6; marks 1 centred`; the pitch unevenness refuted by measurement, the gap and the mark fixed; adopted in its closing commit)",
           "ruling": "design-advisor follow-up 2 of 2026-11-15 (docs/plans/handoff/P3.11d.md, \"2026-11-15, UX-P3.11d, design-advisor, follow-up 2 (the standing finding)\"): fixed, owner P3.12, which states the pitch as a measurement before it fixes it"
         }
       ],

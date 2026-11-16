@@ -1,0 +1,522 @@
+{
+ "item": "P3.12",
+ "runs": [
+  {
+   "runId": "43790398405",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "5bad341 (proving push of P3.12a)",
+   "look": "modern",
+   "workflow": "wf_0cf5ebfc-70d",
+   "note": "Three states against their 1200 artboards, main-installed-cpm against its committed golden. Every details cell masks package-details-panel whole, so no pixel gate reads the facts block: DS-ALIGN-2 and DS-ALIGN-1 are its checks. D37 is not met: every finding carries a disposition and an owner (GOLDEN CLASS ruling DO 3).",
+   "captures": {
+    "main-installed-details": {
+     "png": "captures/43790398405/main-installed-details.dark-modern.1200.png",
+     "sha256": "2aebb1d3403a10352a7214bc91293d633212a316bf8d041ce6e5105b601c4f86",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png"
+    },
+    "main-transitive-details": {
+     "png": "captures/43790398405/main-transitive-details.dark-modern.1200.png",
+     "sha256": "4de360cf1010b3a754acbb5aba1dc92efe6ce5377e88d92265eb7dd16fe3b524",
+     "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png"
+    },
+    "main-transitive-expanded": {
+     "png": "captures/43790398405/main-transitive-expanded.dark-modern.1200.png",
+     "sha256": "83d3a5c67bf3e71fe89261a7525e23bcfd1059b7e4524c0a66a8ece42d420770",
+     "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png"
+    },
+    "main-installed-cpm": {
+     "png": "captures/43790398405/main-installed-cpm.dark-modern.1200.png",
+     "sha256": "6e01289fe98755d170d47339056f570b0a5a7cc3940002ff82e3805059de3f63",
+     "artboard": "src/test/ui/v2/golden/main-installed-cpm.dark-modern.1200.png (the committed golden before this item's adoption)"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 10,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 10,
+    "incomplete": 0
+   },
+   "findings": [],
+   "singleJudge": [
+    {
+     "id": "main-installed-details#D1",
+     "state": "main-installed-details",
+     "finding": "[geometry] The details facts block (Version to Report abuse) sits on a 24 px pitch (label baselines 304, 329, 353, 377, 401, 425, 450), which DS-ALIGN-2 requires, but the approved artboard still draws it at about 22 px (baselines 304 to 440). Everything below it, from Vulnerabilities to the Dependencies groups, therefore sits 10 px lower than in the artboard. The capture follows the rule; the artboard is stale.",
+     "severity": "minor",
+     "box": [
+      441,
+      293,
+      328,
+      162
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-1",
+       "lens": "geometry",
+       "state": "main-installed-details",
+       "finding": "The details facts block (Version to Report abuse) sits on a 24 px pitch (label baselines 304, 329, 353, 377, 401, 425, 450), which DS-ALIGN-2 requires, but the approved artboard still draws it at about 22 px (baselines 304 to 440). Everything below it, from Vulnerabilities to the Dependencies groups, therefore sits 10 px lower than in the artboard. The capture follows the rule; the artboard is stale.",
+       "severity": "minor",
+       "box": [
+        441,
+        293,
+        328,
+        162
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The capture crop puts the facts rows Version to Report abuse on about a 24 px pitch, and the artboard crop puts them on about 22 px, with Vulnerabilities already visible at the artboard crop's bottom. The measurement reads 'DS-ALIGN-2: pitch 24.2 ×6, spread 0', so the capture follows the rule. spec.json has no rect for the facts rows. This stands only as the one minor artboard/rule disagreement (spec-conflict), not as a product defect.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ALIGN-2 (24 px pitch); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-installed-details#D2",
+     "state": "main-installed-details",
+     "finding": "[geometry] The NETStandard.Library row's SDK and Props pills are about 4 px apart in the capture, as DS-ROW-1 requires (8 px from the name to the first badge, 4 px between pills), but the artboard draws them about 8 px apart. The capture follows the rule; the artboard is stale.",
+     "severity": "minor",
+     "box": [
+      259,
+      360,
+      80,
+      20
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-2",
+       "lens": "geometry",
+       "state": "main-installed-details",
+       "finding": "The NETStandard.Library row's SDK and Props pills are about 4 px apart in the capture, as DS-ROW-1 requires (8 px from the name to the first badge, 4 px between pills), but the artboard draws them about 8 px apart. The capture follows the rule; the artboard is stale.",
+       "severity": "minor",
+       "box": [
+        259,
+        360,
+        80,
+        20
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "At 5x, the capture's SDK and Props pills are about 4 px apart and the artboard's about 8 px. The measurement reads 'DS-ROW-1: badges: name gap 8 ×2, pill gap 4', so the capture follows the rule. This is a minor artboard/rule spec-conflict, separate from D1.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ROW-1's badge clause (4 px between pills); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-installed-details#D3",
+     "state": "main-installed-details",
+     "finding": "[states] The main search box's placeholder reads \"Search or type @ to filter\" where the approved artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture follows design-system.md §8's main-header row, which declares the side bar's short hint for the main box since UX-P3.fix-15, so the artboard is stale on this copy. Reported once as an artboard/rule disagreement, not as a product defect.",
+     "severity": "minor",
+     "box": [
+      22,
+      47,
+      437,
+      16
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-installed-details",
+       "finding": "The main search box's placeholder reads \"Search or type @ to filter\" where the approved artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture follows design-system.md §8's main-header row, which declares the side bar's short hint for the main box since UX-P3.fix-15, so the artboard is stale on this copy. Reported once as an artboard/rule disagreement, not as a product defect.",
+       "severity": "minor",
+       "box": [
+        22,
+        47,
+        437,
+        16
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The capture placeholder reads 'Search or type @ to filter' and the artboard draws 'Search packages, or filter: @installed, @updates, @vulnerable'. design-system.md line 436 declares the short copy since UX-P3.fix-15, and spec.json does not fix the copy. This is a minor spec-conflict: the artboard is stale.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows §8's main-header row (the side bar's hint since UX-P3.fix-15); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-installed-details#D4",
+     "state": "main-installed-details",
+     "finding": "[states] The source-settings action (spec rect 1136,10,22,22) shows the codicon settings-gear in the capture. The artboard draws a hand-made sun-like glyph instead: a circle with eight stroke rays, not a codicon. DS-ICON-1 and icons.json (SettingsGearIcon is settings-gear) require the codicon, so the capture is correct and the artboard glyph disagrees with the rule. Reported once as a disagreement.",
+     "severity": "minor",
+     "box": [
+      1136,
+      10,
+      22,
+      22
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-2",
+       "lens": "states",
+       "state": "main-installed-details",
+       "finding": "The source-settings action (spec rect 1136,10,22,22) shows the codicon settings-gear in the capture. The artboard draws a hand-made sun-like glyph instead: a circle with eight stroke rays, not a codicon. DS-ICON-1 and icons.json (SettingsGearIcon is settings-gear) require the codicon, so the capture is correct and the artboard glyph disagrees with the rule. Reported once as a disagreement.",
+       "severity": "minor",
+       "box": [
+        1136,
+        10,
+        22,
+        22
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "At 5x, the capture at spec rect 1136,10,22,22 shows the codicon settings-gear (a cog outline), and the artboard draws a sun with radiating dashes. icons.json maps SettingsGearIcon to settings-gear, so the capture follows DS-ICON-1. This is a minor spec-conflict: the artboard glyph is stale.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ICON-1 (the settings-gear codicon); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-transitive-details#D1",
+     "state": "main-transitive-details",
+     "finding": "[geometry] The details facts rows (Version, Authors) step 24 px in the capture (Version line at y 138, Authors at y 162), as DS-ALIGN-2 requires, while the approved artboard draws them 23 px apart (Authors at y 161); the capture follows the rule and the artboard is out of date with it.",
+     "severity": "minor",
+     "box": [
+      441,
+      130,
+      140,
+      40
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-1",
+       "lens": "geometry",
+       "state": "main-transitive-details",
+       "finding": "The details facts rows (Version, Authors) step 24 px in the capture (Version line at y 138, Authors at y 162), as DS-ALIGN-2 requires, while the approved artboard draws them 23 px apart (Authors at y 161); the capture follows the rule and the artboard is out of date with it.",
+       "severity": "minor",
+       "box": [
+        441,
+        130,
+        140,
+        40
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The crop shows the Version and Authors facts rows. A pixel profile puts the Version glyph tops at y 133 in both images and the Authors tops at y 157 in the capture but y 156 in the artboard, so the capture steps 24 px and the artboard 23 px. The log's DS-ALIGN-2 line reads pitch 24.2, and the redline declares no facts rows, so this is a real artboard-versus-rule spec-conflict.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ALIGN-2 (24 px pitch); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-transitive-details#D2",
+     "state": "main-transitive-details",
+     "finding": "[geometry] On the NETStandard.Library row the SDK and Props pills are 4 px apart in the capture (Props starts at x 298), as DS-ROW-1 requires, while the artboard draws them 8 px apart (Props at x 302); the capture follows the rule and the artboard disagrees with it.",
+     "severity": "minor",
+     "box": [
+      259,
+      260,
+      84,
+      20
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-2",
+       "lens": "geometry",
+       "state": "main-transitive-details",
+       "finding": "On the NETStandard.Library row the SDK and Props pills are 4 px apart in the capture (Props starts at x 298), as DS-ROW-1 requires, while the artboard draws them 8 px apart (Props at x 302); the capture follows the rule and the artboard disagrees with it.",
+       "severity": "minor",
+       "box": [
+        259,
+        260,
+        84,
+        20
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "On the NETStandard.Library row the SDK pill ends at x 293 in both images. Props starts at x 298 in the capture (a 4 px gap) and at x 302 in the artboard (an 8 px gap). The log's DS-ROW-1 line reads pill gap 4, and the redline does not declare the gap, so the artboard disagrees with the rule.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ROW-1's badge clause (4 px between pills); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-transitive-details#D3",
+     "state": "main-transitive-details",
+     "finding": "[states] The search box placeholder reads \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows the copy that design-system.md's overflow table now declares for the main header, so the artboard is the stale side and should be re-drawn.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      420,
+      26
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-transitive-details",
+       "finding": "The search box placeholder reads \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows the copy that design-system.md's overflow table now declares for the main header, so the artboard is the stale side and should be re-drawn.",
+       "severity": "minor",
+       "box": [
+        16,
+        42,
+        420,
+        26
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The capture's search box reads \"Search or type @ to filter\" and the artboard's reads \"Search packages, or filter: @installed, @updates, @vulnerable\". The log's hard DS-OVERFLOW-2 placeholder line names the short copy, and line 436 of design-system.md declares it for the main header, so the artboard is the stale side.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows §8's main-header row (the side bar's hint since UX-P3.fix-15); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-transitive-details#D4",
+     "state": "main-transitive-details",
+     "finding": "[states] The source-settings action draws the settings-gear codicon, while the artboard draws a sun-like glyph at the same spot; the capture follows the icon plan (docs/design/icons.json SettingsGearIcon = settings-gear, DS-ICON-1), so the artboard and the icon plan disagree.",
+     "severity": "minor",
+     "box": [
+      1136,
+      10,
+      22,
+      22
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-2",
+       "lens": "states",
+       "state": "main-transitive-details",
+       "finding": "The source-settings action draws the settings-gear codicon, while the artboard draws a sun-like glyph at the same spot; the capture follows the icon plan (docs/design/icons.json SettingsGearIcon = settings-gear, DS-ICON-1), so the artboard and the icon plan disagree.",
+       "severity": "minor",
+       "box": [
+        1136,
+        10,
+        22,
+        22
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "At [1136,10] the capture draws the settings-gear codicon and the artboard draws a sun-like glyph. icons.json maps SettingsGearIcon to settings-gear (DS-ICON-1), and the log's hard DS-ICON-2 line reads 16×16 ×3 in icon.foreground, so the glyph in the capture is correct and the artboard disagrees.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ICON-1 (the settings-gear codicon); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-transitive-expanded#D1",
+     "state": "main-transitive-expanded",
+     "finding": "[states] The main search box placeholder reads \"Search or type @ to filter\", but the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\" at 1200 px. The capture follows the copy that design-system §8 (main header row) now names for every width, so the artboard is out of date on this text, not the capture.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      420,
+      26
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-transitive-expanded",
+       "finding": "The main search box placeholder reads \"Search or type @ to filter\", but the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\" at 1200 px. The capture follows the copy that design-system §8 (main header row) now names for every width, so the artboard is out of date on this text, not the capture.",
+       "severity": "minor",
+       "box": [
+        16,
+        42,
+        420,
+        26
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The capture crop shows the placeholder \"Search or type @ to filter\" and the artboard crop at the same box shows \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture follows design-system §8 (main header row: \"Search or type @ to filter\", since UX-P3.fix-15), and the spec.json search-input entry declares only geometry and tokens, not the copy. So this is the stale-artboard disagreement that rubric §6 reports once as a minor spec-conflict, not a product defect.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows §8's main-header row (the side bar's hint since UX-P3.fix-15); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    },
+    {
+     "id": "main-installed-cpm#D1",
+     "state": "main-installed-cpm",
+     "finding": "[native] The approved artboard draws the CPM label badge about 4 px after the package name (Mapster, MediatR, every row), while DS-ROW-1 now requires 8 px from the name to the first badge; the capture follows the rule (8 px), so the artboard and the rule disagree and the artboard is the stale side. No other native-parity difference: header, tabs, toolbar, group header, rows, controls, icons, colour roles and dividers match the artboard.",
+     "severity": "minor",
+     "box": [
+      98,
+      191,
+      105,
+      20
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "native"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "main-installed-cpm",
+       "finding": "The approved artboard draws the CPM label badge about 4 px after the package name (Mapster, MediatR, every row), while DS-ROW-1 now requires 8 px from the name to the first badge; the capture follows the rule (8 px), so the artboard and the rule disagree and the artboard is the stale side. No other native-parity difference: header, tabs, toolbar, group header, rows, controls, icons, colour roles and dividers match the artboard.",
+       "severity": "minor",
+       "box": [
+        98,
+        191,
+        105,
+        20
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The crops show the CPM pill about 8 px after 'Mapster' in the capture and about 4 px after it in the golden artboard. The hard measurement supports the capture ('DS-ROW-1@main-installed-cpm: ... badges: name gap 8 ×13'), and the redline declares no badge gap, so the stale side is the artboard: a minor spec-conflict under rubric §6, not a defect in the capture.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the capture follows DS-ROW-1's badge clause (8 px from the name); the artboard or golden is stale (captures/43790398405)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): accepted-as-design, the capture follows the rule"
+    }
+   ],
+   "refuted": [],
+   "rowOwned": [
+    {
+     "id": "main-installed-details#D1",
+     "from": "P3.11d (wf_892edfeb-730)",
+     "part": "the facts pitch unevenness",
+     "disposition": "refuted-by-measurement",
+     "owner": "P3.12",
+     "evidence": "run 43790398405 (and the unchanged reading): `one-line height 18.2 ×7, spread 0`; no one-line facts row is short",
+     "ruling": "design-advisor ruling on the Verified-mark stop of 2026-11-16, DO 7 (docs/plans/handoff/P3.12.md)"
+    },
+    {
+     "id": "main-installed-details#D1",
+     "from": "P3.11d (wf_892edfeb-730)",
+     "part": "the 4 px gap and the mark 1.1 px high",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: `gap 6 ×6; pitch 24.2 ×6; marks 1 centred` (DS-ALIGN-2, hard)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed"
+    },
+    {
+     "id": "main-installed-details#D2",
+     "from": "P3.9 (wf_a3d37f73-2d9, single judge)",
+     "part": "the facts grid shorter than the artboard",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: pitch 24.2 (DS-ALIGN-2, hard); the target-size entry of main-details-readonly removed: `[axe] main-details-readonly: 0 violations`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed"
+    },
+    {
+     "id": "main-transitive-details#D2",
+     "from": "P3.11d (single judge)",
+     "part": "the facts pitch and the mark",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: `DS-ALIGN-2@main-transitive-details: rows 2 … gap 6; pitch 24.2; marks 1 centred`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed"
+    },
+    {
+     "id": "main-transitive-expanded#D3",
+     "from": "P3.9 (wf_a3d37f73-2d9, single judge)",
+     "part": "label pills 8 apart against the artboard's 12",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: `badges: name gap 8 ×2, pill gap 4` (DS-ROW-1's badge clause, hard; premise P-1)",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed"
+    },
+    {
+     "id": "main-transitive-details#D1, main-transitive-expanded#D1",
+     "from": "P3.11d (badge-spacing class)",
+     "part": "badge gaps 6 and 4 against 8 and 8",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: `name gap 8`, `pill gap 4`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed (the pill gap 4 is the rule; the artboard's 8 its deviation)"
+    },
+    {
+     "id": "main-installed-details-1200#D2",
+     "from": "P3.fix-15 (wf_7afda995-1f8, single judge)",
+     "part": "badges 6 from the name, 4 between pills",
+     "disposition": "fixed",
+     "owner": "P3.12",
+     "evidence": "run 43790398405: `name gap 8 ×2, pill gap 4`",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md): fixed"
+    },
+    {
+     "id": "main-updates-unsupported#D3",
+     "from": "P3.10 (wf_f12946f4-0d9, single judge)",
+     "part": "the read-only rows' check border about #7e7e7e against checkbox.border",
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "primitives.css `.nuiget-row-check--off` takes `--nuiget-color-fg-disabled` (the workbench's disabled check box; DS-COLOR-6, DECISIONS 2026-10-31 UX-P2.3)",
+     "ruling": "design-advisor opening ruling of 2026-11-16 (docs/plans/handoff/P3.12.md), Q4: accepted-as-design; the rule wins over the artboard"
+    }
+   ]
+  }
+ ]
+}
