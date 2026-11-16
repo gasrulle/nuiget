@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -55,7 +55,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-6', 'DS-GRID-1', 'DS-GRID-2a', 'DS-GRID-2b', 'DS-INSET-1', 'DS-INSET-2', 'PF-3b', 'DS-ROW-7', 'PF-5',
             ...Array.from({ length: 11 }, (_, i) => `DS-HEIGHT-${i + 1}`),
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
-            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-6', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1',
+            'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-6', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1', 'DS-ALIGN-2',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
             'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1', 'DS-SCROLL-2',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1', 'DS-TYPE-10',
@@ -185,6 +185,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-OVERFLOW-3')).toEqual({ toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' });
         expect(scopes('DS-OVERFLOW-5')).toEqual({ details: 'hard', split: 'hard' });
         expect(scopes('DS-ALIGN-1')).toEqual({ details: 'hard' });
+        // UX-P3.12: the facts rows' pitch, on the details states that show facts.
+        expect(scopes('DS-ALIGN-2')).toEqual({ details: ALIGN_2_STATUS });
+        expect(RULES.find(rule => rule.id === 'DS-ALIGN-2')?.exceptStates).toEqual(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates);
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         // UX-P3.10 push C: the details cells with no facts block, by fact.
         expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme', 'main-details-empty', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error']);
@@ -235,7 +238,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             ...Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`DS-HEIGHT-${i + 1}`, 1])),
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-6': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
-            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
+            'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-ALIGN-2': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
             'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-SCROLL-2': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0, 'DS-TYPE-10': 0,
         });
     });
@@ -754,6 +757,20 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', facts({ stateCells: cells({ ...long, text: 'Search or type @ to filter', width: 164 }) }, 220), 'DS-OVERFLOW-2@main-installed-single/placeholder'))
             .toMatchObject({ value: 'placeholder "Search or type @ to filter" 164 of 340 px (printed at 220)' + placeholderSuffix, pass: true });
         expect(lineOf('main-installed-details', facts({ stateCells: cells({ ...long, empty: false }) }), 'DS-OVERFLOW-2@main-installed-details/placeholder')).toMatchObject({ value: 'placeholder not shown (the box holds text)', pass: true });
+    });
+
+    it('reads the facts rows\' pitch and a comfortable row\'s badge gaps (DS-ALIGN-2, DS-ROW-1, UX-P3.12)', () => {
+        // Today's tree (2d75894): the facts rows 4 px apart, the Authors row 1 px shorter with its Verified mark 2 px high.
+        const today: FactBlock = { heights: [18, 19.2, 18.2, 18.2], oneLine: [true, true, true, true], gaps: [4, 4, 4], pitches: [22, 23.2, 22.2], marks: [{ centre: 30, line: 32 }] };
+        expect(factsPitchClause([today])).toEqual({ text: 'rows 4: one-line height 18, 18.2 ×2, 19.2, spread 1.2; gap 4 ×3; pitch 22, 22.2, 23.2; marks off by -2', pass: false });
+        const fixed: FactBlock = { heights: [18.2, 18.2, 18.2, 36.4], oneLine: [true, true, true, false], gaps: [6, 6, 6], pitches: [24.2, 24.2, 24.2], marks: [{ centre: 33.1, line: 33.1 }] };
+        expect(factsPitchClause([fixed])).toEqual({ text: 'rows 4: one-line height 18.2 ×3, spread 0; gap 6 ×3; pitch 24.2 ×3; marks 1 centred', pass: true });
+        // Today's badges: 6 px from the name (the line's gap), 4 px between pills.
+        expect(badgeGapClause([{ badgeGaps: { name: 6, pills: [4] } }, { badgeGaps: { name: 6, pills: [] } }, {}])).toEqual({ text: 'badges: name gap 6 ×2, pill gap 4', pass: false });
+        expect(badgeGapClause([{ badgeGaps: { name: 8, pills: [4, 4] } }])).toEqual({ text: 'badges: name gap 8, pill gap 4 ×2', pass: true });
+        expect(badgeGapClause([{}])).toBeUndefined();
+        expect(ALIGN_2_STATUS === 'hard' || ALIGN_2_STATUS.pending === 'P3.12').toBe(true);
+        expect(BADGE_GAP_STATUS === 'hard' || BADGE_GAP_STATUS.pending === 'P3.12').toBe(true);
     });
 
     it('checks the rules registered at the end of P0 (UX-P0.13)', () => {

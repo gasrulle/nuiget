@@ -141,6 +141,63 @@ export function detailsNotShown(fit: SplitFit | undefined): { value: string; pas
     return { value: `details not shown (panel below ${fit.listMin + fit.detailsMin + fit.line})`, pass: true };
 }
 
+/** One facts block (UX-P3.12): each row's height and whether its value is one line, the gaps and pitches between consecutive rows, its marks. */
+export interface FactBlock {
+    heights: number[];
+    oneLine: boolean[];
+    gaps: number[];
+    pitches: number[];
+    marks: Array<{ centre: number; line: number }>;
+}
+
+/** A comfortable row's shown label badges (UX-P3.12): the first badge's left minus the name's right, and each next pill's gap. */
+export interface BadgeGaps {
+    name: number;
+    pills: number[];
+}
+
+/** DS-ALIGN-2, the facts rows' pitch (UX-P3.12, design-advisor opening ruling of 2026-11-16). Pending until that item's fix. */
+export const ALIGN_2_STATUS: RuleStatus = { pending: 'P3.12' };
+
+/** DS-ROW-1's badge clause: 8 px from the name to the first badge, pills 4 apart (UX-P3.12). Pending until that item's fix. */
+export const BADGE_GAP_STATUS: RuleStatus = { pending: 'P3.12' };
+
+const FACTS_GAP = 6;
+const FACTS_PITCH = 24;
+const BADGE_NAME_GAP = 8;
+const BADGE_PILL_GAP = 4;
+
+/** Per block: the one-line rows' heights spread at most 0.5, the rows 6 apart, the pitch at least 24, each mark within 1 of its line's centre. */
+export function factsPitchClause(blocks: readonly FactBlock[]): { text: string; pass: boolean } {
+    const heights = blocks.flatMap(block => block.heights.filter((_, index) => block.oneLine[index]));
+    const spreads = blocks.map(block => {
+        const one = block.heights.filter((_, index) => block.oneLine[index]);
+        return one.length === 0 ? 0 : tenth(Math.max(...one) - Math.min(...one));
+    });
+    const gaps = blocks.flatMap(block => block.gaps.map(tenth));
+    const pitches = blocks.flatMap(block => block.pitches.map(tenth));
+    const marks = blocks.flatMap(block => block.marks.map(mark => tenth(mark.centre - mark.line)));
+    const off = marks.filter(offset => Math.abs(offset) > 1);
+    return {
+        text: `rows ${heights.length + blocks.reduce((sum, block) => sum + block.oneLine.filter(one => !one).length, 0)}: one-line height ${tally(heights.map(tenth))}, spread ${Math.max(0, ...spreads)}; gap ${tally(gaps)}; pitch ${tally(pitches)}; marks ${marks.length === 0 ? 0 : off.length === 0 ? `${marks.length} centred` : `off by ${off.join(', ')}`}`,
+        pass: spreads.every(spread => spread <= 0.5) && gaps.every(gap => Math.abs(gap - FACTS_GAP) <= 0.5) && pitches.every(pitch => pitch >= FACTS_PITCH - 0.5) && off.length === 0,
+    };
+}
+
+/** A comfortable row's first label badge 8 from the name (within 1), consecutive pills 4 apart (within 1); undefined without shown badges. */
+export function badgeGapClause(rows: ReadonlyArray<{ badgeGaps?: BadgeGaps }>): { text: string; pass: boolean } | undefined {
+    const shown = rows.flatMap(row => (row.badgeGaps === undefined ? [] : [row.badgeGaps]));
+    if (shown.length === 0) {
+        return undefined;
+    }
+    const names = shown.map(gaps => tenth(gaps.name));
+    const pills = shown.flatMap(gaps => gaps.pills.map(tenth));
+    return {
+        text: `badges: name gap ${tally(names)}${pills.length > 0 ? `, pill gap ${tally(pills)}` : ''}`,
+        pass: names.every(gap => Math.abs(gap - BADGE_NAME_GAP) <= 1) && pills.every(gap => Math.abs(gap - BADGE_PILL_GAP) <= 1),
+    };
+}
+
 /** No toolbar button is cut; at a pane of at most 250 px the toolbar's controls share one line. */
 export function toolbarFitClause(fits: readonly ToolbarFit[]): { text: string; pass: boolean } {
     const cut = fits.flatMap(fit => fit.cut);
@@ -600,6 +657,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.fix-15: `split`, the main split below and above the sum of both pane minimums (SPLIT_STATUS).
     rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard', split: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_FACTS_STATES }),
+    // UX-P3.12: the facts rows' pitch (ALIGN_2_STATUS).
+    rule('DS-ALIGN-2', { helper: 2, scopes: { details: ALIGN_2_STATUS }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_FACTS_STATES }),
     // UX-P0.18 (negative control (b), design-advisor ruling of 2026-10-24): hard where run 40111706433 and the UX-P0.15 rerun
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -1016,6 +1075,8 @@ export interface EndOfP0 {
         check: { fill: string; border: string } | undefined;
         /** The mark cannot join a bulk action: its line stays disabledForeground (DS-HEIGHT-9). */
         checkOff: boolean;
+        /** UX-P3.12: a comfortable row's shown label badges, from the name's right (DS-ROW-1's badge clause). */
+        badgeGaps?: BadgeGaps;
     }>;
     /** UX-P2.2b: the theme's selection colours, as computed colours. */
     listSelection: { active: string; inactive: string };
@@ -1059,6 +1120,8 @@ export interface EndOfP0 {
     sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<{ name: string; hit: string; ok: boolean }> }>;
     /** Per facts block of the details pane, the lefts of its values. */
     factLefts: number[][];
+    /** UX-P3.12: per facts block of the details pane, its rows' heights and gaps and its marks (DS-ALIGN-2). */
+    factRows?: FactBlock[];
     fonts: { root: string; others: string[] };
     /** UX-P1.1: per visible text outside the README, its computed size and weight, and whether it is a section title or group header (DS-TYPE-2, DS-TYPE-3). */
     textStyles: Array<{ fontSize: number; fontWeight: number; header: boolean }>;
@@ -1818,6 +1881,13 @@ const endRows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-ki
         focusPainted: focused ? 0 : [row, ...row.querySelectorAll('*')].filter(el => visible(el) && paintsFocus(el)).length,
         check: checkOf(option),
         checkOff: visible(option.querySelector('.nuiget-row-check--off')),
+        // UX-P3.12: a comfortable row's shown label badges against the name (DS-ROW-1's badge clause).
+        badgeGaps: (() => {
+            if (row.classList.contains('nuiget-row--compact') || !visible(name)) return undefined;
+            const pills = [...option.querySelectorAll('.nuiget-row-badges > *')].filter(visible).map(rectOf);
+            if (pills.length === 0) return undefined;
+            return { name: round(pills[0].left - rectOf(name).right), pills: pills.slice(1).map((pill, index) => round(pill.left - pills[index].right)) };
+        })(),
     };
 });
 const detailsHeaderEl = scope.querySelector('.nuiget-details-header');
@@ -1936,6 +2006,26 @@ const toolbarEl = scope.querySelector('[data-testid="installed-toolbar"], [data-
 const factLefts = shown('.nuiget-property-list')
     .map(block => [...block.querySelectorAll(':scope > .nuiget-property-value')].filter(visible).map(el => round(rectOf(el).left)))
     .filter(lefts => lefts.length > 1);
+// UX-P3.12: per facts block, each term-value row's height, whether its value is one line, the gaps and pitches, the marks (DS-ALIGN-2).
+const factRows = shown('.nuiget-property-list').map(block => {
+    const children = [...block.children].filter(visible);
+    const rows = [];
+    for (let index = 0; index + 1 < children.length; index += 2) {
+        const term = rectOf(children[index]);
+        const value = children[index + 1];
+        const box = rectOf(value);
+        const lineHeight = px(getComputedStyle(value).lineHeight);
+        const top = Math.min(term.top, box.top);
+        rows.push({ top, bottom: Math.max(term.bottom, box.bottom), oneLine: box.height < lineHeight * 1.5, value: box, lineHeight, marks: [...value.querySelectorAll('svg')].filter(visible).map(rectOf) });
+    }
+    return {
+        heights: rows.map(row => round(row.bottom - row.top)),
+        oneLine: rows.map(row => row.oneLine),
+        gaps: rows.slice(1).map((row, index) => round(row.top - rows[index].bottom)),
+        pitches: rows.slice(1).map((row, index) => round(row.top - rows[index].top)),
+        marks: rows.flatMap(row => row.marks.map(mark => ({ centre: round(mark.top + mark.height / 2), line: round(row.value.top + row.lineHeight / 2) }))),
+    };
+}).filter(block => block.heights.length > 0);
 // The font families of the visible text other than the root's, code and README excepted (DS-TYPE-1).
 const rootFont = getComputedStyle(scope).fontFamily;
 const otherFonts = new Set();
@@ -2167,6 +2257,7 @@ const endOfP0 = {
     splitFit,
     sashes,
     factLefts,
+    factRows,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
     readmeHeadings: shown('.nuiget-readme h1, .nuiget-readme h2, .nuiget-readme h3, .nuiget-readme h4, .nuiget-readme h5, .nuiget-readme h6').map(el => px(getComputedStyle(el).fontSize)),
@@ -2930,11 +3021,15 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 return [tenth((row.icon?.centre ?? band) - band), ...(row.textCentre === undefined ? [] : [tenth(row.textCentre - band)])];
             });
             const lineCounts = rows.map(row => row.lines);
+            // UX-P3.12: 8 px from the name to the first label badge, pills 4 apart (BADGE_GAP_STATUS).
+            const badges = badgeGapClause(rows);
+            const badgeText = badges === undefined ? '' : `; ${badges.text}${BADGE_GAP_STATUS === 'hard' ? '' : ` (pending ${BADGE_GAP_STATUS.pending})`}`;
             return {
-                value: `icon ${tally(icons)} (target ${END_OF_P0.icon}×${END_OF_P0.icon}); name after icon ${tally(gaps)} (target ${END_OF_P0.nameAfterIcon}); centre offsets ${tally(centres)}; lines ${tally(lineCounts)} (target ${lines})`,
+                value: `icon ${tally(icons)} (target ${END_OF_P0.icon}×${END_OF_P0.icon}); name after icon ${tally(gaps)} (target ${END_OF_P0.nameAfterIcon}); centre offsets ${tally(centres)}; lines ${tally(lineCounts)} (target ${lines})${badgeText}`,
                 pass: rows.every(row => row.icon?.w === END_OF_P0.icon && row.icon?.h === END_OF_P0.icon)
                     && gaps.every(gap => near(gap, END_OF_P0.nameAfterIcon, tolerance)) && centres.every(offset => Math.abs(offset) <= tolerance)
-                    && rows.every(row => row.lines === linesOf(row)),
+                    && rows.every(row => row.lines === linesOf(row))
+                    && (badges === undefined || BADGE_GAP_STATUS !== 'hard' || badges.pass),
             };
         }
         case 'DS-ROW-2': {
@@ -3304,6 +3399,14 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                     : `bounds ${split.min}%..${split.max}% (list ${listAtMin} ≥ ${split.listMin}, details ${detailsAtMax} ≥ ${split.detailsMin})`);
             }
             return { value: parts.join('; '), pass: fits(toolbar) && fits(header) && boundsHold };
+        }
+        case 'DS-ALIGN-2': {
+            const blocks = facts.factRows ?? [];
+            if (blocks.length === 0) {
+                return notMeasurable('no facts block');
+            }
+            const clause = factsPitchClause(blocks);
+            return { value: clause.text, pass: clause.pass };
         }
         case 'DS-ALIGN-1': {
             if (facts.factLefts.length === 0) {

@@ -392,6 +392,11 @@
     gap: var(--nuiget-space-2);
 }
 
+/* Two groups 8 apart, one group 4 apart (premise P-1): the line's 6 plus 2 before a comfortable row's badges (DS-ROW-1, UX-P3.12). */
+.nuiget-row--comfortable .nuiget-row-badges {
+    margin-inline-start: var(--nuiget-space-1);
+}
+
 /* A row with no badge leaves its name the line's whole width, not the line's gap short (judge P2.8b main-installed-single#D3). */
 .nuiget-row-badges:empty {
     display: none;
@@ -869,7 +874,8 @@
 .nuiget-property-list {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: var(--nuiget-space-2) var(--nuiget-space-5);
+    /* One pitch: a one-line row is one line box, rows 6 px apart, 24 px at 13/1.4 (DS-ALIGN-2, UX-P3.12). */
+    gap: var(--nuiget-space-3) var(--nuiget-space-5);
     align-items: baseline;
     margin: 0;
 }
@@ -883,6 +889,16 @@
     min-width: 0;
     margin: 0;
     overflow-wrap: anywhere;
+}
+
+/*
+ * The 12 px Verified mark centred on its line on any face: from the line's top by half the line box minus the mark (DS-ALIGN-2).
+ * An offset is a position, not spacing: the line box and its neighbours stay where they are.
+ */
+.nuiget-property-value .nuiget-verified {
+    vertical-align: top;
+    position: relative;
+    inset-block-start: calc((1lh - var(--nuiget-icon-size-sm)) / 2);
 }
 
 /* ── GroupCaption ── */

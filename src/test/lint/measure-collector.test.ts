@@ -693,6 +693,22 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('reads each facts row\'s height, gap, pitch and mark, and a comfortable row\'s badge gaps (DS-ALIGN-2, DS-ROW-1, UX-P3.12)', () => {
+        const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
+        panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-property-list" style="line-height: 18px" data-rect="620,200,880,280">'
+            + '<dt class="nuiget-property-term" style="line-height: 18px" data-rect="620,200,690,218">Version</dt><dd class="nuiget-property-value" style="line-height: 18px" data-rect="700,200,880,218">1.0.0</dd>'
+            + '<dt class="nuiget-property-term" style="line-height: 18px" data-rect="620,222,690,241">Authors</dt><dd class="nuiget-property-value" style="line-height: 18px" data-rect="700,222,880,241"><svg data-rect="700,223,712,235"></svg> Microsoft</dd>'
+            + '<dt class="nuiget-property-term" style="line-height: 18px" data-rect="620,245,690,263">Tags</dt><dd class="nuiget-property-value" style="line-height: 18px" data-rect="700,245,880,281">json serialization</dd></dl>');
+        const list = document.querySelector('[data-testid="installed-list"]') as HTMLElement;
+        list.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--comfortable" data-rect="0,300,600,372"><div class="nuiget-row-option" role="option" data-rect="0,300,600,371">'
+            + '<span class="nuiget-row-name" data-rect="80,310,180,326">NETStandard.Library</span><span class="nuiget-row-badges"><span class="nuiget-badge" data-rect="186,310,210,326">SDK</span><span class="nuiget-badge" data-rect="214,310,250,326">Props</span></span></div></div>');
+        const facts = collect().endOfP0;
+        expect(facts.factRows).toEqual([{ heights: [18, 19, 36], oneLine: [true, true, false], gaps: [4, 4], pitches: [22, 23], marks: [{ centre: 229, line: 231 }] }]);
+        expect(facts.rows.find(row => row.badgeGaps !== undefined)?.badgeGaps).toEqual({ name: 6, pills: [4] });
+        // A compact row reads no badge gaps.
+        expect(facts.rows.filter(row => row.compact).every(row => row.badgeGaps === undefined)).toBe(true);
+    });
+
     it('collects the facts of the rules registered at the end of P0 (UX-P0.13)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
         panel.insertAdjacentHTML('beforeend', '<dl class="nuiget-property-list" data-rect="620,200,880,260"><dt class="nuiget-property-term" data-rect="620,200,690,220" data-text="620,200,680,220">Owner</dt><dd class="nuiget-property-value" data-rect="700,200,880,220" data-text="700,200,760,220">Microsoft</dd><dt class="nuiget-property-term" data-rect="620,230,690,250" data-text="620,230,670,250">License</dt><dd class="nuiget-property-value" data-rect="704,230,880,250" data-text="704,230,750,250">MIT</dd></dl><p class="nuiget-empty-text" data-rect="620,300,880,320" data-text="620,300,800,320">Select a package</p>');

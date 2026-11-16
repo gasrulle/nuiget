@@ -128,10 +128,9 @@ export interface AxePending {
  * in both looks (design-advisor ruling of 2026-10-25, UX-P0.25). A state that prints an unresolved node again fails hard.
  * UX-P3.3b held the README results of `main-details-readme` here; UX-P3.4 removed them (underlined links, link-only list items
  * on a 24 px line; design-advisor ruling of 2026-11-07). UX-P3.10 (design-advisor follow-up 4, B): the facts' links (`dd > a`) of
- * `main-details-readonly` are under 24 px apart; P3.12 raises `PropertyList`'s row pitch with `main-installed-details#D2` and
- * removes the entry.
+ * `main-details-readonly` were under 24 px apart; UX-P3.12 raised `PropertyList`'s row pitch to 24.2 (DS-ALIGN-2) and removed the entry.
  */
-export const AXE_PENDING: readonly AxePending[] = [{ rule: 'target-size', kind: 'violation', item: 'P3.12', states: ['main-details-readonly'] }];
+export const AXE_PENDING: readonly AxePending[] = [];
 
 /** A violation a decision declares by design, on the nodes of one selector or on one surface; `ruling` names the decision. */
 export interface AxeAccepted {

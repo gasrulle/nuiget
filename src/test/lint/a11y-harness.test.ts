@@ -40,8 +40,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // The design-advisor ruling of 2026-10-25 (UX-P0.25): the resolve pass decided the three undecided contrast cases of
         // UX-P0.23 in every state (run 40152178889). UX-P3.4 removed the README results UX-P3.3b had put here (underlined links,
         // link-only list items on a 24 px line; design-advisor ruling of 2026-11-07).
-        // UX-P3.10 (design-advisor follow-up 4, B): the facts' links of main-details-readonly, owned by P3.12; one state, exact.
-        expect(AXE_PENDING).toEqual([{ rule: 'target-size', kind: 'violation', item: 'P3.12', states: ['main-details-readonly'] }]);
+        // UX-P3.10 (design-advisor follow-up 4, B) held the facts' links of main-details-readonly here; UX-P3.12 removed them (the facts
+        // rows' pitch 24.2, DS-ALIGN-2; design-advisor opening ruling of 2026-11-16, DO 6).
+        expect(AXE_PENDING).toEqual([]);
         expect(AXE_ACCEPTED.map(entry => `${entry.rule} ${entry.selector ?? entry.surface}`)).toEqual(['label-content-name-mismatch .nuiget-row-option', 'page-has-heading-one sidebar', 'target-size .nuiget-icon-button', 'target-size .nuiget-icon-button', 'target-size .nuiget-section-toggle', 'target-size .nuiget-section-toggle', 'target-size .nuiget-row-group', 'target-size .nuiget-row-group', 'target-size .nuiget-row-option--compact', 'target-size .nuiget-row-option--compact', 'target-size .nuiget-row-message', 'target-size .nuiget-row-message']);
         expect(acceptedSelectors()).toEqual(['.nuiget-row-option', '.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-option--compact', '.nuiget-row-message']);
         expect(acceptedTargetSelectors()).toEqual(['.nuiget-icon-button', '.nuiget-section-toggle', '.nuiget-row-group', '.nuiget-row-option--compact', '.nuiget-row-message']);
