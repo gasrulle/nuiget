@@ -1,0 +1,438 @@
+{
+ "item": "P3.fix-6",
+ "runs": [
+  {
+   "runId": "43851402714",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "fb89ebd (the proving push: b3fa095 code and tests, fb89ebd docs)",
+   "look": "modern",
+   "workflow": "wf_c3d9c931-d6a",
+   "note": "The four states the item touched, on the proving run's crops. Two states have no artboard and were judged against the stand-ins earlier items used: main-installed-bulk-dialog against main-installed-details (P3.5, P3.11), sidebar-all-projects-updates against main-installed-all (P3.7d, P3.10, P3.fix-10); a first launch with null artboards (wf_a4bb81ab-09a) was refused by the workflow's screen-mode check before any agent ran. No finding concerns the scroll shadow. D37 is not met: every standing and single-judge finding carries a disposition.",
+   "captures": {
+    "main-transitive-expanded": {
+     "png": "captures/43851402714/main-transitive-expanded.dark-modern.1200.png",
+     "sha256": "2b3f39f177840a1a8eb5338736a27ec21f92af252d276c704ecedfc58332d229",
+     "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png"
+    },
+    "main-transitive-details": {
+     "png": "captures/43851402714/main-transitive-details.dark-modern.1200.png",
+     "sha256": "7a7c693e8c769c9c21750ad1e51ed7d3c65608a737da3a95ae384bdadc4812ca",
+     "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png"
+    },
+    "main-installed-bulk-dialog": {
+     "png": "captures/43851402714/main-installed-bulk-dialog.dark-modern.1200.png",
+     "sha256": "3a467cb4e481cc22e0d2734acdc47b023c79bc2260f36165dd16a97977045629",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png (stand-in)"
+    },
+    "sidebar-all-projects-updates": {
+     "png": "captures/43851402714/sidebar-all-projects-updates.dark-modern.300.png",
+     "sha256": "a32664180531b8dc9fed9d70864c3dc9338a0a4842da3cbf59e154da9db3f887",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (stand-in)"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 13,
+    "standing": 1,
+    "blocking": 0,
+    "refuted": 5,
+    "singleJudge": 6,
+    "incomplete": 0
+   },
+   "findings": [
+    {
+     "id": "main-installed-bulk-dialog#D1",
+     "state": "main-installed-bulk-dialog",
+     "finding": "[native] The search box placeholder reads \"Search or type @ to filter\" where the approved artboard's search-input (spec rect 16,42,1168,26) draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the copy of the panel's main control does not match the artboard. | [states] The search field's placeholder reads \"Search or type @ to filter\", but the artboard's search-input element says \"Search packages, or filter: @installed, @updates, @vulnerable\". So the approved copy that names the filters is missing.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      180,
+      26
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "main-installed-bulk-dialog",
+       "finding": "The search box placeholder reads \"Search or type @ to filter\" where the approved artboard's search-input (spec rect 16,42,1168,26) draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the copy of the panel's main control does not match the artboard.",
+       "severity": "minor",
+       "box": [
+        16,
+        42,
+        180,
+        26
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The capture crop at 16,42 shows the placeholder 'Search or type @ to filter', while the artboard crop at the same box shows 'Search packages, or filter: @...'. The spec's search-input entry (rect 16,42,1168,26) declares no placeholder text, so nothing in the spec allows the difference.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      },
+      {
+       "id": "states-2",
+       "lens": "states",
+       "state": "main-installed-bulk-dialog",
+       "finding": "The search field's placeholder reads \"Search or type @ to filter\", but the artboard's search-input element says \"Search packages, or filter: @installed, @updates, @vulnerable\". So the approved copy that names the filters is missing.",
+       "severity": "minor",
+       "box": [
+        22,
+        48,
+        166,
+        15
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "This is the same defect as native-1: the capture crop reads 'Search or type @ to filter' where the artboard crop at the same box reads 'Search packages, or filter: @...', and the spec declares no placeholder difference.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the same finding is accepted-as-design in docs/plans/judge-log/P3.12.json: the capture follows the Design System §8 main-header row (\"Search or type @ to filter\", MainShell.tsx); the artboard copy is stale. This item touched nothing in the header.",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md); design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    }
+   ],
+   "singleJudge": [
+    {
+     "id": "main-transitive-details#D1",
+     "state": "main-transitive-details",
+     "finding": "[native] The search box placeholder reads \"Search or type @ to filter\" where the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture's prompt no longer names the filters the artboard lists.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      1168,
+      26
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "main-transitive-details",
+       "finding": "The search box placeholder reads \"Search or type @ to filter\" where the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture's prompt no longer names the filters the artboard lists.",
+       "severity": "minor",
+       "box": [
+        16,
+        42,
+        1168,
+        26
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "The crop shows the capture's placeholder \"Search or type @ to filter\" where the artboard (and its source's placeholder attribute) reads \"Search packages, or filter: @installed, @updates, @vulnerable\". The spec declares no placeholder text, and DS-OVERFLOW-2/placeholder only measures that it fits (164 of 1136 px), so nothing contradicts the wording difference.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "as main-installed-bulk-dialog#D1: P3.12.json accepted the placeholder copy as design",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md); design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    },
+    {
+     "id": "main-transitive-details#D2",
+     "state": "main-transitive-details",
+     "finding": "[native] The header's source-settings action (spec rect 1136,10,22,22) shows the codicon settings-gear in the capture, while the artboard shows a sun-like glyph there. The capture follows the icon plan and the workbench's settings gear (DS-ICON-1), so the artboard drawing disagrees with the rules rather than the capture being wrong.",
+     "severity": "minor",
+     "box": [
+      1136,
+      10,
+      22,
+      22
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "native"
+     ],
+     "members": [
+      {
+       "id": "native-2",
+       "lens": "native",
+       "state": "main-transitive-details",
+       "finding": "The header's source-settings action (spec rect 1136,10,22,22) shows the codicon settings-gear in the capture, while the artboard shows a sun-like glyph there. The capture follows the icon plan and the workbench's settings gear (DS-ICON-1), so the artboard drawing disagrees with the rules rather than the capture being wrong.",
+       "severity": "minor",
+       "box": [
+        1136,
+        10,
+        22,
+        22
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "At 8x the capture draws the codicon settings gear at 1136,10, while the artboard's source draws a hand-made stroked circle with eight rays, which reads as a sun. The capture follows the icon rules and DS-ICON-2 (hard: glyph 16x16 x3, icon.foreground), so this is a minor spec-conflict in the artboard, which is how rubric section 6 says to report it.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.12",
+     "evidence": "the same glyph finding is accepted-as-design in docs/plans/judge-log/P3.12.json (main-installed-details#D4): the capture follows DS-ICON-1 (the settings-gear codicon); the artboard is stale",
+     "ruling": "design-advisor GOLDEN CLASS ruling of 2026-11-16 (docs/plans/handoff/P3.12.md); design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    },
+    {
+     "id": "main-transitive-details#D3",
+     "state": "main-transitive-details",
+     "finding": "[native] The search box's filter action glyph is about 15-16 px in the capture and about 12 px in the artboard. DS-ICON-2 requires 16 px action glyphs, so the capture matches the rule and the smaller artboard drawing disagrees with it.",
+     "severity": "minor",
+     "box": [
+      1162,
+      46,
+      18,
+      18
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "native"
+     ],
+     "members": [
+      {
+       "id": "native-3",
+       "lens": "native",
+       "state": "main-transitive-details",
+       "finding": "The search box's filter action glyph is about 15-16 px in the capture and about 12 px in the artboard. DS-ICON-2 requires 16 px action glyphs, so the capture matches the rule and the smaller artboard drawing disagrees with it.",
+       "severity": "minor",
+       "box": [
+        1162,
+        46,
+        18,
+        18
+       ],
+       "rule": "spec-conflict",
+       "verdict": "confirmed",
+       "reason": "The capture's filter funnel is about 15x14 px and the artboard's is about 13x10 px. DS-ICON-2 measures 16x16 x3 (hard) in the capture, so the capture is right and the smaller artboard drawing conflicts with the rule. This is a minor spec-conflict, separate from the gear glyph.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "refuted-by-measurement",
+     "owner": "P3.fix-6",
+     "evidence": "run 43851402714: `DS-ICON-2@main-transitive-details: glyph 16×16 ×3 (target 16×16); colour icon.foreground ×3 (hard)`; the finding itself says the capture matches DS-ICON-2",
+     "ruling": "design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    },
+    {
+     "id": "main-transitive-details#D4",
+     "state": "main-transitive-details",
+     "finding": "[geometry] In the details header the Authors line sits 1-2 px lower than in the artboard: label top y 157 against 156, value top y 157 against 155, verified mark y 158 against 156. The Version-to-Authors pitch grows to 24 px (artboard 22-23) and the gap from Authors to Required by shrinks by the same amount.",
+     "severity": "minor",
+     "box": [
+      441,
+      133,
+      138,
+      35
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "geometry-2",
+       "lens": "geometry",
+       "state": "main-transitive-details",
+       "finding": "In the details header the Authors line sits 1-2 px lower than in the artboard: label top y 157 against 156, value top y 157 against 155, verified mark y 158 against 156. The Version-to-Authors pitch grows to 24 px (artboard 22-23) and the gap from Authors to Required by shrinks by the same amount.",
+       "severity": "minor",
+       "box": [
+        441,
+        133,
+        138,
+        35
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "Pixel rows show the Version line identical in both images (ink 133-142). The Authors line sits lower in the capture: label 157-167 against 156-165, value with the verified mark 157-167 against 155-165. That is a 1-2 px layout shift, visible only side by side, and no hard measurement covers this pitch.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "disposition": "refuted-by-measurement",
+     "owner": "P3.fix-6",
+     "evidence": "run 43851402714: `SPEC@main-transitive-details/details: 2/2 within 1 (hard)` and `DS-ALIGN-2@main-transitive-details: rows 2: one-line height 18.2 ×2, spread 0; gap 6; pitch 24.2; marks 1 centred (hard)`: the details block is within the redline's 1 px and on the facts pitch the Design System sets",
+     "ruling": "design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    },
+    {
+     "id": "main-installed-bulk-dialog#D2",
+     "state": "main-installed-bulk-dialog",
+     "finding": "[states] Neither dialog button shows a focus ring. The bulk confirm dialog puts its initial focus on Cancel, but Cancel has only its grey secondary border and no 1 px focusBorder outline at +2, so nothing shows which button Enter or Space would activate. The main panel should draw rings after a click in both looks (DS-FOCUS-3; button focus 1 px focusBorder at offset +2, DS-FOCUS-1).",
+     "severity": "major",
+     "box": [
+      671,
+      424,
+      137,
+      26
+     ],
+     "rule": "DS-FOCUS-3",
+     "lenses": [
+      "states"
+     ],
+     "members": [
+      {
+       "id": "states-1",
+       "lens": "states",
+       "state": "main-installed-bulk-dialog",
+       "finding": "Neither dialog button shows a focus ring. The bulk confirm dialog puts its initial focus on Cancel, but Cancel has only its grey secondary border and no 1 px focusBorder outline at +2, so nothing shows which button Enter or Space would activate. The main panel should draw rings after a click in both looks (DS-FOCUS-3; button focus 1 px focusBorder at offset +2, DS-FOCUS-1).",
+       "severity": "major",
+       "box": [
+        671,
+        424,
+        137,
+        26
+       ],
+       "rule": "DS-FOCUS-3",
+       "verdict": "confirmed",
+       "reason": "In the crop, Cancel has only its grey secondary border and no 1 px focusBorder outline at +2, yet the ARIA snapshot marks it 'button \"Cancel\" [focused]'. The ring is missing because primitives.css rings .nuiget-button only on :focus-visible, while DS-FOCUS-3 says the main panel draws rings after a click in both looks. No hard measurement in ui-output.txt covers focus in this state.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      }
+     ],
+     "disposition": "accepted-as-design",
+     "owner": "P3.5",
+     "evidence": "the same finding (no focus ring on the initially focused Cancel of the open confirm dialog) is accepted-as-design in docs/plans/judge-log/P3.5.json; this item changed no dialog, button or focus rule",
+     "ruling": "design-advisor UX-P3.5 follow-up 3 of 2026-11-07 (docs/plans/handoff/P3.5.md); design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    },
+    {
+     "id": "sidebar-all-projects-updates#D1",
+     "state": "sidebar-all-projects-updates",
+     "finding": "[native] The count badges of the in-list group rows (0, 1, 3 and 13, right edge at x 281) end 8 px left of the Updates pane header's 44 badge (right edge at x 289), so the trailing count column is ragged. In a native side-bar tree the overlay scrollbar does not shift row content, and pane-header and row badges share one end edge.",
+     "severity": "minor",
+     "box": [
+      262,
+      58,
+      28,
+      237
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native"
+     ],
+     "members": [
+      {
+       "id": "native-2",
+       "lens": "native",
+       "state": "sidebar-all-projects-updates",
+       "finding": "The count badges of the in-list group rows (0, 1, 3 and 13, right edge at x 281) end 8 px left of the Updates pane header's 44 badge (right edge at x 289), so the trailing count column is ragged. In a native side-bar tree the overlay scrollbar does not shift row content, and pane-header and row badges share one end edge.",
+       "severity": "minor",
+       "box": [
+        262,
+        58,
+        28,
+        237
+       ],
+       "rule": "judge-only",
+       "verdict": "confirmed",
+       "reason": "In the crop the group-row count badges end left of the pane header's 44 badge. The measurement confirms an 8 px offset (DS-OVERFLOW-2: updates \"44\" 263.3–290 in a box ending 296; project badges 261.6–282 in boxes ending 288). DS-INSET-3 holds 6 px within each box, so the offset comes from the list's reserved 8 px scrollbar (DS-SCROLL-1), not from a broken inset.",
+       "method": "crop",
+       "refuterSeverity": "minor"
+      }
+     ],
+     "owner": "planning session (no hard line reads the in-list count badges against the pane header's badge; a row in docs/plans/handoff/P3.fix-6.md, \"For the planning session\")",
+     "evidence": "no hard line reads the alignment of in-list group-row count badges against the pane header's badge (`DS-OVERFLOW-2@sidebar-all-projects-updates` reads containment only: \"updates \\\"44\\\" 263.3–290 (box right 296); updates-project-empty.csproj \\\"0\\\" 261.6–282 (box right 288)\"); a row in the handoff note's planning hand-off",
+     "ruling": "design-advisor final ruling of 2026-11-16 (docs/plans/handoff/P3.fix-6.md)"
+    }
+   ],
+   "refuted": [
+    {
+     "id": "geometry-1",
+     "lens": "geometry",
+     "state": "main-transitive-details",
+     "finding": "On the NETStandard.Library row the gap between the SDK and Props label badges is 4 px (SDK ends x 293, Props starts x 298), but the artboard draws 8 px (Props starts x 302). That is also the 8 px the row keeps between the name and its first badge (name ends x 250, SDK starts x 259 in both images), so the badge run looks tighter than in the artboard.",
+     "severity": "minor",
+     "box": [
+      259,
+      260,
+      84,
+      20
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "The crop does show a gap of about 4 px between the SDK and Props pills, against about 8 px in the artboard. The hard measurement \"DS-ROW-1 ... badges: name gap 8 x2, pill gap 4 (hard)\" and the DS-ROW-1 rule (\"8 px from the name to the first badge, 4 px between pills\") make 4 px the specified gap, so the artboard is wrong here, not the capture.",
+     "method": "crop",
+     "refuterSeverity": "minor"
+    },
+    {
+     "id": "native-1",
+     "lens": "native",
+     "state": "sidebar-all-projects-updates",
+     "finding": "The three update rows of Unsupported.csproj (Newtonsoft.Json, Polly and Serilog, x 44 to 244, y 424 to 490) look exactly like actionable update rows, with the same name colour and the same green target version, and the group row carries only its count. By analogy with the main artboard, which marks that project's header with Unsupported and Provisional label badges and each of its rows Read-only, nothing on these rows says that they cannot be updated. Only the message leaf above them gives the reason.",
+     "severity": "major",
+     "box": [
+      8,
+      362,
+      280,
+      128
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "The crop does show Newtonsoft.Json, Polly and Serilog under Unsupported.csproj with no per-row marker, but no rule requires one. The interaction model defines sidebar-updates-unsupported as a banner \"above its read-only update rows\", and that leaf is present (DS-STATE-1 hard: \"present: sidebar-updates-unsupported-unsupported.csproj ... missing: none\"). The cited Read-only meta and label badges belong to the main panel's comfortable Installed rows (the artboard crop), which is a different surface.",
+     "method": "crop",
+     "refuterSeverity": "major"
+    },
+    {
+     "id": "states-1",
+     "lens": "states",
+     "state": "sidebar-all-projects-updates",
+     "finding": "The folder group row reads \"tools\" in lower case, while the artboard draws the same folder group as \"Tools\" (capitalised group header); DS-COPY-1 requires group-header labels in Title Case.",
+     "severity": "major",
+     "box": [
+      10,
+      252,
+      56,
+      20
+     ],
+     "rule": "DS-COPY-1",
+     "verdict": "refuted",
+     "reason": "The crop shows the folder row \"tools\", which is the name of the dense workspace's directory on disk (live data, not a label). A hard measurement sets sidebar group rows to no text transform (DS-TYPE-5: \"level ×6: 13px/600/none (target 13px/600/none)\"). The artboard's \"Tools\" comes from the main panel's header transform (capitalize) on another surface.",
+     "method": "crop",
+     "refuterSeverity": "major"
+    },
+    {
+     "id": "states-2",
+     "lens": "states",
+     "state": "sidebar-all-projects-updates",
+     "finding": "The Unsupported.csproj group row shows only its count badge \"3\"; the artboard's Unsupported.csproj group row also carries the \"Unsupported\" and \"Provisional\" label badges, and the state matrix (§9, All Projects) says the group row's badge stays beside the unsupported message leaf.",
+     "severity": "major",
+     "box": [
+      8,
+      364,
+      284,
+      20
+     ],
+     "rule": "DS-STATE-1",
+     "verdict": "refuted",
+     "reason": "The crop shows Unsupported.csproj with its count badge 3. The quoted \"group row's badge stays\" is the Main · Installed (All Projects) cell of the §9 matrix. The Sidebar · Updates cell asks for read-only rows and no Update All. DS-STATE-1 is hard and green (\"missing: none\"), and DS-ROW-7 measures \"label none\" for sidebar group rows, so the main panel's Unsupported and Provisional badges do not apply here.",
+     "method": "crop",
+     "refuterSeverity": "major"
+    },
+    {
+     "id": "states-3",
+     "lens": "states",
+     "state": "sidebar-all-projects-updates",
+     "finding": "The three update rows under Unsupported.csproj (Newtonsoft.Json, Polly, Serilog) look the same as actionable update rows, with the new version in the green new-version role. They have no read-only marker, while the artboard marks each row under that project \"Read-only\" and the matrix's Sidebar Updates unsupported cell says read-only.",
+     "severity": "major",
+     "box": [
+      8,
+      424,
+      284,
+      66
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "This is the same claim as native-1. The rows carry no marker in the crop, but the sidebar contract puts the read-only signal in the banner above the rows (interaction model: sidebar-updates-unsupported is a banner \"above its read-only update rows\"), and that banner is present (DS-STATE-1 hard). The per-row \"Read-only\" text in the artboard crop is the main panel's comfortable Installed row meta, a different surface and screen.",
+     "method": "crop",
+     "refuterSeverity": "major"
+    }
+   ]
+  }
+ ]
+}

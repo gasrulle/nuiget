@@ -1102,7 +1102,7 @@
       "finding": "P3.7d judge: no scroll shadow over a scrolled list (DS-SCROLL-2)",
       "disposition": "fixed",
       "owner": "P3.fix-6",
-      "evidence": "both measured forms cost subpixel text (runs 43508009789, 43514791659); DS-SCROLL-2 pending P3.fix-6",
+      "evidence": "both measured forms cost subpixel text (runs 43508009789, 43514791659); DS-SCROLL-2 pending P3.fix-6; fixed by UX-P3.fix-6, b3fa095, run 43851402714 (the scroller's own inset shadow, DS-SCROLL-2 hard)",
       "ruling": "design-advisor follow-up 5 of 2026-11-13, DO 9"
     }
   ],
