@@ -273,10 +273,13 @@ async function searchWithEnter(text: string): Promise<void> {
     await (await findByTestId('search-input')).sendKeys(Key.ENTER);
 }
 
-async function typeInSearch(text: string): Promise<void> {
+/**
+ * Types into the main search box through `typeHeld`, which reads the box back and retypes with a `[typed]` line: run 43884327577 lost
+ * the N of Newtonsoft.Json in one sendKeys and the search answered nothing (UX-P3.fix-20).
+ */
+async function typeInSearch(text: string, what = 'main search'): Promise<void> {
     const search = await findByTestId('search-input', 30_000);
-    await search.click();
-    await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE, text);
+    await typeHeld(search, text, what);
 }
 
 /** Makes a row current and waits for its selection in the details panel only: a held cell withholds what `currentDetails` waits for (UX-P3.10). */
@@ -820,7 +823,7 @@ const REACH: Record<string, Reach> = {
     'main-browse-results': {
         reach: async () => {
             await chooseFixtureProject('Gateway.csproj');
-            await typeInSearch('Newtonsoft.Json');
+            await typeInSearch('Newtonsoft.Json', 'main-browse-results');
             await (await findByTestId('search-input')).sendKeys(Key.ENTER);
             await findByTestId('browse-list', 120_000);
             await until('document.querySelector(\'[data-testid="browse-list"] [data-testid="package-row-newtonsoft.json"]\') !== null', 'the Newtonsoft.Json Browse row');
@@ -837,7 +840,7 @@ const REACH: Record<string, Reach> = {
     'main-browse-empty': {
         reach: async () => {
             await chooseFixtureProject('Gateway.csproj');
-            await typeInSearch('zz-no-such-package-nuiget');
+            await typeInSearch('zz-no-such-package-nuiget', 'main-browse-empty');
             await (await findByTestId('search-input')).sendKeys(Key.ENTER);
             await until('document.querySelector(\'[data-testid="browse-empty"]\')?.textContent === \'No results for "zz-no-such-package-nuiget".\'', 'the Browse empty state', 120_000);
         },
