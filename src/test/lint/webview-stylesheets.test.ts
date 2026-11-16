@@ -122,12 +122,13 @@ describe('2.0 webview stylesheets', () => {
 
     it('every pointer target is at least --nuiget-target-min high or widens its hit to it with an ::after (DS-HEIGHT-8), and the sash takes the pointer over that width', () => {
         expect(stylesheets().flatMap(file => findSmallTargets(readFileSync(file, 'utf8')).map(prelude => `${file}: ${prelude}`))).toEqual([]);
-        // The sash is drawn thin; its ::after is the target, widened to the target size on both sides of the line.
+        // The sash is drawn thin; its ::after is the target, widened to the target size from the band's edge into the pane after it.
         const rules = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const hitArea = (prelude: string): string[] => rules.find(rule => rule.prelude === prelude)?.declarations ?? [];
         // UX-P3.9 (design-advisor follow-up 1, DO 3): one-sided, from the band's list-side edge into the trailing pane, 24 px in all.
         expect(hitArea('.nuiget-sash--vertical::after')).toContain('inset: 0 calc(var(--nuiget-line-width) - var(--nuiget-target-min) - (var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0 calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2)');
-        expect(hitArea('.nuiget-sash--horizontal::after')).toContain('inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0');
+        // UX-P3.fix-19: the horizontal sash the same way, from the band's upper edge into the pane below, so the row above keeps its presses.
+        expect(hitArea('.nuiget-sash--horizontal::after')).toContain('inset: calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0 calc(var(--nuiget-line-width) - var(--nuiget-target-min) - (var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2)');
         // The check has something to look at.
         expect(rules.filter(rule => rule.declarations.includes('cursor: pointer')).length).toBeGreaterThanOrEqual(3);
     });

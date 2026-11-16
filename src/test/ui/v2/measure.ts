@@ -1089,6 +1089,19 @@ export interface ArtboardSpec {
     looks: Partial<Record<'modern' | 'classic', SpecLook>>;
 }
 
+/** A sash hit point (DS-DIVIDER-6): a horizontal sash's hits carry their point, its last-row hit the rectangles it reads (UX-P3.fix-19). */
+export interface SashHit {
+    name: string;
+    hit: string;
+    ok: boolean;
+    at?: { x: number; y: number };
+    rowTop?: number;
+    rowBottom?: number;
+    listBottom?: number;
+    lineTop?: number;
+    lineBottom?: number;
+}
+
 /** UX-P0.13: the facts the rules registered at the end of P0 read (design-advisor ruling of 2026-10-24). */
 export interface EndOfP0 {
     rows: Array<{
@@ -1145,7 +1158,7 @@ export interface EndOfP0 {
      * (`::before`) width, background and transition delay, the gap between the panes either side, and whether it draws the
      * focus role's solid `focusBorder` outline (DO 1b reads the outline only, never a colour string).
      */
-    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<{ name: string; hit: string; ok: boolean }>; secondHits?: Array<{ name: string; hit: string; ok: boolean }> }>;
+    sashes?: Array<{ thickness: number; background: string; band: { width: number; background: string; delay: string }; gap: number | undefined; focused: boolean; outlineFocus: boolean; hits?: Array<SashHit>; secondHits?: Array<{ name: string; hit: string; ok: boolean }>; /** UX-P3.fix-19: a horizontal sash's line top less the last fully shown row's bottom above it. */ lastRowGap?: number }>;
     /** UX-P3.fix-9: the sidebar's shown sections, so a sidebar with one pane reads its sash as not shown by design. */
     sidebarPanes?: number;
     /** Per facts block of the details pane, the lefts of its values. */
@@ -1956,6 +1969,7 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
     const secondHits = [];
     const read = (name, x, y, ok) => { const el = at(x, y); hits.push({ name, hit: el ? label(el) : 'nothing', ok: Boolean(el) && ok(el) }); };
     const onSash = el => el.closest('.nuiget-sash') === sash;
+    let lastRowGap;
     if (vertical) {
         const mid = box.top + box.height / 2;
         read('line -1', box.left - 1, mid, onSash);
@@ -1973,17 +1987,25 @@ const sashes = [...scope.querySelectorAll('.nuiget-sash')].filter(visible).map(s
         if (banner) { const y = heightOf(banner); readSecond('line -1 @banner', box.left - 1, y); readSecond('line +1 @banner', box.right + 1, y); }
     } else {
         const centre = box.left + box.width / 2;
-        read('line -1', centre, box.top - 1, onSash);
-        read('line +1', centre, box.bottom + 1, onSash);
+        const readAt = (name, x, y, ok) => { read(name, x, y, ok); hits[hits.length - 1].at = { x: round(x), y: round(y) }; };
+        readAt('line -1', centre, box.top - 1, onSash);
+        readAt('line +1', centre, box.bottom + 1, onSash);
         const header = after ? after.querySelector('.nuiget-section-header') : null;
-        if (header && visible(header)) read('header +3', centre, rectOf(header).top + 3, el => header.contains(el));
+        if (header && visible(header)) readAt('header +3', centre, rectOf(header).top + 3, el => header.contains(el));
         const list = before ? before.querySelector('[role="listbox"], [role="tree"]') : null;
         const listBox = list ? rectOf(list) : null;
         const rows = before ? [...before.querySelectorAll('.nuiget-row-option')].filter(el => visible(el) && (!listBox || rectOf(el).bottom <= listBox.bottom + 0.5)) : [];
         const last = rows[rows.length - 1];
-        if (last) read('last row -3', centre, rectOf(last).bottom - 3, el => last.contains(el) || el === last);
+        // UX-P3.fix-19: each horizontal hit carries its point; the row's hit its rectangles; 3 px above the line is never the sash.
+        if (last) {
+            const r = rectOf(last);
+            readAt('last row -3', centre, r.bottom - 3, el => last.contains(el) || el === last);
+            Object.assign(hits[hits.length - 1], { rowTop: round(r.top), rowBottom: round(r.bottom), listBottom: listBox ? round(listBox.bottom) : undefined, lineTop: round(box.top), lineBottom: round(box.bottom) });
+            lastRowGap = round(box.top - r.bottom);
+        }
+        readAt('pane -3', centre, box.top - 3, el => !onSash(el));
     }
-    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, secondHits, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
+    return { thickness: round(vertical ? box.width : box.height), background: getComputedStyle(sash).backgroundColor, hits, secondHits, lastRowGap, band: { width: round(px(vertical ? band.width : band.height)), background: band.backgroundColor, delay: band.transitionDelay }, gap, focused: document.activeElement === sash, outlineFocus: (() => { const own = getComputedStyle(sash); return own.outlineStyle === 'solid' && px(own.outlineWidth) > 0 && own.outlineColor === focusBorder; })() };
 });
 // UX-P3.fix-15: the main split's panes against the panel; a hidden pane or sash reads as absent.
 const splitFit = splitEl && visible(splitEl) ? (() => {
@@ -3357,7 +3379,11 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const hitText = (sash: (typeof sashes)[number]): string => {
                 const hits = sash.hits ?? [];
                 const missed = hits.filter(hit => !hit.ok);
-                return hits.length === 0 ? '; hits unread' : `; hits ${hits.length - missed.length}/${hits.length}${missed.length === 0 ? '' : ` (missed ${missed.map(hit => `${hit.name} on ${hit.hit}`).join(', ')})`}`;
+                // UX-P3.fix-19: a missed hit prints its point and, for the last row, the rectangles it read; a sidebar line its row's distance.
+                const where = (hit: SashHit): string => (hit.at === undefined ? '' : ` at ${hit.at.x},${hit.at.y}`)
+                    + (hit.rowBottom === undefined ? '' : ` (row ${hit.rowTop}–${hit.rowBottom}, list bottom ${hit.listBottom ?? 'unread'}, line ${hit.lineTop}–${hit.lineBottom})`);
+                const gap = sash.lastRowGap === undefined ? '' : `; last row ${sash.lastRowGap} above the line`;
+                return hits.length === 0 ? '; hits unread' : `; hits ${hits.length - missed.length}/${hits.length}${missed.length === 0 ? '' : ` (missed ${missed.map(hit => `${hit.name} on ${hit.hit}${where(hit)}`).join(', ')})`}${gap}`;
             };
             // UX-P3.fix-9: the vertical sash's second height as its own part, so the existing part stays as it was until the flip.
             const secondText = (sash: (typeof sashes)[number]): string => {

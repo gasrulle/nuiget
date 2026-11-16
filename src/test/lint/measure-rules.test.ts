@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -782,13 +782,23 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(secondYText([hit('line -1 @tabs', true), hit('line +1 @tabs', true), hit('line -1 @banner', true), hit('line +1 @banner', true)])).toEqual({ text: 'second y: @tabs 2/2, @banner 2/2', pass: true });
         expect(secondYText([hit('line -1 @tabs', true), hit('line +1 @tabs', false)])).toEqual({ text: 'second y: @tabs 1/2 (missed line +1 @tabs on [section-header-updates])', pass: false });
         expect(secondYText([])).toEqual({ text: '', pass: true });
-        const sash = (hits: Array<{ name: string; hit: string; ok: boolean }>, secondHits: Array<{ name: string; hit: string; ok: boolean }> = []) => ({ thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false, hits, secondHits });
+        const sash = (hits: SashHit[], secondHits: Array<{ name: string; hit: string; ok: boolean }> = []) => ({ thickness: 1, background: 'rgb(43, 43, 43)', band: { width: 4, background: 'rgba(0, 0, 0, 0)', delay: '0s' }, gap: 1, focused: false, outlineFocus: false, hits, secondHits });
         const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, ...overrides } as Layout['endOfP0'] });
         const sidebarSuffix = SIDEBAR_SASH_STATUS === 'hard' ? '' : ' (pending ' + SIDEBAR_SASH_STATUS.pending + ')';
         // A sidebar sash whose line +1 reads the Updates header fails (the assertions follow the status: while pending it printed and passed).
         const missed = lineOf('sidebar-sections', facts({ sashes: [sash([hit('line -1', true), { name: 'line +1', hit: '[section-header-updates]', ok: false }])], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash');
         expect(missed?.value).toBe('sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 1/2 (missed line +1 on [section-header-updates])' + sidebarSuffix);
         expect(missed?.pass).toBe(SIDEBAR_SASH_STATUS !== 'hard');
+        // UX-P3.fix-19: a missed horizontal hit prints its point and the rectangles it read, and the line the last row's distance.
+        const flush = { ...sash([
+            { name: 'last row -3', hit: '.nuiget-sash', ok: false, at: { x: 150, y: 368 }, rowTop: 349, rowBottom: 371, listBottom: 370.5, lineTop: 370.5, lineBottom: 371.5 },
+            { name: 'pane -3', hit: '.nuiget-sash', ok: false, at: { x: 150, y: 367.5 } },
+        ]), lastRowGap: -0.5 };
+        const flushLine = lineOf('sidebar-sections', facts({ sashes: [flush], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash');
+        expect(flushLine?.value).toBe('sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 0/2 (missed last row -3 on .nuiget-sash at 150,368 (row 349–371, list bottom 370.5, line 370.5–371.5), pane -3 on .nuiget-sash at 150,367.5); last row -0.5 above the line' + sidebarSuffix);
+        expect(flushLine?.pass).toBe(SIDEBAR_SASH_STATUS !== 'hard');
+        expect(lineOf('sidebar-sections', facts({ sashes: [{ ...sash([hit('line -1', true), hit('pane -3', true)]), lastRowGap: 14 }], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash')?.value)
+            .toBe('sash 1 px in rgb(43, 43, 43); band 4 px in rgba(0, 0, 0, 0), delay 0s; gap 1; hits 2/2; last row 14 above the line' + sidebarSuffix);
         expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 1 }), 'DS-DIVIDER-6@sidebar-sections/sash')).toMatchObject({ value: 'sash not shown (one pane)', pass: true });
         expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 1 }), 'DS-COLOR-5@sidebar-sections/sash')).toMatchObject({ value: 'sash not shown (one pane)', pass: true });
         expect(lineOf('sidebar-sections', facts({ sashes: [], sidebarPanes: 2 }), 'DS-DIVIDER-6@sidebar-sections/sash')?.value).toMatch(/^not measurable/);

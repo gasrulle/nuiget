@@ -998,8 +998,10 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             const layout = collect('nuiget-sidebar');
             expect(layout.endOfP0.sashes?.[0]).toMatchObject({ thickness: 1, background: 'rgb(43, 43, 43)', hits: [
                 { name: 'line -1', hit: '.nuiget-sash', ok: true }, { name: 'line +1', hit: '.nuiget-sash', ok: true },
-                { name: 'header +3', hit: '[section-box-updates]', ok: true }, { name: 'last row -3', hit: '.nuiget-row-option', ok: true },
-            ] });
+                { name: 'header +3', hit: '[section-box-updates]', ok: true }, { name: 'last row -3', hit: '.nuiget-row-option', ok: true, at: { x: 150, y: 103 }, rowTop: 84, rowBottom: 106, listBottom: 400, lineTop: 400, lineBottom: 401 },
+                // UX-P3.fix-19: 3 px above the line is the pane, never the sash; the last row's distance to the line is a fact.
+                { name: 'pane -3', hit: '.nuiget-row-option', ok: true, at: { x: 150, y: 397 } },
+            ], lastRowGap: 294 });
             // The later pane reads the sash as its line: 1 px, the sash's colour and inset beside the header's own.
             expect(layout.sections.find(section => section.id === 'updates')?.sashLine).toMatchObject({ height: 1, colour: 'rgb(43, 43, 43)', inset: 4, expectedInset: 4 });
             expect(layout.sections.find(section => section.id === 'installed')?.sashLine).toBeUndefined();

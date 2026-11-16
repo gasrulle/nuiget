@@ -1304,8 +1304,12 @@
     inset: calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0;
 }
 
+/*
+ * One-sided, as the vertical sash's: from the band's upper edge into the pane below, 24 px in all, so the last row of the pane
+ * above keeps its presses up to the line (DS-DIVIDER-6; UX-P3.fix-19: the two-sided hit took the Installed pane's bottom 10 px).
+ */
 .nuiget-sash--horizontal::after {
-    inset: calc((var(--nuiget-space-2) - var(--nuiget-target-min)) / 2) 0;
+    inset: calc((var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2) 0 calc(var(--nuiget-line-width) - var(--nuiget-target-min) - (var(--nuiget-line-width) - var(--nuiget-sash-size)) / 2);
 }
 
 /* ── Dialog ── */
