@@ -21,8 +21,8 @@ export interface InstalledSectionProps {
     /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
     expanded?: boolean;
     onToggle?: () => void;
-    /** The section's share of the height while both sections are open, a number of parts, for example `"40"` against `"60"`. */
-    share?: string;
+    /** The section's share of the height while both sections are open, in parts (percent), for example 40 against 60. */
+    share?: number;
 }
 
 type TreeItem =
@@ -216,7 +216,7 @@ export function InstalledSection({ filter, announce, expanded: controlled, onTog
     const loadingFirst = all.active ? all.status === 'loading' : installed.status === 'loading';
     const busy = loadingFirst || (all.active ? all.revalidating : installed.revalidating);
     return (
-        <section className={share ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share ? cssVars({ '--nuiget-sidebar-share': share }) : undefined}>
+        <section className={share !== undefined ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share !== undefined ? cssVars({ '--nuiget-sidebar-share': String(share) }) : undefined}>
             <SectionHeader
                 title="Installed"
                 titleId={titleId}

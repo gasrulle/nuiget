@@ -1,4 +1,4 @@
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk } from '../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk } from '../../../protocol';
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
@@ -8,6 +8,26 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Operati
 
 /** What a busy row says is happening to its package. */
 export const IN_PROGRESS: Record<OperationKind, string> = { install: 'Installing', update: 'Updating', remove: 'Uninstalling', restore: 'Restoring' };
+
+/**
+ * What the row of a busy package says on either surface: the kind of the operation the store reports on that project and
+ * package, from the call that asked for it on (UX-P3.12b, V30); an operation without a kind yet says it is in progress.
+ */
+export function busyText(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): string {
+    const id = packageId.toLowerCase();
+    for (const progress of active.values()) {
+        if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
+            return IN_PROGRESS[progress.kind];
+        }
+    }
+    return 'In progress';
+}
+
+/** The rows whose id holds the filter (trimmed, any case), sorted by id, as every list on both surfaces shows them (MU9, P9.10; UX-P3.12b). */
+export function filterById<T extends { id: string }>(rows: readonly T[], filter: string): T[] {
+    const needle = filter.trim().toLowerCase();
+    return rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
+}
 
 /** The version a row shows: what the project resolves to where the declaration is a pattern, else what it declares. */
 export function shownVersion(entry: InstalledPackage): string {

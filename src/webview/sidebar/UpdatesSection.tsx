@@ -24,8 +24,8 @@ export interface UpdatesSectionProps {
     /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
     expanded?: boolean;
     onToggle?: () => void;
-    /** The section's share of the height while both sections are open, a number of parts, for example `"60"` against `"40"`. */
-    share?: string;
+    /** The section's share of the height while both sections are open, in parts (percent), for example 60 against 40. */
+    share?: number;
     /**
      * The pane says an unsupported project itself (`sidebar-updates-unsupported`) only where the view's own banner is hidden, in
      * `@updates` mode: one fact, one banner (UX-P3.10, design-advisor follow-up 2).
@@ -303,7 +303,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
     };
 
     return (
-        <section className={share ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share ? cssVars({ '--nuiget-sidebar-share': share }) : undefined}>
+        <section className={share !== undefined ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share !== undefined ? cssVars({ '--nuiget-sidebar-share': String(share) }) : undefined}>
             <SectionHeader
                 title="Updates"
                 titleId={titleId}

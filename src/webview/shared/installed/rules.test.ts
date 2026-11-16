@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { InstalledPackage, InstalledResult, PackageUpdate } from '../../../protocol';
-import { UNRESOLVED_HINT, updateCandidates, updateRowContext, versionCell } from './rules';
+import type { InstalledPackage, InstalledResult, OperationProgress, PackageUpdate } from '../../../protocol';
+import { UNRESOLVED_HINT, busyText, filterById, updateCandidates, updateRowContext, versionCell } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -58,5 +58,30 @@ describe('updateCandidates', () => {
     it('leaves out a busy row, matches ids whatever the case and keeps the order it is given', () => {
         const result = installed([entry({ id: 'alpha' }), entry({ id: 'Beta' }), entry({ id: 'Gamma' })]);
         expect(updateCandidates([row('Gamma'), row('Alpha'), row('Beta')], result, id => id === 'Beta').map(update => update.id)).toEqual(['Gamma', 'Alpha']);
+    });
+});
+
+describe('busyText (UX-P3.12b)', () => {
+    const progress = (changes: Partial<OperationProgress>): OperationProgress => ({ opId: 'op', status: 'running', kind: 'update', projectPaths: ['/w/App.csproj'], packageIds: ['Serilog'], ...changes });
+    it('names the kind of the operation on that project and package, whatever the id\'s case', () => {
+        expect(busyText(new Map([['a', progress({})]]), '/w/App.csproj', 'serilog')).toBe('Updating');
+        expect(busyText(new Map([['a', progress({ kind: 'remove' })]]), '/w/App.csproj', 'SERILOG')).toBe('Uninstalling');
+    });
+    it('says it is in progress for another project, another package or an operation without a kind yet', () => {
+        expect(busyText(new Map([['a', progress({})]]), '/w/Other.csproj', 'Serilog')).toBe('In progress');
+        expect(busyText(new Map([['a', progress({})]]), '/w/App.csproj', 'Moq')).toBe('In progress');
+        expect(busyText(new Map([['a', progress({ kind: undefined })]]), '/w/App.csproj', 'Serilog')).toBe('In progress');
+        expect(busyText(new Map(), '/w/App.csproj', 'Serilog')).toBe('In progress');
+    });
+});
+
+describe('filterById (UX-P3.12b)', () => {
+    it('keeps the rows whose id holds the trimmed filter in any case, sorted by id, and leaves its input alone', () => {
+        const rows = [{ id: 'Serilog.Sinks.Console' }, { id: 'Moq' }, { id: 'Serilog' }, { id: 'xunit' }];
+        const before = rows.map(row => row.id);
+        expect(filterById(rows, '  SERI ').map(row => row.id)).toEqual(['Serilog', 'Serilog.Sinks.Console']);
+        expect(filterById(rows, '').map(row => row.id)).toEqual(['Moq', 'Serilog', 'Serilog.Sinks.Console', 'xunit']);
+        expect(rows.map(row => row.id)).toEqual(before);
+        expect(filterById(rows, '')).not.toBe(rows);
     });
 });

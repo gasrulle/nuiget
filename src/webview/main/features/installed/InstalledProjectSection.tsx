@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { InstalledPackage, InstalledResult, PackageMetadataLite } from '../../../../protocol';
-import { IN_PROGRESS, versionCell, whyNotRemovable } from '../../../shared/installed/rules';
+import { busyText, filterById, versionCell, whyNotRemovable } from '../../../shared/installed/rules';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
@@ -16,8 +16,7 @@ const isVulnerable = (metadata: ReadonlyMap<string, PackageMetadataLite>, id: st
 
 /** The rows a filter leaves, sorted by id as the sidebar's `visiblePackages` (P9.10, UX-P3.fix-1), and what to say when it leaves none. */
 export function visibleRows(result: InstalledResult, metadata: ReadonlyMap<string, PackageMetadataLite>, filter: string, vulnerableOnly: boolean): { items: Item[]; empty: string } {
-    const needle = filter.trim().toLowerCase();
-    let entries = result.packages.filter(entry => entry.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
+    let entries = filterById(result.packages, filter);
     if (vulnerableOnly) {
         // Empty is not unknown: without any metadata nothing can be said about vulnerabilities.
         if (metadata.size === 0) {
@@ -46,15 +45,6 @@ export interface InstalledRowProps {
  */
 export function InstalledRow({ placement, projectPath, entry, result, metadata, onUninstall }: InstalledRowProps): React.JSX.Element {
     const { isPackageBusy, active } = useOps();
-    const busyStatus = (packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
     const busy = isPackageBusy(projectPath, entry.id);
     const readOnly = whyNotRemovable(entry, result) !== undefined;
     const unresolved = entry.declaration === 'unresolved';
@@ -83,7 +73,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             icon={src === undefined ? undefined : <img src={src} alt="" />}
             busy={busy}
             selectable={!readOnly}
-            status={busy ? busyStatus(entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
+            status={busy ? busyText(active, projectPath, entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
             badges={<>
                 {entry.isImplicit ? <Badge label="SDK" title="Added by the .NET SDK; cannot be uninstalled" /> : null}
                 {entry.declaration === 'props' ? <Badge label="Props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}

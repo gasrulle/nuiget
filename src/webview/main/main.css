@@ -570,7 +570,9 @@ body {
     inset: 0 0 auto 0;
 }
 
-.nuiget-source-list {
+/* The sources list and the several-projects list share one list layout (V67, UX-P3.12b); the latter scrolls on its own. */
+.nuiget-source-list,
+.nuiget-multi-install {
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-space-2);
@@ -650,14 +652,8 @@ body {
 }
 
 .nuiget-multi-install {
-    display: flex;
-    flex-direction: column;
-    gap: var(--nuiget-space-2);
     max-height: 50vh;
-    margin: 0;
-    padding: 0;
     overflow-y: auto;
-    list-style: none;
 }
 
 .nuiget-multi-install-row {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -93,7 +93,7 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
     /** A package row's id in the tree, as the Installed tab's (UX-P3.1a). */
     const keyOf = (packageId: string): string => rowId(projectPath ?? '', packageId);
     // Alphabetical by id, as 1.x listed them (MU9); the stream's rows keep their place while more arrive.
-    const shown = useMemo(() => rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id)), [rows, needle]);
+    const shown = useMemo(() => filterById(rows, needle), [rows, needle]);
     // One grouped list (D48): the Direct packages group row counts the updates shown, `k of N` under a filter (DS-COPY-5).
     // Without a row to list the group row is left out: the empty sentence stands alone (the state cells are UX-P3.1b's).
     const items = useMemo<Item[]>(() => {
@@ -128,16 +128,6 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
     const chosen = candidates.filter(update => bulk.selected.has(keyOf(update.id)));
     const toUpdate = chosen.length > 0 ? chosen : candidates;
     const { allSelected } = bulk;
-
-    const busyStatus = (packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath ?? '') && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
 
     const updateOne = (update: PackageUpdate): void => {
         if (projectPath === null || isBusy(update.id) || unsupported) {
@@ -266,7 +256,7 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                             busy={busy}
                             // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
                             selectable={!unsupported}
-                            status={busy ? busyStatus(update.id) : unsupported ? 'Read-only' : undefined}
+                            status={busy ? busyText(active, projectPath ?? '', update.id) : unsupported ? 'Read-only' : undefined}
                             badges={<>
                                 {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
                             </>}

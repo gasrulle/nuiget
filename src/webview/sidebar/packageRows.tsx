@@ -1,14 +1,13 @@
 import type React from 'react';
 import type { InstalledPackage, InstalledResult } from '../../protocol';
-import { IN_PROGRESS, UNRESOLVED_HINT, shownVersion, whyNotRemovable } from '../shared/installed/rules';
+import { UNRESOLVED_HINT, busyText, filterById, shownVersion, whyNotRemovable } from '../shared/installed/rules';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useRowRequests } from './rowRequests';
 
 /** The packages of a result shown under a filter, sorted by id as the main panel's lists are (P9.10). */
 export function visiblePackages(result: InstalledResult, filter: string): InstalledPackage[] {
-    const needle = filter.trim().toLowerCase();
-    return result.packages.filter(entry => entry.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
+    return filterById(result.packages, filter);
 }
 
 /**
@@ -21,17 +20,6 @@ export function usePackageRows(announce: (message: string) => void) {
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
-
-    /** What the row of a busy package says: the operation the store reports, from the call that asked for it on. */
-    const busyStatus = (projectPath: string, packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
 
     const uninstall = (projectPath: string, result: InstalledResult, entry: InstalledPackage): void => {
         if (isPackageBusy(projectPath, entry.id)) {
@@ -70,7 +58,7 @@ export function usePackageRows(announce: (message: string) => void) {
                 version={shownVersion(entry)}
                 versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                 busy={busy}
-                status={busy ? busyStatus(projectPath, entry.id) : unresolved ? 'Unresolved' : undefined}
+                status={busy ? busyText(active, projectPath, entry.id) : unresolved ? 'Unresolved' : undefined}
                 badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                 actions={whyNotRemovable(entry, result) === undefined
                     ? <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => uninstall(projectPath, result, entry)}><TrashIcon /></IconButton>
@@ -79,6 +67,7 @@ export function usePackageRows(announce: (message: string) => void) {
         );
     };
 
-    return { uninstall, viewDetails, renderPackageRow, busyStatus };
+    // The Browse row reads its operation's status through the hook (BrowseResults.tsx).
+    return { uninstall, viewDetails, renderPackageRow, busyStatus: (projectPath: string, packageId: string): string => busyText(active, projectPath, packageId) };
 }
 

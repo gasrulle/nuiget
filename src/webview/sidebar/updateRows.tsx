@@ -1,14 +1,13 @@
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { IN_PROGRESS, isCentral, updateRowContext, whyNotUpdatable } from '../shared/installed/rules';
+import { busyText, filterById, isCentral, updateRowContext, whyNotUpdatable } from '../shared/installed/rules';
 import { ArrowUpIcon, Badge, IconButton, openRowMenu, Row, type RowPlacement } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useRowRequests } from './rowRequests';
 
 /** The updates of a list shown under the `@updates` text, sorted by id as the main panel's lists are (MU9, P9.10). */
 export function visibleUpdates(updates: readonly PackageUpdate[], filter: string): PackageUpdate[] {
-    const needle = filter.trim().toLowerCase();
-    return updates.filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
+    return filterById(updates, filter);
 }
 
 const entryOf = (installed: InstalledResult | undefined, id: string) => installed?.packages.find(entry => entry.id.toLowerCase() === id.toLowerCase());
@@ -24,17 +23,6 @@ export function useUpdateRows(announce: (message: string) => void) {
     const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
-
-    /** What the row of a busy package says: the operation the store reports, from the call that asked for it on. */
-    const busyStatus = (projectPath: string, packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
 
     const updateOne = (projectPath: string, installed: InstalledResult | undefined, update: PackageUpdate): void => {
         if (isPackageBusy(projectPath, update.id)) {
@@ -73,7 +61,7 @@ export function useUpdateRows(announce: (message: string) => void) {
                 version={update.installedVersion}
                 nextVersion={update.latestVersion}
                 busy={busy}
-                status={busy ? busyStatus(projectPath, update.id) : undefined}
+                status={busy ? busyText(active, projectPath, update.id) : undefined}
                 badges={central ? <Badge label="CPM" title={entry?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                 actions={installed?.unsupported ? undefined : (
                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(projectPath, installed, update)}><ArrowUpIcon /></IconButton>

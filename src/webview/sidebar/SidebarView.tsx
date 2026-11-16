@@ -191,7 +191,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                             announce={announce}
                             expanded={mode === 'installed' ? filterOpen : layout.installedExpanded}
                             onToggle={mode === 'installed' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, installedExpanded: !layout.installedExpanded })}
-                            share={bothOpen ? String(layout.split) : undefined}
+                            share={bothOpen ? layout.split : undefined}
                         />
                     ) : null}
                     {bothOpen ? (
@@ -212,7 +212,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                             announce={announce}
                             expanded={mode === 'updates' ? filterOpen : layout.updatesExpanded}
                             onToggle={mode === 'updates' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, updatesExpanded: !layout.updatesExpanded })}
-                            share={bothOpen ? String(100 - layout.split) : undefined}
+                            share={bothOpen ? 100 - layout.split : undefined}
                             showUnsupported={mode === 'updates'}
                         />
                     ) : null}

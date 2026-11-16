@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
-import { IN_PROGRESS, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
@@ -47,7 +47,7 @@ const changesCentralIn = (installed: InstalledResult | undefined, id: string): b
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
 
 /** A project's updates under the filter, alphabetical by id, as 1.x listed them (MU9). */
-const rowsIn = (section: Section, needle: string): PackageUpdate[] => (section.chunk?.updates ?? []).filter(update => update.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
+const rowsIn = (section: Section, needle: string): PackageUpdate[] => filterById(section.chunk?.updates ?? [], needle);
 
 /**
  * The Updates tab in All Projects (interaction model §3): one tree (D48), the tab's scroller, of every project's updates
@@ -195,16 +195,6 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
         },
     }), [collapsed, updates.sourcesUnavailable, loading, needle, filtering]);
 
-    const busyStatus = (projectPath: string, packageId: string): string => {
-        const id = packageId.toLowerCase();
-        for (const progress of active.values()) {
-            if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-                return IN_PROGRESS[progress.kind];
-            }
-        }
-        return 'In progress';
-    };
-
     const updateOne = (section: Section, update: PackageUpdate): void => {
         if (section.installed?.unsupported || isPackageBusy(section.projectPath, update.id)) {
             return;
@@ -330,7 +320,7 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
                                 busy={busy}
                                 // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
                                 selectable={section.installed?.unsupported === undefined}
-                                status={busy ? busyStatus(section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
+                                status={busy ? busyText(active, section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
                                 badges={isCentralIn(section.installed, update.id) ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                                 actions={section.installed?.unsupported ? undefined : (
                                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(section, update)}><ArrowUpIcon /></IconButton>
