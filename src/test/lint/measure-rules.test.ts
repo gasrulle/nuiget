@@ -1627,6 +1627,40 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         expect(lineOf('main-installed-single', withSashes([sash({ outlineFocus: true, focused: true })]), 'DS-COLOR-5@main-installed-single/sash')).toMatchObject({ pass: true, value: 'sash: 0 of 0 unfocused in focusBorder' });
     });
 
+    it('DS-TYPE-6 reads the versions DS-ROW-5 collapsed in a side bar cell that draws no metadata, never a pass on zero elements (UX-P3.fix-17)', () => {
+        const facts = (overrides: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, descriptionForeground: '#9d9d9d', ...overrides } as Layout['endOfP0'] });
+        const compactRows = (count: number, compact = true) => Array.from({ length: count }, () => ({ compact }));
+        const collapsed = (count: number, fontSize = 11, colour = 'rgb(157, 157, 157)') => Array.from({ length: count }, () => ({ fontSize, colour, selected: false }));
+        const name = 'DS-TYPE-6@sidebar-browse-revalidating';
+        const read = (overrides: Record<string, unknown>, state = 'sidebar-browse-revalidating', line = name) => lineOf(state, facts(overrides), line);
+        // (a) every compact row's version collapsed at 11 in descriptionForeground: the declared reading passes.
+        expect(read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(20) })).toMatchObject({
+            pass: true, status: 'hard', value: 'no metadata shown: version collapsed in 20 of 20 compact rows (DS-ROW-5); computed 11 ×20 (target 11); 0 off descriptionForeground',
+        });
+        // (b) a row whose version is not collapsed and draws no metadata either: red.
+        const partial = read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(19) });
+        expect(partial?.pass).toBe(false);
+        expect(partial?.value.startsWith('no metadata shown: version collapsed in 19 of 20')).toBe(true);
+        // (c) a collapsed version at another size, (d) in another colour: red.
+        expect(read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(20, 12) })?.pass).toBe(false);
+        const offColour = read({ rows: compactRows(2), metaText: [], collapsedVersions: [...collapsed(1), ...collapsed(1, 11, 'rgb(204, 204, 204)')] });
+        expect(offColour?.pass).toBe(false);
+        expect(offColour?.value.endsWith('1 off descriptionForeground')).toBe(true);
+        // A selected row's collapsed version takes the selection's colour and is exempt from the colour check, as metadata is.
+        expect(read({ rows: compactRows(2), metaText: [], collapsedVersions: [...collapsed(1), { fontSize: 11, colour: 'rgb(255, 255, 255)', selected: true }] }))
+            .toMatchObject({ pass: true, value: 'no metadata shown: version collapsed in 2 of 2 compact rows (DS-ROW-5); computed 11 ×2 (target 11); 0 off descriptionForeground' });
+        // (e) no collapsed version recorded (absent, null over WebDriver, empty): still not measurable, never a pass.
+        for (const collapsedVersions of [undefined, null, []]) {
+            expect(read({ rows: compactRows(20), metaText: [], collapsedVersions })).toMatchObject({ pass: false, value: 'not measurable (no row metadata)' });
+        }
+        // (f) a main-panel cell keeps today's reading.
+        expect(read({ rows: compactRows(20, false), metaText: [], collapsedVersions: collapsed(20) }, 'main-installed-single', 'DS-TYPE-6@main-installed-single'))
+            .toMatchObject({ pass: false, value: 'not measurable (no row metadata)' });
+        // (g) a cell that draws metadata keeps its ordinary line, whatever collapsed beside it.
+        expect(read({ rows: compactRows(20), metaText: [{ kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false }], collapsedVersions: collapsed(19) }))
+            .toMatchObject({ pass: true, value: 'meta 11 (target 11); 0 meta off descriptionForeground' });
+    });
+
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
         // No product rule uses pendingStates since UX-P3.fix-6; the mechanism stays, so a synthetic rule keeps its branch tested.
         const synthetic: RuleDefinition[] = [

@@ -1166,6 +1166,11 @@ export interface EndOfP0 {
     /** The computed line-height of each compact row. */
     compactLineHeights: number[];
     metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean; fontWeight?: string; authors?: boolean }>;
+    /**
+     * The versions of shown compact rows that DS-ROW-5's yield order collapsed to zero width (present, displayed, zero wide,
+     * nonzero high): DS-TYPE-6 reads them by computed style when a cell draws no metadata (UX-P3.fix-17). Optional: older layouts.
+     */
+    collapsedVersions?: Array<{ fontSize: number; colour: string; selected: boolean }>;
     /** DS-STATE-7: the rows whose check mark is muted, and what says why. */
     unselectable: Array<{ label: string; status: string; transitive: boolean }>;
     descriptionForeground: string;
@@ -2108,6 +2113,15 @@ const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-me
     const style = getComputedStyle(el);
     return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, fontWeight: style.fontWeight, authors: el.classList.contains('nuiget-row-authors'), selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) };
 });
+// UX-P3.fix-17: a compact row's version collapsed behind the name (DS-ROW-5) is in the DOM at zero width; visible() drops it.
+const collapsedVersions = shown('.nuiget-row--compact:not([data-row-kind="group"]):not([data-row-kind="message"])').flatMap(row => {
+    const el = row.querySelector('.nuiget-row-version');
+    if (!el || !el.isConnected) return [];
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || rect.width !== 0 || !(rect.height > 0)) return [];
+    return [{ fontSize: px(style.fontSize), colour: style.color, selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) }];
+});
 const copyEnds = [
     ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
     ...shown('.nuiget-banner-text').map(el => ({ kind: 'banner', text: el.textContent.trim() })),
@@ -2319,6 +2333,7 @@ const endOfP0 = {
     rootLineHeight: rootLine > 0 ? round(rootLine) : undefined,
     compactLineHeights: shown('.nuiget-row--compact').map(el => round(px(getComputedStyle(el).lineHeight))),
     metaText,
+    collapsedVersions,
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
     copyEnds,
     detailsLabels,
@@ -3493,7 +3508,18 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-TYPE-6': {
             if (facts.metaText.length === 0) {
-                return notMeasurable('no row metadata');
+                // UX-P3.fix-17: a side bar cell whose every compact row has its version collapsed behind the name (DS-ROW-5's yield
+                // order) draws no metadata; the collapsed versions are read by computed style instead. Never a pass on zero elements.
+                const collapsed = facts.collapsedVersions ? facts.collapsedVersions : [];
+                if (scope !== 'sidebar' || collapsed.length === 0) {
+                    return notMeasurable('no row metadata');
+                }
+                const compactRows = facts.rows.filter(row => row.compact).length;
+                const off = collapsed.filter(text => !text.selected && !sameColour(text.colour, facts.descriptionForeground)).length;
+                return {
+                    value: `no metadata shown: version collapsed in ${collapsed.length} of ${compactRows} compact rows (DS-ROW-5); computed ${tally(collapsed.map(text => text.fontSize))} (target ${END_OF_P0.metaFont}); ${off} off descriptionForeground`,
+                    pass: collapsed.length === compactRows && collapsed.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && off === 0,
+                };
             }
             const meta = facts.metaText.filter(text => text.kind === 'meta');
             const description = facts.metaText.filter(text => text.kind === 'description');
