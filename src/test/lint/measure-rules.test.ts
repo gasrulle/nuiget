@@ -1035,6 +1035,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P2.8b: a message leaf is read in All Projects, and "unresolved" has no subject.
         expect(value('main-installed-all', facts({ copyEnds: [{ kind: 'leaf', text: 'Unsupported project: requires .NET SDK 10 or newer.' }] }), 'DS-COPY-3@main-installed-all')).toMatchObject({ pass: true });
         expect(value('main-installed-unresolved', facts({}), 'DS-COPY-3@main-installed-unresolved')).toBeUndefined();
+        // UX-P3.fix-21: the side bar's All Projects leaves are read in the pinned cells; the unpinned tree has no subject, and a pinned cell
+        // without its leaves still fails loudly.
+        expect(value('sidebar-all-projects', facts({}), 'DS-COPY-3@sidebar-all-projects')).toBeUndefined();
+        const leaves = facts({ copyEnds: [{ kind: 'leaf', text: 'No packages installed.' }, { kind: 'leaf', text: 'Unsupported project: requires .NET SDK 10 or newer.' }] });
+        expect(value('sidebar-all-projects-tools', leaves, 'DS-COPY-3@sidebar-all-projects-tools')).toMatchObject({ pass: true, value: '2 end with a full stop' });
+        expect(value('sidebar-all-projects-updates', leaves, 'DS-COPY-3@sidebar-all-projects-updates')).toMatchObject({ pass: true, value: '2 end with a full stop' });
+        expect(value('sidebar-all-projects-tools', facts({}), 'DS-COPY-3@sidebar-all-projects-tools')).toMatchObject({ pass: false, value: 'not measurable (no empty state or banner)' });
     });
 
     it('leaves the group header unread in the cells with no list (UX-P2.8b; the Updates cells without a row, UX-P3.1b)', () => {

@@ -696,8 +696,9 @@ export const RULES: readonly RuleDefinition[] = [
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
         helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' },
-        // UX-P3.10 (design-advisor follow-up 1, F3): the side bar's All Projects trees read their message leaves too.
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$|^sidebar-all-projects/, exceptStates: POPUP_CELL_STATES,
+        // UX-P3.10 (follow-up 1, F3): the side bar's All Projects trees read their message leaves, in their pinned cells only: the unpinned
+        // sidebar-all-projects shows 0 to 2 leaves by window height and has no subject (UX-P3.fix-21).
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|nomatch|-all$|^sidebar-all-projects-(updates|tools)$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
