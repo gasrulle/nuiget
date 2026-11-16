@@ -449,8 +449,8 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
-/** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4). */
-export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog'];
+/** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
+export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'];
 
 /** One pending item for the state groups where a rule's elements are rendered. */
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
@@ -733,8 +733,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.fix-4 (H27; design-advisor opening ruling of 2026-11-13, DO 10): the side bar's text keeps its subpixel rendering,
     // read per DOM text line from the crop (`fringe.ts`) after the shot; the `ui` lane's host is the one whose LCD it reads.
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
-    // UX-P3.9 follow-ups 4-5: the text of a dialog over the main panel, judged as the sidebar's (H27); pending on P3.fix-6, which owns the scroll shadow.
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: { pending: 'P3.fix-6' } }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
+    // UX-P3.9 follow-ups 4-5: the text of a dialog, judged as the sidebar's (H27). Hard for the dialogs scope since UX-P3.fix-6's
+    // first push (opening ruling, DO 1-2); the dialog over the side bar stays pending until its first line is read.
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES }, pendingStates: { 'sidebar-update-all-dialog': 'P3.fix-6' } }),
 ];
 
 /** The state group of a named state, by its name. */

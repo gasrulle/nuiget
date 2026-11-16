@@ -2,7 +2,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { ActivityBar, By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
+import { ActivityBar, By, EditorView, Key, VSBrowser, Workbench } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
 import { type ArtboardSpec, cellList, DIALOG_FRINGE_STATES, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
 import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostReading, type LineVerdict, summarize, type TextLine } from '../fringe';
@@ -1658,6 +1658,145 @@ return { x: rect.left, y: rect.top, width: rect.width, height: rect.height, labe
     }
 }
 
+// ---- UX-P3.fix-6: the scroll-shadow probe -----------------------------------------------------------------------------
+
+/** The token shadow DS-SCROLL-2 asks for, in the form a1b43d6 wrote it. */
+const SCROLL_SHADOW = 'var(--nuiget-color-scroll-shadow) 0 var(--nuiget-space-3) var(--nuiget-space-3) calc(var(--nuiget-space-3) * -1) inset';
+/** The overlay of a1b43d6 (the measured form that greyed the side bar's source line, run 43514791659), without its carrier. */
+const SCROLL_SHADOW_BOX = '.nuiget-listbox-root::after { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0; block-size: var(--nuiget-space-3); pointer-events: none; box-shadow: var(--nuiget-listbox-shadow, none); }';
+
+/**
+ * The forms of the probe (opening ruling of 2026-11-16, DO 6): S-0 the control, S-r a1b43d6 verbatim, S-b its box without the
+ * shadow, S-i the shadow on the scroller without a box, S-z everything removed. Discriminators, never product CSS.
+ */
+const SCROLL_SHADOW_FORMS: ReadonlyArray<{ form: 'S-0' | 'S-r' | 'S-b' | 'S-i' | 'S-z'; css?: string }> = [
+    { form: 'S-0' },
+    { form: 'S-r', css: `${SCROLL_SHADOW_BOX}\n.nuiget-listbox-root[data-scrolled="true"] { --nuiget-listbox-shadow: ${SCROLL_SHADOW}; }` },
+    { form: 'S-b', css: SCROLL_SHADOW_BOX },
+    { form: 'S-i', css: `.nuiget-listbox-root[data-scrolled="true"] > .nuiget-listbox { box-shadow: ${SCROLL_SHADOW}; }` },
+    { form: 'S-z' },
+];
+
+/** The cells the probe reads, each at its primary capture (DO 4). */
+const SCROLL_SHADOW_CELLS: readonly string[] = ['main-transitive-expanded', 'main-transitive-details', 'main-installed-bulk-dialog', 'sidebar-all-projects', 'sidebar-all-projects-updates', 'sidebar-update-all-dialog'];
+
+/** Adds a constructed sheet to the webview document (CSSOM: the webview's CSP drops a `<style>` element; DO 5). */
+const ADOPT_PROBE_SHEET = 'const sheet = new CSSStyleSheet(); sheet.replaceSync(arguments[0]); window.__nuigetProbeSheet = sheet; document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]; return document.adoptedStyleSheets.length;';
+/** Removes the probe's sheet, if any; returns the adopted count after. */
+const DROP_PROBE_SHEET = 'const sheet = window.__nuigetProbeSheet; if (sheet) { document.adoptedStyleSheets = document.adoptedStyleSheets.filter(adopted => adopted !== sheet); delete window.__nuigetProbeSheet; } return document.adoptedStyleSheets.length;';
+
+interface ShadowList { id: string; scrollTop: number; scrollable: boolean; scrolled: boolean; afterPosition: string; afterShadow: string; scrollerShadow: string }
+
+/** Every rendered list root of the document: its scroll and what paints its top edge. */
+const READ_SHADOW_LISTS = `
+return { sheets: document.adoptedStyleSheets.length, lists: [...document.querySelectorAll('.nuiget-listbox-root')].filter(root => root.getClientRects().length > 0).map(root => {
+    const list = root.querySelector(':scope > .nuiget-listbox');
+    const after = getComputedStyle(root, '::after');
+    return {
+        id: (list && list.getAttribute('data-testid')) || 'listbox',
+        scrollTop: list ? Math.round(list.scrollTop) : 0,
+        scrollable: list ? list.scrollHeight > list.clientHeight : false,
+        scrolled: root.getAttribute('data-scrolled') === 'true',
+        afterPosition: after.position,
+        afterShadow: after.boxShadow,
+        scrollerShadow: list ? getComputedStyle(list).boxShadow : 'none',
+    };
+}) };`;
+
+/** Whether a form took effect, read from computed style (DO 8). */
+function shadowApplied(form: string, lists: readonly ShadowList[], sheets: number, baseline: number): string {
+    const plain = (list: ShadowList): boolean => list.afterPosition !== 'absolute' && list.afterShadow === 'none' && list.scrollerShadow === 'none';
+    if (form === 'S-0' || form === 'S-z') {
+        return lists.every(plain) && sheets === baseline ? 'yes' : 'no';
+    }
+    if (!lists.some(list => list.scrollable)) {
+        return 'n/a (no scrolling list)';
+    }
+    const scrolled = lists.filter(list => list.scrollTop > 0);
+    if (form === 'S-i') {
+        return scrolled.length === 0 ? 'n/a (no list scrolled from its start)' : scrolled.every(list => list.scrollerShadow !== 'none') ? 'yes' : 'no';
+    }
+    // On a list at its start S-r and S-b need the box only (DO 8).
+    const boxes = lists.every(list => list.afterPosition === 'absolute');
+    const ok = form === 'S-r' ? boxes && scrolled.every(list => list.afterShadow !== 'none') : boxes && scrolled.every(list => list.afterShadow === 'none');
+    return ok ? 'yes' : 'no';
+}
+
+/** Waits two animation frames and for no running transition in the current webview document. */
+async function settleFrames(): Promise<void> {
+    await driverOf().executeAsyncScript('const done = arguments[arguments.length - 1]; requestAnimationFrame(() => requestAnimationFrame(() => done(true)));');
+    await until(NO_RUNNING_TRANSITION, 'no running transition', 10_000);
+}
+
+/**
+ * One form of one cell (DO 7): the lists' facts, the crop under `probe/`, its `[fringe]` line and every greyscale line.
+ * Called in the cell's webview; leaves the driver in the top document.
+ */
+async function scrollShadowShot(state: NamedState, form: string, width: number, baseline: number): Promise<void> {
+    const root = state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar';
+    const { sheets, lists } = await script<{ sheets: number; lists: ShadowList[] }>(READ_SHADOW_LISTS);
+    const own = await script<TextLine[]>(COLLECT_TEXT_LINES, root);
+    const dialogOutside = await script<boolean>(`const dialog = document.querySelector('[data-testid="confirm-dialog"]'); const root = document.querySelector('[data-testid="${root}"]'); return dialog !== null && !(root && root.contains(dialog));`);
+    const lines = dialogOutside ? [...own, ...await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')] : own;
+    const listText = lists.length === 0 ? 'no list' : lists.map(list => `${list.id} scrollTop ${list.scrollTop} scrolled ${list.scrolled} after ${list.afterPosition}/${list.afterShadow} scroller ${list.scrollerShadow}`).join('; ');
+    const name = `${form} ${state.name}`;
+    console.warn(`[probe] scroll-shadow ${name}: ${listText}, sheets ${sheets}, applied ${shadowApplied(form, lists, sheets, baseline)}`);
+    await leaveWebview();
+    await driverOf().actions().move({ x: 1, y: 1 }).perform();
+    const rect = await webviewRect(root);
+    const dpr = await script<number>('return window.devicePixelRatio;');
+    const windowName = `probe-scroll-shadow-${form}-${state.name}.window`;
+    await VSBrowser.instance.takeScreenshot(windowName);
+    const dir = VSBrowser.instance.getScreenshotsDir();
+    const probeDir = path.join(path.dirname(dir), 'probe');
+    fs.mkdirSync(probeDir, { recursive: true });
+    const crop = path.join(probeDir, `scroll-shadow-${form}-${state.name}.png`);
+    execFileSync(process.execPath, [
+        path.resolve('scripts/crop-png.mjs'),
+        path.join(dir, `${windowName}.png`),
+        String(rect.x), String(rect.y), String(width), String(rect.height),
+        crop,
+        String(dpr),
+    ], { stdio: 'pipe' });
+    try {
+        const verdicts = lineVerdictsOf(crop, lines, dpr);
+        console.warn(fringeLine(`scroll-shadow ${name}`, summarize(verdicts)));
+        const grey = verdicts.flatMap((verdict, index) => (verdict.skipped === undefined && verdict.greyscale ? [`${verdict.label}@${Math.round(lines[index].y)}`] : []));
+        console.warn(`[probe] scroll-shadow ${name} greyscale: ${grey.length === 0 ? 'none' : grey.join(', ')}`);
+    } catch (error) {
+        const reason = error instanceof Error ? error.message.split('\n')[0] : String(error);
+        console.warn(`[fringe] scroll-shadow ${name}: not read (${reason})`);
+        console.warn(`[probe] scroll-shadow ${name} greyscale: not read (${reason})`);
+    }
+}
+
+/**
+ * The workbench's own scroll shadow (S-w, DO 9): a native list of the side bar scrolled by keyboard, and every element
+ * under it whose computed `box-shadow` is not `none` or whose class names a shadow. One line; never throws.
+ */
+const READ_EXEMPLAR_SHADOW = `
+const part = document.querySelector('.part.sidebar');
+const list = document.querySelector('[data-nuiget-probe-list]');
+if (!part || !list) { return null; }
+const tagOf = element => element ? element.tagName.toLowerCase() + (element.className && typeof element.className === 'string' ? '.' + element.className.trim().split(/\\s+/).join('.') : '') : 'none';
+const painted = element => { const value = getComputedStyle(element).boxShadow; return value !== 'none' && !/^rgba\\(0, 0, 0, 0\\) 0px 0px 0px 0px$/.test(value); };
+const named = element => typeof element.className === 'string' && /shadow/.test(element.className);
+const all = [...list.parentElement.querySelectorAll('*')];
+const candidates = [...all.filter(element => named(element) && painted(element)), ...all.filter(element => named(element) && !painted(element)), ...all.filter(element => !named(element) && painted(element))].slice(0, 6);
+const shadow = candidates[0] || null;
+const rows = list.querySelector('.monaco-list-rows');
+const scroller = rows ? rows.closest('.monaco-scrollable-element') : null;
+const style = shadow ? getComputedStyle(shadow) : null;
+const rect = shadow ? shadow.getBoundingClientRect() : null;
+const rowsStyle = rows ? getComputedStyle(rows) : null;
+return {
+    view: (part.querySelector('.composite.title .title-label h2') || {}).textContent || 'unknown',
+    scrolled: rows ? 'rows top ' + (rows.style.top || '0') + ', candidates ' + candidates.length : 'no rows',
+    shadow: shadow ? tagOf(shadow) + ' parent ' + tagOf(shadow.parentElement) + ' position ' + style.position + ' z-index ' + style.zIndex + ' top ' + style.top + ' left ' + style.left + ' size ' + Math.round(rect.width) + 'x' + Math.round(rect.height) + ' box-shadow ' + style.boxShadow + ' pointer-events ' + style.pointerEvents : 'none',
+    rows: rows ? tagOf(rows) + ' transform ' + rowsStyle.transform + ' will-change ' + rowsStyle.willChange : 'none',
+    overflow: scroller ? getComputedStyle(scroller).overflow : 'none',
+};`;
+
 /** Prints the RGBA of one device pixel of a PNG, read with the decoder of `scripts/crop-png.mjs`. */
 const PIXEL_AT = 'const { decodePng } = await import(process.argv[1]); const [file, x, y] = process.argv.slice(2); const png = decodePng(file); '
     + 'const at = (Number(y) * png.width + Number(x)) * 4; console.log(JSON.stringify([...png.pixels.subarray(at, at + 4)]));';
@@ -2515,9 +2654,10 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 }
                 // DS-TYPE-10 (UX-P3.fix-4): the side bar's text lines under the same settle, read in the crop after the shot; a
                 // dialog of DIALOG_FRINGE_STATES gives its title and body lines, not its buttons' (UX-P3.9 follow-up 4).
+                // A dialog state is tested first, so the dialog over the side bar gives its own lines (UX-P3.fix-6, DO 2).
                 const textLines = LANE !== 'ui' ? undefined
-                    : state.surface === 'sidebar' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar')
-                        : DIALOG_FRINGE_STATES.includes(state.name) ? (await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')).filter(line => line.label === 'confirm-dialog')
+                    : DIALOG_FRINGE_STATES.includes(state.name) ? (await script<TextLine[]>(COLLECT_TEXT_LINES, 'confirm-dialog')).filter(line => line.label === 'confirm-dialog')
+                        : state.surface === 'sidebar' ? await script<TextLine[]>(COLLECT_TEXT_LINES, 'nuiget-sidebar')
                             : undefined;
                 const shot = await shoot(state, capture);
                 writeSidecar(state, capture, facts);
@@ -2619,6 +2759,51 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
             await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
+        });
+
+        // UX-P3.fix-6 (opening ruling of 2026-11-16, DO 4-8): a reading of five injected forms per cell, its own test so no
+        // golden shot or audit sits between a form and its removal. Informational: it prints and never fails the run.
+        it('scroll shadow probe (UX-P3.fix-6)', async function () {
+            this.timeout(900_000);
+            await applyTheme('dark-modern');
+            for (const name of SCROLL_SHADOW_CELLS) {
+                const state = stateNamed(name);
+                const width = state.surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH;
+                const enter = (): Promise<void> => (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+                try {
+                    await applyWidth(state, width);
+                    if (state.surface === 'main') {
+                        await freshMainPanel();
+                    }
+                    await REACH[name].reach();
+                    await enter();
+                    const baseline = await script<number>(DROP_PROBE_SHEET);
+                    for (const { form, css } of SCROLL_SHADOW_FORMS) {
+                        await enter();
+                        await script<number>(DROP_PROBE_SHEET);
+                        if (css !== undefined) {
+                            await script<number>(ADOPT_PROBE_SHEET, css);
+                        }
+                        await settleFrames();
+                        await scrollShadowShot(state, form, width, baseline);
+                    }
+                } catch (error) {
+                    console.warn(`[probe] scroll-shadow ${name}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+                } finally {
+                    try {
+                        await enter();
+                        await script<number>(DROP_PROBE_SHEET);
+                    } catch {
+                        // The cell's document may be gone; nothing of the probe stays in a new one.
+                    }
+                    try {
+                        await REACH[name].leave?.();
+                    } catch (error) {
+                        console.warn(`[probe] scroll-shadow ${name}: leave failed (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+                    }
+                    await leaveWebview();
+                }
+            }
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state
@@ -2750,6 +2935,50 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await read('sidebar right-click', enterSidebarWebview, async () => driverOf().actions().contextClick(await optionOf('package-row-serilog')).perform());
             }
             await leaveWebview();
+        });
+    }
+
+    // UX-P3.fix-6 (S-w, opening ruling DO 9): the workbench's own scroll shadow, read from the top document in each look. Last
+    // in the suite: opening another view swaps the nUIget side bar out. Informational: it prints one line and never throws.
+    if (LANE === 'ui') {
+        it('scroll shadow exemplar (UX-P3.fix-6)', async function () {
+            this.timeout(240_000);
+            try {
+                await leaveWebview();
+                // A palette command of an earlier test leaves Ctrl/Cmd+Shift held (UX-P3.fix-11): released before any key.
+                await driverOf().actions().clear();
+                const read = async (): Promise<{ view: string; scrolled: string; shadow: string; rows: string; overflow: string } | null> => script(READ_EXEMPLAR_SHADOW);
+                // The first native list of the side bar whose rows overflow it, marked for the reading and focused by script.
+                const markOverflowing = 'document.querySelectorAll("[data-nuiget-probe-list]").forEach(element => element.removeAttribute("data-nuiget-probe-list")); '
+                    + 'const list = [...document.querySelectorAll(".part.sidebar .monaco-list")].find(candidate => { const rows = candidate.querySelector(".monaco-list-rows"); return rows && rows.offsetHeight > candidate.clientHeight + 1; }); '
+                    + 'if (!list) { return false; } list.setAttribute("data-nuiget-probe-list", ""); list.focus(); return document.activeElement === list || list.contains(document.activeElement);';
+                await (await new ActivityBar().getViewControl('Explorer'))?.openView();
+                if (!(await script<boolean>(markOverflowing))) {
+                    await new Workbench().executeCommand('Extensions: Show Built-in Extensions');
+                    await driverOf().actions().clear();
+                    await poll(async () => ((await driverOf().findElements(By.css('.part.sidebar .extension-list-item'))).length > 20 ? true : undefined), 'the built-in extensions listed', 60_000);
+                    if (!(await script<boolean>(markOverflowing))) {
+                        throw new Error('no native list of the side bar overflows');
+                    }
+                }
+                await driverOf().actions().sendKeys(Key.PAGE_DOWN, Key.PAGE_DOWN).perform();
+                await poll(async () => (await script<boolean>('const rows = document.querySelector("[data-nuiget-probe-list] .monaco-list-rows"); return !!rows && rows.style.top !== "" && rows.style.top !== "0px" && rows.style.top !== "-0px";') ? true : undefined), 'the native list scrolled', 10_000).catch(() => undefined);
+                const facts = await read();
+                console.warn(facts === null
+                    ? `[probe] scroll-shadow exemplar ${LOOK}: not read (no side bar)`
+                    : `[probe] scroll-shadow exemplar ${LOOK}: view ${facts.view}, scrolled ${facts.scrolled}, shadow ${facts.shadow}; rows ${facts.rows}; scroller overflow ${facts.overflow}`);
+            } catch (error) {
+                console.warn(`[probe] scroll-shadow exemplar ${LOOK}: not read (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+            } finally {
+                try {
+                    await driverOf().actions().clear();
+                    await openSidebarView();
+                    await new Workbench().executeCommand('nuiget.sidebarView.focus');
+                    await driverOf().actions().clear();
+                } catch (error) {
+                    console.warn(`[probe] scroll-shadow exemplar ${LOOK}: refocus failed (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
+                }
+            }
         });
     }
 
