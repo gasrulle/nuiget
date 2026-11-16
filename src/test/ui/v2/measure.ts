@@ -819,7 +819,7 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         // skeleton bars and compact message leaves.
         case 'sidebar':
             // UX-P3.11 (design-advisor opening ruling DO 7): the search box's placeholder fits its text room.
-            // UX-P3.fix-9: the sidebar's sash (DS-DIVIDER-6, DS-COLOR-5), pending on the sidebar (SIDEBAR_SASH_STATUS).
+            // UX-P3.fix-9: the sidebar's sash (DS-DIVIDER-6, DS-COLOR-5), hard since that item's closing (SIDEBAR_SASH_STATUS).
             return ['chrome', 'icon-buttons', 'labels', 'skeleton', 'message-leaf', 'placeholder', 'sash'];
         default:
             return ['chrome'];
