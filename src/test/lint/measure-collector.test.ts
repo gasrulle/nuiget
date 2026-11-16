@@ -1052,6 +1052,8 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             { inHeader: false, width: 22, height: 22, label: 'Uninstall', glyph: { w: 16, h: 16 }, band: 'current', multi: false },
         ]);
         expect(facts.tabs.map(tab => [tab.id, tab.selected, tab.text, tab.countBadges])).toEqual([['installed-tab', true, 'Installed', 0], ['updates-tab', false, 'Updates', 0]]);
+        // UX-P3.fix-18: each tab says whether it is under the pointer; nothing is hovered in jsdom.
+        expect(facts.tabs.map(tab => tab.hovered)).toEqual([false, false]);
         // UX-P2.6: a badge's kind, and what a header box reads.
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         app.insertAdjacentHTML('beforeend', '<div class="nuiget-row" data-row-kind="group" data-rect="0,100,600,128"><div class="nuiget-row-group nuiget-row-group--divided" role="treeitem" aria-level="1" aria-posinset="2" data-rect="0,100,600,128"><div class="nuiget-section-header" data-testid="section-box-direct" data-variant="group" data-rect="0,100,600,128"><span class="nuiget-section-title" data-rect="16,106,120,122" data-text="16,106,120,122">Direct packages</span><span class="nuiget-section-count" data-rect="565,104,584,123"><span class="nuiget-badge nuiget-badge--count nuiget-badge--neutral" data-rect="565,104,584,123" data-text="570,108,580,119">3</span></span></div></div></div>');

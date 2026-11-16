@@ -1418,6 +1418,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(color4(tabs(selected, other))).toMatchObject({ pass: true, status: 'hard', value: 'selected [installed-tab]: panelTitle.activeForeground, line 1 panelTitle.activeBorder; 1 other: panelTitle.inactiveForeground, no line' });
         expect(color4(tabs({ ...selected, lineWidth: 2 }, other))).toMatchObject({ pass: false });
         expect(color4(tabs(selected, { ...other, colour: selected.colour }))).toMatchObject({ pass: false });
+        // UX-P3.fix-18: a red line prints what it compared; a hovered tab is named on any line, and the pass condition is unchanged.
+        expect(color4(tabs(selected, { ...other, colour: selected.colour }))?.value).toBe('selected [installed-tab]: panelTitle.activeForeground, line 1 panelTitle.activeBorder; 1 other: panelTitle.inactiveForeground, no line; off: [updates-tab] colour rgb(231, 231, 231) line 1 rgba(0, 0, 0, 0) (expected colour rgb(157, 157, 157), no line)');
+        const dimSelected = color4(tabs({ ...selected, colour: 'rgb(157, 157, 157)' }, other));
+        expect(dimSelected?.pass).toBe(false);
+        expect(dimSelected?.value).toContain('off: [installed-tab] selected colour rgb(157, 157, 157) line 1 rgb(0, 120, 212) (expected colour rgb(231, 231, 231) line 1 rgb(0, 120, 212))');
+        const hoveredOther = color4(tabs(selected, { ...other, hovered: true } as typeof selected));
+        expect(hoveredOther?.pass).toBe(true);
+        expect(hoveredOther?.value.endsWith('no line; under the pointer: [updates-tab]')).toBe(true);
         expect(color4(layout())).toMatchObject({ pass: false, value: 'not measurable (no tab)' });
         const color5 = (built: Layout) => lineOf('main-installed-single', built, 'DS-COLOR-5@main-installed-single/tabs');
         expect(color5(tabs(selected, other))).toMatchObject({ pass: true, status: 'hard', value: 'tabs: selected line in panelTitle.activeBorder; 1 others unlined' });

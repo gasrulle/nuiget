@@ -899,7 +899,8 @@ export interface Heights {
     layerInputRadius?: string;
     iconButtons: Array<{ inHeader: boolean; width: number; height: number; hit: { width: number; height: number }; label: string; glyph: { w: number; h: number } | undefined; colour: string; background: string; radius: string; disabled: boolean; hovered: boolean; band: 'current' | 'selected' | undefined; listFocused: boolean; multi: boolean; severity: boolean }>;
     toggles: Array<{ label: string; height: number; hit: { width: number; height: number } }>;
-    tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string; text?: string; countBadges?: number }>;
+    /** `hovered`: the tab matches `:hover` when read (UX-P3.fix-18), optional for older layouts. */
+    tabs: Array<{ id: string; selected: boolean; colour: string; lineWidth: number; lineColour: string; text?: string; countBadges?: number; hovered?: boolean }>;
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
@@ -1651,7 +1652,7 @@ const heights = {
     toggles: shown('button.nuiget-section-toggle').map(el => ({ label: el.dataset.testid ?? '', height: round(rectOf(el).height), hit: hitOf(el) })),
     tabs: shown('[role="tab"]').map(el => {
         const style = getComputedStyle(el);
-        return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor, text: el.textContent ?? '', countBadges: el.querySelectorAll('.nuiget-badge--count').length };
+        return { id: el.dataset.testid ?? label(el), selected: el.getAttribute('aria-selected') === 'true', hovered: el.matches(':hover'), colour: style.color, lineWidth: px(style.borderBottomWidth), lineColour: style.borderBottomColor, text: el.textContent ?? '', countBadges: el.querySelectorAll('.nuiget-badge--count').length };
     }),
     // A reserved check column (a list without bulk actions, UX-P3.2) holds no check box: its space only.
     checkBoxes: shown('input[type="checkbox"], .nuiget-row-check:not(.nuiget-row-check--reserved)').map(el => {
@@ -3171,10 +3172,19 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             }
             const others = tabs.filter(tab => !tab.selected);
             const { active, inactive, indicator } = facts.tabColours;
+            // One predicate per tab, used by pass and by the red line's off: suffix (UX-P3.fix-18): a red line prints what it compared.
+            const selectedHolds = (tab: (typeof tabs)[number]) => tab.colour === active && tab.lineWidth === 1 && tab.lineColour === indicator;
+            const otherHolds = (tab: (typeof tabs)[number]) => tab.colour === inactive && (tab.lineWidth === 0 || tab.lineColour === 'rgba(0, 0, 0, 0)');
+            const off = [
+                ...selected.filter(tab => !selectedHolds(tab)).map(tab => `[${tab.id}] selected colour ${tab.colour} line ${tab.lineWidth} ${tab.lineColour} (expected colour ${active} line 1 ${indicator})`),
+                ...others.filter(tab => !otherHolds(tab)).map(tab => `[${tab.id}] colour ${tab.colour} line ${tab.lineWidth} ${tab.lineColour} (expected colour ${inactive}, no line)`),
+            ];
+            const hovered = tabs.filter(tab => tab.hovered === true).map(tab => `[${tab.id}]`);
             return {
-                value: `selected ${selected.map(tab => `[${tab.id}]`).join(', ')}: panelTitle.activeForeground, line ${tally(selected.map(tab => tab.lineWidth))} panelTitle.activeBorder; ${others.length} other: panelTitle.inactiveForeground, no line`,
-                pass: selected.every(tab => tab.colour === active && tab.lineWidth === 1 && tab.lineColour === indicator)
-                    && others.every(tab => tab.colour === inactive && (tab.lineWidth === 0 || tab.lineColour === 'rgba(0, 0, 0, 0)')),
+                value: `selected ${selected.map(tab => `[${tab.id}]`).join(', ')}: panelTitle.activeForeground, line ${tally(selected.map(tab => tab.lineWidth))} panelTitle.activeBorder; ${others.length} other: panelTitle.inactiveForeground, no line`
+                    + (off.length === 0 ? '' : `; off: ${off.join('; ')}`) + (hovered.length === 0 ? '' : `; under the pointer: ${hovered.join(', ')}`),
+                pass: selected.every(selectedHolds)
+                    && others.every(otherHolds),
             };
         }
         case 'DS-RADIUS-1': {
