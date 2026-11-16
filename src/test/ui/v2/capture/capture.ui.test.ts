@@ -2956,10 +2956,9 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 if (!(await script<boolean>(markOverflowing))) {
                     await new Workbench().executeCommand('Extensions: Show Built-in Extensions');
                     await driverOf().actions().clear();
-                    await poll(async () => ((await driverOf().findElements(By.css('.part.sidebar .extension-list-item'))).length > 20 ? true : undefined), 'the built-in extensions listed', 60_000);
-                    if (!(await script<boolean>(markOverflowing))) {
-                        throw new Error('no native list of the side bar overflows');
-                    }
+                    // The list is virtualized: a 900 px window renders about ten of its 72 px rows, so the wait is for a list
+                    // that overflows, never for a count of rendered rows (the first push's run 43838219504 timed out on one).
+                    await poll(async () => ((await script<boolean>(markOverflowing)) ? true : undefined), 'a native list of the side bar that overflows', 60_000);
                 }
                 await driverOf().actions().sendKeys(Key.PAGE_DOWN, Key.PAGE_DOWN).perform();
                 await poll(async () => (await script<boolean>('const rows = document.querySelector("[data-nuiget-probe-list] .monaco-list-rows"); return !!rows && rows.style.top !== "" && rows.style.top !== "0px" && rows.style.top !== "-0px";') ? true : undefined), 'the native list scrolled', 10_000).catch(() => undefined);
