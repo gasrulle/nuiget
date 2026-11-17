@@ -52,11 +52,6 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         });
         this.attach(webviewView.webview);
         webviewView.webview.onDidReceiveMessage(message => { void this.receive(message); }, null, this.disposables);
-        webviewView.onDidChangeVisibility(() => {
-            if (webviewView.visible) {
-                this.sendEvent('ui/focusSearch', {});
-            }
-        }, null, this.disposables);
         webviewView.onDidDispose(() => {
             this.detach();
             this.view = undefined;

@@ -75,31 +75,35 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const uninstall = useUninstallConfirm(announce);
     // The box and the lists are one keyboard path (ADR-013 Decision 6, UX-P4.3).
     const focusSearch = useCallback((): void => { searchRef.current?.focus(); }, [searchRef]);
-    // SB14 (UX-P3.8): the search box claims the focus once, when the side bar's own document has the focus and nothing in it
-    // holds it: at mount, else at the document's first focus gain. The Extensions view focuses its box when the view takes
-    // the focus; a mount while the user types in an editor leaves the editor focused. The ref keeps the claim to one under
-    // StrictMode's second effect run.
-    const claimed = useRef(false);
+    // SB14 (UX-P3.8, every gain since UX-P4.fix-4): the search box claims the focus when the side bar's own document has the
+    // focus and nothing in it holds it, at mount and on every later focus gain of the document, as the Extensions view
+    // focuses its box whenever the view takes the focus. A gain that a pointer press in the document caused claims nothing:
+    // a press on a blank spot of the Extensions view leaves its box alone. A mount while the user types in an editor leaves
+    // the editor focused; under StrictMode the second run finds the box focused and does nothing.
     useEffect(() => {
-        const claim = (): boolean => {
+        let pressed = false;
+        const claim = (): void => {
             const active = document.activeElement;
-            if (!document.hasFocus() || (active !== null && active !== document.body)) {
-                return false;
+            if (document.hasFocus() && (active === null || active === document.body)) {
+                searchRef.current?.focus();
             }
-            claimed.current = true;
-            searchRef.current?.focus();
-            return true;
         };
-        if (claimed.current || claim()) {
-            return undefined;
-        }
         const onFocus = (): void => {
-            if (claim()) {
-                window.removeEventListener('focus', onFocus);
+            if (!pressed) {
+                claim();
             }
         };
+        const onPointerDown = (): void => { pressed = true; };
+        const onBlur = (): void => { pressed = false; };
+        claim();
         window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
+        window.addEventListener('blur', onBlur);
+        document.addEventListener('pointerdown', onPointerDown, true);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            window.removeEventListener('blur', onBlur);
+            document.removeEventListener('pointerdown', onPointerDown, true);
+        };
     }, [searchRef]);
     const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [layout, setLayout] = useState<SidebarLayout>(() => readLayout(viewState));

@@ -874,3 +874,36 @@ describe('row menu', () => {
         expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
     });
 });
+
+describe('SidebarHost', () => {
+    // UX-P4.fix-4: the Extensions view leaves the focus in the editor when the side bar is shown again, so the host sends
+    // the box nothing on a change to visible.
+    it('SidebarHost: showing the view again sends no ui/focusSearch (UX-P4.fix-4)', () => {
+        const { services } = makeServices();
+        const posted: OutboundEnvelope[] = [];
+        const listeners: (() => void)[] = [];
+        const view = {
+            webview: {
+                options: {},
+                html: '',
+                cspSource: 'https://mock-csp-source',
+                asWebviewUri: (uri: vscode.Uri) => uri,
+                postMessage: (message: unknown) => { posted.push(message as OutboundEnvelope); return true; },
+                onDidReceiveMessage: () => ({ dispose: () => undefined }),
+            },
+            visible: true,
+            title: undefined as string | undefined,
+            onDidChangeVisibility: (listener: () => void) => { listeners.push(listener); return { dispose: () => undefined }; },
+            onDidDispose: () => ({ dispose: () => undefined }),
+        };
+
+        const sidebar = new SidebarHost(services);
+        sidebar.resolveWebviewView(view as unknown as vscode.WebviewView);
+        for (const listener of listeners) {
+            listener();
+        }
+
+        expect(posted.filter(message => message.kind === 'event' && message.type === 'ui/focusSearch')).toEqual([]);
+        sidebar.dispose();
+    });
+});

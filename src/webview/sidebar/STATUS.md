@@ -64,6 +64,13 @@ view is opened from the activity bar the workbench gives the view no focus, so t
 proposed (below). An unconditional `focus()` at mount (form 1) was refused on the local readings: it took the focus from an
 editor when the webviews were reloaded.
 
+**Since UX-P4.fix-4 (2026-11-17, `docs/plans/handoff/P4.fix-2.md`):** the claim runs at mount and on every focus gain of the
+document while it has the focus and the body is active, not once (the document is retained for the session, so a spent
+claim left the body active when the view took the focus again), except a gain that follows a `pointerdown` in the
+document (form B: a press on a blank spot of the Extensions view leaves its box alone). The host's `ui/focusSearch` on a
+change to visible is gone (it took the focus from the editor on a side bar toggle). The first-open gap named above is
+closed: the `[focus-open]` readings show the box focused after an activity-bar open, as the Extensions view's.
+
 Verified by running (local, macOS, VS Code 1.140.0; never pixel evidence):
 
 - `npx vitest run --project frontend src/webview/sidebar` → `Test Files  7 passed (7)`, `Tests  82 passed (82)`; the four SB14

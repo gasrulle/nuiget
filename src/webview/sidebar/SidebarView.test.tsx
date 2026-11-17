@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
@@ -575,7 +575,7 @@ describe('sidebar: Installed section', () => {
         }
     });
 
-    it('SB14: under StrictMode the box claims once, and a later focus gain leaves the focus where it is', () => {
+    it('SB14: under StrictMode the box claims at mount once, and a later focus gain with nothing focused claims again', () => {
         const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
         try {
             const host = createFakeHost();
@@ -584,24 +584,78 @@ describe('sidebar: Installed section', () => {
             expect(document.activeElement).toBe(search);
             search.blur();
             act(() => { window.dispatchEvent(new FocusEvent('focus')); });
-            expect(document.activeElement).toBe(document.body);
+            expect(document.activeElement).toBe(search);
         } finally {
             hasFocus.mockRestore();
         }
     });
 
-    it('SB14: after the first claim a later focus gain leaves the focus where it is', () => {
+    // UX-P4.fix-4 (design-advisor ruling of 2026-11-17): the side bar's document lives for the session, so the box claims on
+    // every focus gain with nothing focused, as the Extensions view focuses its box whenever the view takes the focus.
+    it('SB14: every focus gain with nothing focused moves the focus to the box', () => {
         const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
         try {
             mount();
             const search = screen.getByTestId('sidebar-search-input');
             expect(document.activeElement).toBe(search);
-            search.blur();
-            expect(document.activeElement).toBe(document.body);
-            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
-            expect(document.activeElement).toBe(document.body);
+            for (let gain = 0; gain < 2; gain++) {
+                search.blur();
+                expect(document.activeElement).toBe(document.body);
+                act(() => { window.dispatchEvent(new FocusEvent('blur')); window.dispatchEvent(new FocusEvent('focus')); });
+                expect(document.activeElement).toBe(search);
+            }
         } finally {
             hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: a focus gain that a pointer press in the document caused claims nothing; the next gain without one claims', () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+        try {
+            mount();
+            expect(document.activeElement).toBe(document.body);
+            hasFocus.mockReturnValue(true);
+            act(() => { fireEvent.pointerDown(document.body); window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(document.body);
+            act(() => { window.dispatchEvent(new FocusEvent('blur')); window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(screen.getByTestId('sidebar-search-input'));
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: a focus gain while a dialog is open leaves the focus in the dialog', async () => {
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+        try {
+            const user = userEvent.setup();
+            await mountWith([pkg('Serilog'), pkg('Moq')]);
+            await user.click(option('Serilog'));
+            await user.keyboard('{Delete}');
+            const cancel = screen.getByTestId('confirm-dialog-cancel');
+            expect(cancel).toHaveFocus();
+            act(() => { window.dispatchEvent(new FocusEvent('blur')); window.dispatchEvent(new FocusEvent('focus')); });
+            expect(cancel).toHaveFocus();
+            await user.click(cancel);
+            expectFocusAfterClose('sidebar-delete-confirm-cancel');
+        } finally {
+            hasFocus.mockRestore();
+        }
+    });
+
+    it('SB14: the focus listener is removed on unmount', () => {
+        const remove = vi.spyOn(window, 'removeEventListener');
+        const removeFromDocument = vi.spyOn(document, 'removeEventListener');
+        try {
+            const host = createFakeHost();
+            const { unmount } = render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+            unmount();
+            expect(remove).toHaveBeenCalledWith('focus', expect.any(Function));
+            // Form B's two other listeners (UX-P4.fix-4): the focus loss and the press in the document.
+            expect(remove).toHaveBeenCalledWith('blur', expect.any(Function));
+            expect(removeFromDocument).toHaveBeenCalledWith('pointerdown', expect.any(Function), true);
+        } finally {
+            remove.mockRestore();
+            removeFromDocument.mockRestore();
         }
     });
 

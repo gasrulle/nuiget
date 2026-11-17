@@ -1474,6 +1474,10 @@ async function applyTheme(theme: Theme): Promise<void> {
 async function applyWidth(state: NamedState, width: number): Promise<void> {
     // One sash sets the captured surface's width; the other part takes the slack (the P0.8 width ruling).
     await leaveWebview();
+    // `applyTheme`'s palette reach can leave ExTester's Ctrl/Cmd+Shift held (UX-P3.fix-11); an activity-bar click made
+    // while they are held left the keyboard focus in the side bar webview's outer frame, and no key reached the workbench
+    // (UX-P4.fix-4, `[palette2]` and `[palette3]` reads).
+    await driverOf().actions().clear();
     await openSidebarView();
     if (state.surface === 'main') {
         await openMainPanel();
