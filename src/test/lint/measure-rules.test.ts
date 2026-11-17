@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -201,7 +201,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
         // UX-P3.10 push A (DO 4): the compact message leaf clause, hard since UX-P3.10 push E.
-        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard' });
+        // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17): the dialog text clause, pending that row until its declaration lands.
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': { pending: 'P4.fix-3' } });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         // UX-P3.10 push C: the details cells, hard since UX-P3.10 push E.
@@ -1768,6 +1769,29 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
             .toMatchObject({ pass: false, status: 'hard', value: '1 line: height 22, line 22 (target 22); 2 lines: height 44, line 22 (target 40.2, line 18.2)' });
         expect(lineOf('sidebar-all-projects-updates', withCells({ messageLeaves: [{ lineHeight: 18.2, height: 22, lines: 1 }, { lineHeight: 18.2, height: 40.2, lines: 2 }] }), name)?.pass).toBe(true);
         expect(lineOf('sidebar-all-projects-tools', withCells({ messageLeaves: [] }), 'DS-TYPE-4@sidebar-all-projects-tools/message-leaf')).toMatchObject({ pass: false, value: 'not measurable (no compact message leaf)' });
+    });
+
+    it('reads a dialog\'s title at 25.2 and its text containers at 18.2, a normal line height red (DS-TYPE-4 dialog-text, UX-P4.fix-3)', () => {
+        const name = 'DS-TYPE-4@sidebar-uninstall-dialog/dialog-text';
+        const normal = [{ part: 'title', lineHeight: 'normal' }, { part: 'description', lineHeight: 'normal' }, { part: 'body', lineHeight: 'normal' }, { part: 'option', lineHeight: 'normal' }];
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: normal }), name))
+            .toMatchObject({ pass: false, status: { pending: 'P4.fix-3' }, value: 'title normal (target 25.2); description normal, body normal, option normal (target 18.2)' });
+        expect(lineOf('main-installed-bulk-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '22.5px' }, { part: 'description', lineHeight: '16px' }] }), 'DS-TYPE-4@main-installed-bulk-dialog/dialog-text'))
+            .toMatchObject({ pass: false, value: 'title 22.5 (target 25.2); description 16 (target 18.2)' });
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'description', lineHeight: '18.2px' }, { part: 'option', lineHeight: '18.6px' }] }), name)?.pass).toBe(true);
+        // One part off is red, whatever the others read.
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'description', lineHeight: '18.2px' }, { part: 'option', lineHeight: 'normal' }] }), name)?.pass).toBe(false);
+        // The sources dialog's cells read it in the sources group.
+        expect(lineOf('main-sources-add', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'body', lineHeight: '18.2px' }] }), 'DS-TYPE-4@main-sources-add/dialog-text'))
+            .toMatchObject({ pass: true, status: { pending: 'P4.fix-3' }, value: 'title 25.2 (target 25.2); body 18.2 (target 18.2)' });
+        expect(lineOf('sidebar-uninstall-dialog', withCells({}), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog)' });
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'body', lineHeight: '18.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
+        // Only the twelve cells with a dialog open read it.
+        expect(lineOf('main-installed-single', withCells({ dialogText: normal }), 'DS-TYPE-4@main-installed-single/dialog-text')).toBeUndefined();
+        expect(DIALOG_TEXT_STATES).toHaveLength(12);
+        expect(elementGroups('dialogs')).toContain('dialog-text');
+        expect(elementGroups('sources')).toContain('dialog-text');
     });
 
     it('reads the side bar placeholder against the search box\'s text room, asserted at 300 and printed narrower (DS-OVERFLOW-2 placeholder, UX-P3.11)', () => {

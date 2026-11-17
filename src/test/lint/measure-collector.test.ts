@@ -637,6 +637,28 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('reads the topmost dialog\'s title and text containers with their raw line heights, never a covered dialog\'s (DS-TYPE-4 dialog-text, UX-P4.fix-3)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="dialog-text">.nuiget-dialog-title { line-height: 25.2px; } .nuiget-dialog-description { line-height: normal; } .nuiget-dialog-option { line-height: 18.2px; } .sources .nuiget-dialog-body { line-height: 30px; }</style>');
+        expect(collect().endOfP0.stateCells.dialogText).toBeUndefined();
+        // The sources dialog with a confirmation over it, the confirmation inside its body: only the confirmation's parts count.
+        document.body.insertAdjacentHTML('beforeend', [
+            '<div class="nuiget-dialog-layer" data-rect="0,0,900,700"><div class="nuiget-dialog sources" data-rect="100,100,800,600">',
+            '<h2 class="nuiget-dialog-title" data-rect="120,110,400,135">NuGet Sources</h2>',
+            '<div class="nuiget-dialog-body" data-rect="120,140,780,580">',
+            '<div class="nuiget-dialog" data-rect="200,200,700,400">',
+            '<h2 class="nuiget-dialog-title" data-rect="220,210,600,235">Remove nuget.org?</h2>',
+            '<div class="nuiget-dialog-description" data-rect="220,240,680,260">It can be added again.</div>',
+            '<div class="nuiget-dialog-body" style="display: none" data-rect="220,262,680,280"></div>',
+            '<label class="nuiget-dialog-option" data-rect="220,280,400,304">Do not ask me again</label>',
+            '</div></div></div></div>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.dialogText).toEqual([
+            { part: 'title', lineHeight: '25.2px' },
+            { part: 'description', lineHeight: 'normal' },
+            { part: 'option', lineHeight: '18.2px' },
+        ]);
+    });
+
     it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; row-gap: 8px; }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;

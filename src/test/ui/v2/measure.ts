@@ -287,7 +287,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -449,6 +449,8 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
+/** The cells with a dialog open whose text line heights DS-TYPE-4 `dialog-text` reads: the dialog states and the sources dialog's cells (UX-P4.fix-3). */
+export const DIALOG_TEXT_STATES: readonly string[] = [...DIALOG_STATES, 'main-sources', 'main-sources-add', 'main-sources-add-invalid', 'main-sources-revalidating', 'main-sources-empty', 'main-sources-error'];
 /** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
 export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'sidebar-uninstall-dialog'];
 
@@ -688,7 +690,8 @@ export const RULES: readonly RuleDefinition[] = [
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `message-leaf`, a compact message leaf that wraps sets body text, not the row's line box.
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard' }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'] } }),
+    // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): `dialog-text`, a dialog's title and text containers at 1.4.
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': { pending: 'P4.fix-3' } }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'], 'dialog-text': DIALOG_TEXT_STATES } }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES],
     }),
@@ -815,9 +818,10 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
             return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split'];
         case 'dialogs':
-            return ['chrome', 'layers', 'labels'];
+            // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
+            return ['chrome', 'layers', 'labels', 'dialog-text'];
         case 'sources':
-            return ['chrome', 'controls', 'text-buttons', 'icon-buttons'];
+            return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text'];
         // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
         // skeleton bars and compact message leaves.
         case 'sidebar':
@@ -1268,6 +1272,8 @@ export interface StateCells {
     detailsSkeletonMarks?: number[];
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
+    /** The topmost dialog's title and text containers, each with its computed line height as the page gives it (`normal` kept; UX-P4.fix-3). */
+    dialogText?: Array<{ part: 'title' | 'description' | 'body' | 'option'; lineHeight: string }>;
     /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
     disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
     clauseError?: string;
@@ -2215,6 +2221,8 @@ const stateCells = {
                     const pane = document.querySelector('[data-testid="package-details-panel"]');
                     return cellArea && pane ? inCell('.nuiget-skeleton-row').map(el => round(rectOf(el).left + px(getComputedStyle(el, el.classList.contains('nuiget-skeleton-row--compact') ? '::after' : '::before').left) - rectOf(pane).left)) : [];
                 })(),
+                // UX-P4.fix-3 (DO 2a): the topmost dialog's title and text containers, the raw computed line height (px() reads normal as 0).
+                dialogText: dialog ? [['title', '.nuiget-dialog-title'], ['description', '.nuiget-dialog-description'], ['body', '.nuiget-dialog-body'], ['option', '.nuiget-dialog-option']].flatMap(([part, selector]) => [...dialog.querySelectorAll(selector)].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => ({ part, lineHeight: getComputedStyle(el).lineHeight }))) : undefined,
                 messageLeaves: shown('.nuiget-row-message--compact').map(el => {
                     const range = document.createRange();
                     range.selectNodeContents(el);
@@ -4141,12 +4149,12 @@ const PLACEHOLDER_WIDTH = 300;
 /** The details pane's content inset, where its title and tab label start in both looks (DS-INSET-4; UX-P3.10 fix ruling, DEFECTS 1). */
 const DETAILS_CONTENT_X = 20;
 
-/** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`), or undefined for another. */
+/** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`; `dialog-text` since UX-P4.fix-3), or undefined for another. */
 function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && scope === 'message-leaf') || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder');
     if (!own) {
         return undefined;
     }
@@ -4197,6 +4205,9 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         const target = SIDEBAR_NAME_X[look];
         return { value: `skeleton bars at ${tally(bars)} from the pane (target ${target}, the level-1 row name)`, pass: bars.every(x => near(x, target, tolerance)) };
     }
+    if (scope === 'dialog-text') {
+        return dialogTextClause(cells.dialogText, tolerance);
+    }
     const leaves = cells.messageLeaves ?? [];
     if (leaves.length === 0) {
         return notMeasurable('no compact message leaf');
@@ -4206,6 +4217,31 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     return {
         value: leaves.map(leaf => `${leaf.lines} line${leaf.lines === 1 ? '' : 's'}: height ${leaf.height}, line ${leaf.lineHeight} (target ${targetOf(leaf.lines)}${leaf.lines === 1 ? '' : `, line ${COMPACT_LINE}`})`).join('; '),
         pass: leaves.every(holds),
+    };
+}
+
+/** UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 2c): a dialog title's line box is 18 × 1.4, its text containers' 13 × 1.4. */
+const DIALOG_TITLE_LINE = 25.2;
+const DIALOG_TEXT_LINE = 18.2;
+
+/**
+ * DS-TYPE-4 `dialog-text`: the title and the description, body and check box label of the topmost dialog, each at its literal
+ * target; a value that is not a px length (`normal`) fails as printed; the title and one other part, or not measurable.
+ */
+function dialogTextClause(parts: StateCells['dialogText'], tolerance: number): { value: string; pass: boolean } {
+    if (parts === undefined) {
+        return { value: `${NOT_MEASURABLE} (no dialog)`, pass: false };
+    }
+    const title = parts.filter(part => part.part === 'title');
+    const text = parts.filter(part => part.part !== 'title');
+    if (title.length === 0 || text.length === 0) {
+        return { value: `${NOT_MEASURABLE} (no dialog text)`, pass: false };
+    }
+    const shown = (lineHeight: string): string => (/^-?[\d.]+px$/.test(lineHeight) ? String(tenth(Number.parseFloat(lineHeight))) : lineHeight);
+    const holds = (lineHeight: string, target: number): boolean => /^-?[\d.]+px$/.test(lineHeight) && near(Number.parseFloat(lineHeight), target, tolerance);
+    return {
+        value: `title ${title.map(part => shown(part.lineHeight)).join(', ')} (target ${DIALOG_TITLE_LINE}); ${text.map(part => `${part.part} ${shown(part.lineHeight)}`).join(', ')} (target ${DIALOG_TEXT_LINE})`,
+        pass: title.every(part => holds(part.lineHeight, DIALOG_TITLE_LINE)) && text.every(part => holds(part.lineHeight, DIALOG_TEXT_LINE)),
     };
 }
 
