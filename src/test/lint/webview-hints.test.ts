@@ -38,6 +38,7 @@ export function hintProblems(hints: readonly string[], source: string, neighbour
         [/\bSpace\b/, /selectedIds=/, 'selectedIds'],
         [/\bLeft\b|\bRight\b/, /groups=/, 'groups'],
         [/Shift\+F10/, /vscodeContext=/, 'vscodeContext'],
+        [/Ctrl\+Up/, /onExitUp=/, 'onExitUp'],
     ];
     return hints.flatMap(hint => needs.flatMap(([key, handler, name]) => {
         const haystack = name === 'vscodeContext' ? source + neighbours : source;
@@ -69,6 +70,8 @@ describe('a11y-hint-truthful (UX-P2.9a)', () => {
         expect(hintProblems([hint], 'onActivate={run}', '<Row vscodeContext={context}')).toEqual([]);
         expect(hintProblems(['Delete uninstalls it.'], '', '')).toEqual([expect.stringContaining('onDelete')]);
         expect(hintProblems(['Ctrl+Enter installs it.'], 'onSecondaryActivate={run}', '')).toEqual([]);
+        expect(hintProblems(['Ctrl+Up (Cmd+Up) returns to the search box.'], '', '')).toEqual([expect.stringContaining('onExitUp')]);
+        expect(hintProblems(['Ctrl+Up (Cmd+Up) returns to the search box.'], 'onExitUp={focusSearch}', '')).toEqual([]);
     });
 
     it('reads a named constant and both branches of a ternary', () => {
@@ -77,3 +80,32 @@ describe('a11y-hint-truthful (UX-P2.9a)', () => {
         expect(hintsOf("const HINT = 'One.';\r\n<Listbox\r\n hint={HINT}\r\n")).toEqual(['One.']);
     });
 });
+
+describe('a search box names its hidden keys (A18, UX-P4.3)', () => {
+    const boxes = product.filter(file => /<SearchBox\b/.test(readFileSync(file, 'utf8')));
+
+    it('every search box has a hint and the way down, and a hint names only the keys its box handles', () => {
+        expect(boxes.map(file => path.basename(file)).sort()).toEqual(['MainShell.tsx', 'SidebarView.tsx']);
+        const problems = boxes.flatMap(file => {
+            const source = readFileSync(file, 'utf8');
+            const box = source.slice(source.indexOf('<SearchBox'));
+            const hints = hintsOf(box.slice(0, box.indexOf('/>') + 2).replace(/hint=\{([A-Z_]+)\}/, 'hint={$1}\n')).concat(hintsOf(source).filter(hint => hint.includes('Ctrl+Down')));
+            const found: string[] = [];
+            if (!/\bhint=/.test(box) || hints.length === 0) {
+                found.push('no hint=');
+            }
+            if (!/onFocusList=/.test(box)) {
+                found.push('no onFocusList=');
+            }
+            if (hints.some(hint => /Ctrl\+Enter/.test(hint)) && !/onQuickInstall=/.test(box)) {
+                found.push('names Ctrl+Enter without onQuickInstall');
+            }
+            if (hints.some(hint => /\bRight\b/.test(hint)) && !/onExpandSuggestion=/.test(box)) {
+                found.push('names Right without onExpandSuggestion');
+            }
+            return found.map(problem => `${path.relative(ROOT, file)}: ${problem}`);
+        });
+        expect(problems).toEqual([]);
+    });
+});
+

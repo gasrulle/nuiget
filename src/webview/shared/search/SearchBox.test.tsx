@@ -33,6 +33,22 @@ const box = (): HTMLInputElement => screen.getByTestId('box');
 const optionTexts = (): string[] => screen.queryAllByRole('option').map(option => option.textContent ?? '');
 
 describe('SearchBox', () => {
+    it('Ctrl+ArrowDown or Meta+ArrowDown calls onFocusList only while no list is open; the input is described by hint (UX-P4.3)', async () => {
+        const user = userEvent.setup();
+        const onFocusList = vi.fn();
+        render(<Harness extra={{ onFocusList, hint: 'When no list is open under the box, Ctrl+Down (Cmd+Down) moves to the package list.' }} />);
+        expect(box()).toHaveAccessibleDescription('When no list is open under the box, Ctrl+Down (Cmd+Down) moves to the package list.');
+        await user.click(box());
+        await user.keyboard('{Control>}{ArrowDown}{/Control}');
+        await user.keyboard('{Meta>}{ArrowDown}{/Meta}');
+        expect(onFocusList).toHaveBeenCalledTimes(2);
+        // With the filters listed the arrows belong to the open list (ADR-013 Decision 6).
+        await user.keyboard('@');
+        expect(box()).toHaveAttribute('aria-expanded', 'true');
+        await user.keyboard('{Control>}{ArrowDown}{/Control}');
+        expect(onFocusList).toHaveBeenCalledTimes(2);
+    });
+
     it('typing @ lists the prefixes that match as the text grows, and a complete prefix closes the list', async () => {
         const user = userEvent.setup();
         render(<Harness />);

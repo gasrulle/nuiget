@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
-import { Banner, Checkbox, cssVars, EmptyState, IconButton, LiveStatus, LoadingIcon, Sash, Select, RefreshIcon } from '../shared/primitives';
+import { Banner, Checkbox, cssVars, EmptyState, focusList, IconButton, LiveStatus, LoadingIcon, Sash, Select, RefreshIcon } from '../shared/primitives';
 import { FILTER_PREFIXES, parseSearchQuery, type SearchMode } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
 import { useDetailsActions } from '../shared/store/details';
@@ -24,6 +24,9 @@ import { failure } from '../shared/updates/sentence';
 
 export type MainTab = 'installed' | 'updates';
 
+/** The keys of the main search box that a reader cannot see (A18; design-advisor ruling of 2026-11-17, UX-P4.3). */
+const SEARCH_HINT = 'When no list is open under the box, Ctrl+Down (Cmd+Down) moves to the package list. In the suggestions, Right lists a package\'s versions, Left returns to the suggestions, and Ctrl+Enter (Cmd+Enter) installs the highlighted package or version into the selected project.';
+
 /** What a list in a tab is given by the shell. */
 export interface ListView {
     /** The text after `@installed`, `@updates` or `@vulnerable`; empty for none. */
@@ -36,6 +39,8 @@ export interface ListView {
     central: Pick<CentralChange, 'ask'>;
     /** Asks the panel's one Delete confirmation before a row is uninstalled by the key (UX-P4.2a). */
     uninstall: Pick<UninstallConfirm, 'ask'>;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
 }
 
 /** What the browse results are given by the shell. */
@@ -45,6 +50,8 @@ export interface BrowseView {
     announce: (message: string) => void;
     /** The panel's one install action (Ctrl+Enter on a row). */
     install: InstallAction;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
 }
 
 /** What the details of the selected package are given by the shell. */
@@ -153,6 +160,8 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     }), [bus, keepTab, setReveal]);
 
     const parsed = parseSearchQuery(query);
+    // The box and the lists are one keyboard path (ADR-013 Decision 6, UX-P4.3).
+    const focusSearch = useCallback((): void => { searchRef.current?.focus(); }, [searchRef]);
     const browsing = parsed.mode === 'browse';
     const [focused, setFocused] = useState(false);
     const typing = useSearchTyping({ text: query, setText: setQuery, browsing, focused, announce, install: installAction });
@@ -168,7 +177,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     // The details pane shows the active view's own selection; Browse starts without one.
     const { showView } = useDetailsActions();
     useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
-    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central, uninstall };
+    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central, uninstall, focusSearch };
 
     const selectTab = (next: MainTab): void => {
         setChosenTab(next);
@@ -248,6 +257,8 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         onPickVersion={typing.pickVersion}
                         onQuickInstall={typing.quickInstall}
                         onFocusChange={setFocused}
+                        hint={SEARCH_HINT}
+                        onFocusList={() => { focusList(browsing ? 'browse-list' : tab === 'updates' ? 'updates-list' : 'installed-list'); }}
                     />
                 </div>
                 <FirstUsefulRenderMark />
@@ -255,7 +266,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
             {projectsError ? <Banner severity="error">{failure('The projects', 'listed', projectsError.message)}</Banner> : null}
             <div className="nuiget-main-split" ref={splitRef} style={cssVars({ '--nuiget-split': `${shownSplit}%` })}>
                 <div className="nuiget-main-list" id={listPaneId}>
-                    {browsing ? browse?.({ text: query, announce, install: installAction }) : (
+                    {browsing ? browse?.({ text: query, announce, install: installAction, focusSearch }) : (
                         <MainTabs selected={tab} onSelect={selectTab}>
                             {tab === 'installed' ? installed?.(view) : updates?.(view)}
                         </MainTabs>

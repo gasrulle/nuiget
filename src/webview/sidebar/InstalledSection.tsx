@@ -20,6 +20,8 @@ export interface InstalledSectionProps {
     announce: (message: string) => void;
     /** The view's Delete confirmation (UX-P4.2b). */
     ask: AskUninstall;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
     /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
     expanded?: boolean;
     onToggle?: () => void;
@@ -37,6 +39,7 @@ interface AllProjectsTreeProps {
     filter: string;
     announce: (message: string) => void;
     ask: AskUninstall;
+    focusSearch: () => void;
     revalidating: boolean;
     labelledBy: string;
     onRetry: () => void;
@@ -46,7 +49,7 @@ interface AllProjectsTreeProps {
  * All Projects as one compact tree (D48, UX-P3.7c): a folder row per workspace folder when there are several, a project row under
  * it, the project's packages under that; an empty or unsupported project says so in a message leaf. A row acts on its own project.
  */
-function AllProjectsTree({ chunks, filter, announce, ask, revalidating, labelledBy, onRetry }: AllProjectsTreeProps): React.JSX.Element {
+function AllProjectsTree({ chunks, filter, announce, ask, focusSearch, revalidating, labelledBy, onRetry }: AllProjectsTreeProps): React.JSX.Element {
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const { askUninstall, viewDetails, renderPackageRow } = usePackageRows(announce, ask);
@@ -150,8 +153,10 @@ function AllProjectsTree({ chunks, filter, announce, ask, revalidating, labelled
                 items={items}
                 groups={groups}
                 labelledBy={labelledBy}
-                hint="Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it from the row's project. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it."
+                hint="Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it from the row's project. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box."
                 testId="sidebar-installed-list"
+                onExitUp={focusSearch}
+                typeaheadLabel={item => (item.kind === 'group' ? item.title : item.kind === 'package' ? item.entry.id : undefined)}
                 density="compact"
                 selectedId={selectedId}
                 busy={revalidating}
@@ -171,7 +176,7 @@ function AllProjectsTree({ chunks, filter, announce, ask, revalidating, labelled
  * there are several. A row acts on its own project. The list is asked for again by the store when the host says it
  * changed, with the rows left in place meanwhile.
  */
-export function InstalledSection({ filter, announce, ask, expanded: controlled, onToggle, share }: InstalledSectionProps): React.JSX.Element {
+export function InstalledSection({ filter, announce, ask, focusSearch, expanded: controlled, onToggle, share }: InstalledSectionProps): React.JSX.Element {
     const installed = useInstalled();
     const all = useAllProjects();
     const { session } = useSession();
@@ -201,7 +206,7 @@ export function InstalledSection({ filter, announce, ask, expanded: controlled, 
                 ? <Banner severity="error" action={{ label: 'Retry', onClick: all.refresh }}>{failure('The projects', 'listed', all.error?.message)}</Banner>
                 : <Skeleton density="compact" />;
         } else {
-            content = <AllProjectsTree chunks={chunks} filter={filter} announce={announce} ask={ask} revalidating={all.revalidating} labelledBy={titleId} onRetry={all.refresh} />;
+            content = <AllProjectsTree chunks={chunks} filter={filter} announce={announce} ask={ask} focusSearch={focusSearch} revalidating={all.revalidating} labelledBy={titleId} onRetry={all.refresh} />;
         }
     } else if (projectPath === null) {
         content = session === undefined
@@ -212,7 +217,7 @@ export function InstalledSection({ filter, announce, ask, expanded: controlled, 
         content = installed.status === 'error' ? null : <Skeleton density="compact" />;
     } else {
         count = headerCount(result.packages.length, shownOf(result.packages));
-        content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} ask={ask} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
+        content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} ask={ask} focusSearch={focusSearch} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 
     // The pane loads or revalidates: its 2 px bar over the list's top edge (DS-STATE-2, UX-P3.8); the header's spinner is the first

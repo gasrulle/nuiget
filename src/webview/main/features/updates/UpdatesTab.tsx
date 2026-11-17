@@ -27,7 +27,9 @@ type Item =
     | { kind: 'group'; id: 'direct'; count: number | string }
     | { kind: 'package'; id: string; update: PackageUpdate };
 
-const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+/** The Direct packages group row's title, read by its header and by type-ahead. */
+const DIRECT_TITLE = 'Direct Packages';
+const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
@@ -44,7 +46,7 @@ export function UpdatesTab(view: ListView): React.JSX.Element {
     return allMode ? <AllProjectsUpdates {...view} /> : <ProjectUpdates {...view} />;
 }
 
-function ProjectUpdates({ filter, announce, central, uninstall }: ListView): React.JSX.Element {
+function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const { projects } = useProjects();
     const updates = useUpdates();
@@ -118,7 +120,7 @@ function ProjectUpdates({ filter, announce, central, uninstall }: ListView): Rea
             return next;
         }),
         render: (item, placement) => (item.kind === 'group'
-            ? <SectionHeader presentation="content" title="Direct Packages" testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
+            ? <SectionHeader presentation="content" title={DIRECT_TITLE} testKey="direct" expanded={placement.expanded} variant="group" count={item.count} />
             : null),
     }), [collapsed]);
     // A bulk update takes the rows shown that both surfaces' rule admits (installed and resolvable, not central, not busy;
@@ -252,6 +254,8 @@ function ProjectUpdates({ filter, announce, central, uninstall }: ListView): Rea
                 groups={groups}
                 label="Updates"
                 hint={HINT}
+                onExitUp={focusSearch}
+                typeaheadLabel={item => (item.kind === 'group' ? DIRECT_TITLE : item.update.id)}
                 testId="updates-list"
                 density="comfortable"
                 busy={updates.revalidating || updates.status === 'loading'}

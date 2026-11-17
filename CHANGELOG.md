@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Move between the search box and the lists by keyboard** — Ctrl+Down (Cmd+Down on macOS) in the search box moves to the package list, and Ctrl+Up (Cmd+Up) in a list returns to the box.
+- **Page and type-ahead keys in the package lists** — Page Up and Page Down move a page at a time, and typing the start of a name jumps to it.
 - **Sidebar packages open on their own tab** — Enter or View Package Details on a sidebar package opens the main panel on the Installed or Updates tab of its project with the package selected.
 - **Uninstall from the sidebar's Updates list** — Delete (Cmd+Backspace on macOS) uninstalls the package of an update row.
 - **Uninstall from the Updates list** — Delete (Cmd+Backspace on macOS) on a package in the main panel's Updates list uninstalls it.

@@ -17,6 +17,8 @@ export interface ProjectPackagesProps {
     announce: (message: string) => void;
     /** The view's Delete confirmation (UX-P4.2b). */
     ask: AskUninstall;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
     /** The id of the element that names the list (the section's title). */
     labelledBy: string;
     testId: string;
@@ -27,7 +29,7 @@ export interface ProjectPackagesProps {
 }
 
 /** The installed packages of one project as compact rows (the selected project's list; `usePackageRows` acts on them). */
-export function ProjectPackages({ projectPath, result, filter, announce, ask, labelledBy, testId, busy: revalidating, selectedId, onSelectedChange }: ProjectPackagesProps): React.JSX.Element {
+export function ProjectPackages({ projectPath, result, filter, announce, ask, focusSearch, labelledBy, testId, busy: revalidating, selectedId, onSelectedChange }: ProjectPackagesProps): React.JSX.Element {
     const { askUninstall, viewDetails, renderPackageRow } = usePackageRows(announce, ask);
     const items = useMemo<Item[]>(() => visiblePackages(result, filter).map(entry => ({ id: entry.id, entry })), [result, filter]);
     const readOnly = result.unsupported !== undefined;
@@ -40,9 +42,11 @@ export function ProjectPackages({ projectPath, result, filter, announce, ask, la
             items={items}
             labelledBy={labelledBy}
             hint={readOnly
-                ? 'Read-only. Enter opens the package in the main panel. Shift+F10 opens the actions menu.'
-                : 'Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu.'}
+                ? 'Read-only. Enter opens the package in the main panel. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.'
+                : 'Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.'}
             testId={testId}
+            onExitUp={focusSearch}
+            typeaheadLabel={({ entry }) => entry.id}
             density="compact"
             selectedId={selectedId}
             busy={revalidating}

@@ -16,7 +16,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
 
-const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 
 interface Section {
     projectPath: string;
@@ -59,7 +59,7 @@ const rowsIn = (section: Section, needle: string): PackageUpdate[] => filterById
  * alone without a preview (N74), and Update all takes the selected rows across projects (or every candidate) as one
  * `ops/bulkUpdateAllProjects`. A source that could not be checked is one banner over the tree.
  */
-export function AllProjectsUpdates({ filter, announce, central, uninstall }: ListView): React.JSX.Element {
+export function AllProjectsUpdates({ filter, announce, central, uninstall, focusSearch }: ListView): React.JSX.Element {
     const all = useAllProjects();
     const { updates } = all;
     const { isPackageBusy, active } = useOps();
@@ -318,6 +318,8 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall }: Lis
                     groups={groups}
                     label="Updates"
                     hint={HINT}
+                    onExitUp={focusSearch}
+                    typeaheadLabel={item => (item.kind === 'group' ? item.title : item.kind === 'package' ? item.update.id : undefined)}
                     testId="updates-list"
                     density="comfortable"
                     busy={loading || updates.revalidating}

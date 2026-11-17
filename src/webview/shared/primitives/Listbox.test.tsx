@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Badge } from './Badge';
 import { IconButton } from './IconButton';
 import { TrashIcon } from './icons';
-import { Listbox } from './Listbox';
+import { focusList, Listbox, TYPEAHEAD_RESET_MS } from './Listbox';
 import { Row } from './Row';
 import { axeRuleOutcome, installFakeLayout, recordRowMenus } from './testSupport';
 
@@ -22,7 +22,7 @@ const INLINE_STYLE = /^(--nuiget-[a-z0-9-]+: [^;]+;\s*)+$/;
 const three: Package[] = [{ id: 'Alpha', version: '1.0.0' }, { id: 'Beta', version: '2.0.0', central: true }, { id: 'Gamma', version: '3.0.0' }];
 const many = (count: number): Package[] => Array.from({ length: count }, (_, index) => ({ id: `Package${index}`, version: '1.0.0' }));
 
-type Handlers = Pick<React.ComponentProps<typeof Listbox<Package>>, 'onSelect' | 'onActivate' | 'onSecondaryActivate' | 'onDelete' | 'selectedId' | 'busy' | 'empty'>;
+type Handlers = Pick<React.ComponentProps<typeof Listbox<Package>>, 'onSelect' | 'onActivate' | 'onSecondaryActivate' | 'onDelete' | 'selectedId' | 'busy' | 'empty' | 'onExitUp' | 'typeaheadLabel'>;
 
 function PackageList({ items, onAction, ...rest }: { items: Package[]; onAction?: (id: string) => void } & Handlers): React.JSX.Element {
     return (
@@ -943,5 +943,116 @@ describe('Listbox: an untouched list\'s tab stop is its first row (UX-P3.fix-10)
         const { rerender } = render(<PackageList items={[three[0]]} selectedId="Beta" />);
         rerender(<PackageList items={[zeta, three[0]]} selectedId="Beta" />);
         expect(onlyStop()).toContain('Zeta');
+    });
+});
+
+describe('Listbox: the way back, pages and type-ahead (ADR-013 Decision 6, UX-P4.3)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 120, row: 24 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+        vi.useRealTimers();
+    });
+
+    const many: Package[] = ['Alpha', 'Beta', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'India'].map(id => ({ id, version: '1.0.0' }));
+    const active = (): string => (document.activeElement as HTMLElement).getAttribute('aria-label') ?? (document.activeElement?.textContent ?? '');
+    const activeId = (): string => (document.activeElement?.closest('[data-testid^="package-row-"]')?.getAttribute('data-testid') ?? '').replace('package-row-', '');
+
+    it('Ctrl+ArrowUp and Meta+ArrowUp call onExitUp from a package and a disabled row and move no row; Ctrl+ArrowDown moves no row', async () => {
+        const user = userEvent.setup();
+        const onExitUp = vi.fn();
+        render(<PackageList items={[...three, { id: 'Broken', version: 'unresolved', disabled: true }]} onExitUp={onExitUp} />);
+        await user.tab();
+        await user.keyboard('{ArrowDown}');
+        expect(option('Beta')).toHaveFocus();
+        await user.keyboard('{Control>}{ArrowUp}{/Control}');
+        await user.keyboard('{Meta>}{ArrowUp}{/Meta}');
+        expect(onExitUp).toHaveBeenCalledTimes(2);
+        expect(option('Beta')).toHaveFocus();
+        await user.keyboard('{Control>}{ArrowDown}{/Control}');
+        expect(option('Beta')).toHaveFocus();
+        await user.keyboard('{End}');
+        expect(option('Broken')).toHaveFocus();
+        await user.keyboard('{Control>}{ArrowUp}{/Control}');
+        expect(onExitUp).toHaveBeenCalledTimes(3);
+        expect(option('Broken')).toHaveFocus();
+    });
+
+    it('PageDown moves the active row a page on, PageUp a page back, both clamped at the ends', async () => {
+        const user = userEvent.setup();
+        render(<PackageList items={many} />);
+        await user.tab();
+        expect(activeId()).toBe('alpha');
+        // A 120 px scroller of 24 px rows: from the first row, four rows on.
+        await user.keyboard('{PageDown}');
+        expect(activeId()).toBe('delta');
+        await user.keyboard('{PageUp}');
+        expect(activeId()).toBe('alpha');
+        await user.keyboard('{PageUp}');
+        expect(activeId()).toBe('alpha');
+        await user.keyboard('{End}{PageDown}');
+        expect(activeId()).toBe('india');
+    });
+
+    it('type-ahead moves to the next row whose label starts with the typed text, wraps, keeps the row on no match and resets after the interval', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        render(<PackageList items={many} typeaheadLabel={item => (item.id === 'Delta' ? undefined : item.id)} />);
+        await user.tab();
+        // A first character searches from the next row: Beta, then Bravo.
+        await user.keyboard('b');
+        expect(activeId()).toBe('beta');
+        vi.advanceTimersByTime(TYPEAHEAD_RESET_MS + 1);
+        await user.keyboard('b');
+        expect(activeId()).toBe('bravo');
+        // A second character keeps a matching row.
+        await user.keyboard('r');
+        expect(activeId()).toBe('bravo');
+        vi.advanceTimersByTime(TYPEAHEAD_RESET_MS + 1);
+        // A row without a label is skipped; the search wraps.
+        await user.keyboard('d');
+        expect(activeId()).toBe('bravo');
+        await user.keyboard('{End}');
+        vi.advanceTimersByTime(TYPEAHEAD_RESET_MS + 1);
+        await user.keyboard('a');
+        expect(activeId()).toBe('alpha');
+        expect(active()).not.toBe('');
+    });
+
+    it('without typeaheadLabel a letter moves nothing, and Space keeps its bulk meaning with it', async () => {
+        const user = userEvent.setup();
+        const { unmount } = render(<PackageList items={many} />);
+        await user.tab();
+        await user.keyboard('c');
+        expect(activeId()).toBe('alpha');
+        unmount();
+        const onToggleSelected = vi.fn();
+        render(
+            <Listbox items={many} label="Bulk" hint={HINT} testId="bulk-list" density="compact" selectedIds={new Set<string>()} onToggleSelected={onToggleSelected} typeaheadLabel={item => item.id}
+                renderRow={(item, placement) => <Row {...placement} itemId={item.id} name={item.id} version={item.version} />} />,
+        );
+        await user.tab();
+        await user.keyboard(' ');
+        expect(onToggleSelected).toHaveBeenCalledTimes(1);
+    });
+
+    it('focusList moves focus to the list\'s active row; a missing or empty list moves nothing', async () => {
+        const user = userEvent.setup();
+        render(<><input data-testid="box" /><PackageList items={three} /></>);
+        await user.click(screen.getByTestId('box'));
+        expect(focusList('sidebar-installed-list')).toBe(true);
+        expect(option('Alpha')).toHaveFocus();
+        await user.click(screen.getByTestId('box'));
+        expect(focusList('no-such-list')).toBe(false);
+        expect(screen.getByTestId('box')).toHaveFocus();
+        cleanup();
+        render(<><input data-testid="box" /><PackageList items={[]} empty={<p>Nothing</p>} /></>);
+        await user.click(screen.getByTestId('box'));
+        expect(focusList('sidebar-installed-list')).toBe(false);
+        expect(screen.getByTestId('box')).toHaveFocus();
     });
 });

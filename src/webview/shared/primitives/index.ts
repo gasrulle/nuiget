@@ -16,7 +16,7 @@ export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
 export { GroupCaption, type GroupCaptionProps } from './GroupCaption';
 export { IconButton, type IconButtonProps } from './IconButton';
-export { Listbox, type GroupPlacement, type ListboxGroups, type ListboxProps } from './Listbox';
+export { focusList, Listbox, TYPEAHEAD_RESET_MS, type GroupPlacement, type ListboxGroups, type ListboxProps } from './Listbox';
 export { LiveStatus, type LiveStatusProps } from './LiveStatus';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { PropertyList, type PropertyListProps } from './PropertyList';

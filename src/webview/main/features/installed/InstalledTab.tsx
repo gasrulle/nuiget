@@ -23,7 +23,7 @@ import { failure } from '../../../shared/updates/sentence';
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
 
-const HINT = 'Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+const HINT = 'Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 
 const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
 
@@ -39,7 +39,7 @@ const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
  * `aria-selected`. Nothing is removed from a list here: a row is busy from the request on (ops slice) and leaves
  * when the host's next list no longer has it.
  */
-export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: confirmUninstall }: ListView): React.JSX.Element {
+export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: confirmUninstall, focusSearch }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const installed = useInstalled();
     const transitive = useTransitive();
@@ -369,6 +369,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                     groups={groups}
                     label="Installed packages"
                     hint={HINT}
+                    onExitUp={focusSearch}
+                    typeaheadLabel={item => (item.kind === 'group' ? item.title : item.kind === 'package' || item.kind === 'transitive' ? item.entry.id : undefined)}
                     testId="installed-list"
                     density="comfortable"
                     busy={revalidating}

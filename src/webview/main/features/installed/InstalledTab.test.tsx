@@ -6,6 +6,7 @@ import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledPackage, ty
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
+import { TYPEAHEAD_RESET_MS } from '../../../shared/primitives';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
 import { InstalledTab } from './InstalledTab';
@@ -217,7 +218,7 @@ describe('main panel: Installed tab', () => {
 
     it('the tree is described by the hint that names the group keys', async () => {
         await mountWith();
-        expect(screen.getByTestId('installed-list')).toHaveAccessibleDescription('Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.');
+        expect(screen.getByTestId('installed-list')).toHaveAccessibleDescription('Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.');
     });
 
     it('a busy row cannot join the bulk set and Space says why', async () => {
@@ -445,6 +446,28 @@ describe('main panel: Installed tab', () => {
         // A package the project does not have changes nothing.
         await hostSays(() => host.event('ui/selectProject', { projectPath: A, initialTab: 'installed', packageId: 'Absent' }));
         expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true');
+    });
+
+    it('Ctrl+ArrowDown in the search box moves to the Installed list\'s active row and Ctrl+ArrowUp returns to the box (UX-P4.3)', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        await user.click(screen.getByTestId('search-input'));
+        await user.keyboard('{Control>}{ArrowDown}{/Control}');
+        expect(screen.getByTestId('installed-list').contains(document.activeElement)).toBe(true);
+        await user.keyboard('{Control>}{ArrowUp}{/Control}');
+        expect(screen.getByTestId('search-input')).toHaveFocus();
+    });
+
+    it('type-ahead reaches a package by its id and a group row by its title (UX-P4.3)', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        optionOf('Serilog').focus();
+        await user.keyboard('m');
+        expect(optionOf('Moq')).toHaveFocus();
+        // The buffer clears after the workbench's interval; a fresh first character then searches on from the active row.
+        await new Promise(resolve => setTimeout(resolve, TYPEAHEAD_RESET_MS + 50));
+        await user.keyboard('t');
+        expect(groupItem('transitive')).toHaveFocus();
     });
 
     it('Space and Delete on a transitive row change nothing and the live region says why', async () => {

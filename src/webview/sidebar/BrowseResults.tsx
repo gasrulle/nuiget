@@ -22,6 +22,8 @@ export interface BrowseResultsProps {
     announce: (message: string) => void;
     /** The view's Delete confirmation (UX-P4.2b). */
     ask: AskUninstall;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
 }
 
 /** The 2 px bar at the top of the results while a search runs or runs again; the list does not move under it (DS-STATE-2). */
@@ -38,7 +40,7 @@ const bar = (label: string): React.JSX.Element => <div className="nuiget-sidebar
  * projects the central version reaches (ADR-004 tier 3, N77). A first search shows the bar alone (rows first under it
  * are D56's).
  */
-export function BrowseResults({ announce, ask }: BrowseResultsProps): React.JSX.Element {
+export function BrowseResults({ announce, ask, focusSearch }: BrowseResultsProps): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const { isPackageBusy } = useOps();
@@ -174,9 +176,11 @@ export function BrowseResults({ announce, ask }: BrowseResultsProps): React.JSX.
                 items={items}
                 label={`Search results for ${query}`}
                 hint={all.active
-                    ? 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) and Shift+F10 open the actions menu, which installs into or uninstalls from the projects you choose.'
-                    : 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) installs it into the selected project; on a package with a central entry in a CPM project it opens the actions menu. Delete (Cmd+Backspace) uninstalls an installed package from the selected project. Shift+F10 opens the actions menu.'}
+                    ? 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) and Shift+F10 open the actions menu, which installs into or uninstalls from the projects you choose. Ctrl+Up (Cmd+Up) returns to the search box.'
+                    : 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) installs it into the selected project; on a package with a central entry in a CPM project it opens the actions menu. Delete (Cmd+Backspace) uninstalls an installed package from the selected project. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.'}
                 testId="sidebar-browse-list"
+                onExitUp={focusSearch}
+                typeaheadLabel={item => item.result.id}
                 density="compact"
                 busy={search.revalidating}
                 selectedId={selectedId}

@@ -543,16 +543,6 @@ export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]
 
 /** The key paths today's tree fails, by `<screen> <path>`, with the item that fixes them (each under a ruling). */
 export const KEYS_PENDING: Readonly<Record<string, string>> = {
-    // ADR-013 Decision 6 (SB7, X21, A11), P4.3: the search box ↔ list bridge. Today the search box handles ArrowDown only
-    // while its popup is open (`SearchBox.tsx:176-191`) and the list moves on ArrowUp whatever the modifier (`Listbox.tsx:144`).
-    'main-installed search Ctrl+DownArrow': 'P4.3',
-    'main-installed rows Ctrl+UpArrow': 'P4.3',
-    'main-updates search Ctrl+DownArrow': 'P4.3',
-    'main-updates rows Ctrl+UpArrow': 'P4.3',
-    'main-browse search Ctrl+DownArrow': 'P4.3',
-    'main-browse rows Ctrl+UpArrow': 'P4.3',
-    'sidebar search Ctrl+DownArrow': 'P4.3',
-    'sidebar rows Ctrl+UpArrow': 'P4.3',
 };
 
 /**

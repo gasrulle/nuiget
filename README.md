@@ -128,6 +128,10 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 |-----|--------|
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
+| `Page Up` / `Page Down` | Move a page of rows |
+| Typing | Jump to the next package or group whose name starts with the typed text |
+| `Ctrl+↓` (`Cmd+↓` on macOS) in the search box | Move to the package list |
+| `Ctrl+↑` (`Cmd+↑` on macOS) in a list | Return to the search box |
 | `Enter` | Main panel: show the details (Installed, Updates, search results). Sidebar: open the package in the main panel, on its own tab |
 | `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct Packages, Transitive Packages and a target framework inside it, a project under All Projects); sidebar under All Projects: expand or collapse a workspace folder or a project |
 | `Ctrl+Enter` (`Cmd+Enter` on macOS) | Install the search result into the selected project, or update the package (Updates); a centrally managed change shows the projects it reaches first (main panel) or opens the actions menu (sidebar) |

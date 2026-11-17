@@ -1965,6 +1965,10 @@ const focusedTestId = async (): Promise<string> => (await script<string | null>(
 async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: string, enter: 'press' | 'later' | { skipped: string }): Promise<KeyOutcome[]> {
     const outcomes: KeyOutcome[] = [];
     await (await findByTestId(searchTestId, 30_000)).click();
+    // An open list under the box keeps the arrows (ADR-013 Decision 6): close it first.
+    if ((await script<string | null>('return document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\').getAttribute("aria-expanded");', searchTestId)) === 'true') {
+        await press(Key.ESCAPE);
+    }
     await press(Key.chord(MODIFIER, Key.ARROW_DOWN));
     const landed = await activeRow(listTestId);
     outcomes.push({ path: 'search Ctrl+DownArrow', observed: A_ROW.test(landed) ? 'a row of the list' : landed, expected: 'a row of the list' });
@@ -1999,6 +2003,22 @@ async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: stri
         await step('rows ArrowDown', Key.ARROW_DOWN, size > 1 ? 'row 2' : 'row 1');
         await step('rows ArrowUp', Key.ARROW_UP, 'row 1');
     }
+    // UX-P4.3: a page on and back, then type-ahead to the row below the first; expectations name no package or count.
+    const facts = (): Promise<{ index: number; inView: boolean }> => script<{ index: number; inView: boolean }>(ACTIVE_FACTS, listTestId);
+    const relation = (before: { index: number }, after: { index: number; inView: boolean }): string =>
+        `${after.index > before.index ? 'a later row' : after.index < before.index ? 'an earlier row' : 'the same row'}${after.inView ? ', in view' : ', out of view'}`;
+    const single = !tree && size <= 1;
+    const beforePage = await facts();
+    await press(Key.PAGE_DOWN);
+    const afterDown = await facts();
+    outcomes.push({ path: 'rows PageDown', observed: relation(beforePage, afterDown), expected: single ? 'the same row, in view' : 'a later row, in view' });
+    await press(Key.PAGE_UP);
+    outcomes.push({ path: 'rows PageUp', observed: relation(afterDown, await facts()), expected: single ? 'the same row, in view' : 'an earlier row, in view' });
+    await press(Key.HOME);
+    const letter = await script<string>(NEXT_ROW_LETTER, listTestId);
+    await press(letter);
+    outcomes.push({ path: 'rows type-ahead', observed: (await activeRow(listTestId)).replace(/^current /, ''), expected: tree ? 'row 1' : single ? 'row 1' : 'row 2' });
+
     // A tree's tail is the screen's declaration in `KEYS_TREE_TAIL` (End on its last treeitem, interaction model §5), checked
     // by the level-1 set size read at Home; a tree screen without an entry fails, never guessed.
     if (tree) {
@@ -2094,6 +2114,12 @@ async function deleteKeys(): Promise<KeyOutcome[]> {
     outcomes.push({ path: 'rows Delete restore', observed: await activeRow('installed-list'), expected: before });
     return outcomes;
 }
+
+/** Runs in the webview: the active row's index in the list and whether its box lies inside the list's (UX-P4.3). */
+const ACTIVE_FACTS = 'const list = document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\'); const row = document.activeElement && document.activeElement.closest(\'[data-index]\'); if (!list || !row) { return { index: -1, inView: false }; } const a = row.getBoundingClientRect(); const b = list.getBoundingClientRect(); return { index: Number(row.getAttribute("data-index")), inView: a.top >= b.top - 1 && a.bottom <= b.bottom + 1 };';
+
+/** Runs in the webview: the first character of the name of the row below the active one (the active one in a one-row list). */
+const NEXT_ROW_LETTER = 'const list = document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\'); const row = document.activeElement && document.activeElement.closest(\'[data-index]\'); const index = row ? Number(row.getAttribute("data-index")) : 0; const next = list.querySelector(\'[data-index="\' + (index + 1) + \'"]\') || row; const name = next && (next.querySelector(".nuiget-row-name") || next.querySelector("[data-testid^=\\"section-header-\\"]") || next); return (name.textContent || "").trim().charAt(0);';
 
 /** Runs in the main panel's webview: the selected tab and the row made current, as `<tab test id>, <row test id>`. */
 const MAIN_SHOWN = 'const tab = document.querySelector(\'[role="tab"][aria-selected="true"]\'); const row = document.querySelector(\'.nuiget-row-option[aria-current="true"]\'); return (tab ? tab.getAttribute("data-testid") : "no tab") + ", " + (row ? (row.closest(\'[data-testid^="package-row-"]\') || row).getAttribute("data-testid") : "no current row");';

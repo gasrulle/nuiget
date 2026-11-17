@@ -373,6 +373,9 @@ of the list does too:
 | Delete, Cmd+Backspace | `onDelete` (uninstall where it applies) |
 | Shift+F10, ContextMenu key, right-click | VS Code's `webview/context` menu: `Listbox` never prevents a `contextmenu`'s default, and the keys dispatch one on the row's wrapper (`openRowMenu`) |
 | Space, Ctrl+click, Cmd+click, a click on the check mark | Only in a multi-selectable list (`selectedIds` given): `onToggleSelected`, the row joins or leaves the bulk set |
+| PageUp, PageDown | Move the active row by a page: the last row whose end lies within one client height of the scroller from the active row's start, at least one row, clamped (UX-P4.3) |
+| A printable character (type-ahead) | With `typeaheadLabel`: the active row moves to the next row whose label starts with the typed text (a first character searches from the next row, wrapping; rows without a label are skipped); the buffer clears `TYPEAHEAD_RESET_MS` (800 ms, the workbench's interval) after the last key; Space keeps its bulk meaning (UX-P4.3) |
+| Ctrl+ArrowUp, Cmd+ArrowUp | `onExitUp`: the owner returns focus to the search box that drives the list; neither Ctrl/Cmd+ArrowUp nor Ctrl/Cmd+ArrowDown moves a row (UX-P4.3) |
 
 A list names its keys in a visually hidden sentence it is described by (`hint`). A disabled option
 (`aria-disabled`, for example an unresolved package) keeps focus and the menu and ignores Enter, Ctrl+Enter
@@ -381,8 +384,9 @@ the rows of the set are `aria-selected` and show a check mark (an `aria-hidden` 
 nothing in the option can take focus), and `selectedId` becomes the current row, `aria-current`, the one whose
 details are shown. Without `selectedIds` nothing of this exists and Space is not handled; a list without bulk actions
 may keep the check column's space (`checkColumn="reserved"`: an empty, borderless, `aria-hidden` mark that takes no click),
-so its icons and names line up with the panel's multi-selectable lists (Browse, UX-P3.2). Shift ranges, Ctrl+A,
-PageUp/PageDown and type-ahead are not handled.
+so its icons and names line up with the panel's multi-selectable lists (Browse, UX-P3.2). Shift ranges and Ctrl+A are not
+handled. `focusList(testId)` (exported with the primitive) focuses a list's active row from outside, with
+`scrollIntoView({ block: 'nearest' })`, and answers `false` when no such list or row is in the document (UX-P4.3).
 
 `Listbox` reads from the DOM only the `[data-index]` wrapper and the focusable element inside it; every row fact crosses as
 `RowPlacement` (`disabled` from `isDisabled`, `onToggle` for the check mark). With `groups` a list is a `role="tree"` (one grouped list per view, D48, ADR-013 Decision 8): every row is a `treeitem` with
@@ -775,7 +779,12 @@ Both surfaces use one combobox, `shared/search/SearchBox.tsx`: typing `@` lists 
 offers, and quick-search suggestions use the same list. ArrowUp/ArrowDown move through the options with focus kept in
 the box (`aria-activedescendant`), Enter or Tab takes the active option, Escape closes the list, then clears the box,
 then leaves it. The list belongs to the box and is no layer of `primitives/layers.ts`: focus never moves into it, which
-is why it is not a dialog.
+is why it is not a dialog. With no list open under the box Ctrl+ArrowDown (Cmd+ArrowDown) calls `onFocusList`: the
+main shell runs `focusList` on `browse-list` while browsing, else on the visible tab's `updates-list` or
+`installed-list`; the sidebar on `sidebar-browse-list`, else `sidebar-installed-list` and then `sidebar-updates-list`.
+The way back is each list's `onExitUp`, which calls the shell's `focusSearch` (`ListView`, `BrowseView` and the sidebar
+lists' prop). The box's `hint` names these hidden keys in a visually hidden span the input names with
+`aria-describedby` (A18, UX-P4.3).
 
 - **Main panel.** Plain text is a browse search: `BrowseList` (`browse-list`) takes the place of the tab bar and
   lists the results as the 1.x card (P9.6): the icon (`packageIconSrc`, the bundled default when no `data:` URI),

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { UninstallConfirmDialog, useUninstallConfirm } from '../shared/installed/uninstallConfirm';
-import { Banner, cssVars, LiveStatus, Sash } from '../shared/primitives';
+import { Banner, cssVars, focusList, LiveStatus, Sash } from '../shared/primitives';
 import { failure, sentence } from '../shared/updates/sentence';
 import { parseSearchQuery } from '../shared/search/parseSearchQuery';
 import { SearchBox } from '../shared/search/SearchBox';
@@ -73,6 +73,8 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const { announce, live, searchRef } = useShellChrome();
     // The view's one Delete confirmation (ADR-013 Decision 3, UX-P4.2b): every list asks here; the row buttons do not.
     const uninstall = useUninstallConfirm(announce);
+    // The box and the lists are one keyboard path (ADR-013 Decision 6, UX-P4.3).
+    const focusSearch = useCallback((): void => { searchRef.current?.focus(); }, [searchRef]);
     // SB14 (UX-P3.8): the search box claims the focus once, when the side bar's own document has the focus and nothing in it
     // holds it: at mount, else at the document's first focus gain. The Extensions view focuses its box when the view takes
     // the focus; a mount while the user types in an editor leaves the editor focused. The ref keeps the claim to one under
@@ -166,6 +168,8 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                     <SearchBox
                         inputRef={searchRef}
                         testId="sidebar-search-input"
+                        hint="When no list is open under the box, Ctrl+Down (Cmd+Down) moves to the package list."
+                        onFocusList={() => { if (mode === 'browse') { focusList('sidebar-browse-list'); } else if (!focusList('sidebar-installed-list')) { focusList('sidebar-updates-list'); } }}
                         label="Search packages, or filter with @installed or @updates"
                         placeholder="Search or type @ to filter"
                         prefixes={PREFIXES}
@@ -181,7 +185,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                     />
                 </div>
             </div>
-            {mode === 'browse' ? <BrowseResults announce={announce} ask={uninstall.ask} /> : (
+            {mode === 'browse' ? <BrowseResults announce={announce} ask={uninstall.ask} focusSearch={focusSearch} /> : (
                 <>
                     {/* The Updates pane alone says it with its own banner (UX-P3.10): one message per fact. */}
                     {unsupported && mode !== 'updates' ? <Banner severity="warning" data-testid="sidebar-unsupported">{`Unsupported project: ${sentence(unsupported.message)}`}</Banner> : null}
@@ -193,6 +197,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                             filter={mode === 'installed' ? parsed.filterText : ''}
                             announce={announce}
                             ask={uninstall.ask}
+                            focusSearch={focusSearch}
                             expanded={mode === 'installed' ? filterOpen : layout.installedExpanded}
                             onToggle={mode === 'installed' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, installedExpanded: !layout.installedExpanded })}
                             share={bothOpen ? layout.split : undefined}
@@ -215,6 +220,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
                             filter={mode === 'updates' ? parsed.filterText : ''}
                             announce={announce}
                             ask={uninstall.ask}
+                            focusSearch={focusSearch}
                             expanded={mode === 'updates' ? filterOpen : layout.updatesExpanded}
                             onToggle={mode === 'updates' ? () => setFilterOpen(open => !open) : () => changeLayout({ ...layout, updatesExpanded: !layout.updatesExpanded })}
                             share={bothOpen ? 100 - layout.split : undefined}

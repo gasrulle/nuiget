@@ -132,6 +132,30 @@ interface ListboxBaseProps<T extends { id: string }> {
     busy?: boolean;
     /** What takes the place of the list when it has no items, usually an `EmptyState`. */
     empty?: React.ReactNode;
+    /** Ctrl+ArrowUp, or Cmd+ArrowUp on macOS, on any row: the owner moves focus to the search box that drives the list. */
+    onExitUp?: () => void;
+    /** The text type-ahead matches a row by: a package's id, a group row's title; `undefined` for a row it skips. */
+    typeaheadLabel?: (item: T) => string | undefined;
+}
+
+/**
+ * The workbench's type navigation clears its buffer 800 ms after the last key (`listWidget.ts:513`, VS Code 1.140.0,
+ * `TypeNavigationController`; UX-P4.3).
+ */
+export const TYPEAHEAD_RESET_MS = 800;
+
+/**
+ * Moves focus into the list with the test id, on its active row (the one tab stop), as `moveTo` does (UX-P4.3): the search
+ * box's Ctrl/Cmd+ArrowDown. `false`, and nothing moves, when no such list or no row is in the document.
+ */
+export function focusList(testId: string): boolean {
+    const row = document.querySelector(`[data-testid="${testId}"]`)?.querySelector<HTMLElement>('[tabindex="0"]');
+    if (row === null || row === undefined) {
+        return false;
+    }
+    row.focus({ preventScroll: true });
+    row.scrollIntoView?.({ block: 'nearest' });
+    return true;
 }
 
 /** A list is named by its own label or by an element on the page, such as the title of its section. */
@@ -144,7 +168,7 @@ export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ la
  * active row always is, so focus never falls out of the list.
  */
 export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React.JSX.Element {
-    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, checkColumn, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, busy, empty } = props;
+    const { items, renderRow, groups, isDisabled, hint, testId, density, selectedId = null, selectedIds, checkColumn, onToggleSelected, onSelect, onActivate, onSecondaryActivate, onDelete, busy, empty, onExitUp, typeaheadLabel } = props;
     const rowHeight = ROW_HEIGHT[density];
     const groupHeight = groupRowHeight();
     const tree = useMemo(() => (groups === undefined ? undefined : treeOf(items, groups)), [items, groups]);
@@ -243,6 +267,45 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         rowFocusAt(index)?.scrollIntoView?.({ block: 'nearest' });
     };
 
+    // A page: the last row whose end lies within one client height of the scroller from the active row's start, at least
+    // one row on, clamped; PageUp the mirror (UX-P4.3).
+    const pageFrom = (from: number, direction: 1 | -1): number => {
+        const measures = virtualizer.measurementsCache;
+        const height = scrollRef.current?.clientHeight ?? 0;
+        const origin = measures[from];
+        if (origin === undefined) {
+            return from;
+        }
+        let target = from;
+        for (let index = from + direction; index >= 0 && index < items.length; index += direction) {
+            const span = direction === 1 ? measures[index].end - origin.start : origin.end - measures[index].start;
+            if (span > height) {
+                break;
+            }
+            target = index;
+        }
+        return target === from ? Math.min(Math.max(from + direction, 0), items.length - 1) : target;
+    };
+
+    // Type-ahead: a buffer of typed characters, cleared the workbench's interval after the last key; a first character
+    // searches from the next row, a longer buffer from the active row, wrapping; rows without a label are skipped.
+    const typed = useRef({ buffer: '', timer: undefined as ReturnType<typeof setTimeout> | undefined });
+    useEffect(() => () => clearTimeout(typed.current.timer), []);
+    const typeahead = (key: string): number => {
+        const state = typed.current;
+        clearTimeout(state.timer);
+        state.buffer += key.toLowerCase();
+        state.timer = setTimeout(() => { state.buffer = ''; }, TYPEAHEAD_RESET_MS);
+        const start = state.buffer.length === 1 ? activeIndex + 1 : activeIndex;
+        for (let step = 0; step < items.length; step++) {
+            const index = (start + step) % items.length;
+            if (typeaheadLabel?.(items[index])?.toLowerCase().startsWith(state.buffer)) {
+                return index;
+            }
+        }
+        return -1;
+    };
+
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
         const item = items[activeIndex];
         if (!item) {
@@ -252,6 +315,27 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
         const command = event.ctrlKey || event.metaKey;
         const disabled = isDisabled?.(item) === true;
         const handled = (): void => event.preventDefault();
+        if (command && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            // Ctrl/Cmd+ArrowUp returns to the search box (ADR-013 Decision 6); neither chord moves a row.
+            if (event.key === 'ArrowUp' && onExitUp !== undefined) {
+                handled();
+                onExitUp();
+            }
+            return;
+        }
+        if (!command && !event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) {
+            handled();
+            moveTo(pageFrom(activeIndex, event.key === 'PageDown' ? 1 : -1));
+            return;
+        }
+        if (typeaheadLabel !== undefined && event.key.length === 1 && event.key !== ' ' && !command && !event.altKey && !event.nativeEvent.isComposing) {
+            handled();
+            const next = typeahead(event.key);
+            if (next >= 0) {
+                moveTo(next);
+            }
+            return;
+        }
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             handled();
             const next = activeIndex + (event.key === 'ArrowDown' ? 1 : -1);

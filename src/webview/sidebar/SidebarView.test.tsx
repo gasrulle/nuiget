@@ -95,7 +95,7 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
         // A pane box of the measurements (UX-P0.10).
         expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
-        expect(list()).toHaveAccessibleDescription('Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.');
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
         expect(sectionSpinner()).toBeNull();
     });
@@ -166,7 +166,7 @@ describe('sidebar: Installed section', () => {
         expect(banner).toHaveTextContent('Warning: Unsupported project: requires .NET SDK 10 or newer');
         expect(names()).toEqual(['Moq', 'Serilog']);
         expect(screen.queryAllByTestId('row-action-uninstall')).toHaveLength(0);
-        expect(list()).toHaveAccessibleDescription('Read-only. Enter opens the package in the main panel. Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Read-only. Enter opens the package in the main panel. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.');
         await userEvent.click(option('Serilog'));
         await userEvent.keyboard('{Delete}');
         expect(removals(host)).toHaveLength(0);
@@ -286,6 +286,16 @@ describe('sidebar: Installed section', () => {
         await user.keyboard('{Delete}');
         expect(screen.queryByTestId('confirm-dialog')).toBeNull();
         expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq', 'Serilog']);
+    });
+
+    it('Ctrl+ArrowDown in the box moves to the first visible pane\'s list and Ctrl+ArrowUp returns to the box (UX-P4.3)', async () => {
+        const user = userEvent.setup();
+        await mountWith([pkg('Serilog'), pkg('Moq')]);
+        await user.click(screen.getByTestId('sidebar-search-input'));
+        await user.keyboard('{Control>}{ArrowDown}{/Control}');
+        expect(screen.getByTestId('sidebar-installed-list').contains(document.activeElement)).toBe(true);
+        await user.keyboard('{Control>}{ArrowUp}{/Control}');
+        expect(screen.getByTestId('sidebar-search-input')).toHaveFocus();
     });
 
     it('a failed or refused uninstall leaves the row as it was and says why', async () => {

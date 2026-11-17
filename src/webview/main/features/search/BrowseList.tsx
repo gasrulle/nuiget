@@ -18,7 +18,7 @@ interface Item {
     result: PackageSearchResult;
 }
 
-const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project. Shift+F10 opens the actions menu.';
+const HINT = 'Enter shows the package\'s details; Ctrl+Enter (Cmd+Enter) installs it into the selected project. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.';
 
 /** The 2 px bar over the list area's top edge while the search runs or runs again (DS-STATE-2, UX-P3.2). */
 const bar = (label: string): React.JSX.Element => <div className="nuiget-installed-progress"><ProgressBar label={label} data-testid="browse-progress" /></div>;
@@ -43,7 +43,7 @@ const formatDownloads = (count: number | undefined): string | undefined => {
  * The list keeps the check column's space, so its icons and names line up with the Installed and Updates rows (DS-ROW-2,
  * V58); a first search shows the bar alone, rows first under it later (D56, P5.9a) (UX-P3.2).
  */
-export function BrowseList({ text, announce, install }: BrowseView): React.JSX.Element {
+export function BrowseList({ text, announce, install, focusSearch }: BrowseView): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const [currentId, setCurrentId] = useState<string | null>(null);
@@ -113,6 +113,8 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
                 items={items}
                 label={`Search results for ${query}`}
                 hint={HINT}
+                onExitUp={focusSearch}
+                typeaheadLabel={item => item.result.id}
                 testId="browse-list"
                 density="comfortable"
                 checkColumn="reserved"

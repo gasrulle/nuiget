@@ -20,6 +20,8 @@ export interface ProjectUpdatesProps {
     announce: (message: string) => void;
     /** The view's Delete confirmation (UX-P4.2b). */
     ask: AskUninstall;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
     labelledBy: string;
     testId: string;
     busy: boolean;
@@ -37,7 +39,7 @@ export interface ProjectUpdatesProps {
  * unsupported project is read-only.
  */
 export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
-    const { projectPath, rows, installed, filter, announce, ask, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
+    const { projectPath, rows, installed, filter, announce, ask, focusSearch, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
     const { updateOne, askUninstall, viewDetails, renderUpdateRow } = useUpdateRows(announce, ask);
     const items = useMemo<Item[]>(() => visibleUpdates(rows, filter).map(update => ({ id: update.id, update })), [rows, filter]);
 
@@ -45,8 +47,10 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
         <Listbox
             items={items}
             labelledBy={labelledBy}
-            hint="Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) updates it to the latest version; on a centrally managed package it opens the actions menu. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu."
+            hint="Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) updates it to the latest version; on a centrally managed package it opens the actions menu. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box."
             testId={testId}
+            onExitUp={focusSearch}
+            typeaheadLabel={({ update }) => update.id}
             density="compact"
             selectedId={selectedId}
             busy={revalidating}

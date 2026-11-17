@@ -22,6 +22,8 @@ export interface UpdatesSectionProps {
     announce: (message: string) => void;
     /** The view's Delete confirmation (UX-P4.2b). */
     ask: AskUninstall;
+    /** Ctrl/Cmd+ArrowUp in the list: focus returns to the search box (UX-P4.3). */
+    focusSearch: () => void;
     /** The text after `@updates`: only updates whose id contains it are listed. */
     filter?: string;
     /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
@@ -63,6 +65,7 @@ interface AllProjectsUpdatesTreeProps {
     sourcesUnavailable: boolean;
     announce: (message: string) => void;
     ask: AskUninstall;
+    focusSearch: () => void;
     revalidating: boolean;
     labelledBy: string;
 }
@@ -72,7 +75,7 @@ interface AllProjectsUpdatesTreeProps {
  * are several, a project row under it with its count, the project's updates under that; a project without an update to list says
  * why in a message leaf, with the main panel's words. A row updates its own project.
  */
-function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailable, announce, ask, revalidating, labelledBy }: AllProjectsUpdatesTreeProps): React.JSX.Element {
+function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailable, announce, ask, focusSearch, revalidating, labelledBy }: AllProjectsUpdatesTreeProps): React.JSX.Element {
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const { updateOne, askUninstall, viewDetails, renderUpdateRow } = useUpdateRows(announce, ask);
@@ -157,8 +160,10 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
             items={items}
             groups={groups}
             labelledBy={labelledBy}
-            hint="Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) updates it to the latest version in the row's project; on a centrally managed package it opens the actions menu. Delete (Cmd+Backspace) uninstalls it from the row's project. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it."
+            hint="Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) updates it to the latest version in the row's project; on a centrally managed package it opens the actions menu. Delete (Cmd+Backspace) uninstalls it from the row's project. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box."
             testId="sidebar-updates-list"
+            onExitUp={focusSearch}
+            typeaheadLabel={item => (item.kind === 'group' ? item.title : item.kind === 'package' ? item.update.id : undefined)}
             density="compact"
             selectedId={selectedId}
             busy={revalidating}
@@ -190,7 +195,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
  * folder when there are several. A row updates its own project. A source that could not be checked is a banner, never
  * "no updates".
  */
-export function UpdatesSection({ announce, ask, filter = '', expanded: controlled, onToggle, share, showUnsupported = false }: UpdatesSectionProps): React.JSX.Element {
+export function UpdatesSection({ announce, ask, focusSearch, filter = '', expanded: controlled, onToggle, share, showUnsupported = false }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
     const all = useAllProjects();
@@ -243,7 +248,7 @@ export function UpdatesSection({ announce, ask, filter = '', expanded: controlle
                 ))}
                 {chunks.length === 0
                     ? (stream.status !== 'error' ? <Skeleton density="compact" /> : null)
-                    : <AllProjectsUpdatesTree chunks={chunks} installedOf={installedOf} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} ask={ask} revalidating={stream.revalidating} labelledBy={titleId} />}
+                    : <AllProjectsUpdatesTree chunks={chunks} installedOf={installedOf} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} ask={ask} focusSearch={focusSearch} revalidating={stream.revalidating} labelledBy={titleId} />}
             </>
         );
     } else if (projectPath === null) {
@@ -283,6 +288,7 @@ export function UpdatesSection({ announce, ask, filter = '', expanded: controlle
                     filter={filter}
                     announce={announce}
                     ask={ask}
+                    focusSearch={focusSearch}
                     labelledBy={titleId}
                     testId="sidebar-updates-list"
                     busy={updates.revalidating}

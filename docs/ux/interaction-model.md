@@ -163,6 +163,8 @@ row; moving changes the active row, not the selection.
 | Shift+F10, the ContextMenu key, right-click | The actions menu of the row | The same |
 | Ctrl+DownArrow (Cmd+DownArrow) in the search box | Focus moves to the active row of the visible list (the tab's list, or the Browse results) | Focus moves to the active row of the first visible pane's list |
 | Ctrl+UpArrow (Cmd+UpArrow) in a list | Focus returns to the search box | The same |
+| PageUp, PageDown | The active row moves by a page of the list; the selection does not change | The same |
+| A letter, digit or symbol (type-ahead) | The active row moves to the next row whose name starts with the typed text | The same |
 | Space, Ctrl+click, Cmd+click, a click on the check mark | In a list with bulk actions: the package row joins or leaves the bulk set | *(no bulk set)* |
 
 A click on a group row toggles it, as Enter does.

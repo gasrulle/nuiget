@@ -52,6 +52,10 @@ export interface SearchBoxProps {
     inputRef?: React.Ref<HTMLInputElement>;
     /** The box gained or lost focus. */
     onFocusChange?: (focused: boolean) => void;
+    /** Ctrl+ArrowDown, or Cmd+ArrowDown on macOS, while no list is open under the box: the owner moves focus to the list the box drives (ADR-013 Decision 6, UX-P4.3). */
+    onFocusList?: () => void;
+    /** The keys the box takes that a reader cannot see, read as the input's description (A18, UX-P4.3). */
+    hint?: string;
 }
 
 type Option =
@@ -88,8 +92,9 @@ function groupsOf(suggestions: readonly Suggestion[]): Array<{ sourceName: strin
  * layer stack nor a listener on the document.
  */
 export function SearchBox(props: SearchBoxProps): React.JSX.Element {
-    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, suggestError = false, onRetrySuggestions, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, inputRef, onFocusChange } = props;
+    const { value, onChange, onSubmit, prefixes, suggestions = [], onPickSuggestion, pending = false, suggestError = false, onRetrySuggestions, versions, onExpandSuggestion, onCollapseVersions, onPickVersion, onQuickInstall, label, placeholder, testId, inputRef, onFocusChange, onFocusList, hint } = props;
     const listId = `${useId()}-options`;
+    const hintId = `${useId()}-hint`;
     const [active, setActive] = useState(-1);
     const [versionActive, setVersionActive] = useState(0);
     // Escape, Enter and a pick close the list for the text it was open for (and for the id picked, which the owner
@@ -180,6 +185,12 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
         switch (event.key) {
             case 'ArrowDown':
             case 'ArrowUp':
+                // With no list open under the box Ctrl/Cmd+ArrowDown moves to the list it drives; an open list keeps the arrows.
+                if (!open && event.key === 'ArrowDown' && (event.ctrlKey || event.metaKey) && onFocusList !== undefined) {
+                    event.preventDefault();
+                    onFocusList();
+                    return;
+                }
                 if (open) {
                     event.preventDefault();
                     const direction = event.key === 'ArrowDown' ? 1 : -1;
@@ -333,6 +344,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                 aria-expanded={open}
                 aria-controls={open ? listId : undefined}
                 aria-activedescendant={descendant}
+                aria-describedby={hint === undefined ? undefined : hintId}
                 placeholder={placeholder}
                 value={value}
                 autoComplete="off"
@@ -346,6 +358,7 @@ export function SearchBox(props: SearchBoxProps): React.JSX.Element {
                     onFocusChange?.(false);
                 }}
             />
+            {hint === undefined ? null : <span id={hintId} className="nuiget-visually-hidden">{hint}</span>}
             {/* Pointer helpers only: Escape clears and `@` lists the filters from the keyboard (§2). */}
             <span className="nuiget-search-actions">
                 {value !== '' ? <IconButton label="Clear Search" tabIndex={-1} onMouseDown={keepFocus} onClick={() => change('')}><CloseIcon /></IconButton> : null}
