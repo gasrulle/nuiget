@@ -2,7 +2,9 @@
 
 Status: accepted · Date: 2026-10-23 · Decision 7 (success feedback) supersedes the 2.0 plan's D17: the owner confirmed
 it in design round 1 (D50). Decision 1's sidebar Enter is the owner's round-1 pick (D-D). · Amended: 2026-11-17 (UX
-plan item UX-P4.1: the contract additions of Decision 3 and the Consequences landed; `ui/contextMenu` removed)
+plan item UX-P4.1: the contract additions of Decision 3 and the Consequences landed; `ui/contextMenu` removed) ·
+Amended: 2026-11-17 (UX plan item UX-P4.fix-1: Decision 2's Delete names the sidebar's installed Browse row, shipped in
+UX-P3.8)
 
 ## Context
 
@@ -45,7 +47,7 @@ model of 2.0 at odds with both the interaction model and the workbench:
    version (the 2.0 path of D16, unchanged); an Updates row updates to the row's new version; Installed and transitive
    rows have none. On a central row the key never writes directly: in the main panel it opens the CPM preview dialog,
    in the sidebar it opens the actions menu (Decision 4). *Delete* (Cmd+Backspace on macOS) uninstalls an Installed or
-   an Updates row. *The actions menu* offers every write of the row. The row's pointer action buttons stay, mirrored by
+   an Updates row, and in the sidebar a Browse row of a package installed in the selected project. *The actions menu* offers every write of the row. The row's pointer action buttons stay, mirrored by
    these keys (the listbox contract of ADR-008). Every key is named in the hint of the list it works in.
 3. **Delete confirms, like the Explorer.** The key opens a confirmation: "Uninstall <id> from <project>?" (under All
    Projects, the row's project), Uninstall and Cancel, opening on Cancel as every `ConfirmDialog` does, and a "Do not
