@@ -690,8 +690,9 @@ export const RULES: readonly RuleDefinition[] = [
     // pair read green in every capture of the group; the red groups to the items that make them hold.
     rule('DS-TYPE-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs', 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `message-leaf`, a compact message leaf that wraps sets body text, not the row's line box.
-    // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): `dialog-text`, a dialog's title and text containers at 1.4.
-    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': { pending: 'P4.fix-3' } }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'], 'dialog-text': DIALOG_TEXT_STATES } }),
+    // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): `dialog-text`, a dialog's title and text containers at 1.4;
+    // hard since its declaration (DO 5; the reading run 44111085167 printed every part `normal`).
+    rule('DS-TYPE-4', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': 'hard' }, tolerance: TOLERANCES.gapMembership, scopeStates: { 'message-leaf': ['sidebar-all-projects-updates', 'sidebar-all-projects-tools'], 'dialog-text': DIALOG_TEXT_STATES } }),
     rule('DS-TYPE-6', {
         helper: 3, scopes: inGroups('hard', 'main-installed', 'main-updates', 'details', 'sidebar', 'browse'), tolerance: TOLERANCES.fontExact, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES],
     }),

@@ -1348,6 +1348,8 @@
     border-radius: var(--nuiget-radius-layer);
     background: var(--nuiget-color-widget-bg);
     color: var(--nuiget-color-widget-fg);
+    /* The layer portals to the body, outside the roots that set 1.4 (DS-TYPE-4; judge P4.2b#D1, UX-P4.fix-3). */
+    line-height: var(--nuiget-line-height);
     box-shadow: 0 var(--nuiget-space-1) var(--nuiget-space-4) var(--nuiget-color-shadow);
 }
 

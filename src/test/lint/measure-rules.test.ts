@@ -201,8 +201,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const hard = (...groups: string[]) => Object.fromEntries(groups.map(group => [group, 'hard']));
         expect(scopes('DS-TYPE-1')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sidebar'), sources: 'hard' });
         // UX-P3.10 push A (DO 4): the compact message leaf clause, hard since UX-P3.10 push E.
-        // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17): the dialog text clause, pending that row until its declaration lands.
-        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': { pending: 'P4.fix-3' } });
+        // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17): the dialog text clause, hard since the Dialog's declaration.
+        expect(scopes('DS-TYPE-4')).toEqual({ ...hard('main-installed', 'main-updates', 'browse', 'details', 'dialogs'), sidebar: 'hard', sources: 'hard', 'message-leaf': 'hard', 'dialog-text': 'hard' });
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         // UX-P3.10 push C: the details cells, hard since UX-P3.10 push E.
@@ -1775,7 +1775,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         const name = 'DS-TYPE-4@sidebar-uninstall-dialog/dialog-text';
         const normal = [{ part: 'title', lineHeight: 'normal' }, { part: 'description', lineHeight: 'normal' }, { part: 'body', lineHeight: 'normal' }, { part: 'option', lineHeight: 'normal' }];
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: normal }), name))
-            .toMatchObject({ pass: false, status: { pending: 'P4.fix-3' }, value: 'title normal (target 25.2); description normal, body normal, option normal (target 18.2)' });
+            .toMatchObject({ pass: false, status: 'hard', value: 'title normal (target 25.2); description normal, body normal, option normal (target 18.2)' });
         expect(lineOf('main-installed-bulk-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '22.5px' }, { part: 'description', lineHeight: '16px' }] }), 'DS-TYPE-4@main-installed-bulk-dialog/dialog-text'))
             .toMatchObject({ pass: false, value: 'title 22.5 (target 25.2); description 16 (target 18.2)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'description', lineHeight: '18.2px' }, { part: 'option', lineHeight: '18.6px' }] }), name)?.pass).toBe(true);
@@ -1783,7 +1783,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'description', lineHeight: '18.2px' }, { part: 'option', lineHeight: 'normal' }] }), name)?.pass).toBe(false);
         // The sources dialog's cells read it in the sources group.
         expect(lineOf('main-sources-add', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }, { part: 'body', lineHeight: '18.2px' }] }), 'DS-TYPE-4@main-sources-add/dialog-text'))
-            .toMatchObject({ pass: true, status: { pending: 'P4.fix-3' }, value: 'title 25.2 (target 25.2); body 18.2 (target 18.2)' });
+            .toMatchObject({ pass: true, status: 'hard', value: 'title 25.2 (target 25.2); body 18.2 (target 18.2)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({}), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'body', lineHeight: '18.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
