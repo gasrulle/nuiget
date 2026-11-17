@@ -22,6 +22,7 @@
     "    combobox \"Search packages, or filter with @installed, @updates or @vulnerable\" [collapsed, focused] {search-input}",
     "    button \"Clear Search\"",
     "    button \"Filters\"",
+    "  group \"Search results for zz-no-such-package-nuiget\"",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

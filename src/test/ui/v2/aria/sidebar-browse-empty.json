@@ -6,6 +6,7 @@
     "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed, focused] {sidebar-search-input}",
     "    button \"Clear Search\"",
     "    button \"Filters\"",
+    "  group \"Search results for zz-no-such-package-nuiget\"",
     "  status \"\" {status-live}"
   ]
 }

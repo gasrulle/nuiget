@@ -9,6 +9,7 @@
     "  heading \"Updates # of #\"",
     "    button \"Updates # of #\" [expanded] {section-header-updates}",
     "  button \"Update All (#)\" [disabled] {sidebar-update-all-button}",
+    "  group \"Updates\"",
     "  status \"\" {status-live}"
   ]
 }

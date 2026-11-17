@@ -29,6 +29,7 @@
     "      button \"Select All\" [disabled, not pressed] {select-all-button}",
     "      button \"Uninstall Selected (#)\" [disabled] {uninstall-selected-button}",
     "    progressbar \"Loading installed packages\" {installed-progress}",
+    "    group \"Installed packages\" [focused]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "    heading \"Serilog\"",

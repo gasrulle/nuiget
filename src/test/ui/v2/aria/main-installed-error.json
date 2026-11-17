@@ -30,6 +30,7 @@
     "      button \"Uninstall Selected (#)\" [disabled] {uninstall-selected-button}",
     "    alert \"\" {installed-error}",
     "      button \"Retry\"",
+    "    group \"Installed packages\"",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"

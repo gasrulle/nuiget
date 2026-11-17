@@ -1,0 +1,165 @@
+{
+ "item": "P4.4",
+ "runs": [
+  {
+   "runId": "44169068801",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "b9de5dce (proving push)",
+   "look": "modern",
+   "workflow": "wf_9f1abf0f-68b",
+   "note": "Four states (main-details-readonly, main-updates-empty, main-browse-empty, main-installed-bulk-dialog); no dialog or empty-state artboard: main-installed-details, main-updates and main-installed-all as the references.",
+   "captures": {
+    "main-details-readonly": {
+     "png": "captures/44169068801/main-details-readonly.dark-modern.1200.png",
+     "sha256": "06cd5a2a77a29a8ace0ebf9c0d24c5bb19bb3d81ffad5a72e2f8c24e272866ba"
+    },
+    "main-updates-empty": {
+     "png": "captures/44169068801/main-updates-empty.dark-modern.1200.png",
+     "sha256": "1f73410714cf0b8d8a40005ee233a71c357489be71ed3b4d0fc1e24a310f97b0"
+    },
+    "main-browse-empty": {
+     "png": "captures/44169068801/main-browse-empty.dark-modern.1200.png",
+     "sha256": "f72324d7ba0f28df5c968f4636d1a1f0c14ed4742b1d6289d3d9f399acc61892"
+    },
+    "main-installed-bulk-dialog": {
+     "png": "captures/44169068801/main-installed-bulk-dialog.dark-modern.1200.png",
+     "sha256": "5ca47318ba09be25b7536a7172b928f5a572c2f82c95dbb4f80c5799272abed0"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 8,
+    "standing": 3,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 2,
+    "incomplete": 0
+   },
+   "singleJudge": [
+    {
+     "id": "main-details-readonly#D2",
+     "state": "main-details-readonly",
+     "finding": "[states] The read-only details header no longer shows what the selection had: the artboard draws an \"Installed <version>\" row with an Uninstall button (spec uninstall-button at 653,130, 70x26) above the Version row, but the capture drops that row and labels the disabled primary \"Install\". The banner beside it says the package shown is Serilog of Gateway.csproj, where it is installed, so the stale selection reads as not installed instead of keeping its content with the actions disabled (interaction model, Stale selection; design-system §9 details-readonly cell).",
+     "severity": "major",
+     "box": [
+      441,
+      130,
+      283,
+      60
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "states"
+     ],
+     "note": "informational: accepted-as-design — the header shows the same content as the committed golden; the selected project's list is not known yet (\"Checking the selected project.\"); not this item's (design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions))"
+    },
+    {
+     "id": "main-updates-empty#D1",
+     "state": "main-updates-empty",
+     "finding": "[states] The search box placeholder reads \"Search or type @ to filter\" where the approved artboard's search-input element draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; design-system.md (overflow table, main header row) declares the short copy since UX-P3.fix-15, so the artboard drawing and the written rules disagree and the product follows the rules.",
+     "severity": "minor",
+     "box": [
+      23,
+      47,
+      165,
+      16
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "note": "informational: accepted-as-design — DECISIONS 2026-11-16 \"The main panel at the editor minimum (UX-P3.fix-15)\": the main box takes the hint \"Search or type @ to filter\"; the artboard's long hint is the planning line on the P3.fix-15 row (design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions))"
+    }
+   ],
+   "findings": [
+    {
+     "id": "main-details-readonly#D1",
+     "state": "main-details-readonly",
+     "finding": "[native] The Installed list draws a 1 px focusBorder (#0078d4) ring around the listbox container itself, and the ring stops at y 362 round the three skeleton rows, about 440 px above the pane bottom. It reads as a blue box drawn round the loading rows. The artboard's installed-list runs to the pane bottom (spec rect 0,147,420,656), and a native focused list rings either its focused row (the artboard's Newtonsoft.Json band) or the whole view, never a box that ends partway down the pane. | [geometry] The Installed list's outlined box (1 px focusBorder ring with the 2 px progress bar drawn over its top edge) spans only the three skeleton rows, x 0-419 by y 147-362 (216 px high), and stops in the middle of the list pane. The spec's installed-list rect is 420 x 656 (y 147-803), and the artboard's list fills the pane to its bottom edge.",
+     "severity": "major",
+     "box": [
+      0,
+      147,
+      420,
+      216
+     ],
+     "rule": "DS-FOCUS-2, judge-only",
+     "lenses": [
+      "native",
+      "geometry"
+     ],
+     "disposition": "fixed",
+     "evidence": "re-run 44175345104 (c947764b): no longer standing (design-judge wf_97fffb1c-fa5, 0 candidates); DS-FOCUS-1@main-details-readonly/controls slot 420×656 in list 420×656 (hard)",
+     "ruling": "design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions), DO 1-5"
+    },
+    {
+     "id": "main-browse-empty#D1",
+     "state": "main-browse-empty",
+     "finding": "[native] The Browse empty sentence 'No results for \"…\".' (glyph top y 88, about 11 px under the y 77 divider) and the details pane's empty sentence 'Select a package to see its details.' (glyph top y 100, as on the artboard) start on different lines. The two empty states sit side by side and read as a ragged pair, where a workbench welcome view starts its text at one top padding in each pane. | [geometry] The Browse empty sentence \"No results for ...\" sits 8 px below the list column's top edge (ink top y 88, box about y 85) while its start inset is 20 px, and the details pane's empty sentence beside it keeps the 20/20 inset of the artboard's details-empty (ink top y 100, spec padding 20), so the two empty-state sentences either side of the split sit 12 px apart vertically and the list one has unequal top and start insets.",
+     "severity": "minor",
+     "box": [
+      20,
+      85,
+      647,
+      29
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native",
+      "geometry"
+     ],
+     "disposition": "accepted-as-design",
+     "evidence": "primitives.css: an empty state's block inset is 8 by default and 20 in the details pane, set by the carrier at UX-P3.3b; DS-INSET-4 empty top 20 (hard) and DS-STATE-3 20/20 (hard) green; the cell at 0 px, untouched by this item; proposed as a planning row (DO 10)",
+     "ruling": "design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions)"
+    },
+    {
+     "id": "main-installed-bulk-dialog#D1",
+     "state": "main-installed-bulk-dialog",
+     "finding": "[native] No control in the open confirmation dialog shows a focus ring: Cancel (where the dialog opens) has only its 1 px grey secondary border, and Uninstall only its fill, with no 1 px focusBorder outline at offset +2. A workbench modal dialog shows which button has the keyboard focus, and the main panel draws focus rings after a click in both looks, so the user cannot see which button Enter will activate. | [states] The open confirmation dialog shows no focus ring on any of its controls: neither Cancel nor the primary Uninstall button, nor the dialog surface, draws the 1 px focusBorder ring. Yet the dialog was opened from the main panel, an editor surface that draws rings after a pointer click in both looks, so the capture does not show where focus sits in the dialog.",
+     "severity": "major",
+     "box": [
+      671,
+      428,
+      138,
+      28
+     ],
+     "rule": "DS-FOCUS-3",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "disposition": "accepted-as-design",
+     "evidence": "DECISIONS.md 2026-11-07 (a pointer-opened dialog focuses Cancel without :focus-visible; DS-FOCUS-3 premise P-3)",
+     "ruling": "judge-log rule; docs/plans/judge-log/P3.5.json main-installed-bulk-dialog#D2 (design-advisor, 2026-11-07, UX-P3.5 follow-up 3); confirmed in the design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions)"
+    }
+   ],
+   "refuted": []
+  },
+  {
+   "runId": "44175345104",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "c947764b (fix push)",
+   "look": "modern",
+   "workflow": "wf_97fffb1c-fa5",
+   "note": "The re-judge of main-details-readonly after the slot fills its list (GOLDEN ruling DO 5): 0 candidates; the three judges returned no finding.",
+   "captures": {
+    "main-details-readonly": {
+     "png": "captures/44175345104/main-details-readonly.dark-modern.1200.png",
+     "sha256": "b918a70ca1bb34c7dec15edbc56015a8f9762ecde18fbcdb98992760e071802f"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 0,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "singleJudge": [],
+   "findings": [],
+   "refuted": []
+  }
+ ]
+}

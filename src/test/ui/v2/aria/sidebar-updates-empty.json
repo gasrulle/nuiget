@@ -24,6 +24,7 @@
     "  separator \"Resize the Installed and Updates sections\" {sash}",
     "  heading \"Updates\"",
     "    button \"Updates\" [expanded] {section-header-updates}",
+    "  group \"Updates\"",
     "  status \"\" {status-live}"
   ]
 }

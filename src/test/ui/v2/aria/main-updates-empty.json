@@ -28,6 +28,7 @@
     "    toolbar \"Bulk actions\" {updates-toolbar}",
     "      button \"Select All\" [disabled, not pressed] {select-all-button}",
     "      button \"Update All (#)\" [disabled] {update-all-button}",
+    "    group \"Updates\"",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",
     "  status \"\" {status-live}"
