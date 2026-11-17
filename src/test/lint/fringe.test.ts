@@ -81,7 +81,7 @@ describe('DS-TYPE-10 reader (UX-P3.fix-4)', () => {
             { name: 'DS-TYPE-10@sidebar-filter', value: 'not measurable (no pixels)', status: 'hard', pass: false },
         ]);
         expect(RULES.find(rule => rule.id === 'DS-TYPE-10')).toMatchObject({ scopes: { sidebar: 'hard', dialogs: 'hard' }, scopeStates: { dialogs: ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'sidebar-uninstall-dialog'] }, lanes: ['ui'], pixels: true });
-        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')?.pendingStates).toEqual({ 'sidebar-uninstall-dialog': 'P4.2b' });
+        expect(RULES.find(rule => rule.id === 'DS-TYPE-10')?.pendingStates).toBeUndefined();
     });
 
     it('prints DS-TYPE-10 on the two dialogs\' cells, hard since UX-P3.fix-6, and on no other dialog (UX-P3.9 follow-ups 4-5)', () => {

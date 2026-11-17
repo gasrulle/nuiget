@@ -736,8 +736,8 @@ export const RULES: readonly RuleDefinition[] = [
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
     // UX-P3.9 follow-ups 4-5: the text of a dialog, judged as the sidebar's (H27). Hard for the dialogs scope since UX-P3.fix-6's
     // first push (opening ruling, DO 1-2); the dialog over the side bar since its proving push (26 lines, 0 greyscale on two runs).
-    // UX-P4.2b: the sidebar's Delete confirmation is read from its proving push and flipped by the item's closing commit.
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES }, pendingStates: { 'sidebar-uninstall-dialog': 'P4.2b' } }),
+    // UX-P4.2b: the sidebar's Delete confirmation joined the dialogs scope; hard since its closing commit (5 lines, 0 greyscale).
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
 ];
 
 /** The state group of a named state, by its name. */

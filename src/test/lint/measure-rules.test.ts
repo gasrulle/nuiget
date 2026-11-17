@@ -145,7 +145,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.filter(rule => rule.lanes !== undefined).map(rule => rule.id)).toEqual(['SPEC', 'DS-TYPE-10']);
         // UX-P3.9 follow-ups 4-5: DS-TYPE-10 reads the bulk dialog's text too; hard on both dialogs since UX-P3.fix-6.
         expect(definition('DS-TYPE-10')?.scopes).toEqual({ sidebar: 'hard', dialogs: 'hard' });
-        expect(definition('DS-TYPE-10')?.pendingStates).toEqual({ 'sidebar-uninstall-dialog': 'P4.2b' });
+        expect(definition('DS-TYPE-10')?.pendingStates).toBeUndefined();
         // UX-P3.9 follow-up 5: the scroll shadow moved to P3.fix-6 with its rule; hard since UX-P3.fix-6's proving push.
         expect(definition('DS-SCROLL-2')?.scopes).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
         expect(definition('DS-TYPE-10')?.scopeStates).toEqual({ dialogs: ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'sidebar-uninstall-dialog'] });

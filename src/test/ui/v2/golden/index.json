@@ -641,6 +641,12 @@
     "sha256": "5ecbe0248b1ffaf64bc5d28d965762a4f9a72fa1509c3e8c62b75577bcfb2f1f",
     "sidecarSha256": "c545d0de95ca570ac5fc784aa2b10cf77599adf4d335f458e5c1ebe21adc49dc"
   },
+  "sidebar-uninstall-dialog.dark-modern.300.png": {
+    "status": "baseline",
+    "run": "44036837521",
+    "sha256": "4b49e93cea9ca65cfca5032683ddbfc5e5b33c47e0bbca77ab12c4d8f3c2830c",
+    "sidecarSha256": "e0d03e9afedf33def1f4219eab5075432d866e57c10b36fa260a85d84d49746f"
+  },
   "sidebar-update-all-dialog.dark-modern.300.png": {
     "status": "approved",
     "run": "43726017923",

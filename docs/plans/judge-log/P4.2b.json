@@ -1,0 +1,107 @@
+{
+ "item": "P4.2b",
+ "runs": [
+  {
+   "runId": "44036837521",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "80aa7704 (proving push B)",
+   "look": "modern",
+   "workflow": "wf_c9ff0d78-8dd",
+   "note": "No sidebar or dialog artboard: judged against main-installed-all.dark-modern.1200 as the row reference (the P3.7c/P3.8 sidebar precedent). One standing finding, disposed as fixed with its owner the proposed dialog line-height row.",
+   "captures": {
+    "sidebar-uninstall-dialog": {
+     "png": "captures/44036837521/sidebar-uninstall-dialog.dark-modern.300.png",
+     "sha256": "4b49e93cea9ca65cfca5032683ddbfc5e5b33c47e0bbca77ab12c4d8f3c2830c",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the sidebar row reference)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 3,
+    "standing": 1,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "findings": [
+    {
+     "id": "sidebar-uninstall-dialog#D1",
+     "state": "sidebar-uninstall-dialog",
+     "finding": "[native] The dialog's wrapped title and body text are set too tight. The title's two lines sit 21 px apart (x-height baselines at y 343 and 364) and the body's two lines 15 px apart (baselines at y 388 and 403). That is about 1.16 × the font size, where the type scale's 'Details title, dialog title' row gives 1.4 (25.2 px at 18 px) and DS-TYPE-4 gives 18.2 px for 13 px body text. The dialog's text block reads squeezed next to the workbench's own dialog message and detail lines. | [geometry] The dialog's two-line body sentence \"Removes the package reference / from the project file.\" is set at a line pitch of about 15 px (baselines at y 388 and 403), the browser's normal line height, not the 1.4 body line height of 18.2 px at 13 px. The wrapped message reads squeezed against the rest of the sidebar's body text. | [geometry] The dialog title \"Uninstall Serilog from / Gateway.csproj?\" wraps to two lines at a pitch of about 21 to 22 px (cap tops at y 330/331 and 352/353). The type scale gives the dialog title a 1.4 line box, about 25 px at 18 px, so the title block is about 7 px shorter than the spec.",
+     "severity": "major",
+     "box": [
+      33,
+      327,
+      222,
+      82
+     ],
+     "rule": "DS-TYPE-4",
+     "lenses": [
+      "native",
+      "geometry"
+     ],
+     "members": [
+      {
+       "id": "native-1",
+       "lens": "native",
+       "state": "sidebar-uninstall-dialog",
+       "finding": "The dialog's wrapped title and body text are set too tight. The title's two lines sit 21 px apart (x-height baselines at y 343 and 364) and the body's two lines 15 px apart (baselines at y 388 and 403). That is about 1.16 × the font size, where the type scale's 'Details title, dialog title' row gives 1.4 (25.2 px at 18 px) and DS-TYPE-4 gives 18.2 px for 13 px body text. The dialog's text block reads squeezed next to the workbench's own dialog message and detail lines.",
+       "severity": "major",
+       "box": [
+        33,
+        330,
+        222,
+        77
+       ],
+       "rule": "DS-TYPE-4",
+       "verdict": "confirmed",
+       "reason": "The crop shows a tight two-line title and a tight two-line body. A pixel profile puts the title baselines at y 343 and 364, a 21 px pitch for 18 px type where the scale gives 1.4, about 25 px. It puts the body baselines at y 388 and 403, a 15 px pitch where the rule gives 18.2 px. The hard DS-TYPE-4 line 'line height 18.2 (target 18.2)' reads only the root's computed line height, not the dialog's text, so it does not contradict this.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      },
+      {
+       "id": "geometry-1",
+       "lens": "geometry",
+       "state": "sidebar-uninstall-dialog",
+       "finding": "The dialog's two-line body sentence \"Removes the package reference / from the project file.\" is set at a line pitch of about 15 px (baselines at y 388 and 403), the browser's normal line height, not the 1.4 body line height of 18.2 px at 13 px. The wrapped message reads squeezed against the rest of the sidebar's body text.",
+       "severity": "major",
+       "box": [
+        33,
+        379,
+        210,
+        30
+       ],
+       "rule": "DS-TYPE-4",
+       "verdict": "confirmed",
+       "reason": "The crop shows the body sentence 'Removes the package reference / from the project file.' set tight. Its bright-pixel baselines fall at y 388 and 403, a 15 px pitch against DS-TYPE-4's 18.2 px. The hard DS-TYPE-4 value of 18.2 measures the sidebar root, not this text.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      },
+      {
+       "id": "geometry-2",
+       "lens": "geometry",
+       "state": "sidebar-uninstall-dialog",
+       "finding": "The dialog title \"Uninstall Serilog from / Gateway.csproj?\" wraps to two lines at a pitch of about 21 to 22 px (cap tops at y 330/331 and 352/353). The type scale gives the dialog title a 1.4 line box, about 25 px at 18 px, so the title block is about 7 px shorter than the spec.",
+       "severity": "major",
+       "box": [
+        33,
+        327,
+        222,
+        42
+       ],
+       "rule": "DS-TYPE-4",
+       "verdict": "confirmed",
+       "reason": "The crop shows the title 'Uninstall Serilog from / Gateway.csproj?' on two lines. Ink starts at y 330 and 351 and the baselines fall at y 343 and 364, a 21 px pitch where the type scale's 1.4 for an 18 px dialog title gives about 25 px. DS-TYPE-7 measures only the size and weight (18px/600) and says nothing on line height.",
+       "method": "crop",
+       "refuterSeverity": "major"
+      }
+     ],
+     "disposition": "fixed",
+     "dispositionText": "A dialog's text takes the browser's normal line height: `Dialog` portals to `document.body` and `.nuiget-dialog` sets no line-height (`primitives.css:1338-1366`), while the roots set 1.4. Real, and older than this item (every dialog since UX-P3.5). Fixed in the row the planning session places (proposed UX-P4.fix: dialog line height), which first adds the DS-TYPE-4 clause that fails on run 44036837521 and then the one declaration; this golden is adopted as `baseline` until then (design-advisor GOLDEN ruling, sha256 4b49e93c…2830c)."
+    }
+   ],
+   "refuted": []
+  }
+ ]
+}
