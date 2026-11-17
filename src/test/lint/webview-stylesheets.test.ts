@@ -112,6 +112,27 @@ describe('2.0 webview stylesheets', () => {
         expect(timed.length).toBeGreaterThanOrEqual(2);
     });
 
+    // UX-P4.5 (design-advisor opening ruling of 2026-11-17, DO 3): DS-MOTION-1's timings, read from the rules; every capture
+    // runs under reduced motion, so the stylesheet is where the un-reduced values are held.
+    it('colours move on the fast duration, geometry on the normal one, and the three loops on the workbench timings (DS-MOTION-1)', () => {
+        const declarations = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8')).flatMap(rule => rule.declarations.map(text => ({ file, prelude: rule.prelude, text }))));
+        const transitions = declarations.filter(entry => /^transition\s*:/.test(entry.text));
+        expect(transitions.length).toBeGreaterThanOrEqual(5);
+        for (const { prelude, text } of transitions) {
+            const [property, duration, easing] = text.slice(text.indexOf(':') + 1).trim().split(/\s+/);
+            const expected = property === 'color' || property === 'background-color' ? 'var(--nuiget-duration-fast)' : 'var(--nuiget-duration-normal)';
+            expect({ prelude, duration, easing }).toEqual({ prelude, duration: expected, easing: 'var(--nuiget-easing)' });
+        }
+        const animations = declarations.filter(entry => /^animation\s*:/.test(entry.text)).map(entry => entry.text.replace(/\s+/g, ' '));
+        expect(animations.sort()).toEqual([
+            'animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) ease-in-out infinite alternate',
+            'animation: nuiget-progress-cross var(--nuiget-duration-progress) linear infinite',
+            'animation: nuiget-spin var(--nuiget-duration-spin) var(--nuiget-easing-spin) infinite',
+        ]);
+        const keyframes = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8')).map(rule => rule.prelude).filter(prelude => prelude.startsWith('@keyframes')));
+        expect(keyframes.sort()).toEqual(['@keyframes nuiget-breathe', '@keyframes nuiget-progress-cross', '@keyframes nuiget-spin']);
+    });
+
     it('every padding, margin and gap is a spacing token', () => {
         expect(defectsOf('pxSpacing')).toEqual([]);
     });
@@ -366,7 +387,7 @@ describe('2.0 webview stylesheets', () => {
     it('the scanner accepts what the primitives are allowed to write', () => {
         const allowed = [
             '.nuiget-icon-button { transition: color var(--nuiget-duration-fast) var(--nuiget-easing); }',
-            '.nuiget-spinner svg { animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite; }',
+            '.nuiget-spinner svg { animation: nuiget-spin var(--nuiget-duration-spin) var(--nuiget-easing-spin) infinite; }',
             '.nuiget-banner { transition: none; font-size: var(--nuiget-font-size-sm); width: 1px; }',
             '.nuiget-readme h1 { font-size: 1.6em; }',
             '@media (forced-colors: active) { .nuiget-row { outline: 1px solid; } }',

@@ -13,9 +13,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
  * Reference values that wait for the item that builds what uses them: token → that item.
  * @type {Record<string, string>}
  */
-export const ALLOWANCE = {
-    '--nuiget-duration-normal': 'P4.5',
-};
+export const ALLOWANCE = {};
 
 const LOOK_BLOCK = ':root[data-look="modern"] {';
 const FORCED_BLOCK = '@media (forced-colors: active) {';

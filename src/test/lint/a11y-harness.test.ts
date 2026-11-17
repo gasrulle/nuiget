@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
@@ -259,9 +259,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(ariaLineFor('main-updates', snapshot, { state: 'main-updates', lines: ['listbox "Installed"'] }))
             .toBe('[aria] main-updates: 1 nodes, differs (-1 +1; first removed: listbox "Installed"; first added: listbox "Updates")');
     });
-    it('holds the keyboard walks hard since their first run, the motion check pending on P4.5, and never presses an Enter that writes (UX-P0.24)', () => {
+    it('holds the keyboard walks and the motion check hard, and never presses an Enter that writes (UX-P0.24, UX-P4.5)', () => {
         expect(KEYS_STATUS).toBe('hard');
-        expect(MOTION_STATUS).toEqual({ pending: 'P4.5' });
+        expect(MOTION_STATUS).toBe('hard');
         // UX-P4.3 removed the last eight (the search box ↔ list bridge): every key path is hard.
         expect(KEYS_PENDING).toEqual({});
         expect(KEYS_AWAITING_ARIA).toEqual({});
@@ -329,27 +329,54 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(pending.failures).toEqual(['main-browse tab order']);
     });
 
-    it('reads what moves under VS Code\'s reduce-motion signal and holds it to nothing running (UX-P0.24)', () => {
+    it('reads what moves under VS Code\'s reduce-motion signal and holds it to nothing running, the body tokens at 0 and no loop timed (UX-P0.24, UX-P4.5)', () => {
         document.body.classList.add('vscode-reduce-motion');
-        document.body.innerHTML = '<div class="nuiget-spinner"></div>';
+        document.body.innerHTML = '<div class="nuiget-spinner"><svg></svg></div><div class="nuiget-skeleton-row"></div>';
         const spinner = document.querySelector('.nuiget-spinner')!;
         const animations = [{ playState: 'running', effect: { target: spinner }, animationName: 'nuiget-spin' }, { playState: 'finished', effect: { target: spinner }, animationName: 'nuiget-spin' }];
         (document as unknown as { getAnimations: () => unknown[] }).getAnimations = () => animations;
         try {
             const facts = new Function(RUNNING_ANIMATIONS)() as MotionFacts;
-            // jsdom loads no stylesheet: the duration tokens resolve to nothing.
-            expect(facts).toEqual({ reduceMotion: true, running: 1, groups: { '.nuiget-spinner nuiget-spin': 1 }, fast: '', normal: '' });
-            expect(motionLines('main panel at open', facts)).toEqual({
-                lines: ['[motion] main panel at open: body.vscode-reduce-motion set, 1 running (.nuiget-spinner nuiget-spin ×1); durations fast unset, normal unset (pending P4.5)'],
-                failures: ['1 running animations'],
+            // jsdom loads no stylesheet: the duration tokens resolve to nothing, and no element has an animation duration.
+            expect(facts).toEqual({
+                reduceMotion: true, mediaReduce: false, running: 1, groups: { '.nuiget-spinner nuiget-spin': 1 },
+                body: { fast: null, normal: null, spin: null, progress: null },
+                root: { fast: null, normal: null, spin: null, progress: null, easing: '', easingSpin: '' },
+                loops: 2, timedLoops: 0,
             });
+            expect(motionLines('main panel at open', facts)).toEqual({
+                lines: ['[motion] DS-MOTION-2@main panel at open: body.vscode-reduce-motion set, 1 running (.nuiget-spinner nuiget-spin ×1); body durations fast unset, normal unset, spin unset, progress unset ms; loops 2, 0 timed (hard)'],
+                failures: ['1 running animations', 'body durations not 0: fast, normal, spin, progress'],
+            });
+            // Durations in seconds or milliseconds, as the bundle writes them, are parsed, never compared as text.
+            document.body.style.setProperty('--nuiget-duration-fast', '0s');
+            document.body.style.setProperty('--nuiget-duration-normal', '0ms');
+            document.body.style.setProperty('--nuiget-duration-spin', '.0s');
+            document.body.style.setProperty('--nuiget-duration-progress', '0ms');
+            (document.querySelector('.nuiget-skeleton-row') as HTMLElement).style.animationDuration = '0.9s';
+            expect(new Function(RUNNING_ANIMATIONS)()).toMatchObject({ body: { fast: 0, normal: 0, spin: 0, progress: 0 }, timedLoops: 1 });
         } finally {
             delete (document as unknown as { getAnimations?: unknown }).getAnimations;
             document.body.classList.remove('vscode-reduce-motion');
+            document.body.removeAttribute('style');
         }
-        const still: MotionFacts = { reduceMotion: true, running: 0, groups: {}, fast: '0ms', normal: '0ms' };
-        expect(motionLines('main panel at open', still, 'hard')).toEqual({ lines: ['[motion] main panel at open: body.vscode-reduce-motion set, 0 running; durations fast 0ms, normal 0ms (hard)'], failures: [] });
-        expect(motionLines('sidebar', { ...still, reduceMotion: false }, 'hard').failures).toEqual(['body.vscode-reduce-motion absent']);
+        const zero = { fast: 0, normal: 0, spin: 0, progress: 0 };
+        const still: MotionFacts = { reduceMotion: true, mediaReduce: false, running: 0, groups: {}, body: zero, root: { fast: 100, normal: 150, spin: 1500, progress: 4000, easing: 'ease-out', easingSpin: 'steps(30)' }, loops: 3, timedLoops: 0 };
+        expect(motionLines('main-installed-loading', still)).toEqual({
+            lines: ['[motion] DS-MOTION-2@main-installed-loading: body.vscode-reduce-motion set, 0 running; body durations fast 0, normal 0, spin 0, progress 0 ms; loops 3, 0 timed (hard)'],
+            failures: [],
+        });
+        expect(motionLines('sidebar', { ...still, reduceMotion: false }).failures).toEqual(['body.vscode-reduce-motion absent']);
+        expect(motionLines('sidebar', { ...still, body: { ...zero, normal: 150 } }).failures).toEqual(['body durations not 0: normal']);
+        expect(motionLines('sidebar', { ...still, timedLoops: 1 }).failures).toEqual(['1 timed loops']);
+        // DS-MOTION-1 on :root, once per run; the OS signal reduces :root too, so the line is not measurable then, and fails.
+        expect(motionRootLines(still)).toEqual({ lines: ['[motion] DS-MOTION-1@:root: fast 100, normal 150, spin 1500, progress 4000 ms; easing ease-out, spin steps(30) (hard)'], failures: [] });
+        expect(motionRootLines({ ...still, root: { ...still.root, normal: 200 } }).failures).toEqual(['DS-MOTION-1 durations or easings off']);
+        expect(motionRootLines({ ...still, mediaReduce: true })).toEqual({
+            lines: ['[motion] DS-MOTION-1@:root: not measurable (prefers-reduced-motion matches) (hard)'],
+            failures: ['DS-MOTION-1 not measurable: prefers-reduced-motion matches'],
+        });
+        expect(MOTION_STATES).toHaveLength(15);
     });
 
     it('expects only tab stops that the screen\'s committed ARIA snapshot holds, or that KEYS_AWAITING_ARIA names for the item adopting the snapshot (UX-P0.24, UX-P2.1d)', () => {

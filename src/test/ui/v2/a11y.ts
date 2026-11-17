@@ -439,7 +439,7 @@ export function ariaLineFor(state: string, actual: AriaSnapshot, committed: Aria
 export const KEYS_STATUS: RuleStatus = 'hard';
 
 /** The reduced-motion check's status: P4.5 makes the tokens honour `body.vscode-reduce-motion` (A4, H29, H87). */
-export const MOTION_STATUS: RuleStatus = { pending: 'P4.5' };
+export const MOTION_STATUS: RuleStatus = 'hard';
 
 /** The screens the capture suite walks, each from scratch. */
 export type KeyScreen = 'main-installed' | 'main-updates' | 'main-browse' | 'sidebar';
@@ -620,17 +620,37 @@ export function keysLines(screen: KeyScreen, stops: readonly FocusFacts[], outco
     return { lines, failures };
 }
 
+/**
+ * The states whose loading cues (the indeterminate stripe, the skeleton, the spinner) were masked as `LIVE_MOTION` until
+ * UX-P4.5: each reads the DS-MOTION-2 line after its shot (design-advisor ruling of 2026-11-17, DO 6).
+ */
+export const MOTION_STATES: readonly string[] = [
+    'main-sources-revalidating', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating',
+    'main-browse-loading', 'main-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading',
+    'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-readme-loading',
+];
+
+/** Four duration tokens in milliseconds, `null` when unset or not a time (UX-P4.5: parsed, never compared as strings). */
+export interface Durations { fast: number | null; normal: number | null; spin: number | null; progress: number | null }
+
 /** What moves in the webview (`RUNNING_ANIMATIONS`). */
 export interface MotionFacts {
     reduceMotion: boolean;
+    /** `prefers-reduced-motion: reduce` matches (the OS signal; the tokens then read 0 at `:root` too). */
+    mediaReduce: boolean;
     running: number;
     /** Running animations by the animated element's first class (or tag) and the animation's name. */
     groups: Record<string, number>;
-    fast: string;
-    normal: string;
+    /** The duration tokens on `body`, where `body.vscode-reduce-motion` zeroes them (DS-MOTION-2). */
+    body: Durations;
+    /** The duration tokens and the two easings on `:root`, which the body class does not reach (DS-MOTION-1). */
+    root: Durations & { easing: string; easingSpin: string };
+    /** The loop elements (spinner glyph, skeleton row, indeterminate stripe) and how many have a non-zero `animation-duration`. */
+    loops: number;
+    timedLoops: number;
 }
 
-/** Runs in the webview: VS Code's reduce-motion body class, the running animations and transitions, the duration tokens. */
+/** Runs in the webview: VS Code's reduce-motion body class, the running animations and transitions, the duration tokens, the loops. */
 export const RUNNING_ANIMATIONS = `
 const running = document.getAnimations().filter(animation => animation.playState === 'running');
 const groups = {};
@@ -640,22 +660,63 @@ for (const animation of running) {
     const key = element + ' ' + (typeof CSSTransition !== 'undefined' && animation instanceof CSSTransition ? 'transition ' + animation.transitionProperty : animation.animationName || 'animation');
     groups[key] = (groups[key] || 0) + 1;
 }
+const ms = value => {
+    const match = /^(-?\\d*\\.?\\d+)(ms|s)$/.exec(String(value || '').trim());
+    return match ? parseFloat(match[1]) * (match[2] === 's' ? 1000 : 1) : null;
+};
+const durations = style => ({
+    fast: ms(style.getPropertyValue('--nuiget-duration-fast')),
+    normal: ms(style.getPropertyValue('--nuiget-duration-normal')),
+    spin: ms(style.getPropertyValue('--nuiget-duration-spin')),
+    progress: ms(style.getPropertyValue('--nuiget-duration-progress')),
+});
 const root = getComputedStyle(document.documentElement);
+const loops = [...document.querySelectorAll('.nuiget-spinner svg, .nuiget-skeleton-row, .nuiget-progress--indeterminate .nuiget-progress-bar')];
 return {
     reduceMotion: document.body.classList.contains('vscode-reduce-motion'),
+    mediaReduce: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
     running: running.length,
     groups,
-    fast: root.getPropertyValue('--nuiget-duration-fast').trim(),
-    normal: root.getPropertyValue('--nuiget-duration-normal').trim(),
+    body: durations(getComputedStyle(document.body)),
+    root: { ...durations(root), easing: root.getPropertyValue('--nuiget-easing').trim(), easingSpin: root.getPropertyValue('--nuiget-easing-spin').trim() },
+    loops: loops.length,
+    timedLoops: loops.filter(element => (getComputedStyle(element).animationDuration || '0s').split(',').some(part => (ms(part) || 0) !== 0)).length,
 };
 `;
 
-/** The `[motion]` line of a moment and its failure: the body class set and nothing moving. */
+const msText = (value: number | null): string => (value === null ? 'unset' : String(value));
+
+/**
+ * The DS-MOTION-2 line of a moment (a11y-reduced-motion-both-signals; UX-P4.5, DO 5): the body class set, nothing running,
+ * the four duration tokens 0 on `body` and no loop element timed.
+ */
 export function motionLines(where: string, facts: MotionFacts, status: RuleStatus = MOTION_STATUS): { lines: string[]; failures: string[] } {
     const moving = Object.entries(facts.groups).map(([key, count]) => `${key} ×${count}`).join(', ');
-    const line = `[motion] ${where}: body.vscode-reduce-motion ${facts.reduceMotion ? 'set' : 'absent'}, ${facts.running} running${moving ? ` (${moving})` : ''}; durations fast ${facts.fast || 'unset'}, normal ${facts.normal || 'unset'} (${statusText(status)})`;
-    const failures = [...(facts.reduceMotion ? [] : ['body.vscode-reduce-motion absent']), ...(facts.running === 0 ? [] : [`${facts.running} running animations`])];
+    const { fast, normal, spin, progress } = facts.body;
+    const line = `[motion] DS-MOTION-2@${where}: body.vscode-reduce-motion ${facts.reduceMotion ? 'set' : 'absent'}, ${facts.running} running${moving ? ` (${moving})` : ''}; body durations fast ${msText(fast)}, normal ${msText(normal)}, spin ${msText(spin)}, progress ${msText(progress)} ms; loops ${facts.loops}, ${facts.timedLoops} timed (${statusText(status)})`;
+    const nonZero = (['fast', 'normal', 'spin', 'progress'] as const).filter(key => facts.body[key] !== 0);
+    const failures = [
+        ...(facts.reduceMotion ? [] : ['body.vscode-reduce-motion absent']),
+        ...(facts.running === 0 ? [] : [`${facts.running} running animations`]),
+        ...(nonZero.length === 0 ? [] : [`body durations not 0: ${nonZero.join(', ')}`]),
+        ...(facts.timedLoops === 0 ? [] : [`${facts.timedLoops} timed loops`]),
+    ];
     return { lines: [line], failures };
+}
+
+/** DS-MOTION-1's values (Design System §11): the four durations in ms and the two easings. */
+export const MOTION_TARGET = { fast: 100, normal: 150, spin: 1500, progress: 4000, easing: 'ease-out', easingSpin: 'steps(30)' } as const;
+
+/** The DS-MOTION-1 line, once per run at open (UX-P4.5, DO 5): the un-reduced tokens on `:root`, unless the OS signal reduces them. */
+export function motionRootLines(facts: MotionFacts, status: RuleStatus = MOTION_STATUS): { lines: string[]; failures: string[] } {
+    if (facts.mediaReduce) {
+        return { lines: [`[motion] DS-MOTION-1@:root: not measurable (prefers-reduced-motion matches) (${statusText(status)})`], failures: ['DS-MOTION-1 not measurable: prefers-reduced-motion matches'] };
+    }
+    const { fast, normal, spin, progress, easing, easingSpin } = facts.root;
+    const line = `[motion] DS-MOTION-1@:root: fast ${msText(fast)}, normal ${msText(normal)}, spin ${msText(spin)}, progress ${msText(progress)} ms; easing ${easing || 'unset'}, spin ${easingSpin || 'unset'} (${statusText(status)})`;
+    const holds = fast === MOTION_TARGET.fast && normal === MOTION_TARGET.normal && spin === MOTION_TARGET.spin && progress === MOTION_TARGET.progress
+        && easing === MOTION_TARGET.easing && easingSpin === MOTION_TARGET.easingSpin;
+    return { lines: [line], failures: holds ? [] : ['DS-MOTION-1 durations or easings off'] };
 }
 
 // ---- UX-P0.25: contrast axe could not decide, and the theme pass's moments ------------------------------------------

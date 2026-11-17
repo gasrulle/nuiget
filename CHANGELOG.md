@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update All stays visible when VS Code always shows header actions** — With VS Code's `workbench.view.alwaysShowHeaderActions` setting on, the Update All button of the sidebar's Updates section is shown without hovering.
 
 ### Changed
+- **Loading indicators follow VS Code's timing**
 - **Breaking: Enter on a package in the main panel's Updates list shows its details; Ctrl+Enter (Cmd+Enter) updates it**
 - **Breaking: Enter on a sidebar package opens it in the main panel; Ctrl+Enter (Cmd+Enter) installs or updates it**
 - **The Delete key asks before it uninstalls, with "Do not ask me again" and the `nuiget.confirmUninstall` setting**

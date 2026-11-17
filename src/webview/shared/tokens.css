@@ -115,8 +115,7 @@
 
     /* Motion (DS-MOTION-1, DS-MOTION-2) */
     --nuiget-duration-fast: 100ms;
-    /* 150 ms with the motion item (P4.5, DS-MOTION-1). */
-    --nuiget-duration-normal: 200ms;
+    --nuiget-duration-normal: 150ms;
     --nuiget-easing: ease-out;
     --nuiget-duration-spin: 1.5s;
     --nuiget-easing-spin: steps(30);

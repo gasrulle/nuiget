@@ -14,7 +14,7 @@ import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATUS, type MotionFacts, motionLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -1838,6 +1838,16 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
     if (!(await script<boolean>('return typeof window.axe !== "undefined";'))) {
         await script(AXE_SOURCE);
     }
+    // UX-P4.5 (design-advisor ruling of 2026-11-17, DO 6): a state whose loading cue moved until reduced motion stilled it reads
+    // DS-MOTION-2 after its shot, before its hold is released, in the Modern UI pass.
+    const motionFailures: string[] = [];
+    if (LOOK === 'modern' && MOTION_STATES.includes(state.name)) {
+        const motion = motionLines(state.name, await script<MotionFacts>(RUNNING_ANIMATIONS));
+        printLines(motion.lines);
+        if (MOTION_STATUS === 'hard') {
+            motionFailures.push(...motion.failures.map(failure => `[motion] ${failure}`));
+        }
+    }
     // After the shot and the measurements, never before them: the snapshot and axe read the state's settled data.
     if (!HELD_STATES.includes(state.name)) {
         const unsettled = NO_COUNT_STATES.includes(state.name) ? 'return document.querySelector(\'[aria-busy="true"]\') ? "a busy element" : "";' : UNSETTLED;
@@ -1886,7 +1896,7 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
             pendingLines.push(line);
         }
     }
-    return [...(FULL_AXE_STATUS === 'hard' ? failures : []), ...(CONTRAST_STATUS === 'hard' ? contrast.failures : [])];
+    return [...motionFailures, ...(FULL_AXE_STATUS === 'hard' ? failures : []), ...(CONTRAST_STATUS === 'hard' ? contrast.failures : [])];
 }
 
 /** The audit with its own errors caught: an error is a failure, which fails the capture only once the rule is `hard`. */
@@ -2750,8 +2760,12 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyTheme('dark-modern');
             await applyWidth(stateNamed('main-installed-single'), PANEL_WIDTH);
             await freshMainPanel();
-            // The motion check, once per run, while the panel's first list is still loading (H87; pending P4.5).
-            const motion = motionLines('main panel at open', await script<MotionFacts>(RUNNING_ANIMATIONS));
+            // The motion check, once per run, while the panel's first list is still loading (H87): DS-MOTION-2 on the body and
+            // DS-MOTION-1 on :root, which the body class does not reach (UX-P4.5, DO 5).
+            const facts = await script<MotionFacts>(RUNNING_ANIMATIONS);
+            const reduced = motionLines('main panel at open', facts);
+            const root = motionRootLines(facts);
+            const motion = { lines: [...reduced.lines, ...root.lines], failures: [...reduced.failures, ...root.failures] };
             printLines(motion.lines);
             await gatewayInstalled();
             await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-installed', 'installed-list', 'search-input', 'press'), ...await dialogKeys(), ...await deleteKeys()]);

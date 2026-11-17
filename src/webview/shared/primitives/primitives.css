@@ -724,9 +724,9 @@
     min-height: var(--nuiget-target-min);
 }
 
-/* One turn takes five normal durations: a second, or no time at all under reduced motion. */
+/* One turn in the workbench's timing, 1.5 s in 30 steps (codicon-spin), or no time at all under reduced motion (DS-MOTION-1, UX-P4.5). */
 .nuiget-spinner svg {
-    animation: nuiget-spin calc(var(--nuiget-duration-normal) * 5) linear infinite;
+    animation: nuiget-spin var(--nuiget-duration-spin) var(--nuiget-easing-spin) infinite;
 }
 
 @keyframes nuiget-spin {
@@ -842,7 +842,7 @@
 
 .nuiget-section-chevron {
     flex: none;
-    transition: transform var(--nuiget-duration-fast) var(--nuiget-easing);
+    transition: transform var(--nuiget-duration-normal) var(--nuiget-easing);
 }
 
 .nuiget-section-chevron--expanded {
@@ -1116,7 +1116,7 @@
 /* A row that is not there yet: its anatomy at the row's own insets (DS-ROW-1). It breathes for as long as the duration tokens allow. */
 .nuiget-skeleton-row {
     position: relative;
-    animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) var(--nuiget-easing) infinite alternate;
+    animation: nuiget-breathe calc(var(--nuiget-duration-normal) * 6) ease-in-out infinite alternate;
 }
 
 .nuiget-skeleton-row--compact {
@@ -1191,7 +1191,7 @@
 /* How much is done is not known: a stripe crosses the bar. Under reduced motion it stands at the start. */
 .nuiget-progress--indeterminate .nuiget-progress-bar {
     width: 30%;
-    animation: nuiget-progress-cross calc(var(--nuiget-duration-normal) * 8) linear infinite;
+    animation: nuiget-progress-cross var(--nuiget-duration-progress) linear infinite;
 }
 
 @keyframes nuiget-progress-cross {
