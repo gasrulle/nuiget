@@ -1289,7 +1289,7 @@ export interface Outline {
 }
 
 export interface FocusFacts {
-    kind: 'option' | 'tab' | 'checkbox' | 'input' | 'select' | 'header' | 'icon-button' | 'button' | 'other';
+    kind: 'option' | 'tab' | 'checkbox' | 'input' | 'select' | 'header' | 'icon-button' | 'button' | 'link' | 'empty' | 'other';
     label: string;
     outline: Outline;
     /** The section header's `data-variant` (`pane`, `group`, `level`) of a focused header toggle, else empty. */
@@ -2300,6 +2300,9 @@ const focusKind = el => {
     if (el.tagName === 'BUTTON' && el.closest('.nuiget-section-header')) return 'header';
     if (el.tagName === 'BUTTON' && el.classList.contains('nuiget-icon-button')) return 'icon-button';
     if (el.tagName === 'BUTTON') return 'button';
+    // UX-P4.4 (design-advisor ruling of 2026-11-17, DO 13): a link and a list's empty slot ring at the inside offset.
+    if (el.tagName === 'A' && el.hasAttribute('href')) return 'link';
+    if (el.classList.contains('nuiget-listbox-empty')) return 'empty';
     return 'other';
 };
 let focus;
@@ -3754,7 +3757,7 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
             };
         }
         case 'DS-FOCUS-1': {
-            const kinds: ReadonlyArray<FocusFacts['kind']> = scope === 'tabs' ? ['tab'] : ['input', 'select', 'button', 'checkbox', 'header'];
+            const kinds: ReadonlyArray<FocusFacts['kind']> = scope === 'tabs' ? ['tab'] : ['input', 'select', 'button', 'checkbox', 'header', 'link', 'empty'];
             // The rule names the offsets of inputs, selects, tabs, headers, check boxes and text buttons, not icon buttons.
             if (scope !== 'tabs' && focus?.kind === 'icon-button') {
                 return notMeasurable(`icon button ${focus.label}: DS-FOCUS-1 names no offset for it`);

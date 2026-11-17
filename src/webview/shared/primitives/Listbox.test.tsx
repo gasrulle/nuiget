@@ -8,7 +8,7 @@ import { IconButton } from './IconButton';
 import { TrashIcon } from './icons';
 import { focusList, Listbox, TYPEAHEAD_RESET_MS } from './Listbox';
 import { Row } from './Row';
-import { axeRuleOutcome, installFakeLayout, recordRowMenus } from './testSupport';
+import { axeRuleOutcome, installFakeLayout, installStylesheet, recordRowMenus } from './testSupport';
 
 interface Package {
     id: string;
@@ -336,6 +336,33 @@ describe('Listbox', () => {
     it('an empty listbox has no axe violations', async () => {
         const { container } = render(<PackageList items={[]} empty={<p>No packages installed</p>} />);
         expect(await axe(container)).toHaveNoViolations();
+    });
+
+    // UX-P4.4 (A15; design-advisor ruling of 2026-11-17, DO 9): the empty slot is a group named as its list, ringed when focused.
+    it('the empty slot is a group named as its list, and its density picks the ring\'s condition', () => {
+        const { container } = render(<PackageList items={[]} empty={<p>No packages installed</p>} />);
+        const slot = screen.getByRole('group', { name: 'Installed packages' });
+        expect(slot).toBe(container.querySelector('.nuiget-listbox-empty'));
+        expect(slot).toHaveClass('nuiget-listbox-empty--compact');
+        const remove = installStylesheet();
+        const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]) as CSSStyleRule[];
+        const ring = rules.find(rule => rule.selectorText?.split(',').map(part => part.trim()).includes('.nuiget-listbox-empty--compact:focus-visible'));
+        expect(ring?.selectorText).toContain('.nuiget-listbox-empty--comfortable:focus');
+        expect(ring?.style.outline).toContain('var(--nuiget-color-focus)');
+        expect(ring?.style.outlineOffset).toBe('calc(var(--nuiget-line-width) * -1)');
+        expect(rules.some(rule => rule.selectorText === '.nuiget-listbox-empty' && rule.style.outline === 'none')).toBe(false);
+        remove();
+    });
+
+    it('a list emptied while the focus is elsewhere pulls nothing into its slot', async () => {
+        const user = userEvent.setup();
+        const empty = <p>No packages installed</p>;
+        const { rerender } = render(<><button type="button">Elsewhere</button><PackageList items={three} empty={empty} /></>);
+        const elsewhere = screen.getByRole('button', { name: 'Elsewhere' });
+        await user.click(elsewhere);
+        rerender(<><button type="button">Elsewhere</button><PackageList items={[]} empty={empty} /></>);
+        expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+        expect(screen.getByRole('group', { name: 'Installed packages' })).not.toHaveFocus();
     });
 });
 

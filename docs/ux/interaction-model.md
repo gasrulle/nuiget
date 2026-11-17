@@ -181,11 +181,14 @@ through the one `role="status"` region (`status-live`). A row with a pending ope
 A disabled row (`aria-disabled="true"`, e.g. unresolved) keeps focus, selection, Enter and the context
 menu but ignores Ctrl+Enter and Delete. When the active row disappears, focus moves to the
 row now at its index (or the last one); when the list empties, the empty-state container takes
-focus. A list that offers bulk actions is `aria-multiselectable`: the rows selected for them are `aria-selected`, and
+focus: a group named as its list, with the focus ring (UX-P4.4). A list that offers bulk actions is `aria-multiselectable`: the rows selected for them are `aria-selected`, and
 the row whose details are shown is `aria-current`. Select All selects every row the action applies to; the
 confirmation dialog lists exactly those rows. A dialog returns focus to the element that opened it; when that element
-is gone or disabled (a bulk action that emptied its list), focus goes to the list's active row or to the toolbar's
-first enabled control, never to the page (A6).
+is gone or disabled (a bulk action that emptied its list), focus goes, in this order, to a dialog still open underneath,
+to the opener when it can take the focus, to the active row of the nearest list from the opener upward, to the first
+enabled control of the opener's toolbar, and else to the first control of the page, never to the page itself (A6,
+UX-P4.4). A dialog the host opens with nothing focused takes the control that opens it as its opener (the sources
+dialog's gear).
 
 Main panel Ctrl+Enter (D16). In the Browse list Ctrl+Enter (Cmd+Enter on macOS) installs the row's version, the
 newest the search found under the prerelease setting, into the selected project with the row's source, and makes the

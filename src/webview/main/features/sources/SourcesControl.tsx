@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { IconButton, Select, SettingsGearIcon, WarningIcon } from '../../../shared/primitives';
@@ -25,10 +25,19 @@ export function SourcesControl({ announce, end }: SourcesControlProps): React.JS
     const { set } = useSessionActions();
     const { sources, failed, status, enable } = useSources();
     const [open, setOpen] = useState(false);
+    const gear = useRef<HTMLButtonElement>(null);
 
     // The selector needs the list whatever else is mounted.
     useEffect(() => enable(), [enable]);
-    useEffect(() => bus.onEvent('ui/openSourceSettings', () => setOpen(true)), [bus]);
+    // A dialog the host opens with nothing focused gets the gear as its opener, where the focus returns when it closes
+    // (UX-P4.4; design-advisor ruling of 2026-11-17, DO 5).
+    useEffect(() => bus.onEvent('ui/openSourceSettings', () => {
+        const active = document.activeElement;
+        if (active === null || active === document.body || active === document.documentElement) {
+            gear.current?.focus({ preventScroll: true });
+        }
+        setOpen(true);
+    }), [bus]);
 
     const selected = session?.selectedSource ?? 'all';
     const enabled = (sources ?? []).filter(source => source.enabled);
@@ -52,7 +61,7 @@ export function SourcesControl({ announce, end }: SourcesControlProps): React.JS
                 ))}
             </Select>
             <span className="nuiget-main-actions">
-                <IconButton label="Manage Package Sources..." data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
+                <IconButton ref={gear} label="Manage Package Sources..." data-testid="source-settings" onClick={() => setOpen(true)}><SettingsGearIcon /></IconButton>
                 {failed.length > 0 ? (
                     <span className="nuiget-source-health"><IconButton
                         label={`Retry ${failed.length} Unreachable Source${failed.length === 1 ? '' : 's'}`}

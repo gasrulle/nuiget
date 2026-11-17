@@ -269,6 +269,7 @@ describe('main panel: sources', () => {
         expect(dialog()).toBeInTheDocument();
         await user.keyboard('{Escape}');
         expect(screen.queryByTestId('source-settings-modal')).toBeNull();
+        expect(document.activeElement).toBe(screen.getByTestId('source-settings'));
         expectFocusAfterClose('sources-host-opened-escape');
     });
 

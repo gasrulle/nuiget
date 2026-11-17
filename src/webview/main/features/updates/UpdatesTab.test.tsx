@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type PackageUpdate, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { InstalledTab } from '../installed/InstalledTab';
@@ -165,6 +165,7 @@ describe('main panel: Updates tab', () => {
         expect(within(dialog).queryByText(/Newtonsoft/)).toBeNull();
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusOnListTabStop('updates-list');
         expectFocusAfterClose('updates-update-all-confirm');
         expect(host.requests('ops/bulkUpdate').map(sent => sent.payload)).toEqual([{ projectPath: A, packages: [
             { id: 'Moq', version: '4.20.72', sourceUrl: FEED },
@@ -189,6 +190,7 @@ describe('main panel: Updates tab', () => {
         const dialog = screen.getByRole('alertdialog', { name: 'Update 1 package?' });
         expect(within(dialog).queryByText(/Moq/)).toBeNull();
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusOnListTabStop('updates-list');
         expectFocusAfterClose('updates-update-all-confirm');
         expect(host.requests('ops/bulkUpdate').map(sent => sent.payload)).toEqual([{ projectPath: A, packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: FEED }] }]);
     });
@@ -494,6 +496,7 @@ describe('main panel: Updates tab', () => {
             await user.click(screen.getByTestId('update-all-button'));
             expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
             await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            expectFocusOnListTabStop('updates-list');
             expectFocusAfterClose('updates-all-projects-update-confirm');
             expect(host.requests('ops/bulkUpdateAllProjects').map(request => request.payload)).toEqual([{
                 projectUpdates: [
@@ -663,6 +666,7 @@ describe('main panel: Updates tab', () => {
         const host = await mountWith();
         await user.click(screen.getByTestId('update-all-button'));
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusOnListTabStop('updates-list');
         expectFocusAfterClose('updates-busy-update-all-confirm');
         const request = host.requests('ops/bulkUpdate')[0];
         // The host names the operation with every package, then reports one package per step.

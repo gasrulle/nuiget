@@ -1236,6 +1236,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('main-installed-unfocused', facts({ focus: focused('input', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true, status: 'hard' });
         expect(at('main-installed-unfocused', facts({ focus: focused('button', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls'))
             .toMatchObject({ pass: false, value: 'button [x]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset 2)' });
+        // UX-P4.4 (DO 13): a link and a list's empty slot ring at the inside offset in the controls scope.
+        expect(at('main-installed-unfocused', facts({ focus: focused('link', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true });
+        expect(at('main-installed-unfocused', facts({ focus: focused('empty', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true });
+        expect(at('main-installed-unfocused', facts({ focus: focused('link', ring(1, 'solid', blue, 2)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: false });
         expect(at('main-updates', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: true, status: 'hard' });
         expect(at('main-installed-single', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-single/tabs')).toMatchObject({ status: 'hard' });
         expect(at('main-installed-details', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-details/tabs')).toBeUndefined();

@@ -404,7 +404,17 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
     if (items.length === 0) {
         return (
             <div className="nuiget-listbox-root" ref={rootRef} data-vscode-context={LIST_CONTEXT}>
-                <div className="nuiget-listbox-empty" tabIndex={-1} ref={emptyRef}>{empty}</div>
+                {/* A group named as its list, ringed when focused (UX-P4.4, A15; design-advisor ruling of 2026-11-17, DO 9). */}
+                <div
+                    className={`nuiget-listbox-empty nuiget-listbox-empty--${density}`}
+                    role="group"
+                    aria-label={props.label}
+                    aria-labelledby={props.labelledBy}
+                    tabIndex={-1}
+                    ref={emptyRef}
+                >
+                    {empty}
+                </div>
             </div>
         );
     }

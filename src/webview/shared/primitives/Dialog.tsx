@@ -2,7 +2,7 @@ import React, { useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconButton } from './IconButton';
 import { CloseIcon } from './icons';
-import { focusInto, isInLayerAbove, isTopLayer, pushLayer, removeLayer, restoreFocus, tabbables, type Layer } from './layers';
+import { focusInto, focusWasInside, isInLayerAbove, isTopLayer, pushLayer, removeLayer, restoreFocus, tabbables, type Layer } from './layers';
 import './primitives.css';
 
 export interface DialogProps {
@@ -32,10 +32,50 @@ export interface DialogProps {
  * dimmed by the scrim, black at 50 % as the workbench's modal block (DS-DIVIDER-5).
  */
 export function Dialog(props: DialogProps): React.JSX.Element | null {
-    return props.open ? <OpenDialog {...props} /> : null;
+    // The opener is kept here, set once per opening: StrictMode's simulated remount of the inner dialog would read an
+    // element inside the dialog as its opener. A dialog that closed with the focus inside it (or nowhere) is restored once
+    // the closing update's DOM changes are in: a layout effect of this component, which stays mounted, runs after the
+    // commit's mutations, where the inner dialog's own clean-up runs among them (UX-P4.4, A6; design-advisor ruling of
+    // 2026-11-17, DO 3).
+    const opener = useRef<Element | null | undefined>(undefined);
+    const closedInside = useRef(false);
+    const unmounted = useRef(false);
+    const hooks = useRef({
+        onOpened: (): void => {
+            if (opener.current === undefined) {
+                opener.current = document.activeElement;
+            }
+            closedInside.current = false;
+        },
+        onClosed: (): void => {
+            if (unmounted.current) {
+                restoreFocus(opener.current ?? null);
+            } else {
+                closedInside.current = true;
+            }
+        },
+    }).current;
+    useLayoutEffect(() => {
+        if (!props.open) {
+            if (closedInside.current) {
+                restoreFocus(opener.current ?? null);
+            }
+            closedInside.current = false;
+            opener.current = undefined;
+        }
+    }, [props.open]);
+    // Unmounted while open (its owner went away): React runs this clean-up before the inner dialog's, which then restores at
+    // once, with the DOM as it is.
+    useLayoutEffect(() => {
+        unmounted.current = false;
+        return () => {
+            unmounted.current = true;
+        };
+    }, []);
+    return props.open ? <OpenDialog {...props} onOpened={hooks.onOpened} onClosed={hooks.onClosed} /> : null;
 }
 
-function OpenDialog({ onClose, title, description, children, footer, role = 'dialog', initialFocus, closeLabel, 'data-testid': testId }: DialogProps): React.JSX.Element {
+function OpenDialog({ onClose, onOpened, onClosed, title, description, children, footer, role = 'dialog', initialFocus, closeLabel, 'data-testid': testId }: DialogProps & { onOpened: () => void; onClosed: () => void }): React.JSX.Element {
     const baseId = useId();
     const titleId = `${baseId}-title`;
     const descriptionId = `${baseId}-description`;
@@ -45,7 +85,7 @@ function OpenDialog({ onClose, title, description, children, footer, role = 'dia
     onCloseRef.current = onClose;
 
     useLayoutEffect(() => {
-        const opener = document.activeElement;
+        onOpened();
         const element = ref.current;
         pushLayer(layer);
         if (element) {
@@ -61,8 +101,11 @@ function OpenDialog({ onClose, title, description, children, footer, role = 'dia
         document.addEventListener('focusin', onFocusIn);
         return () => {
             document.removeEventListener('focusin', onFocusIn);
+            const inside = focusWasInside(element);
             removeLayer(layer);
-            restoreFocus(element, opener);
+            if (inside) {
+                onClosed();
+            }
         };
         // Opening is the one moment to remember the opener and move focus; a later change of the props is not.
         // eslint-disable-next-line react-hooks/exhaustive-deps

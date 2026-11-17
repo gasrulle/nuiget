@@ -850,6 +850,14 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             // An icon button is a kind of its own (DS-FOCUS-1 names no offset for it).
             (document.querySelector('.nuiget-row-actions .nuiget-icon-button') as HTMLButtonElement).focus();
             expect(collect().endOfP0.focus?.kind).toBe('icon-button');
+            // UX-P4.4: a link and a list's empty slot are kinds of their own (DS-FOCUS-1 controls, inside offset).
+            document.body.insertAdjacentHTML('beforeend', '<a id="p44-link" href="https://example.org" data-rect="10,10,60,24">Project</a><div id="p44-empty" class="nuiget-listbox-empty nuiget-listbox-empty--compact" role="group" tabindex="-1" data-rect="0,30,200,60"></div>');
+            (document.getElementById('p44-link') as HTMLElement).focus();
+            expect(collect().endOfP0.focus?.kind).toBe('link');
+            (document.getElementById('p44-empty') as HTMLElement).focus();
+            expect(collect().endOfP0.focus?.kind).toBe('empty');
+            document.getElementById('p44-link')?.remove();
+            document.getElementById('p44-empty')?.remove();
             // Nothing focused: no subject.
             (document.activeElement as HTMLElement).blur();
             option.blur();

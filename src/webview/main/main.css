@@ -333,6 +333,13 @@ body {
     color: var(--nuiget-color-link);
 }
 
+/* A focused link rings in focusBorder like every other control; links live in the main panel only, which rings after a
+   click too (DS-FOCUS-3), hence `:focus` (UX-P4.4, A16; design-advisor ruling of 2026-11-17, DO 11). */
+a:focus {
+    outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
+}
+
 /* A README link is underlined: its colour alone is under 3:1 against the body in most themes (WCAG 1.4.1, UX-P3.4). */
 .nuiget-readme a {
     color: var(--nuiget-color-link);

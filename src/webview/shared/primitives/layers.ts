@@ -56,14 +56,57 @@ export function focusInto(root: HTMLElement, target?: HTMLElement | null): void 
     (target ?? tabbables(root)[0] ?? root).focus({ preventScroll: true });
 }
 
-/**
- * Gives focus back to `opener` when the layer closes with focus inside it (or nowhere, as after the focused
- * element was removed). Focus that the user moved elsewhere stays where it is.
- */
-export function restoreFocus(root: HTMLElement | null, opener: Element | null): void {
+/** Whether focus is on `root`'s content or nowhere (`<body>`, `<html>` or none), the moment a layer closes. */
+export function focusWasInside(root: HTMLElement | null): boolean {
     const active = document.activeElement;
-    const focusWasInside = active === null || active === document.body || (root?.contains(active) ?? false);
-    if (focusWasInside && opener instanceof HTMLElement && opener.isConnected) {
-        opener.focus({ preventScroll: true });
+    return active === null || active === document.body || active === document.documentElement || (root?.contains(active) ?? false);
+}
+
+// One literal each (N63): a list's tab stop, a hidden or inert subtree, a toolbar's controls.
+const LIST_TAB_STOP = '[role="listbox"] [tabindex="0"], [role="tree"] [tabindex="0"]';
+const HIDDEN = '[inert], [aria-hidden="true"], [hidden], .nuiget-dialog-layer';
+const TOOLBAR_CONTROL = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]';
+
+/** Focuses `element` and answers whether it took the focus (a disabled or hidden element does not). */
+function takesFocus(element: Element | null | undefined): boolean {
+    if (!(element instanceof HTMLElement) || !element.isConnected || element.matches(':disabled')) {
+        return false;
     }
+    element.focus({ preventScroll: true });
+    return document.activeElement === element;
+}
+
+/**
+ * Gives the focus back when a layer has closed with the focus inside it or nowhere (UX-P4.4, A6; design-advisor ruling of
+ * 2026-11-17, DO 2), read after the closing update's DOM changes: (a) a layer still open takes it, at the opener when the
+ * opener is inside it; (b) the opener, when it takes the focus; (c) the active row of the nearest list, from the opener
+ * upward; (d) the first enabled control of the opener's toolbar; (e) the first tabbable of the page outside every layer.
+ * `<body>` and `<html>` count as no opener; focus never lands on the page while a layer is open.
+ */
+export function restoreFocus(opener: Element | null): void {
+    const known = opener instanceof HTMLElement && opener.isConnected && opener !== document.body && opener !== document.documentElement ? opener : null;
+    const below = stack[stack.length - 1]?.element();
+    if (below) {
+        if (!(known && below.contains(known) && takesFocus(known))) {
+            focusInto(below);
+        }
+        return;
+    }
+    if (takesFocus(known)) {
+        return;
+    }
+    for (let scope: Element | null = known ?? document.body; scope; scope = scope.parentElement) {
+        const rows = [...scope.querySelectorAll(LIST_TAB_STOP)].filter(row => !row.closest(HIDDEN));
+        if (rows.length > 0) {
+            if (rows.some(row => takesFocus(row))) {
+                return;
+            }
+            break;
+        }
+    }
+    const toolbar = known?.closest('[role="toolbar"]');
+    if (toolbar && [...toolbar.querySelectorAll(TOOLBAR_CONTROL)].some(control => takesFocus(control))) {
+        return;
+    }
+    tabbables(document.body).filter(element => !element.closest(HIDDEN)).some(element => takesFocus(element));
 }

@@ -430,7 +430,7 @@ announced there, and the same message twice is announced twice. A `Banner` annou
 
 **Layers: dialogs.** `Dialog` is modal (`role="dialog"` or `alertdialog`, `aria-modal`, named by
 its heading): focus moves into it, Tab and Shift+Tab wrap inside it, focus that lands outside is taken back,
-Escape closes it, and focus returns to the element that had it. `ConfirmDialog` is the `alertdialog` of
+Escape closes it, and focus returns to the element that had it; when that element is gone or disabled, `restoreFocus` (`layers.ts`) gives it, after the closing update's DOM changes, to a layer still open, else the nearest list's active row from the opener upward, else the first enabled control of the opener's toolbar, else the first control of the page, never `<body>` (UX-P4.4, A6). A list's empty slot is a `group` named as the list. `ConfirmDialog` is the `alertdialog` of
 interaction model §5 (bulk update, bulk uninstall, remove source) with the test ids `confirm-dialog`,
 `confirm-dialog-confirm` and `confirm-dialog-cancel`; it opens on Cancel, and renders its lists through
 `DialogGroups` (`groups`: a lead and its items), which `CentralUpdateDialog` composes too. Dialogs are portalled

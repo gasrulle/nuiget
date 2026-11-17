@@ -252,6 +252,15 @@ describe('2.0 main panel: Installed tab', () => {
         await (await findByTestId('uninstall-selected-button')).click();
         await (await findByTestId('confirm-dialog-confirm', 10_000)).click();
         await waitForTestIdGone('confirm-dialog', 10_000);
+        // UX-P4.4 (A6; design-advisor ruling of 2026-11-17, DO 8): Confirm disables the opener in the same update, and the
+        // focus goes to the list's active row, never to the page; jsdom cannot show what Chromium does with a disabled button.
+        const focused = await poll(async () => {
+            const reading = await driverOf().executeScript<{ role: string | null; inList: boolean; text: string }>(`
+                const active = document.activeElement;
+                return { role: active ? active.getAttribute('role') : null, inList: Boolean(active && active.closest('[data-testid="installed-list"]')), text: active ? (active.textContent || '').trim().slice(0, 40) : '' };`);
+            return reading.role === 'treeitem' && reading.inList ? reading : undefined;
+        }, 'the focus on a treeitem of installed-list after Confirm', 10_000);
+        console.warn(`[focus] main-installed bulk confirm: treeitem of installed-list "${focused.text}"`);
         // The row leaves with the host's next list, after `dotnet package remove` and the restore.
         await waitForTestIdGone('package-row-serilog', 240_000);
         await poll(async () => (fs.readFileSync(csprojPath, 'utf-8').includes('Serilog') ? undefined : true), 'Serilog out of TestProject.csproj', 30_000);

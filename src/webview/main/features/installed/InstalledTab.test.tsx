@@ -4,7 +4,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledPackage, type InstalledResult, type OperationOutcome, type SessionSnapshot, type TransitiveResult } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
-import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { TYPEAHEAD_RESET_MS } from '../../../shared/primitives';
 import { MainShell } from '../../MainShell';
@@ -259,6 +259,7 @@ describe('main panel: Installed tab', () => {
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(screen.queryByRole('alertdialog')).toBeNull();
+        expectFocusOnListTabStop('installed-list');
         expectFocusAfterClose('installed-bulk-uninstall-confirm');
         expect(host.requests('ops/bulkRemove').map(request => request.payload)).toEqual([{ projectPath: A, packages: ['Moq', 'Newtonsoft.Json', 'Serilog'] }]);
         // Busy from the request on, before the host reports anything (N61), and nothing left the list.
@@ -280,6 +281,7 @@ describe('main panel: Installed tab', () => {
         await user.click(screen.getByTestId('select-all-button'));
         await user.click(uninstallSelected());
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusOnListTabStop('installed-list');
         expectFocusAfterClose('installed-bulk-uninstall-partial-confirm');
         const removed = (packageId: string, status: OperationOutcome['status']): OperationOutcome => ({ opId: `op-${packageId}`, kind: 'remove', status, projectPath: A, packageId, message: status === 'failed' ? 'Moq could not be removed' : undefined });
         const partial: BulkOutcome = { opId: 'op2', status: 'partial', results: [removed('Serilog', 'completed'), removed('Moq', 'failed')], restores: [{ projectPath: A, ok: true }] };
@@ -312,6 +314,7 @@ describe('main panel: Installed tab', () => {
         await user.click(uninstallSelected());
         expect(screen.getByRole('alertdialog')).toHaveTextContent('From App:SerilogFrom Lib:xunit');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusOnListTabStop('installed-list');
         expectFocusAfterClose('installed-all-projects-uninstall-confirm');
         expect(host.requests('ops/bulkRemoveAllProjects').map(entry => entry.payload)).toEqual([{
             projectRemovals: [{ projectPath: A, projectName: 'App', packages: ['Serilog'] }, { projectPath: B, projectName: 'Lib', packages: ['xunit'] }],

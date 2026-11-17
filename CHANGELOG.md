@@ -79,6 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **In a narrow editor the package details give way to the list**
 
 ### Fixed
+- **Keyboard focus stays in the list after a bulk update or uninstall**
+- **Links in the package details show the theme's focus ring**
 - **Showing the side bar no longer takes the focus from the editor**
 - **The sidebar's search box has the focus whenever the view takes it**
 - **An empty project's Updates tab no longer says its package sources could not be checked**

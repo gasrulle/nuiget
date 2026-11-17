@@ -87,10 +87,6 @@
     height: var(--nuiget-virtual-total);
 }
 
-.nuiget-listbox-empty {
-    outline: none;
-}
-
 /* ── Row ── */
 
 .nuiget-row {
@@ -599,7 +595,9 @@
 .nuiget-icon-button:focus-visible,
 .nuiget-section-toggle:focus-visible,
 .nuiget-tab:focus,
-.nuiget-dialog:focus-visible {
+.nuiget-dialog:focus-visible,
+.nuiget-listbox-empty--compact:focus-visible,
+.nuiget-listbox-empty--comfortable:focus {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * -1);
 }

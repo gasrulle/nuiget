@@ -105,22 +105,7 @@ export function installStylesheet(): () => void {
  * with the item that fixes them. Interaction model §5: a dialog returns focus to its opener, or, when the opener is gone or
  * disabled, to the list's active row or the toolbar's first enabled control, never to the page.
  */
-export const FOCUS_AFTER_CLOSE_PENDING: Readonly<Record<string, { pending: string }>> = {
-    // A6: Confirm empties the selection or the candidates, which disables the opener, and focus has no fallback.
-    'installed-bulk-uninstall-confirm': { pending: 'P4.4' },
-    'updates-update-all-confirm': { pending: 'P4.4' },
-    // A6's mechanism at other close sites (design-advisor ruling of 2026-10-25): the confirm's own update disables the opener.
-    'installed-bulk-uninstall-partial-confirm': { pending: 'P4.4' },
-    'installed-all-projects-uninstall-confirm': { pending: 'P4.4' },
-    'updates-busy-update-all-confirm': { pending: 'P4.4' },
-    'updates-all-projects-update-confirm': { pending: 'P4.4' },
-    'sidebar-update-all-confirm': { pending: 'P4.4' },
-    'sidebar-all-projects-update-all-confirm': { pending: 'P4.4' },
-    'details-cpm-install-confirm': { pending: 'P4.4' },
-    'details-cpm-update-confirm': { pending: 'P4.4' },
-    // No opener: the host opened the dialog with nothing focused; the target is the `source-settings` button.
-    'sources-host-opened-escape': { pending: 'P4.4' },
-};
+export const FOCUS_AFTER_CLOSE_PENDING: Readonly<Record<string, { pending: string }>> = {};
 
 /** The focused element as a test prints it: tag, test id or id. */
 const describeFocus = (element: Element): string => {
@@ -142,6 +127,26 @@ export function expectFocusAfterClose(caseId: string, registry: Readonly<Record<
     }
     if (where === '<body>') {
         throw new Error(`[focus] ${caseId}: focus fell to <body> after the dialog closed (a11y-focus-after-close)`);
+    }
+    // UX-P4.4 (design-advisor ruling of 2026-11-17, DO 7): an element that cannot hold the focus does not count as holding it.
+    if (active !== null && (!active.isConnected || active.matches(':disabled') || active.closest('[inert], [aria-hidden="true"]') !== null)) {
+        throw new Error(`[focus] ${caseId}: focus is on ${where}, which is disabled, disconnected, inert or hidden, after the dialog closed (a11y-focus-after-close)`);
+    }
+}
+
+/**
+ * UX-P4.4 (DO 6): asserts that the focus is on the active row (the roving tab stop, `[tabindex="0"]`) of the list with
+ * `data-testid` `listTestId`, called directly before `expectFocusAfterClose` at a close site whose opener is disabled or gone.
+ */
+export function expectFocusOnListTabStop(listTestId: string): void {
+    const list = document.querySelector(`[data-testid="${listTestId}"]`);
+    const stop = list?.querySelector('[tabindex="0"]') ?? null;
+    if (stop === null) {
+        throw new Error(`[focus] the list ${listTestId} has no active row`);
+    }
+    if (document.activeElement !== stop) {
+        const active = document.activeElement;
+        throw new Error(`[focus] expected the active row of ${listTestId}, found ${active === null || active === document.body ? '<body>' : describeFocus(active)}`);
     }
 }
 

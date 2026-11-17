@@ -160,6 +160,32 @@ async function expectDetailsTabRing(theme: Theme, failures: string[]): Promise<v
     }
 }
 
+/**
+ * DS-FOCUS-1 on a link (UX-P4.4, A16; design-advisor ruling of 2026-11-17, DO 12): the first link of the details facts, focused,
+ * draws the focus ring, 1 px solid in the resolved `--nuiget-color-focus` at offset -1, in every theme. A miss joins the moment
+ * failures; a pass with no link is not a pass.
+ */
+async function expectDetailsLinkRing(theme: Theme, failures: string[]): Promise<void> {
+    type Ring = { focus: string; ring: string; text: string } | null;
+    const read = (): Promise<Ring> => driverOf().executeScript<Ring>(`
+        const link = document.querySelector('.nuiget-details-info a[href]');
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--nuiget-color-focus)';
+        document.body.appendChild(probe);
+        const focus = getComputedStyle(probe).color;
+        probe.remove();
+        if (!link) return null;
+        link.focus({ preventScroll: true });
+        const style = getComputedStyle(link);
+        return { focus, text: link.textContent.trim().slice(0, 40), ring: style.outlineWidth + ' ' + style.outlineStyle + ' ' + style.outlineColor + ' offset ' + style.outlineOffset };`);
+    const holds = (reading: Ring): boolean => reading !== null && reading.ring === `1px solid ${reading.focus} offset -1px`;
+    const reading: Ring = await poll(async () => { const now = await read(); return holds(now) ? now : undefined; }, 'a details link\'s focus ring', 10_000).catch(() => read());
+    console.warn(`[probe] details link ring ${nameOf(theme)}: ${reading === null ? 'no link' : `${reading.ring} (focus ${reading.focus}; "${reading.text}")`}`);
+    if (!holds(reading)) {
+        failures.push(`details link ring under ${nameOf(theme)}: ${reading === null ? 'no link in the details facts' : reading.ring}, expected 1px solid ${reading === null ? 'the focus colour' : reading.focus} offset -1px`);
+    }
+}
+
 /** The main panel's four moments, from the Installed tab with its first row current; the tab is left as it was found. */
 async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
     const rows = await rowsOf('installed-list');
@@ -180,6 +206,7 @@ async function mainMoments(theme: Theme, failures: string[]): Promise<void> {
         return document.querySelector('[data-testid="readme-empty"]') ? 'empty' : null;`)) ?? undefined, 'the README or its empty state', 60_000);
     report('readme', theme, readme === 'content' ? await contrastAt(null) : { violations: [], passes: 0, notMeasurable: readme === 'empty' ? 'the README did not load (readme-empty)' : 'the README has no code element' }, failures);
     await (await findByTestId('details-tab-details', 30_000)).click();
+    await expectDetailsLinkRing(theme, failures);
     await (await optionOf(current.id)).click();
     // The open ConfirmDialog of a bulk uninstall of one row, cancelled; never confirmed.
     await toggle(other.id, true);

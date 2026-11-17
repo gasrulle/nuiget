@@ -194,6 +194,161 @@ describe('Dialog', () => {
         expect(onPageKey.mock.calls).toEqual([['a']]);
     });
 
+    describe('where the focus goes when it closes (UX-P4.4, A6)', () => {
+        /** A toolbar whose button opens a confirm and a list with a roving tab stop; Confirm can disable the opener. */
+        function BulkPage({ disableOnConfirm = true, disabledFromStart = false, rows = true }: { disableOnConfirm?: boolean; disabledFromStart?: boolean; rows?: boolean }) {
+            const [open, setOpen] = useState(false);
+            const [count, setCount] = useState(disabledFromStart ? 0 : 2);
+            return (
+                <main>
+                    <div role="toolbar" aria-label="Bulk">
+                        <button type="button" tabIndex={-1}>Select All</button>
+                        <button type="button" disabled={count === 0} onClick={() => setOpen(true)}>Uninstall Selected</button>
+                    </div>
+                    {rows ? (
+                        <div role="listbox" aria-label="Packages">
+                            <div role="option" aria-selected="false" tabIndex={-1}>Moq</div>
+                            <div role="option" aria-selected="false" tabIndex={0}>Serilog</div>
+                        </div>
+                    ) : null}
+                    <ConfirmDialog
+                        open={open}
+                        title="Uninstall 2 packages?"
+                        confirmLabel="Uninstall"
+                        onConfirm={() => { setOpen(false); if (disableOnConfirm) { setCount(0); } }}
+                        onCancel={() => setOpen(false)}
+                    />
+                </main>
+            );
+        }
+
+        it('goes to the list\'s active row when Confirm disables the opener in the same update', async () => {
+            const user = userEvent.setup();
+            render(<BulkPage />);
+            await user.click(screen.getByRole('button', { name: 'Uninstall Selected' }));
+            await user.click(screen.getByRole('button', { name: 'Uninstall' }));
+            expect(document.activeElement).toBe(screen.getByRole('option', { name: 'Serilog' }));
+        });
+
+        it('goes to the list\'s active row when the opener was disabled as the dialog opened', async () => {
+            const user = userEvent.setup();
+            function DisablingOpener() {
+                const [open, setOpen] = useState(false);
+                const [used, setUsed] = useState(false);
+                return (
+                    <main>
+                        <div role="toolbar" aria-label="Details">
+                            <button type="button" disabled={used} onClick={() => { setUsed(true); setOpen(true); }}>Install</button>
+                        </div>
+                        <div role="listbox" aria-label="Results"><div role="option" aria-selected="false" tabIndex={0}>Polly</div></div>
+                        <ConfirmDialog open={open} title="Install Polly?" confirmLabel="Install" onConfirm={() => setOpen(false)} onCancel={() => setOpen(false)} />
+                    </main>
+                );
+            }
+            render(<DisablingOpener />);
+            const opener = screen.getByRole('button', { name: 'Install' });
+            await user.click(opener);
+            expect(opener).toBeDisabled();
+            await user.keyboard('{Escape}');
+            expect(document.activeElement).toBe(screen.getByRole('option', { name: 'Polly' }));
+        });
+
+        it('goes to the first control of the page when no list and no toolbar can take it', async () => {
+            const user = userEvent.setup();
+            function Bare() {
+                const [open, setOpen] = useState(false);
+                const [gone, setGone] = useState(false);
+                return (
+                    <main>
+                        {gone ? null : <button type="button" onClick={() => setOpen(true)}>Open</button>}
+                        <button type="button">Next</button>
+                        <ConfirmDialog open={open} title="Remove?" confirmLabel="Remove" onConfirm={() => { setOpen(false); setGone(true); }} onCancel={() => setOpen(false)} />
+                    </main>
+                );
+            }
+            render(<Bare />);
+            await user.click(screen.getByRole('button', { name: 'Open' }));
+            await user.click(screen.getByRole('button', { name: 'Remove' }));
+            expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next' }));
+        });
+
+        it('a dialog unmounted while open gives the focus back at once', async () => {
+            const user = userEvent.setup();
+            function Owner() {
+                const [shown, setShown] = useState(true);
+                const [open, setOpen] = useState(false);
+                return (
+                    <main>
+                        <button type="button" onClick={() => setOpen(true)}>Open</button>
+                        <button type="button" onClick={() => setShown(false)}>Hide</button>
+                        {shown ? <Dialog open={open} onClose={() => setOpen(false)} title="Sources"><button type="button" onClick={() => setShown(false)}>Leave</button></Dialog> : null}
+                    </main>
+                );
+            }
+            render(<Owner />);
+            const opener = screen.getByRole('button', { name: 'Open' });
+            await user.click(opener);
+            await user.click(screen.getByRole('button', { name: 'Leave' }));
+            expect(screen.queryByRole('dialog')).toBeNull();
+            expect(document.activeElement).toBe(opener);
+        });
+
+        it('under StrictMode, Cancel still returns to the opener', async () => {
+            const user = userEvent.setup();
+            render(<React.StrictMode><BulkPage /></React.StrictMode>);
+            const opener = screen.getByRole('button', { name: 'Uninstall Selected' });
+            await user.click(opener);
+            await user.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(document.activeElement).toBe(opener);
+        });
+
+        it('goes to a list\'s active row when nothing was focused before it opened', () => {
+            render(<main><div role="listbox" aria-label="Packages"><div role="option" aria-selected="false" tabIndex={0}>Polly</div></div></main>);
+            (document.activeElement as HTMLElement | null)?.blur();
+            const { rerender } = render(<Dialog open onClose={() => undefined} title="NuGet sources"><button type="button">Done</button></Dialog>);
+            rerender(<Dialog open={false} onClose={() => undefined} title="NuGet sources"><button type="button">Done</button></Dialog>);
+            expect(document.activeElement).toBe(screen.getByRole('option', { name: 'Polly' }));
+        });
+
+        it('stays in a layer still open underneath, never on the page', async () => {
+            const user = userEvent.setup();
+            function Stacked() {
+                const [inner, setInner] = useState(false);
+                return (
+                    <Dialog open onClose={() => undefined} title="NuGet sources">
+                        <button type="button" onClick={() => setInner(true)}>Remove</button>
+                        <ConfirmDialog open={inner} title="Remove nuget.org?" confirmLabel="Remove" onConfirm={() => setInner(false)} onCancel={() => setInner(false)} />
+                    </Dialog>
+                );
+            }
+            render(<main><button type="button">Page</button><Stacked /></main>);
+            await user.click(screen.getByRole('button', { name: 'Remove' }));
+            await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            expect(screen.getByRole('dialog', { name: 'NuGet sources' })).toContainElement(document.activeElement as HTMLElement);
+            expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove' }));
+        });
+
+        it('goes to the first enabled control of the opener\'s toolbar, whatever its tabindex, when no list has a row', async () => {
+            const user = userEvent.setup();
+            render(<BulkPage rows={false} />);
+            await user.click(screen.getByRole('button', { name: 'Uninstall Selected' }));
+            await user.click(screen.getByRole('button', { name: 'Uninstall' }));
+            expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Select All' }));
+        });
+
+        it('Cancel and Escape still return to an enabled opener', async () => {
+            const user = userEvent.setup();
+            render(<BulkPage />);
+            const opener = screen.getByRole('button', { name: 'Uninstall Selected' });
+            await user.click(opener);
+            await user.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(document.activeElement).toBe(opener);
+            await user.click(opener);
+            await user.keyboard('{Escape}');
+            expect(document.activeElement).toBe(opener);
+        });
+    });
+
     it('has no axe violations', async () => {
         const user = userEvent.setup();
         render(<Page />);
