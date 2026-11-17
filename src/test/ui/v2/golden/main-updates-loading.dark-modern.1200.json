@@ -4,26 +4,7 @@
   "look": "modern",
   "width": 1200,
   "tolerance": 0.5,
-  "masks": [
-    {
-      "selector": ".nuiget-progress, .nuiget-skeleton",
-      "reason": "the indeterminate stripe and the breathe animation are mid-phase until P4.5 honours vscode-reduce-motion; NO_RUNNING_TRANSITION reads transitions only",
-      "rects": [
-        {
-          "h": 2,
-          "w": 420,
-          "x": 0,
-          "y": 147
-        },
-        {
-          "h": 216,
-          "w": 420,
-          "x": 0,
-          "y": 147
-        }
-      ]
-    }
-  ],
+  "masks": [],
   "fingerprint": {
     "fontFamily": "system-ui, Ubuntu, \"Droid Sans\", sans-serif",
     "font": "13px system-ui, Ubuntu, \"Droid Sans\", sans-serif",
@@ -31,7 +12,7 @@
     "dpr": 1,
     "vscode": "1.140.0",
     "chromium": "150",
-    "image": "ubuntu26 20261111.196.1"
+    "image": "ubuntu26 20261111.82.6"
   },
-  "run": "43776489839"
+  "run": "44191260179"
 }
