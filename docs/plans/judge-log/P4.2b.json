@@ -98,7 +98,8 @@
       }
      ],
      "disposition": "fixed",
-     "dispositionText": "A dialog's text takes the browser's normal line height: `Dialog` portals to `document.body` and `.nuiget-dialog` sets no line-height (`primitives.css:1338-1366`), while the roots set 1.4. Real, and older than this item (every dialog since UX-P3.5). Fixed in the row the planning session places (proposed UX-P4.fix: dialog line height), which first adds the DS-TYPE-4 clause that fails on run 44036837521 and then the one declaration; this golden is adopted as `baseline` until then (design-advisor GOLDEN ruling, sha256 4b49e93c…2830c)."
+     "dispositionText": "A dialog's text takes the browser's normal line height: `Dialog` portals to `document.body` and `.nuiget-dialog` sets no line-height (`primitives.css:1338-1366`), while the roots set 1.4. Real, and older than this item (every dialog since UX-P3.5). Fixed in the row the planning session places (proposed UX-P4.fix: dialog line height), which first adds the DS-TYPE-4 clause that fails on run 44036837521 and then the one declaration; this golden is adopted as `baseline` until then (design-advisor GOLDEN ruling, sha256 4b49e93c…2830c).",
+     "evidence": "fixed by UX-P4.fix-3 (e29cfb89): run 44116707127, 0 candidates in sidebar-uninstall-dialog; DS-TYPE-4 dialog-text hard (docs/plans/judge-log/P4.fix-3.json)"
     }
    ],
    "refuted": []

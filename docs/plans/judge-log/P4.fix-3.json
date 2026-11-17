@@ -1,0 +1,182 @@
+{
+ "item": "P4.fix-3",
+ "runs": [
+  {
+   "runId": "44116707127",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "e29cfb89 (push (b), the declaration and the flip)",
+   "look": "modern",
+   "workflow": "wf_a2077c6c-307",
+   "note": "The six DIALOG_STATES, judged against main-installed-all.dark-modern.1200 as the row reference (P4.2b's precedent; no dialog artboard). sidebar-uninstall-dialog has 0 candidates: judge P4.2b#D1 (DS-TYPE-4, a dialog's text line height) is fixed by e29cfb89, DS-TYPE-4 dialog-text hard on run 44116707127 (read `normal` on every part on the reading run 44111085167).",
+   "captures": {
+    "main-installed-bulk-dialog": {
+     "png": "captures/44116707127/main-installed-bulk-dialog.dark-modern.1200.png",
+     "sha256": "a6724a3970160cb825c01e81fdc2f3a962da41d7095533aed4876bb7f466149f",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    },
+    "sidebar-update-all-dialog": {
+     "png": "captures/44116707127/sidebar-update-all-dialog.dark-modern.300.png",
+     "sha256": "82a1688899c680f817231a41df21739e6a2425acf3107d0641a29b98d5ed66a7",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    },
+    "main-browse-multi-install-dialog": {
+     "png": "captures/44116707127/main-browse-multi-install-dialog.dark-modern.1200.png",
+     "sha256": "0e95d4f3cb7c4c27fc05d9d69bbd063241166b6b37cf99df52435e3bce5af673",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    },
+    "main-sources-remove-dialog": {
+     "png": "captures/44116707127/main-sources-remove-dialog.dark-modern.1200.png",
+     "sha256": "c8bec8046ee8de32706267addb275c2a8c1dde7265dfe248b100086d65498aaa",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    },
+    "main-installed-uninstall-dialog": {
+     "png": "captures/44116707127/main-installed-uninstall-dialog.dark-modern.1200.png",
+     "sha256": "6a27889aae16dba00a55a3cbb23516a8591389b068ab01a506be04c13f75620f",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    },
+    "sidebar-uninstall-dialog": {
+     "png": "captures/44116707127/sidebar-uninstall-dialog.dark-modern.300.png",
+     "sha256": "4cfeafe58b0489b96591e1e13f8979e9119a2caa6ffc6e6fd9fe4dfbe104cf35",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    }
+   },
+   "panel": {
+    "states": 6,
+    "candidates": 12,
+    "standing": 3,
+    "blocking": 0,
+    "refuted": 5,
+    "singleJudge": 1,
+    "incomplete": 0
+   },
+   "singleJudge": [
+    {
+     "id": "main-browse-multi-install-dialog#D1",
+     "state": "main-browse-multi-install-dialog",
+     "finding": "[native] The disabled Unsupported.csproj check box has a light grey border (about #7e7e7e) that is far brighter than the #3c3c3c border of the enabled check boxes above and below it. The disabled box therefore stands out more than the active ones, the reverse of how the workbench dims a disabled control.",
+     "severity": "major",
+     "box": [
+      391,
+      446,
+      19,
+      19
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "native"
+     ],
+     "note": "informational, no action: the declared role: a disabled check box takes `disabledForeground` (docs/design/design-system.md Check box row; docs/plans/judge-log/P2.8b.json native-4) (design-advisor GOLDEN ruling of 2026-11-17, UX-P4.fix-3 (docs/plans/handoff/P4.fix-3.md, Advisor decisions))"
+    }
+   ],
+   "findings": [
+    {
+     "id": "main-installed-bulk-dialog#D1",
+     "state": "main-installed-bulk-dialog",
+     "finding": "[native] The confirmation dialog's initially focused button (ConfirmDialog opens on Cancel) draws no focus ring: Cancel shows only its 1 px secondary border (pixel x=668 at y=441 is the dialog surface, no focusBorder at offset +2), and neither button is ringed. A workbench dialog shows the 1 px focusBorder ring on its focused button when it opens, and the interaction model gives Dialog/ConfirmDialog 'the focused control's ring' (Button: 1 px focusBorder, offset +2) in a main-panel surface that draws rings after a click. | [states] No control in the open confirmation dialog shows a focus ring: Cancel keeps only its 1 px secondary border and Uninstall's edge meets the dialog surface with no 1 px focusBorder ring at offset +2. Focus is held inside the topmost layer, and the main panel draws rings after a click in both looks, so the modal shows no focused element. The selected Serilog row behind it correctly falls back to the inactive selection band.",
+     "severity": "major",
+     "box": [
+      668,
+      426,
+      140,
+      32
+     ],
+     "rule": "DS-FOCUS-3",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "disposition": "accepted-as-design",
+     "evidence": "DECISIONS.md 2026-11-07 (a pointer-opened dialog focuses Cancel programmatically, without :focus-visible; DS-FOCUS-3 premise P-3)",
+     "ruling": "judge-log rule; docs/plans/judge-log/P3.5.json main-installed-bulk-dialog#D2 (design-advisor, 2026-11-07, UX-P3.5 follow-up 3; DECISIONS 2026-11-07); confirmed in the design-advisor GOLDEN ruling of 2026-11-17, UX-P4.fix-3 (docs/plans/handoff/P4.fix-3.md, Advisor decisions)"
+    },
+    {
+     "id": "sidebar-update-all-dialog#D1",
+     "state": "sidebar-update-all-dialog",
+     "finding": "[native] Every line of the dialog's package list is written 'Id: old → new' with a colon between the package id and its versions, while the same pair is drawn without a colon in the sidebar rows behind the scrim ('Polly 8.4.2 → 8.9.1') and the copy rules forbid a colon on a label–value pair. | [states] Each item in the dialog's list writes a package and its versions as a label and value joined by a colon ('Dapper: 2.1.35 → 2.1.89'), which DS-COPY-2 forbids. The same packages in the sidebar's Updates rows behind the dialog have no colon ('Polly 8.4.2 → 8.9.1').",
+     "severity": "major",
+     "box": [
+      32,
+      172,
+      237,
+      452
+     ],
+     "rule": "DS-COPY-2",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "disposition": "fixed",
+     "owner": "the proposed row \"UX-P4.fix-<n> ⚑-design Update All confirmation: a list line without the colon\" (for the planning session to place)",
+     "dispositionText": "The Update All confirmation writes each line 'Id: old → new'; the rows of both surfaces write the id and the versions without a colon. Nothing declares the colon form. Older than this item (UX-P3.7d) and outside its files; fixed in the row the planning session places, rule first. The golden stays `approved` (design-advisor GOLDEN ruling of 2026-11-17, sha256 82a16888…ed66a7).",
+     "ruling": "design-advisor GOLDEN ruling of 2026-11-17, UX-P4.fix-3 (docs/plans/handoff/P4.fix-3.md, Advisor decisions)"
+    },
+    {
+     "id": "main-sources-remove-dialog#D1",
+     "state": "main-sources-remove-dialog",
+     "finding": "[native] No control of the confirmation dialog shows focus: Cancel (the control the ConfirmDialog opens on) and Remove both lack the 1 px focusBorder ring at offset +2 that the main panel draws after a click (DS-FOCUS-3) and that a workbench dialog draws on its focused button when it opens; the pixels 2 px outside Cancel are the dialog background (32,32,32), not focusBorder, so the user cannot see where Enter or Space will act. | [states] No focus ring is drawn anywhere in the confirmation: neither Cancel (675-733 x 437-460), where a ConfirmDialog opens its focus, nor Remove carries the 1 px focusBorder outline at +2 offset. The pixels around both buttons are the dialog surface (32/32/32) on every side, so the focused control after the pointer-opened dialog is invisible on this editor surface.",
+     "severity": "major",
+     "box": [
+      671,
+      433,
+      141,
+      32
+     ],
+     "rule": "DS-FOCUS-3",
+     "lenses": [
+      "native",
+      "states"
+     ],
+     "disposition": "accepted-as-design",
+     "evidence": "DECISIONS.md 2026-11-07 (a pointer-opened dialog focuses Cancel programmatically, without :focus-visible; DS-FOCUS-3 premise P-3)",
+     "ruling": "judge-log rule; docs/plans/judge-log/P3.5.json main-installed-bulk-dialog#D2 (design-advisor, 2026-11-07, UX-P3.5 follow-up 3; DECISIONS 2026-11-07); confirmed in the design-advisor GOLDEN ruling of 2026-11-17, UX-P4.fix-3 (docs/plans/handoff/P4.fix-3.md, Advisor decisions)"
+    }
+   ],
+   "refuted": [
+    {
+     "id": "native-2",
+     "state": "sidebar-update-all-dialog",
+     "rule": "judge-only",
+     "finding": "Long package ids in the dialog list wrap in the middle of a word with no hyphen ('Abstracti|ons', 'Configuratio|n.EnvironmentVariables', 'Dependenc|yInjection', 'Logging.Abs|tractions', 'Con|figurationExtensions'), so the ids no longer read as identifiers; workbench dialogs and lists never split an identifier at an arbitrary character.",
+     "reason": "The mid-word breaks are visible ('Abstracti|ons', 'Dependenc|yInjection'), but no rule, artboard element or measured exemplar covers how an identifier wraps (rubric §6: taste with no rule). The ids are live content and the layout around them holds (DS-OVERFLOW-6 'document 300×799 fits', hard). A token such as 'Microsoft.Extensions.AI.Abstractions:' has no break opportunity, so the workbench's own break-word wrapping would also split it at an arbitrary character, which contradicts the exemplar claim."
+    },
+    {
+     "id": "states-1",
+     "state": "sidebar-update-all-dialog",
+     "rule": "judge-only",
+     "finding": "The dialog's list wraps package ids in the middle of a word instead of at a dot or before the version ('Microsoft.Extensions.AI.Abstracti|ons', 'Configuratio|n.EnvironmentVariables', 'Dependenc|yInjection', 'Logging.Abs|tractions', 'Options.Con|figurationExtensions'), and leaves '→ 11.0.0' alone on its own line, so the ids are hard to read at 300 px. The artboard supplied is for main-installed-all and draws no such list, so I judged this against the identifiers themselves, not an artboard element.",
+     "reason": "The crop shows the same mid-identifier wraps and '→ 11.0.0' on its own line. The second is ordinary wrapping at a space, and the first has no rule or artboard to cite; the judge admits the artboard draws no such list. Package ids are live content whose surrounding layout holds (DS-OVERFLOW-6 'document 300×799 fits', DS-TYPE-4 dialog-text description 18.2, both hard), so rubric §6 excludes the finding."
+    },
+    {
+     "id": "native-2",
+     "state": "main-sources-remove-dialog",
+     "rule": "judge-only",
+     "finding": "The body message breaks the config path at the hyphen inside 'dense-workspace' ('.../fixtures/dense-' then 'workspace/nuget.config.'), so the line end reads like a typographic hyphenation inside a file name. A workbench confirm dialog keeps the path on one line or breaks it at a path separator.",
+     "reason": "The crop shows the break after 'dense-' as described, but no rule or artboard element governs where a path wraps. The Sources dialog in the same run breaks the same path at the same hyphen, and the claim about a workbench dialog is not evidenced. This is taste with no rule (rubric §6)."
+    },
+    {
+     "id": "states-1",
+     "state": "main-sources-remove-dialog",
+     "rule": "judge-only",
+     "finding": "The confirmation is drawn over the bare page instead of over the Sources dialog: the band above and below the confirmation (y 297-327 and 476-506, where the same run's main-sources capture draws the NuGet sources dialog with its title, close button and nuget.org row) reads the plain scrimmed page (rgb 15/15/15 at 600,300 against 32/32/32 for the Sources surface), so the stacked layer the state's name promises is missing. The dialog that opened the confirmation, and that its focus should return to, is not shown.",
+     "reason": "The bands above and below the confirmation do read as scrimmed page (15/15/15 at 600,300 and 600,490, against 32/32/32 for the Sources surface in main-sources). That hiding is by design: layers.ts marks every layer under the topmost one data-covered to give the workbench's single-modal look (one scrim, one box, UX-P3.6). The Sources dialog is still mounted, and focus returns to it when the confirmation closes."
+    },
+    {
+     "id": "states-1",
+     "state": "main-installed-uninstall-dialog",
+     "rule": "judge-only",
+     "finding": "The confirmation's message \"Removes the package reference from the project file.\" uses the noun \"reference\", which design-system §10 Microcopy item 7 forbids (\"package (never reference, except 'Its reference could not be resolved.')\"); the sentence should name the package only, e.g. \"Removes the package from the project file.\"",
+     "reason": "The crop does show the body text \"Removes the package reference from the project file.\" inside the box, but the wording is a ruled design decision, not a defect. docs/design/DECISIONS.md row 2026-11-17 (design-advisor ruling, UX-P4.2a) fixes this exact body text for the dialog, which has no artboard. Here \"reference\" names the entry in the project file, as in the rule's own exception \"Its reference could not be resolved.\"; it does not stand in for the package, so it falls outside §10 item 7. No hard measurement covers copy (DS-TYPE-4/dialog-text 18.2 and the other lines are green)."
+    }
+   ]
+  }
+ ],
+ "resolves": [
+  {
+   "id": "sidebar-uninstall-dialog#D1",
+   "log": "docs/plans/judge-log/P4.2b.json",
+   "disposition": "fixed",
+   "evidence": "run 44116707127: 0 candidates in sidebar-uninstall-dialog; `DS-TYPE-4@sidebar-uninstall-dialog/dialog-text: title 25.2 (target 25.2); description 18.2, body 18.2, option 18.2 (target 18.2) (hard)`",
+   "commit": "e29cfb89"
+  }
+ ]
+}
