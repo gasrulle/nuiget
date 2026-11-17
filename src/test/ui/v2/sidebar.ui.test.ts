@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ActivityBar, By, EditorView, Key, Origin, type WebElement, Workbench } from 'vscode-extension-tester';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, tokenPx, typeHeld, waitForTestIdGone, waitForText } from './sidebarWebview';
-import { WORKBENCH_WIDGETS } from './measure';
 
 /**
  * The 2.0 sidebar in VS Code (plan item P3.5), on the VSIX that `npm run test:ui` packages: the first time the 2.0
@@ -36,8 +35,8 @@ describe('2.0 sidebar', () => {
     it('the sidebar search box takes the focus when the view takes it (SB14, UX-P3.8)', async function () {
         this.timeout(120_000);
         await openSidebarView();
-        // The box claims the focus once per document: an earlier suite may have spent the claim (sidebar-parity runs first, run
-        // 43454600679), so the webviews are reloaded and the sidebar mounts afresh before the view is given the focus.
+        // The webviews are reloaded so the sidebar mounts afresh before the view is given the focus: the case reads a fresh
+        // document (the claim on every later focus gain is read by the cases of UX-P4.fix-4 below).
         await new Workbench().executeCommand('Developer: Reload Webviews');
         await enterSidebarWebview();
         await findByTestId('sidebar-search-input', 60_000);
@@ -270,136 +269,79 @@ describe('2.0 sidebar', () => {
         expect(csproj).to.contain('Include="Newtonsoft.Json"');
     });
 
-    // UX-P4.fix-4 (architecture-advisor ruling of 2026-11-17, docs/plans/handoff/P4.fix-2.md): a probe, not a test. It prints
-    // where the focus lands when the Extensions view and the nUIget view are shown the same way, and asserts nothing; the
-    // row's closing commit removes it.
-    it('prints where the focus lands when a side bar view is shown ([focus-open] probe, UX-P4.fix-4)', async function () {
-        this.timeout(300_000);
-        const driver = driverOf();
-        type View = 'extensions' | 'nuiget';
-        type Token = 'box' | 'view' | 'editor' | 'none' | 'other';
-        interface Top { windowFocused: boolean; top: string; body: boolean; sideBar: boolean; editor: boolean; extensionsBox: boolean; webview: boolean; webviewInSideBar: boolean }
-        interface Frame { focused: boolean; active: string; age: number }
+    // UX-P4.fix-4 (design-advisor follow-up ruling and architecture-advisor third ruling of 2026-11-17): where the focus lands
+    // when the side bar is shown, nUIget's side of the exemplar's readings of run 44149001126 (VS Code 1.140.0). Each case
+    // builds its own start, and the `afterEach` restores the workbench: a case that times out keeps its driver calls pending
+    // (the gotcha row "A UI case that outlives its Mocha timeout").
+    describe('where the focus lands when the side bar is shown (SB14, UX-P4.fix-4)', () => {
         const EDITOR_PART = '.part.editor';
-        const readTop = (): Promise<Top> => driver.executeScript<Top>(`
-            const active = document.activeElement;
-            const inside = selectors => Boolean(active) && selectors.some(selector => Boolean(active.closest(selector)));
-            const webview = Boolean(active) && active.tagName === 'IFRAME' && active.classList.contains('webview');
-            return {
-                windowFocused: document.hasFocus(),
-                top: active ? [active.tagName.toLowerCase(), ...[...active.classList].slice(0, 2)].join('.') : 'none',
-                body: !active || active === document.body,
-                sideBar: inside(['.part.sidebar']),
-                editor: inside([arguments[1]]),
-                extensionsBox: inside(arguments[0]),
-                webview,
-                webviewInSideBar: webview && Boolean(active.closest('.part.sidebar')),
-            };`, WORKBENCH_WIDGETS.extensionsSearch, EDITOR_PART);
-        const readFrame = async (): Promise<Frame | string> => {
+        const TOGGLE = 'Toggle Primary Side Bar Visibility';
+        /** How long a reading must hold: the host's visibility send, removed by UX-P4.fix-4, moved the focus after about 300 ms. */
+        const HOLD_MS = 1_500;
+        interface Top { windowFocused: boolean; inEditor: boolean }
+        interface Frame { focused: boolean; active: string }
+
+        const releaseKeys = async (): Promise<void> => {
+            await leaveWebview();
+            await driverOf().actions().clear();
+        };
+        const readTop = async (): Promise<Top> => {
+            await leaveWebview();
+            return driverOf().executeScript<Top>(
+                'const active = document.activeElement; return { windowFocused: document.hasFocus(), inEditor: Boolean(active) && Boolean(active.closest(arguments[0])) };',
+                EDITOR_PART);
+        };
+        const readFrame = async (): Promise<Frame> => {
             try {
                 await enterSidebarWebview(5_000);
-                return await driver.executeScript<Frame>(`
-                    const active = document.activeElement;
-                    return { focused: document.hasFocus(), active: active ? active.getAttribute('data-testid') || active.tagName.toLowerCase() : 'none', age: Math.round(performance.now()) };`);
-            } catch {
-                return 'frame not reachable';
+                return await driverOf().executeScript<Frame>(
+                    'const active = document.activeElement; return { focused: document.hasFocus(), active: active ? active.getAttribute("data-testid") || active.tagName.toLowerCase() : "none" };');
             } finally {
                 await leaveWebview();
             }
         };
-        const read = async (view: View): Promise<{ token: Token; top: Top; frame: Frame | string | undefined }> => {
-            await leaveWebview();
-            const top = await readTop();
-            const frame = view === 'nuiget' ? await readFrame() : undefined;
-            const inFrame = typeof frame === 'object' ? frame : undefined;
-            let token: Token;
-            if (!top.windowFocused) {
-                token = 'none';
-            } else if (view === 'extensions' ? top.extensionsBox : inFrame?.focused === true && inFrame.active === 'sidebar-search-input') {
-                token = 'box';
-            } else if (top.sideBar || (view === 'nuiget' && inFrame?.focused === true)) {
-                token = 'view';
-            } else if (top.editor) {
-                token = 'editor';
-            } else if (top.body) {
-                token = 'none';
-            } else {
-                token = 'other';
+        /** A reading that holds for `HOLD_MS`, read with the file's `poll`; the last reading is named when it never does. */
+        const held = async <T>(read: () => Promise<T>, holds: (value: T) => boolean, what: string): Promise<T> => {
+            let since: number | undefined;
+            let last: T | undefined;
+            try {
+                return await poll(async () => {
+                    last = await read();
+                    if (!holds(last)) {
+                        since = undefined;
+                        return undefined;
+                    }
+                    since ??= Date.now();
+                    return Date.now() - since >= HOLD_MS ? last : undefined;
+                }, `${what} for ${HOLD_MS} ms`, 15_000);
+            } catch (error) {
+                throw new Error(`${error instanceof Error ? error.message : String(error)}; last reading ${JSON.stringify(last)}`, { cause: error });
             }
-            return { token, top, frame };
         };
-        const describeReading = ({ top, frame }: Awaited<ReturnType<typeof read>>): string => {
-            const frameText = frame === undefined ? 'frame focused n/a, active n/a, document age n/a'
-                : typeof frame === 'string' ? `${frame}, document age n/a`
-                : `frame focused ${frame.focused}, active ${frame.active}, document age ${frame.age} ms`;
-            return `window focused ${top.windowFocused}; top ${top.top}, side bar ${top.sideBar}, editor ${top.editor}, webview ${top.webview} (in side bar ${top.webviewInSideBar}); ${frameText}`;
-        };
-        const sample = async (label: string, view: View): Promise<void> => {
-            const start = Date.now();
-            const first = await read(view);
-            let last = first;
-            let settledAt = 0;
-            // The ruling's sampling: at once, then every 250 ms for 4 s; it waits for no state.
-            while (Date.now() - start < 4_000) {
-                await new Promise(resolve => setTimeout(resolve, 250));
-                const next = await read(view);
-                if (next.token !== last.token) {
-                    settledAt = Date.now() - start;
-                }
-                last = next;
-            }
-            console.warn(`[focus-open] ${label}: ${last.token} (first ${first.token}, settled at ${settledAt} ms); ${describeReading(last)}`);
-        };
-        const releaseKeys = async (): Promise<void> => {
-            await leaveWebview();
-            await driver.actions().clear();
-        };
-        /** Looks a command up in the palette, prints the first five labels and runs the first that matches. */
-        const runLooked = async (words: string, matches: (label: string) => boolean): Promise<string | undefined> => {
+        /** Runs the first palette row whose label matches; throws when none does. */
+        const runLooked = async (words: string, matches: (label: string) => boolean): Promise<string> => {
             await leaveWebview();
             const prompt = await new Workbench().openCommandPrompt();
             await prompt.setText(`>${words}`);
-            let previous = '';
-            let labels: string[] = [];
-            await poll(async () => {
-                labels = [];
+            const chosen = await poll(async () => {
                 for (const pick of (await prompt.getQuickPicks()).slice(0, 5)) {
-                    labels.push(await pick.getLabel());
+                    const label = await pick.getLabel();
+                    if (matches(label)) {
+                        return label;
+                    }
                 }
-                const joined = labels.join(' | ');
-                const stable = joined !== '' && joined === previous;
-                previous = joined;
-                return stable ? true : undefined;
-            }, `the palette's rows for "${words}"`, 5_000).catch(() => undefined);
-            console.warn(`[focus-open] lookup "${words}": ${labels.join(' | ') || '(no rows)'}`);
-            const chosen = labels.find(matches);
-            if (chosen === undefined) {
-                console.warn(`[focus-open] lookup "${words}": no match`);
-                await prompt.cancel();
-                await releaseKeys();
                 return undefined;
-            }
+            }, `a palette row for "${words}"`, 10_000);
             await prompt.selectQuickPick(chosen);
             await releaseKeys();
             return chosen;
         };
-        const showControl = async (title: 'Explorer' | 'Extensions'): Promise<void> => {
+        const sideBarShown = (): Promise<boolean> => driverOf().executeScript<boolean>(
+            'const part = document.querySelector(".part.sidebar"); return Boolean(part) && getComputedStyle(part).display !== "none" && part.getBoundingClientRect().width > 0;');
+        const showExplorer = async (): Promise<void> => {
             await releaseKeys();
-            const control = await poll(async () => new ActivityBar().getViewControl(title), `the ${title} view control`, 20_000);
+            const control = await poll(async () => new ActivityBar().getViewControl('Explorer'), 'the Explorer view control', 20_000);
             await control.openView();
-        };
-        const showView = async (view: View): Promise<void> => {
-            if (view === 'extensions') {
-                await showControl('Extensions');
-            } else {
-                await releaseKeys();
-                await openSidebarView();
-            }
-        };
-        const focusEditor = async (): Promise<void> => {
-            await releaseKeys();
-            const lines = await poll(async () => (await driver.findElements(By.css(`${EDITOR_PART} .monaco-editor .view-lines`)))[0], 'the editor text', 20_000);
-            await lines.click();
         };
         // Go to File, not `VSBrowser.openResources`: that failed for this file on a local run (macOS, 2026-11-17).
         const openProjectFile = async (): Promise<void> => {
@@ -416,157 +358,33 @@ describe('2.0 sidebar', () => {
             }, 'the project file in Go to File', 10_000);
             await pick.select();
             await releaseKeys();
-            await poll(async () => ((await driver.findElements(By.css(`${EDITOR_PART} .monaco-editor .view-lines`))).length > 0 ? true : undefined), 'the project file in an editor', 10_000);
+            await poll(async () => ((await driverOf().findElements(By.css(`${EDITOR_PART} .monaco-editor .view-lines`))).length > 0 ? true : undefined), 'the project file in an editor', 10_000);
         };
-        const sideBarShown = (): Promise<boolean> => driver.executeScript<boolean>(
-            'const part = document.querySelector(".part.sidebar"); return Boolean(part) && getComputedStyle(part).display !== "none" && part.getBoundingClientRect().width > 0;');
-        const TOGGLE = 'Toggle Primary Side Bar Visibility';
-        const precondition = async (label: string, view: View, met: (token: Token) => boolean): Promise<boolean> => {
-            const reading = await read(view);
-            if (met(reading.token)) {
-                return true;
-            }
-            console.warn(`[focus-open] ${label}: precondition not met (${reading.token}); ${describeReading(reading)}`);
-            return false;
+        /** The project file open and its editor focused, read as focused; a start that cannot be built throws. */
+        const startInEditor = async (): Promise<void> => {
+            await openProjectFile();
+            const lines = await poll(async () => (await driverOf().findElements(By.css(`${EDITOR_PART} .monaco-editor .view-lines`)))[0], 'the editor text', 20_000);
+            await lines.click();
+            await releaseKeys();
+            await poll(async () => {
+                const top = await readTop();
+                return top.windowFocused && top.inEditor ? true : undefined;
+            }, 'the editor as the focused element', 10_000);
         };
+        /** The view shown and its search box focused once, so the side bar's document has claimed the focus before. */
+        const claimOnce = async (): Promise<void> => {
+            await releaseKeys();
+            await openSidebarView();
+            await enterSidebarWebview();
+            await (await findByTestId('sidebar-search-input', 60_000)).click();
+            await poll(async () => (await driverOf().executeScript<string | null>('return document.activeElement ? document.activeElement.getAttribute("data-testid") : null;')) === 'sidebar-search-input' ? true : undefined,
+                'the search box focused by a click', 10_000);
+            await releaseKeys();
+        };
+        const boxFocused = (frame: Frame): boolean => frame.focused && frame.active === 'sidebar-search-input';
 
-        const cases: { name: string; run: (view: View, label: string) => Promise<void> }[] = [
-            {
-                name: 'activity-bar',
-                run: async (view, label) => {
-                    await releaseKeys();
-                    await new EditorView().closeAllEditors().catch(() => undefined);
-                    await showControl('Explorer');
-                    // A fresh sidebar document (its box claims the focus once per document); run for both views so the
-                    // two go through the same steps.
-                    if (await runLooked('Developer: Reload Webviews', shown => shown === 'Developer: Reload Webviews') === undefined) {
-                        return;
-                    }
-                    await showControl('Explorer');
-                    if (!(await precondition(label, view, token => token !== 'box'))) {
-                        return;
-                    }
-                    await showView(view);
-                    await sample(label, view);
-                },
-            },
-            {
-                name: 'activity-bar-from-editor',
-                run: async (view, label) => {
-                    await showControl('Explorer');
-                    await openProjectFile();
-                    await focusEditor();
-                    if (!(await precondition(label, view, token => token === 'editor'))) {
-                        return;
-                    }
-                    await showView(view);
-                    await sample(label, view);
-                },
-            },
-            {
-                name: 'toggle',
-                run: async (view, label) => {
-                    await openProjectFile();
-                    await showView(view);
-                    await focusEditor();
-                    if (!(await precondition(label, view, token => token === 'editor'))) {
-                        return;
-                    }
-                    const toggle = await runLooked(TOGGLE, shown => shown.includes(TOGGLE));
-                    if (toggle === undefined) {
-                        return;
-                    }
-                    console.warn(`[focus-open] ${label}: side bar shown after the first toggle ${await sideBarShown()}`);
-                    if (!(await precondition(label, view, token => token === 'editor'))) {
-                        return;
-                    }
-                    if (await runLooked(TOGGLE, shown => shown === toggle) === undefined) {
-                        return;
-                    }
-                    await sample(label, view);
-                },
-            },
-            {
-                name: 'focus-command',
-                run: async (view, label) => {
-                    await openProjectFile();
-                    await showControl('Explorer');
-                    await focusEditor();
-                    if (!(await precondition(label, view, token => token === 'editor'))) {
-                        return;
-                    }
-                    const ran = view === 'nuiget'
-                        ? await runLooked('nuiget.sidebarView.focus', shown => /nuiget/i.test(shown) && /focus/i.test(shown))
-                        : await runLooked('Focus on Extensions View', shown => /extensions/i.test(shown) && /focus/i.test(shown));
-                    if (ran === undefined) {
-                        return;
-                    }
-                    await sample(label, view);
-                },
-            },
-            {
-                // The design-advisor's ruling of 2026-11-17 (DO 1): one pointer press on a spot of the view that holds no
-                // focusable element, with the focus in an editor.
-                name: 'blank-press',
-                run: async (view, label) => {
-                    await openProjectFile();
-                    await showView(view);
-                    await focusEditor();
-                    if (!(await precondition(label, view, token => token === 'editor'))) {
-                        return;
-                    }
-                    if (view === 'nuiget') {
-                        await enterSidebarWebview(10_000);
-                    }
-                    const scope = view === 'nuiget' ? '[data-testid="nuiget-sidebar"]' : '.extensions-viewlet';
-                    const origin = await driver.findElement(By.css(scope));
-                    // A point of the scope whose element has no focusable ancestor, scanned from the bottom up.
-                    const spot = await driver.executeScript<{ dx: number; dy: number; element: string } | null>(`
-                        const root = document.querySelector(arguments[0]);
-                        const rect = root.getBoundingClientRect();
-                        const focusable = '[tabindex], input, button, a[href], textarea, select, [contenteditable], .monaco-list, iframe';
-                        for (let y = rect.bottom - 4; y > rect.top + 4; y -= 8) {
-                            for (const x of [rect.left + rect.width / 2, rect.left + 6, rect.right - 6]) {
-                                const element = document.elementFromPoint(x, y);
-                                if (element && root.contains(element) && !element.closest(focusable)) {
-                                    return { dx: Math.round(x - (rect.left + rect.width / 2)), dy: Math.round(y - (rect.top + rect.height / 2)), element: [element.tagName.toLowerCase(), ...[...element.classList].slice(0, 2)].join('.') + (element.getAttribute('data-testid') ? '#' + element.getAttribute('data-testid') : '') };
-                                }
-                            }
-                        }
-                        return null;`, scope);
-                    if (spot === null) {
-                        await leaveWebview();
-                        console.warn(`[focus-open] ${label}: not readable (no blank spot in ${scope})`);
-                        return;
-                    }
-                    console.warn(`[focus-open] ${label}: pressing ${spot.element} at ${spot.dx},${spot.dy} from the centre of ${scope}`);
-                    await driver.actions().move({ origin, x: spot.dx, y: spot.dy }).press().release().perform();
-                    await releaseKeys();
-                    await sample(label, view);
-                },
-            },
-        ];
-
-        // The probe stops starting cases well inside its timeout, so its clean-up runs before the next suite does.
-        const probeStart = Date.now();
-        try {
-            for (const round of [1, 2]) {
-                for (const { name, run } of cases) {
-                    for (const view of ['extensions', 'nuiget'] as const) {
-                        const label = `${name} ${view} r${round}`;
-                        if (Date.now() - probeStart > 180_000) {
-                            console.warn(`[focus-open] ${label}: not readable (the probe's budget is spent)`);
-                            continue;
-                        }
-                        try {
-                            await run(view, label);
-                        } catch (error) {
-                            console.warn(`[focus-open] ${label}: not readable (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`);
-                        }
-                    }
-                }
-            }
-        } finally {
+        afterEach(async function () {
+            this.timeout(60_000);
             await releaseKeys().catch(() => undefined);
             await new EditorView().closeAllEditors().catch(() => undefined);
             if (!(await sideBarShown().catch(() => true))) {
@@ -574,6 +392,71 @@ describe('2.0 sidebar', () => {
             }
             await openSidebarView().catch(() => undefined);
             await releaseKeys().catch(() => undefined);
-        }
+        });
+
+        it('hiding and showing the side bar leaves the focus in the editor (SB14, UX-P4.fix-4)', async function () {
+            this.timeout(120_000);
+            await claimOnce();
+            await startInEditor();
+            const toggle = await runLooked(TOGGLE, shown => shown.includes(TOGGLE));
+            await poll(async () => ((await sideBarShown()) ? undefined : true), 'the side bar hidden', 10_000);
+            await runLooked(TOGGLE, shown => shown === toggle);
+            await poll(async () => ((await sideBarShown()) ? true : undefined), 'the side bar shown again', 10_000);
+            const reading = await held(async () => ({ top: await readTop(), frame: await readFrame() }),
+                ({ top, frame }) => top.windowFocused && top.inEditor && !frame.focused, 'the focus in the editor and none in the side bar');
+            expect(reading.top.inEditor).to.equal(true);
+            expect(reading.frame.focused).to.equal(false);
+        });
+
+        it('shown from the activity bar after an editor had the focus, the search box takes it again (SB14, UX-P4.fix-4)', async function () {
+            this.timeout(120_000);
+            await claimOnce();
+            await showExplorer();
+            await startInEditor();
+            await releaseKeys();
+            await openSidebarView();
+            const frame = await held(readFrame, boxFocused, 'the side bar focused with the search box active');
+            expect(frame.active).to.equal('sidebar-search-input');
+        });
+
+        it('the view\'s focus command gives the search box the focus again (SB14, UX-P4.fix-4)', async function () {
+            this.timeout(120_000);
+            await claimOnce();
+            await showExplorer();
+            await startInEditor();
+            await runLooked('nuiget.sidebarView.focus', shown => /nuiget/i.test(shown) && /focus/i.test(shown));
+            const frame = await held(readFrame, boxFocused, 'the side bar focused with the search box active');
+            expect(frame.active).to.equal('sidebar-search-input');
+        });
+
+        it('a press on an empty spot of the view focuses the view and not the search box (SB14, UX-P4.fix-4)', async function () {
+            this.timeout(120_000);
+            await claimOnce();
+            await startInEditor();
+            await enterSidebarWebview(10_000);
+            const scope = '[data-testid="nuiget-sidebar"]';
+            const origin = await driverOf().findElement(By.css(scope));
+            // A point of the view whose element has no focusable ancestor, scanned from the bottom up.
+            const spot = await driverOf().executeScript<{ dx: number; dy: number } | null>(`
+                const root = document.querySelector(arguments[0]);
+                const rect = root.getBoundingClientRect();
+                const focusable = '[tabindex], input, button, a[href], textarea, select, [contenteditable], .monaco-list, iframe';
+                for (let y = rect.bottom - 4; y > rect.top + 4; y -= 8) {
+                    for (const x of [rect.left + rect.width / 2, rect.left + 6, rect.right - 6]) {
+                        const element = document.elementFromPoint(x, y);
+                        if (element && root.contains(element) && !element.closest(focusable)) {
+                            return { dx: Math.round(x - (rect.left + rect.width / 2)), dy: Math.round(y - (rect.top + rect.height / 2)) };
+                        }
+                    }
+                }
+                return null;`, scope);
+            if (spot === null) {
+                throw new Error(`no spot without a focusable ancestor in ${scope}`);
+            }
+            await driverOf().actions().move({ origin, x: spot.dx, y: spot.dy }).press().release().perform();
+            await releaseKeys();
+            const frame = await held(readFrame, value => value.focused && value.active === 'body', 'the side bar focused with the body active');
+            expect(frame.active).to.equal('body');
+        });
     });
 });
