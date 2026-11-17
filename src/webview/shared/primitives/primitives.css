@@ -61,6 +61,11 @@
     min-height: 0;
 }
 
+/* A list's empty slot fills the list's box, so a focused empty list rings the whole list view (UX-P4.4, A15; GOLDEN ruling DO 1). */
+.nuiget-listbox-empty {
+    flex: 1;
+}
+
 .nuiget-listbox {
     --nuiget-row-selection-bg: var(--nuiget-color-list-inactive-bg);
     --nuiget-row-selection-fg: var(--nuiget-color-list-inactive-fg);

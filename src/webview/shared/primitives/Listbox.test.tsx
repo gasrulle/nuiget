@@ -351,6 +351,8 @@ describe('Listbox', () => {
         expect(ring?.style.outline).toContain('var(--nuiget-color-focus)');
         expect(ring?.style.outlineOffset).toBe('calc(var(--nuiget-line-width) * -1)');
         expect(rules.some(rule => rule.selectorText === '.nuiget-listbox-empty' && rule.style.outline === 'none')).toBe(false);
+        // It fills its list's box, so a focused empty list rings the whole list view (GOLDEN ruling DO 1-3).
+        expect(rules.find(rule => rule.selectorText === '.nuiget-listbox-empty')?.style.flex).toMatch(/^1( 1 0%)?$/);
         remove();
     });
 

@@ -575,7 +575,8 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5); `main-details-readme` returns it to the current row (UX-P3.9 follow-up 3), and the theme pass reads the details tab's ring. */
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
+// UX-P4.4 (GOLDEN ruling DO 2): `main-details-readonly`, whose focus sits on the Installed list's empty slot at a first load.
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
 const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
 
@@ -1295,7 +1296,7 @@ export interface FocusFacts {
     /** The section header's `data-variant` (`pane`, `group`, `level`) of a focused header toggle, else empty. */
     variant: string;
     box: Box;
-    /** The row band (`.nuiget-row`) around a focused option. */
+    /** The row band (`.nuiget-row`) around a focused option; for a focused empty slot, its list's box (`.nuiget-listbox-root`, UX-P4.4). */
     band: Box | undefined;
 }
 
@@ -2309,7 +2310,8 @@ let focus;
 if (activeEl) {
     const style = getComputedStyle(activeEl);
     const headerBox = activeEl.closest('[data-variant]');
-    const bandEl = activeEl.closest('.nuiget-row');
+    // A focused empty slot's band is its list's box, which the slot must fill (UX-P4.4, GOLDEN ruling DO 2).
+    const bandEl = activeEl.closest('.nuiget-row') || (activeEl.classList.contains('nuiget-listbox-empty') ? activeEl.closest('.nuiget-listbox-root') : null);
     focus = {
         kind: focusKind(activeEl), label: label(activeEl),
         outline: { width: px(style.outlineWidth), style: style.outlineStyle, colour: style.outlineColor, offset: px(style.outlineOffset) },
@@ -3768,9 +3770,20 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
             const offset = focus.kind === 'checkbox' || focus.kind === 'button' ? FOCUS.outside
                 : focus.kind === 'header' && focus.variant === 'pane' && look === 'modern' ? FOCUS.sidebarHeaderModern : FOCUS.inside;
             const colour = focusColours.focusBorder;
+            const ring = isRing(focus.outline, 'solid', colour, tolerance) && near(focus.outline.offset, offset, tolerance);
+            // UX-P4.4 (GOLDEN ruling DO 2): a focused empty slot fills its list's box, so its ring rings the whole list view.
+            if (focus.kind === 'empty') {
+                const band = focus.band;
+                const fills = band !== undefined && (['left', 'top', 'right', 'bottom'] as const).every(edge => near(focus.box[edge], band[edge], tolerance));
+                const extent = band === undefined ? 'no list box' : `slot ${tenth(focus.box.right - focus.box.left)}×${tenth(focus.box.bottom - focus.box.top)} in list ${tenth(band.right - band.left)}×${tenth(band.bottom - band.top)}`;
+                return {
+                    value: `${focus.kind} ${focus.label}: ${outlineText(focus.outline)} (target 1 solid ${colour || 'unset'} offset ${offset}); ${extent} (target equal)`,
+                    pass: ring && fills,
+                };
+            }
             return {
                 value: `${focus.kind} ${focus.label}: ${outlineText(focus.outline)} (target 1 solid ${colour || 'unset'} offset ${offset})`,
-                pass: isRing(focus.outline, 'solid', colour, tolerance) && near(focus.outline.offset, offset, tolerance),
+                pass: ring,
             };
         }
         case 'DS-FOCUS-2': {

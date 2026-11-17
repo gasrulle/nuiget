@@ -851,13 +851,14 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             (document.querySelector('.nuiget-row-actions .nuiget-icon-button') as HTMLButtonElement).focus();
             expect(collect().endOfP0.focus?.kind).toBe('icon-button');
             // UX-P4.4: a link and a list's empty slot are kinds of their own (DS-FOCUS-1 controls, inside offset).
-            document.body.insertAdjacentHTML('beforeend', '<a id="p44-link" href="https://example.org" data-rect="10,10,60,24">Project</a><div id="p44-empty" class="nuiget-listbox-empty nuiget-listbox-empty--compact" role="group" tabindex="-1" data-rect="0,30,200,60"></div>');
+            document.body.insertAdjacentHTML('beforeend', '<a id="p44-link" href="https://example.org" data-rect="10,10,60,24">Project</a><div id="p44-root" class="nuiget-listbox-root" data-rect="0,30,200,300"><div id="p44-empty" class="nuiget-listbox-empty nuiget-listbox-empty--compact" role="group" tabindex="-1" data-rect="0,30,200,60"></div></div>');
             (document.getElementById('p44-link') as HTMLElement).focus();
             expect(collect().endOfP0.focus?.kind).toBe('link');
             (document.getElementById('p44-empty') as HTMLElement).focus();
-            expect(collect().endOfP0.focus?.kind).toBe('empty');
+            // Its band is its list's box (UX-P4.4, GOLDEN ruling DO 2).
+            expect(collect().endOfP0.focus).toMatchObject({ kind: 'empty', box: { left: 0, top: 30, right: 200, bottom: 60 }, band: { left: 0, top: 30, right: 200, bottom: 300 } });
             document.getElementById('p44-link')?.remove();
-            document.getElementById('p44-empty')?.remove();
+            document.getElementById('p44-root')?.remove();
             // Nothing focused: no subject.
             (document.activeElement as HTMLElement).blur();
             option.blur();

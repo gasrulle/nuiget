@@ -74,7 +74,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
@@ -1238,7 +1238,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: false, value: 'button [x]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset 2)' });
         // UX-P4.4 (DO 13): a link and a list's empty slot ring at the inside offset in the controls scope.
         expect(at('main-installed-unfocused', facts({ focus: focused('link', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true });
-        expect(at('main-installed-unfocused', facts({ focus: focused('empty', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: true });
+        // A focused empty slot fills its list's box (GOLDEN ruling DO 2): the run 44169068801 facts (216 high in a 656 list) fail.
+        const list = { left: 0, top: 147, right: 420, bottom: 803 };
+        expect(at('main-details-readonly', facts({ focus: focused('empty', ring(1, 'solid', blue, -1), { box: list, band: list }) }), 'DS-FOCUS-1@main-details-readonly/controls'))
+            .toMatchObject({ pass: true, status: 'hard', value: expect.stringContaining('slot 420×656 in list 420×656 (target equal)') });
+        expect(at('main-details-readonly', facts({ focus: focused('empty', ring(1, 'solid', blue, -1), { box: { left: 0, top: 147, right: 420, bottom: 363 }, band: list }) }), 'DS-FOCUS-1@main-details-readonly/controls'))
+            .toMatchObject({ pass: false, value: expect.stringContaining('slot 420×216 in list 420×656') });
+        expect(at('main-details-readonly', facts({ focus: focused('empty', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-details-readonly/controls'))
+            .toMatchObject({ pass: false, value: expect.stringContaining('no list box') });
         expect(at('main-installed-unfocused', facts({ focus: focused('link', ring(1, 'solid', blue, 2)) }), 'DS-FOCUS-1@main-installed-unfocused/controls')).toMatchObject({ pass: false });
         expect(at('main-updates', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-updates/tabs')).toMatchObject({ pass: true, status: 'hard' });
         expect(at('main-installed-single', facts({ focus: focused('tab', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-1@main-installed-single/tabs')).toMatchObject({ status: 'hard' });
