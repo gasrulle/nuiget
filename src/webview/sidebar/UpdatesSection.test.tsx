@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
@@ -84,22 +84,42 @@ describe('sidebar: Updates section', () => {
         expect(axeRuleOutcome(results, 'aria-required-children')).toBe('passes');
     });
 
-    it('Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu', async () => {
+    it('Ctrl+Enter or the row button updates the package to its latest version; a centrally managed one opens the actions menu; Enter opens the main panel', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountWith({ updates: UPDATES });
         await user.click(updateOption('Serilog'));
+        // Enter writes nothing: it opens the row in the main panel on its own tab (UX-P4.2b).
         await user.keyboard('{Enter}');
+        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0', projectPath: A, tab: 'updates' }]);
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog', version: '3.1.0', sourceUrl: FEED }]);
         expect(updateOption('Serilog')).toHaveAttribute('aria-busy', 'true');
 
         // A central change goes through the host's actions menu, where the host previews and confirms it (P6.4a).
         await user.click(updateOption('Newtonsoft.Json'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(menus.contexts).toEqual([expect.objectContaining({ packageId: 'Newtonsoft.Json', webviewSection: 'updateRow', projectPath: A })]);
         await user.click(within(within(updatesList()).getByTestId('package-row-newtonsoft.json')).getByTestId('row-action-update'));
         expect(menus.contexts).toHaveLength(2);
         expect(host.requests('ops/update')).toHaveLength(1);
+    });
+
+    it('Delete on an update row asks to uninstall it from the project; a row that cannot be uninstalled says why (UX-P4.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: [update('Serilog', '3.0.0', '3.1.0'), update('Moq', '4.18.0', '4.20.72')] }, [pkg('Serilog', '3.0.0'), pkg('Moq', '4.18.0', { declaration: 'props' })]);
+        await user.click(updateOption('Serilog'));
+        await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Serilog from App.csproj?');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-updates-delete-confirm-uninstall');
+        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
+        await user.click(updateOption('Moq'));
+        await user.keyboard('{Delete}');
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq is declared in an imported props file and cannot be uninstalled from the project'));
+        expect(host.requests('ops/remove')).toHaveLength(1);
     });
 
     it('an override row updates in its project alone: one ops/update, no actions menu', async () => {
@@ -107,7 +127,7 @@ describe('sidebar: Updates section', () => {
         const menus = recordRowMenus();
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, [pkg('Moq', '4.18.0', { declaration: 'central-override' })]);
         await user.click(updateOption('Moq'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
         expect(menus.contexts).toHaveLength(0);
         expect(updateOption('Moq')).toHaveAttribute('aria-busy', 'true');
@@ -200,7 +220,29 @@ describe('sidebar: Updates section', () => {
         expect(host.requests('updates/get')).toHaveLength(2);
     });
 
-    it('All Projects: one tree with a folder row per workspace folder, a project row under it and its updates; Enter sends ops/update with the row\'s project', async () => {
+    it('All Projects: Enter opens the row on its project\'s Updates tab and Delete asks to uninstall it from that project (UX-P4.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const B = '/w2/Lib/Lib.csproj';
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w2' }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+        const moq = within(within(updatesList()).getByTestId('package-row-moq')).getByRole('treeitem');
+        await user.click(moq);
+        await user.keyboard('{Enter}');
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Moq', version: '4.20.72', projectPath: B, tab: 'updates' }]);
+        await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Moq from Lib?');
+        await user.click(screen.getByTestId('confirm-dialog-cancel'));
+        expect(host.requests('ops/remove')).toHaveLength(0);
+        expect(host.requests('ops/update')).toHaveLength(0);
+    });
+
+    it('All Projects: one tree with a folder row per workspace folder, a project row under it and its updates; Ctrl+Enter sends ops/update with the row\'s project', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         const B = '/w2/Lib/Lib.csproj';
@@ -225,7 +267,7 @@ describe('sidebar: Updates section', () => {
         const moq = within(within(tree).getByTestId('package-row-moq')).getByRole('treeitem');
         expect(moq).toHaveAttribute('aria-level', '3');
         await user.click(moq);
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
@@ -274,13 +316,13 @@ describe('sidebar: Updates section', () => {
         expect(within(updatesList()).getByTestId('package-row-serilog')).toBeInTheDocument();
     });
 
-    it('the actions menu and Ctrl+Enter carry the update\'s versions and source', async () => {
+    it('the actions menu and Enter carry the update\'s versions and source', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountWith({ updates: UPDATES });
         await user.click(updateOption('Serilog'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
-        await user.keyboard('{Control>}{Enter}{/Control}');
+        await user.keyboard('{Enter}');
 
         expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.floating': false, 'nuiget.central': false, 'nuiget.readOnly': false, packageId: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', webviewSection: 'updateRow', projectPath: A, versionType: 'standard', sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0', projectPath: A, tab: 'updates' }]);

@@ -36,7 +36,7 @@ describe('the webviews\' controls', () => {
         expect(holders('<CentralUpdateDialog')).toEqual(['MainShell.tsx']);
     });
 
-    it('the Delete key\'s confirmation is mounted once in the main panel, in MainShell.tsx (UX-P4.2a)', () => {
-        expect(holders('<UninstallConfirmDialog')).toEqual(['MainShell.tsx']);
+    it('the Delete key\'s confirmation is mounted once per surface, in MainShell.tsx and SidebarView.tsx (UX-P4.2a, UX-P4.2b)', () => {
+        expect(holders('<UninstallConfirmDialog').sort()).toEqual(['MainShell.tsx', 'SidebarView.tsx']);
     });
 });

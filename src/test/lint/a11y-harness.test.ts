@@ -263,7 +263,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(KEYS_STATUS).toBe('hard');
         expect(MOTION_STATUS).toEqual({ pending: 'P4.5' });
         const bridge = ['main-installed', 'main-updates', 'main-browse', 'sidebar'].flatMap(screen => [[`${screen} search Ctrl+DownArrow`, 'P4.3'], [`${screen} rows Ctrl+UpArrow`, 'P4.3']]);
-        expect(KEYS_PENDING).toEqual({ 'sidebar rows Enter': 'P4.2b', ...Object.fromEntries(bridge) });
+        expect(KEYS_PENDING).toEqual({ ...Object.fromEntries(bridge) });
         expect(KEYS_AWAITING_ARIA).toEqual({});
         expect(Object.entries(KEYS_EXPECTED).map(([screen, stops]) => `${screen} ${stops?.length} ${stops?.[0]}`)).toEqual([
             'main-installed 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',

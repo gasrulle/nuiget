@@ -9,7 +9,7 @@ import { useInstalled } from '../shared/store/installed';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import { useSearch } from '../shared/store/search';
 import { failure } from '../shared/updates/sentence';
-import { usePackageRows } from './packageRows';
+import { projectFileName, usePackageRows, type AskUninstall } from './packageRows';
 import { useRowRequests } from './rowRequests';
 
 interface Item {
@@ -20,6 +20,8 @@ interface Item {
 export interface BrowseResultsProps {
     /** Something to say to a screen reader that no outcome of an operation says. */
     announce: (message: string) => void;
+    /** The view's Delete confirmation (UX-P4.2b). */
+    ask: AskUninstall;
 }
 
 /** The 2 px bar at the top of the results while a search runs or runs again; the list does not move under it (DS-STATE-2). */
@@ -36,7 +38,7 @@ const bar = (label: string): React.JSX.Element => <div className="nuiget-sidebar
  * projects the central version reaches (ADR-004 tier 3, N77). A first search shows the bar alone (rows first under it
  * are D56's).
  */
-export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Element {
+export function BrowseResults({ announce, ask }: BrowseResultsProps): React.JSX.Element {
     const search = useSearch();
     const installed = useInstalled();
     const { isPackageBusy } = useOps();
@@ -50,7 +52,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
     const projectPath = installed.projectPath;
     const all = useAllProjects();
     const { viewDetails } = useRowRequests(announce);
-    const { uninstall, busyStatus } = usePackageRows(announce);
+    const { uninstall, askUninstall, busyStatus } = usePackageRows(announce, ask);
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
     const installedEntries = useMemo(
         () => new Map<string, InstalledPackage>((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry])),
@@ -138,6 +140,16 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
         uninstall(projectPath, installed.result, entry);
     };
 
+    // The Delete key: All Projects names the menu as before; one project asks before it uninstalls (UX-P4.2b).
+    const askRemove = (item: Item): void => {
+        const entry = installedEntries.get(item.result.id.toLowerCase());
+        if (all.active || entry === undefined || projectPath === null || installed.result === undefined) {
+            remove(item);
+            return;
+        }
+        askUninstall(projectPath, projectFileName(projectPath), installed.result, entry);
+    };
+
     if (status === 'idle') {
         return <EmptyState message="Press Enter to search." />;
     }
@@ -162,16 +174,16 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                 items={items}
                 label={`Search results for ${query}`}
                 hint={all.active
-                    ? 'Enter chooses what to do and the projects to install into or uninstall from; Delete names the actions menu (Shift+F10), which uninstalls.'
-                    : 'Enter installs into the selected project (a package with a central entry in a CPM project: opens the actions menu); Delete uninstalls an installed package from it; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.'}
+                    ? 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) and Shift+F10 open the actions menu, which installs into or uninstalls from the projects you choose.'
+                    : 'Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) installs it into the selected project; on a package with a central entry in a CPM project it opens the actions menu. Delete (Cmd+Backspace) uninstalls an installed package from the selected project. Shift+F10 opens the actions menu.'}
                 testId="sidebar-browse-list"
                 density="compact"
                 busy={search.revalidating}
                 selectedId={selectedId}
                 onSelect={item => setSelectedId(item.id)}
-                onActivate={install}
-                onSecondaryActivate={({ result }) => viewDetails(result.id, result.version)}
-                onDelete={remove}
+                onActivate={({ result }) => viewDetails(result.id, result.version)}
+                onSecondaryActivate={install}
+                onDelete={askRemove}
                 empty={<EmptyState message={search.sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} data-testid={search.sourcesUnavailable ? undefined : 'sidebar-browse-empty'} />}
                 renderRow={(item, placement) => {
                     const { result } = item;

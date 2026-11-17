@@ -5,7 +5,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageSearchResult, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
-import { installFakeLayout } from '../shared/primitives/testSupport';
+import { expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import { BROWSE_DEBOUNCE_MS, SidebarView } from './SidebarView';
 
@@ -56,7 +56,7 @@ describe('sidebar: search modes and browse', () => {
         removeLayout();
     });
 
-    it('Enter on a row of a CPM project asks for the preview; a central entry opens the actions menu, none installs, and a second Enter while asking sends nothing', async () => {
+    it('Ctrl+Enter on a row of a CPM project asks for the preview; a central entry opens the actions menu, none installs, and a second Ctrl+Enter while asking sends nothing', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountReady(true);
@@ -64,8 +64,8 @@ describe('sidebar: search modes and browse', () => {
 
         // A package with a central entry: the host's actions menu (QuickPick and modal) takes over.
         await user.click(within(row('Polly')).getByRole('option'));
-        await user.keyboard('{Enter}');
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2' }]);
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A] } }));
         expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED, 'nuiget.installed': false, 'nuiget.readOnly': false }]);
@@ -73,7 +73,7 @@ describe('sidebar: search modes and browse', () => {
 
         // Without a central entry the install changes this project only and runs at once.
         await user.click(within(row('Xunit')).getByRole('option'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: null }));
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Xunit', version: '2.9.0', sourceUrl: FEED }]);
         expect(menus.contexts).toHaveLength(1);
@@ -121,26 +121,26 @@ describe('sidebar: search modes and browse', () => {
         expect(queries(host)).toHaveLength(1);
     });
 
-    it('Enter or the row button installs the version found into the selected project, with the source it came from', async () => {
+    it('Ctrl+Enter or the row button installs the version found into the selected project, with the source it came from', async () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Polly.Core', '8.4.2')]);
         await waitFor(() => expect(said()).toBe('2 packages found for "polly"'));
 
         await user.click(within(row('Polly')).getByRole('option'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2', sourceUrl: FEED }]);
         expect(within(row('Polly')).getByRole('option')).toHaveAttribute('aria-busy', 'true');
         expect(within(row('Polly')).getByRole('option')).toHaveAccessibleDescription(/Installing/);
         // Busy: a second Enter starts nothing.
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/install')).toHaveLength(1);
 
         await user.click(within(row('Polly.Core')).getByTestId('row-action-install'));
         expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly', 'Polly.Core']);
     });
 
-    it('an installed package says so and installs nothing; under All Projects Enter, the button and the menu open the row menu with where it is installed', async () => {
+    it('an installed package says so and installs nothing; under All Projects Ctrl+Enter, the button and the menu open the row menu with where it is installed', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountReady();
@@ -148,7 +148,7 @@ describe('sidebar: search modes and browse', () => {
         expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Installed: 3\.0\.0/);
         expect(within(row('Serilog')).queryByTestId('row-action-install')).toBeNull();
         await user.click(within(row('Serilog')).getByRole('option'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         await waitFor(() => expect(said()).toBe('Serilog is already installed (3.0.0).'));
 
         const B = '/w/Lib/Lib.csproj';
@@ -161,7 +161,7 @@ describe('sidebar: search modes and browse', () => {
 
         const expected = { preventDefaultContextMenuItems: true, 'nuiget.installed': true, 'nuiget.partial': true, packageId: 'Serilog', webviewSection: 'browseRow', projectPath: ALL_PROJECTS, latestVersion: '4.0.0', sourceUrl: FEED, installedProjects: [{ projectPath: A, projectName: 'App', version: '3.0.0' }], installedVersion: '3.0.0', partiallyInstalled: true };
         await user.click(within(row('Serilog')).getByRole('option'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         await user.click(within(row('Serilog')).getByTestId('row-action-install'));
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
@@ -193,13 +193,13 @@ describe('sidebar: search modes and browse', () => {
         const host = await mountReady(true);
         await searchFor(host, 'polly', [result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
         await user.click(within(row('Polly')).getByRole('option'));
-        await user.keyboard('{Enter}{ArrowDown}');
+        await user.keyboard('{Control>}{Enter}{/Control}{ArrowDown}');
         expect(within(row('Xunit')).getByRole('option')).toHaveFocus();
         await hostSays(() => host.fail(host.requests('cpm/preview')[0], 'failed'));
         expect(menus.contexts.map(context => context.packageId)).toEqual(['Polly']);
     });
 
-    it('the actions menu and Ctrl+Enter carry the version found', async () => {
+    it('the actions menu and Enter carry the version found', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const host = await mountReady();
@@ -207,14 +207,14 @@ describe('sidebar: search modes and browse', () => {
         await user.click(within(row('Polly')).getByRole('option'));
         await user.keyboard('{Shift>}{F10}{/Shift}');
         await user.click(within(row('Serilog')).getByRole('option'));
-        await user.keyboard('{Control>}{Enter}{/Control}');
+        await user.keyboard('{Enter}');
 
         expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.installed': false, 'nuiget.readOnly': false, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '4.0.0' }]);
         expect(host.requests('ops/install')).toHaveLength(0);
     });
 
-    it('an installed package of the selected project is uninstalled from it by its row button or Delete; Delete on a package not installed writes nothing (UX-P3.8, SB9)', async () => {
+    it('an installed package of the selected project is uninstalled from it by its row button, or by Delete after the confirmation; Delete on a package not installed writes nothing (UX-P3.8, SB9)', async () => {
         const user = userEvent.setup();
         const host = await mountReady();
         await searchFor(host, 'se', [result('Serilog', '4.0.0'), result('Seq', '1.0.0'), result('Moq', '4.20.72')]);
@@ -228,15 +228,18 @@ describe('sidebar: search modes and browse', () => {
 
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Serilog from App.csproj?');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-browse-delete-confirm-uninstall');
         expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
         expect(within(row('Serilog')).getByRole('option')).toHaveAttribute('aria-busy', 'true');
         expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/Uninstalling/);
 
         await user.click(within(row('Moq')).getByTestId('row-action-uninstall'));
         expect(host.requests('ops/remove').map(request => request.payload.packageId)).toEqual(['Serilog', 'Moq']);
-        // Enter on an installed row still only says so (D31's key changes are P4's).
+        // Ctrl+Enter on an installed row only says so; Enter opens it in the main panel (UX-P4.2b).
         await user.click(within(row('Moq')).getByRole('option'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/install')).toHaveLength(0);
     });
 

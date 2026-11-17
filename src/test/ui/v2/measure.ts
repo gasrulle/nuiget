@@ -448,9 +448,9 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 ];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
-export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog'];
+export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
 /** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
-export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'];
+export const DIALOG_FRINGE_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'sidebar-uninstall-dialog'];
 
 /** One pending item for the state groups where a rule's elements are rendered. */
 const on = (item: string, ...groups: StateGroup[]): Partial<Record<Scope, RuleStatus>> => Object.fromEntries(groups.map(group => [group, { pending: item }]));
@@ -612,7 +612,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { sources: ['main-sources-add', 'main-sources-add-invalid'] } }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
-    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
+    rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...inGroups('hard', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
@@ -736,7 +736,8 @@ export const RULES: readonly RuleDefinition[] = [
     // Hard for the sidebar group in both looks since UX-P3.fix-4's closing (follow-up 1, DO 5).
     // UX-P3.9 follow-ups 4-5: the text of a dialog, judged as the sidebar's (H27). Hard for the dialogs scope since UX-P3.fix-6's
     // first push (opening ruling, DO 1-2); the dialog over the side bar since its proving push (26 lines, 0 greyscale on two runs).
-    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES } }),
+    // UX-P4.2b: the sidebar's Delete confirmation is read from its proving push and flipped by the item's closing commit.
+    rule('DS-TYPE-10', { helper: 3, scopes: { sidebar: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.containment, lanes: ['ui'], pixels: true, scopeStates: { dialogs: DIALOG_FRINGE_STATES }, pendingStates: { 'sidebar-uninstall-dialog': 'P4.2b' } }),
 ];
 
 /** The state group of a named state, by its name. */

@@ -543,9 +543,6 @@ export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]
 
 /** The key paths today's tree fails, by `<screen> <path>`, with the item that fixes them (each under a ruling). */
 export const KEYS_PENDING: Readonly<Record<string, string>> = {
-    // A2 (R127): Enter on a sidebar row uninstalls, without asking, on today's tree; the walk records it and never presses
-    // it. Enter on a main Updates row shows its details since UX-P4.2a and is pressed.
-    'sidebar rows Enter': 'P4.2b',
     // ADR-013 Decision 6 (SB7, X21, A11), P4.3: the search box ↔ list bridge. Today the search box handles ArrowDown only
     // while its popup is open (`SearchBox.tsx:176-191`) and the list moves on ArrowUp whatever the modifier (`Listbox.tsx:144`).
     'main-installed search Ctrl+DownArrow': 'P4.3',

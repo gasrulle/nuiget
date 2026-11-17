@@ -1433,6 +1433,21 @@ const REACH: Record<string, Reach> = {
         },
         leave: cancelDialog,
     },
+    'sidebar-uninstall-dialog': {
+        // The sidebar's Delete confirmation (UX-P4.2b): the Installed pane's Serilog option focused by script, Delete pressed
+        // behind the hint guard, the dialog cancelled after the capture, never confirmed, its box never ticked.
+        reach: async () => {
+            await sidebarSections();
+            await script('arguments[0].focus();', await driverOf().findElement(By.css('[data-testid="sidebar-installed-list"] [data-testid="package-row-serilog"] .nuiget-row-option')));
+            if (!(await hintHas('sidebar-installed-list', DELETE_ASKS))) {
+                throw new Error(`the sidebar Installed hint lacks "${DELETE_ASKS}": a build where Delete uninstalls, not pressed`);
+            }
+            await press(Key.DELETE);
+            await findByTestId('confirm-dialog', 10_000);
+            await findByTestId('confirm-dialog-do-not-ask', 10_000);
+        },
+        leave: cancelDialog,
+    },
 };
 
 // ---- theme, width and the capture ----------------------------------------------------------------------------------
@@ -1947,7 +1962,7 @@ const focusedTestId = async (): Promise<string> => (await script<string | null>(
  * The row keys of interaction model §5 that write nothing, on the list reached from the search box: Ctrl+DownArrow, Home,
  * ArrowDown, ArrowUp, End, Enter where it only shows the details (else `enter` says why it is not pressed), Ctrl+UpArrow.
  */
-async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: string, enter: 'press' | { skipped: string }): Promise<KeyOutcome[]> {
+async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: string, enter: 'press' | 'later' | { skipped: string }): Promise<KeyOutcome[]> {
     const outcomes: KeyOutcome[] = [];
     await (await findByTestId(searchTestId, 30_000)).click();
     await press(Key.chord(MODIFIER, Key.ARROW_DOWN));
@@ -2008,6 +2023,8 @@ async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: stri
             return now.startsWith('current ') ? now : undefined;
         }, 'the row made current', 10_000).catch(() => activeRow(listTestId));
         outcomes.push({ path: 'rows Enter', observed: current, expected: enterExpected });
+    } else if (enter === 'later') {
+        // The screen presses Enter itself, last, where the key leaves the frame (the sidebar's, UX-P4.2b).
     } else {
         outcomes.push({ path: 'rows Enter', observed: '', expected: '', skipped: enter.skipped });
     }
@@ -2075,6 +2092,44 @@ async function deleteKeys(): Promise<KeyOutcome[]> {
         await cancelDialog();
     }
     outcomes.push({ path: 'rows Delete restore', observed: await activeRow('installed-list'), expected: before });
+    return outcomes;
+}
+
+/** Runs in the main panel's webview: the selected tab and the row made current, as `<tab test id>, <row test id>`. */
+const MAIN_SHOWN = 'const tab = document.querySelector(\'[role="tab"][aria-selected="true"]\'); const row = document.querySelector(\'.nuiget-row-option[aria-current="true"]\'); return (tab ? tab.getAttribute("data-testid") : "no tab") + ", " + (row ? (row.closest(\'[data-testid^="package-row-"]\') || row).getAttribute("data-testid") : "no current row");';
+
+/** The sidebar hint that says Enter opens the main panel; an older build's hints lack it, and its Enter writes. */
+const ENTER_OPENS = 'Enter opens the package in the main panel.';
+
+/**
+ * Enter on a sidebar row, the walk's last steps (UX-P4.2b, design-advisor ruling of 2026-11-17, DO 9): the Serilog row of the
+ * Updates pane, then of the Installed pane; each opens the main panel on the row's own tab with the row current, read from
+ * the panel's frame. Each press is behind the hint guard, so an older build is never sent a key that writes.
+ */
+async function sidebarEnterKeys(): Promise<KeyOutcome[]> {
+    const outcomes: KeyOutcome[] = [];
+    const enterOn = async (path: string, listTestId: string, expected: string): Promise<void> => {
+        await driverOf().actions().clear();
+        await enterSidebarWebview();
+        if (!(await hintHas(listTestId, ENTER_OPENS))) {
+            outcomes.push({ path, observed: `not pressed: the hint lacks "${ENTER_OPENS}" (a build where Enter writes)`, expected });
+            await leaveWebview();
+            return;
+        }
+        await script('arguments[0].focus();', await driverOf().findElement(By.css(`[data-testid="${listTestId}"] [data-testid="package-row-serilog"] .nuiget-row-option`)));
+        await press(Key.ENTER);
+        await leaveWebview();
+        await enterMainWebview();
+        const shown = await poll(async () => {
+            const now = await script<string>(MAIN_SHOWN);
+            return now === expected ? now : undefined;
+        }, `${path}: the main panel on ${expected}`, 30_000).catch(() => script<string>(MAIN_SHOWN));
+        outcomes.push({ path, observed: shown, expected });
+        await leaveWebview();
+    };
+    await leaveWebview();
+    await enterOn('updates rows Enter', 'sidebar-updates-list', 'updates-tab, package-row-serilog');
+    await enterOn('rows Enter', 'sidebar-installed-list', 'installed-tab, package-row-serilog');
     return outcomes;
 }
 
@@ -2698,7 +2753,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyTheme('dark-modern');
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
-            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', () => rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', { skipped: 'Enter uninstalls the package on today\'s tree (A2, R127)' }));
+            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', async () => [...await rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', 'later'), ...await sidebarEnterKeys()]);
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state

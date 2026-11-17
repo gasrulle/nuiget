@@ -234,6 +234,8 @@ export const STATES: readonly NamedState[] = [
         'The side bar at 200 px with Gateway selected; both sections keep their rows.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-update-all-dialog', 'sidebar', [primary('sidebar')],
         'Gateway selected, Update all pressed in the Updates section header; the confirmation is open and is cancelled after the capture, never confirmed.', [LIVE_SIDEBAR_UPDATES, LIVE_BULK_LIST]), diffTolerance: 0 },
+    { ...ready('sidebar-uninstall-dialog', 'sidebar', [primary('sidebar')],
+        'Gateway selected, the Serilog row of the Installed pane focused and Delete pressed; the confirmation "Uninstall Serilog from Gateway.csproj?" with "Do not ask me again" unchecked is open and is cancelled after the capture, never confirmed (UX-P4.2b).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-installed-loading', 'main', [primary('main')],
         'Gateway committed, its answers then held in the webview document and Utility chosen: the first list loading under the 2 px bar with three skeleton rows (marker installed-progress); released after the capture.', [LIVE_MOTION]), diffTolerance: 0 },
     { ...ready('main-installed-revalidating', 'main', [primary('main')],

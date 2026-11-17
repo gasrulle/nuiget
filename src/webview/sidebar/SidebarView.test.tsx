@@ -6,7 +6,7 @@ import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
-import { axeRuleOutcome, installFakeLayout } from '../shared/primitives/testSupport';
+import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import { UNRESOLVED_HINT, whyNotUpdatable } from '../shared/installed/rules';
 import { shownVersion, whyNotRemovable } from './InstalledSection';
@@ -95,7 +95,7 @@ describe('sidebar: Installed section', () => {
         expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 2');
         // A pane box of the measurements (UX-P0.10).
         expect(screen.getByTestId('section-box-installed')).toHaveAttribute('data-variant', 'pane');
-        expect(list()).toHaveAccessibleDescription('Enter or Delete uninstalls; Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Enter opens the package in the main panel. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu.');
         expect(screen.queryByTestId('sidebar-installed-provisional')).toBeNull();
         expect(sectionSpinner()).toBeNull();
     });
@@ -153,6 +153,8 @@ describe('sidebar: Installed section', () => {
         expect(within(row('xunit')).getByTestId('row-action-uninstall')).toBeInTheDocument();
         await userEvent.click(option('Serilog'));
         await userEvent.keyboard('{Delete}');
+        await userEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('sidebar-delete-confirm-uninstall');
         expect(removals(host).map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
         expect(option('Serilog')).not.toHaveAttribute('aria-disabled');
     });
@@ -164,9 +166,9 @@ describe('sidebar: Installed section', () => {
         expect(banner).toHaveTextContent('Warning: Unsupported project: requires .NET SDK 10 or newer');
         expect(names()).toEqual(['Moq', 'Serilog']);
         expect(screen.queryAllByTestId('row-action-uninstall')).toHaveLength(0);
-        expect(list()).toHaveAccessibleDescription('Read-only. Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu.');
+        expect(list()).toHaveAccessibleDescription('Read-only. Enter opens the package in the main panel. Shift+F10 opens the actions menu.');
         await userEvent.click(option('Serilog'));
-        await userEvent.keyboard('{Enter}');
+        await userEvent.keyboard('{Delete}');
         expect(removals(host)).toHaveLength(0);
         await waitFor(() => expect(said()).toBe('Serilog cannot be uninstalled: requires .NET SDK 10 or newer'));
     });
@@ -230,29 +232,60 @@ describe('sidebar: Installed section', () => {
         expect(host.requests('ops/remove')).toHaveLength(0);
     });
 
-    it('Ctrl+Enter asks ui/viewPackage with the installed version; Enter still uninstalls', async () => {
+    it('Enter asks ui/viewPackage with the row\'s project, its tab and the installed version; Ctrl+Enter does nothing', async () => {
         const user = userEvent.setup();
         const host = await mountWith([pkg('Serilog', { version: '3.1.1' })]);
         await user.click(option('Serilog'));
-        await user.keyboard('{Control>}{Enter}{/Control}');
+        await user.keyboard('{Enter}');
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.1', projectPath: A, tab: 'installed' }]);
         expect(host.requests('ops/remove')).toHaveLength(0);
 
-        await user.keyboard('{Enter}');
-        expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
+        await user.keyboard('{Control>}{Enter}{/Control}');
+        expect(host.requests('ui/viewPackage')).toHaveLength(1);
+        expect(host.requests('ops/remove')).toHaveLength(0);
     });
 
-    it('uninstall: Enter and Delete on the active row do the same as the button, and focus stays in the list when the row goes', async () => {
+    it('uninstall: Delete on the active row asks first and Uninstall does the same as the button; Enter writes nothing, and focus stays in the list when the row goes', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq'), pkg('xunit')]);
         await userEvent.click(option('Moq'));
         await userEvent.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Moq from App.csproj?');
+        await userEvent.click(screen.getByTestId('confirm-dialog-confirm'));
         await userEvent.keyboard('{ArrowDown}{Enter}');
+        expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq']);
+        await userEvent.keyboard('{Delete}');
+        await userEvent.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq', 'Serilog']);
         await hostSays(() => host.respond(removals(host)[0], removed('op1', 'Moq')));
         await hostSays(() => host.respond(removals(host)[1], removed('op2', 'Serilog')));
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
         await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('xunit')]), 2));
         expect(option('xunit')).toHaveFocus();
+    });
+
+    it('Delete asks first: Cancel and Escape send nothing; with nuiget.confirmUninstall off it uninstalls at once; the row button never asks (UX-P4.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
+        await user.click(option('Serilog'));
+        await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog-cancel')).toHaveFocus();
+        await user.click(screen.getByTestId('confirm-dialog-cancel'));
+        expectFocusAfterClose('sidebar-delete-confirm-cancel');
+        await user.click(option('Serilog'));
+        await user.keyboard('{Delete}');
+        await user.keyboard('{Escape}');
+        expectFocusAfterClose('sidebar-delete-confirm-escape');
+        expect(removals(host)).toHaveLength(0);
+
+        await user.click(within(row('Moq')).getByTestId('row-action-uninstall'));
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq']);
+
+        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: false, treeIndent: 8, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false }));
+        await user.click(option('Serilog'));
+        await user.keyboard('{Delete}');
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        expect(removals(host).map(request => request.payload.packageId)).toEqual(['Moq', 'Serilog']);
     });
 
     it('a failed or refused uninstall leaves the row as it was and says why', async () => {
@@ -469,7 +502,12 @@ describe('sidebar: Installed section', () => {
         const moq = within(screen.getByTestId('package-row-moq')).getByRole('treeitem');
         expect(moq).toHaveAttribute('aria-level', '3');
         await user.click(moq);
+        // Enter opens the row on its own project's Installed tab (UX-P4.2b).
+        await user.keyboard('{Enter}');
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([expect.objectContaining({ packageId: 'Moq', projectPath: B, tab: 'installed' })]);
         await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Moq from Lib?');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expect(host.requests('ops/remove').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq' }]);
         await user.keyboard('{Shift>}{F10}{/Shift}');
         expect(menus.contexts[0]).toMatchObject({ packageId: 'Moq', webviewSection: 'installedRow', projectPath: B });

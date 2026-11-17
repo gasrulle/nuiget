@@ -14,11 +14,14 @@ import { failure, sentence } from '../shared/updates/sentence';
 import { UpdateAllDialog } from '../shared/updates/UpdateAllDialog';
 import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
 import { ProjectUpdates } from './ProjectUpdates';
+import type { AskUninstall } from './packageRows';
 import { useUpdateRows, visibleUpdates } from './updateRows';
 
 export interface UpdatesSectionProps {
     /** Something to say to a screen reader that no outcome of an operation says. */
     announce: (message: string) => void;
+    /** The view's Delete confirmation (UX-P4.2b). */
+    ask: AskUninstall;
     /** The text after `@updates`: only updates whose id contains it are listed. */
     filter?: string;
     /** Whether the section is open; the sidebar keeps it with the view's state. When absent, the section keeps its own. */
@@ -59,6 +62,7 @@ interface AllProjectsUpdatesTreeProps {
     filter: string;
     sourcesUnavailable: boolean;
     announce: (message: string) => void;
+    ask: AskUninstall;
     revalidating: boolean;
     labelledBy: string;
 }
@@ -68,10 +72,10 @@ interface AllProjectsUpdatesTreeProps {
  * are several, a project row under it with its count, the project's updates under that; a project without an update to list says
  * why in a message leaf, with the main panel's words. A row updates its own project.
  */
-function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailable, announce, revalidating, labelledBy }: AllProjectsUpdatesTreeProps): React.JSX.Element {
+function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailable, announce, ask, revalidating, labelledBy }: AllProjectsUpdatesTreeProps): React.JSX.Element {
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const { updateOne, viewDetails, renderUpdateRow } = useUpdateRows(announce);
+    const { updateOne, askUninstall, viewDetails, renderUpdateRow } = useUpdateRows(announce, ask);
 
     const groupIds = useMemo(() => projectGroupIds(chunks), [chunks]);
     const items = useMemo((): TreeItem[] => {
@@ -153,20 +157,26 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
             items={items}
             groups={groups}
             labelledBy={labelledBy}
-            hint="Enter updates to the latest version in the row's project (a centrally managed package: opens the actions menu); Ctrl+Enter (Cmd+Enter) opens the main panel; Shift+F10 opens the actions menu."
+            hint="Enter opens the package in the main panel. Ctrl+Enter (Cmd+Enter) updates it to the latest version in the row's project; on a centrally managed package it opens the actions menu. Delete (Cmd+Backspace) uninstalls it from the row's project. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it."
             testId="sidebar-updates-list"
             density="compact"
             selectedId={selectedId}
             busy={revalidating}
             onSelect={item => setSelectedId(item.id)}
+            // Enter opens the row in the main panel; Ctrl+Enter updates; Delete asks before it uninstalls (UX-P4.2b).
             onActivate={item => {
                 if (item.kind === 'package') {
-                    updateOne(item.chunk.projectPath, item.installed, item.update);
+                    viewDetails(item.update.id, item.update.latestVersion, { projectPath: item.chunk.projectPath, tab: 'updates' });
                 }
             }}
             onSecondaryActivate={item => {
                 if (item.kind === 'package') {
-                    viewDetails(item.update.id, item.update.latestVersion, { projectPath: item.chunk.projectPath, tab: 'updates' });
+                    updateOne(item.chunk.projectPath, item.installed, item.update);
+                }
+            }}
+            onDelete={item => {
+                if (item.kind === 'package') {
+                    askUninstall(item.chunk.projectPath, item.chunk.projectName, item.installed, item.update);
                 }
             }}
             renderRow={(item, placement) => (item.kind === 'package' ? renderUpdateRow(item.chunk.projectPath, item.installed, item.update, placement) : null)}
@@ -180,7 +190,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
  * folder when there are several. A row updates its own project. A source that could not be checked is a banner, never
  * "no updates".
  */
-export function UpdatesSection({ announce, filter = '', expanded: controlled, onToggle, share, showUnsupported = false }: UpdatesSectionProps): React.JSX.Element {
+export function UpdatesSection({ announce, ask, filter = '', expanded: controlled, onToggle, share, showUnsupported = false }: UpdatesSectionProps): React.JSX.Element {
     const updates = useUpdates();
     const installed = useInstalled();
     const all = useAllProjects();
@@ -233,7 +243,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                 ))}
                 {chunks.length === 0
                     ? (stream.status !== 'error' ? <Skeleton density="compact" /> : null)
-                    : <AllProjectsUpdatesTree chunks={chunks} installedOf={installedOf} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} revalidating={stream.revalidating} labelledBy={titleId} />}
+                    : <AllProjectsUpdatesTree chunks={chunks} installedOf={installedOf} filter={filter} sourcesUnavailable={stream.sourcesUnavailable} announce={announce} ask={ask} revalidating={stream.revalidating} labelledBy={titleId} />}
             </>
         );
     } else if (projectPath === null) {
@@ -272,6 +282,7 @@ export function UpdatesSection({ announce, filter = '', expanded: controlled, on
                     installed={installed.result}
                     filter={filter}
                     announce={announce}
+                    ask={ask}
                     labelledBy={titleId}
                     testId="sidebar-updates-list"
                     busy={updates.revalidating}

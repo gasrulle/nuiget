@@ -255,6 +255,8 @@ describe('2.0 sidebar', () => {
         const option = await serilogOption();
         await option.click();
         await option.sendKeys(Key.DELETE);
+        // Delete asks first since UX-P4.2b: confirm in the sidebar's own dialog.
+        await (await findByTestId('confirm-dialog-confirm', 10_000)).click();
 
         // The outcome is announced, and the row leaves with the host's next list; the restore may take a while.
         await waitForText('status-live', 'Uninstalled Serilog', 180_000);

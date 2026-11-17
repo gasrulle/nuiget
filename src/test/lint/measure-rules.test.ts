@@ -76,8 +76,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
-        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog'];
-        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
+        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
+        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
         expect(definition('DS-DIVIDER-2')?.states).toEqual(dialogStates);
@@ -145,10 +145,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.filter(rule => rule.lanes !== undefined).map(rule => rule.id)).toEqual(['SPEC', 'DS-TYPE-10']);
         // UX-P3.9 follow-ups 4-5: DS-TYPE-10 reads the bulk dialog's text too; hard on both dialogs since UX-P3.fix-6.
         expect(definition('DS-TYPE-10')?.scopes).toEqual({ sidebar: 'hard', dialogs: 'hard' });
-        expect(definition('DS-TYPE-10')?.pendingStates).toBeUndefined();
+        expect(definition('DS-TYPE-10')?.pendingStates).toEqual({ 'sidebar-uninstall-dialog': 'P4.2b' });
         // UX-P3.9 follow-up 5: the scroll shadow moved to P3.fix-6 with its rule; hard since UX-P3.fix-6's proving push.
         expect(definition('DS-SCROLL-2')?.scopes).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard' });
-        expect(definition('DS-TYPE-10')?.scopeStates).toEqual({ dialogs: ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'] });
+        expect(definition('DS-TYPE-10')?.scopeStates).toEqual({ dialogs: ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'sidebar-uninstall-dialog'] });
         const specLines = (lane: 'ui' | 'floor' | 'macos') => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 932, undefined, 'dark-modern', undefined, lane).filter(line => line.name.startsWith('SPEC@'));
         expect(specLines('ui').length).toBeGreaterThan(0);
         expect([...specLines('floor'), ...specLines('macos')]).toEqual([]);

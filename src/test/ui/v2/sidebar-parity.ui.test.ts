@@ -130,6 +130,8 @@ describe('2.0 sidebar parity', () => {
         const option = await (await findByTestId('package-row-serilog', 120_000)).findElement(By.css('.nuiget-row-option'));
         await option.click();
         await option.sendKeys(Key.DELETE);
+        // Delete asks first since UX-P4.2b: confirm in the sidebar's own dialog.
+        await (await findByTestId('confirm-dialog-confirm', 10_000)).click();
         await waitForText('status-live', 'Uninstalled Serilog', 180_000);
         // The operation ends with its restore and the refresh after it; writing the project back before then races them.
         await poll(async () => {
