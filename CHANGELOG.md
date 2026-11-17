@@ -71,7 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **In a narrow editor the package details give way to the list**
 
 ### Fixed
-- **A search result's right-click menu no longer offers Uninstall or Change Version for a package that the .NET SDK or an imported file adds**
 - **An empty project's Updates tab no longer says its package sources could not be checked**
 - **In a narrow package list the bulk buttons are no longer cut off and long versions end in an ellipsis instead of being sliced**
 - **A package of an unsupported project can no longer be installed or updated from the details pane**
