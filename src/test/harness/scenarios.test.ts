@@ -871,6 +871,31 @@ describe('two-surface harness', () => {
         [main, sidebar].forEach(expectOneResponsePerRequest);
     });
 
+    it('a project with no package answers an empty update list while its one source is down; a project with a package says the source could not be checked (UX-P3.fix-23)', async () => {
+        const feed = createFakeFeed();
+        feed.publish('Serilog', ['3.0.0', '3.1.0']);
+        h = await createHarness({ tree: { 'A/A.csproj': projectXml(['Serilog', '3.0.0']), 'E/E.csproj': projectXml() }, selectedProject: 'E/E.csproj', feed, evaluate: true });
+        const [A, E] = [h.path('A/A.csproj'), h.path('E/E.csproj')];
+        await h.resolve('main');
+        await h.expectState({ selectedProject: E, projects: [A, E], installed: [] });
+        feed.down = true;
+        const first = resultOf(await h.checkUpdates('main').response);
+        expect(first).toMatchObject({ projectPath: E, updates: [] });
+        expect(first.sourcesUnavailable).not.toBe(true);
+        feed.down = false;
+        await h.settle();
+        const second = resultOf(await h.checkUpdates('main').response);
+        expect(second).toMatchObject({ projectPath: E, updates: [] });
+        expect(second.sourcesUnavailable).not.toBe(true);
+        // The banner stays where a row may be missing: the project with a package, its source down.
+        feed.down = true;
+        await h.selectProject('main', A);
+        await h.expectState({ selectedProject: A, projects: [A, E], installed: ['Serilog@3.0.0'] });
+        const withPackage = resultOf(await h.checkUpdates('main').response);
+        expect(withPackage).toMatchObject({ projectPath: A, updates: [], sourcesUnavailable: true });
+        await h.settle();
+    });
+
     it('sources unreachable shows banner not empty', async () => {
         const feed = createFakeFeed();
         feed.down = true;

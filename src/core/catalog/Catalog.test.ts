@@ -598,6 +598,44 @@ describe('Catalog feed reads', () => {
         expect(rig.clients.updates.check).toHaveBeenCalledWith([rig.resolvedOf(remote('feed'))], expect.any(Array), false, expect.any(Function), expect.any(AbortSignal));
     });
 
+    it('updates: a project known to have no package answers empty without asking a source, even an unhealthy one (UX-P3.fix-23)', async () => {
+        const rig = feedRig({ listings: { [appDir]: [remote('down')] }, unhealthy: [remote('down').url] });
+        const inspector = { inspect: vi.fn(async (projectPath: string): Promise<InstalledResult> => ({ ...provisionalOf(projectPath), fidelity: 'authoritative', packages: [] })) };
+        const deps = makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, inspector });
+        const resolve = vi.spyOn(rig.feedContexts, 'resolve');
+
+        const result = await new Catalog(deps).updates(appPath, false);
+
+        expect(result).toMatchObject({ projectPath: appPath, updates: [], sourcesUnavailable: false });
+        expect(resolve).not.toHaveBeenCalled();
+        expect(rig.clients.updates.check).not.toHaveBeenCalled();
+    });
+
+    it('updates: a provisional or an unsupported empty list is not "no packages" and keeps sourcesUnavailable when its one source is unhealthy (UX-P3.fix-23)', async () => {
+        const unsupported = { reason: 'parse-failed' as const, message: 'the project file or an imported props file could not be read or parsed' };
+        for (const answer of [{ fidelity: 'provisional' as const }, { fidelity: 'authoritative' as const, unsupported }]) {
+            const rig = feedRig({ listings: { [appDir]: [remote('down')] }, unhealthy: [remote('down').url] });
+            const inspector = { inspect: vi.fn(async (projectPath: string): Promise<InstalledResult> => ({ ...provisionalOf(projectPath), packages: [], ...answer })) };
+            const deps = makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, inspector });
+            const resolve = vi.spyOn(rig.feedContexts, 'resolve');
+
+            const result = await new Catalog(deps).updates(appPath, false);
+
+            expect(result.sourcesUnavailable, answer.fidelity).toBe(true);
+            expect(resolve, answer.fidelity).toHaveBeenCalled();
+        }
+    });
+
+    it('updates: a project with a package keeps sourcesUnavailable when its one source is unhealthy (UX-P3.fix-23)', async () => {
+        const rig = feedRig({ listings: { [appDir]: [remote('down')] }, unhealthy: [remote('down').url] });
+        const inspector = { inspect: vi.fn(async (projectPath: string): Promise<InstalledResult> => ({ ...provisionalOf(projectPath), fidelity: 'authoritative' })) };
+        const deps = makeDeps({ sources: rig.sources, contexts: rig.contexts, feeds: rig.feeds, feedContexts: rig.feedContexts, inspector });
+
+        const result = await new Catalog(deps).updates(appPath, false);
+
+        expect(result.sourcesUnavailable).toBe(true);
+    });
+
     it('updates: a context that cannot be built answers unavailable, not empty', async () => {
         const rig = feedRig({ getContext: async () => { throw new Error('dotnet nuget config paths failed'); } });
 

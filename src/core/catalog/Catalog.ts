@@ -241,6 +241,10 @@ export class Catalog {
         // `installed` first: its computation registers the chain, so the feed context below walks nothing.
         const { result, upgrade } = await this.installed(projectPath, undefined, signal);
         const final = upgrade ? await upgrade : result;
+        // A project known to have no package has nothing to check: its answer is empty, never "could not be checked" (UX-P3.fix-23).
+        if (final.fidelity === 'authoritative' && final.unsupported === undefined && final.packages.length === 0) {
+            return { projectPath, updates: [], sourcesUnavailable: false };
+        }
         const context = await this.deps.feedContexts.forProject(projectPath).catch((error: unknown) => {
             this.deps.logger?.warn(redact(`Feed context of ${projectPath} could not be built: ${describe(error)}`));
             return undefined;

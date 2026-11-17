@@ -186,7 +186,8 @@ Everything the 2.0 core asks of a package feed goes through four layers ([ADR-00
   metadata resolver (registration → nuspec → search per allowed source, then the global-packages folder).
 
 **Empty is not unknown.** A source that could not answer is reported, never read as "no result": `search` and
-`updates` carry `sourcesUnavailable` (also when a selected source is excluded as unhealthy), `searchById` answers
+`updates` carry `sourcesUnavailable` (also when a selected source is excluded as unhealthy; a project whose authoritative installed
+list has no package answers an empty list without resolving a source, UX-P3.fix-23), `searchById` answers
 `failed` apart from `missing`, vulnerability data read in part is unknown (`vulnerabilities` stays absent), and
 `package/versions` with no versions from an unreachable source is a `failed` response.
 
