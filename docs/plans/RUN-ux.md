@@ -251,7 +251,9 @@ When the last row of a phase (or of a P5.x feature mini-phase) is `done` and CI 
    launch both advisors directly with the brief `PHASE REVIEW <phase>`, the commit list and the gate output.
 3. Fix the `fix-n` rows, re-run the gate, commit, push, wait for green CI, then tag: `git tag labs/ux-<phase>-done &&
    git push origin labs/ux-<phase>-done`.
-4. Continue with the next phase's first open row.
+4. The planning session, not the worker, refreshes the Design System artifact from the tagged commit and adds its row
+   to `docs/design/artifacts.md` (the procedure is there); the worker's report names the tag so it can.
+5. Continue with the next phase's first open row.
 
 ## 7. Stop conditions (end the turn with a report)
 
