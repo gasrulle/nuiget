@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { InstalledPackage, InstalledResult, OperationProgress, PackageUpdate } from '../../../protocol';
-import { UNRESOLVED_HINT, busyText, filterById, updateCandidates, updateRowContext, versionCell } from './rules';
+import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
+import { UNRESOLVED_HINT, browseRowContext, busyText, filterById, updateCandidates, updateRowContext, versionCell } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -83,5 +83,15 @@ describe('filterById (UX-P3.12b)', () => {
         expect(filterById(rows, '').map(row => row.id)).toEqual(['Moq', 'Serilog', 'Serilog.Sinks.Console', 'xunit']);
         expect(rows.map(row => row.id)).toEqual(before);
         expect(filterById(rows, '')).not.toBe(rows);
+    });
+});
+
+describe('browseRowContext (UX-P4.1)', () => {
+    const found: PackageSearchResult = { id: 'Polly', version: '8.4.2', description: '', authors: '', versions: ['8.4.2'], sourceUrl: 'https://feed/' };
+
+    it('is writable unless the caller says the project cannot remove its entry', () => {
+        expect(browseRowContext(found, '/w/App.csproj', undefined)).toMatchObject({ 'nuiget.installed': false, 'nuiget.readOnly': false });
+        expect(browseRowContext(found, '/w/App.csproj', '8.0.0')).toMatchObject({ installedVersion: '8.0.0', 'nuiget.installed': true, 'nuiget.readOnly': false });
+        expect(browseRowContext(found, '/w/App.csproj', '8.0.0', true)).toMatchObject({ 'nuiget.installed': true, 'nuiget.readOnly': true });
     });
 });

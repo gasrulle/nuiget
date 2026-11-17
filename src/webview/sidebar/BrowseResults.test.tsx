@@ -68,7 +68,7 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Enter}');
         expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Polly', version: '8.4.2' }]);
         await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Polly', fromVersion: '8.0.0', toVersion: '8.4.2', affectedProjects: [A] } }));
-        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED, 'nuiget.installed': false }]);
+        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED, 'nuiget.installed': false, 'nuiget.readOnly': false }]);
         expect(host.requests('ops/install')).toHaveLength(0);
 
         // Without a central entry the install changes this project only and runs at once.
@@ -209,7 +209,7 @@ describe('sidebar: search modes and browse', () => {
         await user.click(within(row('Serilog')).getByRole('option'));
         await user.keyboard('{Control>}{Enter}{/Control}');
 
-        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.installed': false, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED }]);
+        expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.installed': false, 'nuiget.readOnly': false, packageId: 'Polly', latestVersion: '8.4.2', webviewSection: 'browseRow', projectPath: A, sourceUrl: FEED }]);
         expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '4.0.0' }]);
         expect(host.requests('ops/install')).toHaveLength(0);
     });
@@ -255,6 +255,23 @@ describe('sidebar: search modes and browse', () => {
         await user.keyboard('{Delete}');
         await waitFor(() => expect(said()).toBe('Serilog cannot be uninstalled: the project resolves .NET SDK 8.0.425'));
         expect(host.requests('ops/remove')).toHaveLength(0);
+    });
+
+    it('a result the project cannot remove (added by the SDK, declared in a props file) is read-only in the row menu; a project entry and an absent one are not (UX-P4.1)', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus}><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [
+            pkg('Serilog', '3.0.0'),
+            { ...pkg('Microsoft.NET.ILLink.Tasks', '8.0.0'), declaration: 'props', isImplicit: true, definedIn: '/sdk/Microsoft.NET.Sdk.props' },
+            { ...pkg('Polly', '8.0.0'), declaration: 'props', definedIn: '/w/Directory.Build.props' },
+        ] }, 1));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [] }, 1));
+        await searchFor(host, 'x', [result('Serilog', '4.0.0'), result('Microsoft.NET.ILLink.Tasks', '9.0.0'), result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
+
+        const context = (id: string) => JSON.parse(row(id).dataset.vscodeContext ?? '{}') as Record<string, unknown>;
+        expect(['Serilog', 'Microsoft.NET.ILLink.Tasks', 'Polly', 'Xunit'].map(id => [context(id)['nuiget.installed'], context(id)['nuiget.readOnly']])).toEqual([[true, false], [true, true], [true, true], [false, false]]);
     });
 
     it('under All Projects a package installed in every project offers Uninstall..., which opens the actions menu; Delete names the menu and writes nothing (UX-P3.8, SB9)', async () => {

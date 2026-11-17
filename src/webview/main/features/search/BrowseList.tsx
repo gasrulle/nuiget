@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type PackageSearchResult } from '../../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type PackageSearchResult } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
-import { allProjectsBrowseContext, browseRowContext, installedProjectsOf } from '../../../shared/installed/rules';
+import { allProjectsBrowseContext, browseRowContext, installedProjectsOf, whyNotRemovable } from '../../../shared/installed/rules';
 import { Badge, Banner, EmptyState, Listbox, ProgressBar, Row } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetailsActions } from '../../../shared/store/details';
@@ -59,8 +59,8 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
     };
 
     const items = useMemo<Item[]>(() => search.results.map(result => ({ id: result.id, result })), [search.results]);
-    const installedVersions = useMemo(
-        () => new Map((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry.resolvedVersion ?? entry.version])),
+    const installedEntries = useMemo(
+        () => new Map<string, InstalledPackage>((installed.result?.packages ?? []).map(entry => [entry.id.toLowerCase(), entry])),
         [installed.result],
     );
 
@@ -131,12 +131,15 @@ export function BrowseList({ text, announce, install }: BrowseView): React.JSX.E
                 empty={<EmptyState message={sourcesUnavailable ? `No package source could be searched for "${query}".` : `No results for "${query}".`} data-testid={sourcesUnavailable ? undefined : 'browse-empty'} />}
                 renderRow={(item, placement) => {
                     const { result } = item;
-                    const installedVersion = installedVersions.get(result.id.toLowerCase());
+                    const entry = installedEntries.get(result.id.toLowerCase());
+                    const installedVersion = entry === undefined ? undefined : entry.resolvedVersion ?? entry.version;
+                    // An entry the project cannot remove (SDK-implicit, from props) is read-only in the row menu (UX-P4.1).
+                    const readOnly = entry !== undefined && installed.result !== undefined && whyNotRemovable(entry, installed.result) !== undefined;
                     const src = packageIconSrc(result.iconUrl);
                     return (
                         <Row
                             {...placement}
-                            vscodeContext={allMode ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], all.chunks.size) : installed.projectPath === null ? undefined : browseRowContext(result, installed.projectPath, installedVersion)}
+                            vscodeContext={allMode ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], all.chunks.size) : installed.projectPath === null ? undefined : browseRowContext(result, installed.projectPath, installedVersion, readOnly)}
                             itemId={result.id}
                             name={result.id}
                             version={result.version}

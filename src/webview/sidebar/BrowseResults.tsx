@@ -204,7 +204,7 @@ export function BrowseResults({ announce }: BrowseResultsProps): React.JSX.Eleme
                     return (
                         <Row
                             {...placement}
-                            vscodeContext={all.active ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], listedCount) : projectPath === null ? undefined : browseRowContext(result, projectPath, installedVersions.get(result.id.toLowerCase()))}
+                            vscodeContext={all.active ? allProjectsBrowseContext(result, whereInstalled.get(result.id.toLowerCase()) ?? [], listedCount) : projectPath === null ? undefined : browseRowContext(result, projectPath, installedVersion, entry !== undefined && !removable)}
                             itemId={result.id}
                             name={result.id}
                             version={result.version}

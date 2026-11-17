@@ -153,8 +153,12 @@ export const allProjectsBrowseContext = (result: PackageSearchResult, where: Rea
     'nuiget.partial': where.length > 0 && where.length < listedCount,
 });
 
-/** A Browse row's context in one project. */
-export const browseRowContext = (result: PackageSearchResult, projectPath: string, installedVersion: string | undefined): Readonly<Record<string, unknown>> => ({
+/**
+ * A Browse row's context in one project. `readOnly` is true when the project's entry for the id cannot be removed
+ * (`whyNotRemovable`: SDK-implicit, from props, unresolved, an unsupported project): the menu's Uninstall and Change
+ * Version hide, and the host refuses them (UX-P4.1, from UX-P2.9a's review).
+ */
+export const browseRowContext = (result: PackageSearchResult, projectPath: string, installedVersion: string | undefined, readOnly = false): Readonly<Record<string, unknown>> => ({
     webviewSection: 'browseRow',
     packageId: result.id,
     projectPath,
@@ -162,4 +166,5 @@ export const browseRowContext = (result: PackageSearchResult, projectPath: strin
     latestVersion: result.version,
     sourceUrl: result.sourceUrl,
     'nuiget.installed': installedVersion !== undefined,
+    'nuiget.readOnly': readOnly,
 });

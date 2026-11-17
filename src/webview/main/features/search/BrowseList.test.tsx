@@ -116,7 +116,19 @@ describe('main panel: browse', () => {
     it('a result carries its menu context; an installed one says so', async () => {
         const host = await mountReady();
         await searchFor(host, 'x', [result('Polly', '8.4.2', { sourceUrl: FEED })]);
-        expect(JSON.parse(within(list()).getByTestId('package-row-polly').dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true, webviewSection: 'browseRow', packageId: 'Polly', projectPath: A, latestVersion: '8.4.2', sourceUrl: FEED, 'nuiget.installed': false });
+        expect(JSON.parse(within(list()).getByTestId('package-row-polly').dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true, webviewSection: 'browseRow', packageId: 'Polly', projectPath: A, latestVersion: '8.4.2', sourceUrl: FEED, 'nuiget.installed': false, 'nuiget.readOnly': false });
+    });
+
+    it('a result the project cannot remove (added by the SDK, declared in a props file) is read-only in the row menu; a project entry and an absent one are not (UX-P4.1)', async () => {
+        const host = await mountReady({ listed: false });
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [
+            { id: 'Serilog', version: '3.0.0', versionType: 'standard', declaration: 'project' },
+            { id: 'Microsoft.NET.ILLink.Tasks', version: '8.0.0', versionType: 'standard', declaration: 'props', isImplicit: true, definedIn: '/sdk/Microsoft.NET.Sdk.props' },
+            { id: 'Polly', version: '8.0.0', versionType: 'standard', declaration: 'props', definedIn: '/w/Directory.Build.props' },
+        ] }, 1));
+        await searchFor(host, 'x', [result('Serilog', '4.0.0'), result('Microsoft.NET.ILLink.Tasks', '9.0.0'), result('Polly', '8.4.2'), result('Xunit', '2.9.0')]);
+        const context = (id: string) => JSON.parse(within(list()).getByTestId(`package-row-${id.toLowerCase()}`).dataset.vscodeContext ?? '{}') as Record<string, unknown>;
+        expect(['Serilog', 'Microsoft.NET.ILLink.Tasks', 'Polly', 'Xunit'].map(id => [context(id)['nuiget.installed'], context(id)['nuiget.readOnly']])).toEqual([[true, false], [true, true], [true, true], [false, false]]);
     });
 
     it('under All Projects a result says where it is installed; with no project committed it has no menu', async () => {
