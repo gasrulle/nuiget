@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
-import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
@@ -16,7 +16,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
 
-const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
 interface Section {
     projectPath: string;
@@ -59,7 +59,7 @@ const rowsIn = (section: Section, needle: string): PackageUpdate[] => filterById
  * alone without a preview (N74), and Update all takes the selected rows across projects (or every candidate) as one
  * `ops/bulkUpdateAllProjects`. A source that could not be checked is one banner over the tree.
  */
-export function AllProjectsUpdates({ filter, announce, central }: ListView): React.JSX.Element {
+export function AllProjectsUpdates({ filter, announce, central, uninstall }: ListView): React.JSX.Element {
     const all = useAllProjects();
     const { updates } = all;
     const { isPackageBusy, active } = useOps();
@@ -196,7 +196,11 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
     }), [collapsed, updates.sourcesUnavailable, loading, needle, filtering]);
 
     const updateOne = (section: Section, update: PackageUpdate): void => {
-        if (section.installed?.unsupported || isPackageBusy(section.projectPath, update.id)) {
+        if (isPackageBusy(section.projectPath, update.id)) {
+            return;
+        }
+        if (section.installed?.unsupported) {
+            announce(`${update.id} cannot be updated: ${section.installed.unsupported.message}`);
             return;
         }
         const entry = entryIn(section.installed, update.id);
@@ -212,6 +216,19 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
         run('ops/update', { projectPath: section.projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
             announce(`Update of ${update.id} failed: ${error instanceof Error ? error.message : String(error)}`);
         });
+    };
+
+    // The Delete key asks first, naming the row's project (ADR-013 Decision 3, UX-P4.2a).
+    const askUninstall = (section: Section, update: PackageUpdate): void => {
+        if (isPackageBusy(section.projectPath, update.id)) {
+            return;
+        }
+        const obstacle = whyNotDeletable(update.id, entryIn(section.installed, update.id), section.installed);
+        if (obstacle !== undefined) {
+            announce(obstacle);
+            return;
+        }
+        uninstall.ask({ projectPath: section.projectPath, projectName: section.projectName, packageId: update.id });
     };
 
     const toggle = (section: Section, update: PackageUpdate): void => {
@@ -294,9 +311,20 @@ export function AllProjectsUpdates({ filter, announce, central }: ListView): Rea
                             makeCurrent(item.section, item.update);
                         }
                     }}
+                    // Enter shows the details, as a click does; Ctrl+Enter writes (ADR-013 Decisions 1 and 2, UX-P4.2a).
                     onActivate={item => {
                         if (item.kind === 'package') {
+                            makeCurrent(item.section, item.update);
+                        }
+                    }}
+                    onSecondaryActivate={item => {
+                        if (item.kind === 'package') {
                             updateOne(item.section, item.update);
+                        }
+                    }}
+                    onDelete={item => {
+                        if (item.kind === 'package') {
+                            askUninstall(item.section, item.update);
                         }
                     }}
                     renderRow={(item, placement) => {

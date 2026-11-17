@@ -100,11 +100,15 @@ describe('2.0 main panel: Updates tab', () => {
         expect(fs.readFileSync(csprojPath, 'utf-8')).to.equal(originalCsproj);
     });
 
-    it('Enter updates one package and the project file follows', async function () {
+    it('Ctrl+Enter updates one package and the project file follows; Enter leaves it as it was', async function () {
         this.timeout(300_000);
         const option = await optionOf('package-row-newtonsoft.json');
         await option.click();
+        // Enter writes nothing on a main-panel list (ADR-013 Decision 1, UX-P4.2a): the row stays current, the file unchanged.
         await option.sendKeys(Key.ENTER);
+        await poll(async () => ((await option.getAttribute('aria-current')) === 'true' ? true : undefined), 'the row current after Enter', 10_000);
+        expect(fs.readFileSync(csprojPath, 'utf-8')).to.equal(originalCsproj);
+        await option.sendKeys(Key.chord(process.platform === 'darwin' ? Key.COMMAND : Key.CONTROL, Key.ENTER));
         // The row leaves with the host's next list, after `dotnet package add` and the restore.
         await waitForTestIdGone('package-row-newtonsoft.json', 240_000);
         await poll(async () => (fs.readFileSync(csprojPath, 'utf-8').includes('Version="13.0.2"') ? undefined : true), 'Newtonsoft.Json updated in TestProject.csproj', 30_000);

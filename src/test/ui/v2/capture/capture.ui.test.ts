@@ -646,6 +646,22 @@ const REACH: Record<string, Reach> = {
         },
         leave: cancelDialog,
     },
+    'main-installed-uninstall-dialog': {
+        // The Delete key's confirmation (UX-P4.2a): the option focused by script, no click, so the details stay as in the
+        // bulk state; Delete opens the dialog, which is cancelled after the capture, never confirmed, its box never ticked.
+        reach: async () => {
+            await gatewayInstalled();
+            await scrollListTo('installed-list', 'package-row-serilog');
+            await script('arguments[0].focus();', await optionOf('package-row-serilog'));
+            if (!(await hintHas('installed-list', DELETE_ASKS))) {
+                throw new Error(`the Installed hint lacks "${DELETE_ASKS}": a build where Delete uninstalls, not pressed`);
+            }
+            await press(Key.DELETE);
+            await findByTestId('confirm-dialog', 10_000);
+            await findByTestId('confirm-dialog-do-not-ask', 10_000);
+        },
+        leave: cancelDialog,
+    },
     'main-transitive-expanded': {
         reach: async () => {
             await gatewayInstalled();
@@ -1867,6 +1883,18 @@ async function auditSafely(state: NamedState): Promise<string[]> {
 
 // ---- UX-P0.24: the keyboard walks and the motion check ---------------------------------------------------------------
 
+/**
+ * Runs in the webview: whether a list's hint (its `aria-describedby` text) holds `text`. A walk or a reach reads it before a
+ * key that writes on an older build (Enter on a main Updates row, Delete on a main row before UX-P4.2a), so that an old
+ * VSIX (`negative-control`, `--build-sha`) is never sent the key (design-advisor ruling of 2026-11-17, DO 11).
+ */
+const HINT_HAS = 'const list = document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\'); const ids = (list && list.getAttribute("aria-describedby") || "").split(" ").filter(Boolean); return ids.map(id => (document.getElementById(id) || {}).textContent || "").join(" ").includes(arguments[1]);';
+const hintHas = (listTestId: string, text: string): Promise<boolean> => script<boolean>(HINT_HAS, listTestId, text);
+
+/** The Updates hint that says Enter writes nothing, and the Installed and Updates hint that says Delete asks (UX-P4.2a). */
+const ENTER_SHOWS = 'Enter shows its details.';
+const DELETE_ASKS = 'Delete (Cmd+Backspace) uninstalls it.';
+
 /** Sends keys to the focused element of the webview the driver is in: the driver's action queue does not reach it (H48). */
 const press = async (...keys: string[]): Promise<void> => {
     await (await driverOf().switchTo().activeElement()).sendKeys(...keys);
@@ -1969,13 +1997,17 @@ async function rowKeys(screen: KeyScreen, listTestId: string, searchTestId: stri
     } else {
         await step('rows End', Key.END, `row ${size}`);
     }
-    if (enter === 'press') {
+    // Enter on the row active before it: a tree's is the row up from End (`KEYS_TREE_TAIL`), a flat list's its last row.
+    const enterExpected = `current ${tree ? treeTail(screen, size)?.upFromEnd ?? 'no KEYS_TREE_TAIL entry' : `row ${size}`}`;
+    if (enter === 'press' && screen === 'main-updates' && !(await hintHas(listTestId, ENTER_SHOWS))) {
+        outcomes.push({ path: 'rows Enter', observed: `not pressed: the hint lacks "${ENTER_SHOWS}" (a build where Enter writes)`, expected: enterExpected });
+    } else if (enter === 'press') {
         await press(Key.ENTER);
         const current = await poll(async () => {
             const now = await activeRow(listTestId);
             return now.startsWith('current ') ? now : undefined;
         }, 'the row made current', 10_000).catch(() => activeRow(listTestId));
-        outcomes.push({ path: 'rows Enter', observed: current, expected: `current row ${size}` });
+        outcomes.push({ path: 'rows Enter', observed: current, expected: enterExpected });
     } else {
         outcomes.push({ path: 'rows Enter', observed: '', expected: '', skipped: enter.skipped });
     }
@@ -2016,6 +2048,33 @@ async function dialogKeys(): Promise<KeyOutcome[]> {
     const option = await optionOf('package-row-serilog');
     await driverOf().actions().keyDown(MODIFIER).click(option).keyUp(MODIFIER).perform();
     await poll(async () => ((await option.getAttribute('aria-selected')) !== 'true' ? true : undefined), 'package-row-serilog out of the selection', 10_000);
+    return outcomes;
+}
+
+/**
+ * The Delete key on an Installed row (UX-P4.2a): it opens the confirmation on Cancel, Escape closes it, and the row is
+ * active again; never confirmed, the box never ticked. On a build whose hint does not say Delete asks, the key is not
+ * pressed and the path is red.
+ */
+async function deleteKeys(): Promise<KeyOutcome[]> {
+    await scrollListTo('installed-list', 'package-row-serilog');
+    const option = await optionOf('package-row-serilog');
+    await script('arguments[0].focus();', option);
+    const before = await activeRow('installed-list');
+    if (!(await hintHas('installed-list', DELETE_ASKS))) {
+        return [{ path: 'rows Delete', observed: `not pressed: the hint lacks "${DELETE_ASKS}" (a build where Delete writes)`, expected: 'confirm-dialog-cancel' }];
+    }
+    const outcomes: KeyOutcome[] = [];
+    await press(Key.DELETE);
+    const opened = await findByTestId('confirm-dialog', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'rows Delete', observed: opened ? await focusedTestId() : 'no dialog', expected: 'confirm-dialog-cancel' });
+    await press(Key.ESCAPE);
+    const closed = await poll(async () => ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length === 0 ? true : undefined), 'the dialog closed', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'rows Delete Escape', observed: closed ? 'closed' : 'still open', expected: 'closed' });
+    if (!closed) {
+        await cancelDialog();
+    }
+    outcomes.push({ path: 'rows Delete restore', observed: await activeRow('installed-list'), expected: before });
     return outcomes;
 }
 
@@ -2610,7 +2669,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             const motion = motionLines('main panel at open', await script<MotionFacts>(RUNNING_ANIMATIONS));
             printLines(motion.lines);
             await gatewayInstalled();
-            await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-installed', 'installed-list', 'search-input', 'press'), ...await dialogKeys()]);
+            await walkScreen('main-installed', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-installed', 'installed-list', 'search-input', 'press'), ...await dialogKeys(), ...await deleteKeys()]);
             if (MOTION_STATUS === 'hard' && motion.failures.length > 0) {
                 throw new Error(`[motion] ${motion.failures.join('; ')}`);
             }
@@ -2622,7 +2681,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('main-updates'), PANEL_WIDTH);
             await freshMainPanel();
             await REACH['main-updates'].reach();
-            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('main-updates', 'updates-list', 'search-input', { skipped: 'Enter updates the package on today\'s tree (A1)' }));
+            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('main-updates', 'updates-list', 'search-input', 'press'));
         });
 
         it('keyboard paths: main panel, Browse (UX-P0.24)', async function () {

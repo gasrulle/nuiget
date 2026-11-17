@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
-import { UNRESOLVED_HINT, browseRowContext, busyText, filterById, updateCandidates, updateRowContext, versionCell } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyText, filterById, projectNameOf, updateCandidates, updateRowContext, versionCell, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -93,5 +93,29 @@ describe('browseRowContext (UX-P4.1)', () => {
         expect(browseRowContext(found, '/w/App.csproj', undefined)).toMatchObject({ 'nuiget.installed': false, 'nuiget.readOnly': false });
         expect(browseRowContext(found, '/w/App.csproj', '8.0.0')).toMatchObject({ installedVersion: '8.0.0', 'nuiget.installed': true, 'nuiget.readOnly': false });
         expect(browseRowContext(found, '/w/App.csproj', '8.0.0', true)).toMatchObject({ 'nuiget.installed': true, 'nuiget.readOnly': true });
+    });
+});
+
+describe('whyNotDeletable (UX-P4.2a)', () => {
+    const result = (changes: Partial<InstalledResult> = {}): InstalledResult => ({ projectPath: '/p/App.csproj', fidelity: 'authoritative', isCpm: false, packages: [], ...changes });
+    const entry = (changes: Partial<InstalledPackage> = {}): InstalledPackage => ({ id: 'Serilog', version: '3.0.0', versionType: 'standard', declaration: 'project', ...changes });
+
+    it('reads the installed entry with whyNotRemovable', () => {
+        expect(whyNotDeletable('Serilog', entry(), result())).toBeUndefined();
+        expect(whyNotDeletable('Serilog', entry({ declaration: 'props' }), result())).toBe('Serilog is declared in an imported props file and cannot be uninstalled from the project');
+    });
+
+    it('without an entry says an unsupported project\'s reason, and nothing for a supported one', () => {
+        expect(whyNotDeletable('Serilog', undefined, result({ unsupported: { reason: 'sdk-too-old', message: 'requires .NET SDK 10 or newer' } }))).toBe('Serilog cannot be uninstalled: requires .NET SDK 10 or newer');
+        expect(whyNotDeletable('Serilog', undefined, result())).toBeUndefined();
+        expect(whyNotDeletable('Serilog', undefined, undefined)).toBeUndefined();
+    });
+});
+
+describe('projectNameOf (UX-P4.2a)', () => {
+    it('takes the listed name, else the file name without its extension, on either separator', () => {
+        expect(projectNameOf([{ name: 'Gateway', path: '/w/Gateway/Gateway.csproj' }], '/w/Gateway/Gateway.csproj')).toBe('Gateway');
+        expect(projectNameOf(undefined, '/w/Lib/Lib.csproj')).toBe('Lib');
+        expect(projectNameOf([], 'C:\\w\\Tools\\Tools.fsproj')).toBe('Tools');
     });
 });

@@ -128,10 +128,10 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 |-----|--------|
 | `↑` / `↓` | Move to the previous or next row |
 | `Home` / `End` | Jump to the first or last row |
-| `Enter` | Main panel: show the details (Installed, search results) or update the package (Updates). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
+| `Enter` | Main panel: show the details (Installed, Updates, search results). Sidebar: the row's action (Uninstall in Installed, Update in Updates, Install in search results); on a centrally managed update, or a search result with a central entry, it opens the actions menu |
 | `Enter`, `←` / `→` on a group row | Main panel: expand or collapse the group (Direct Packages, Transitive Packages and a target framework inside it, a project under All Projects); sidebar under All Projects: expand or collapse a workspace folder or a project |
-| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project. Sidebar: open the package in the main panel |
-| `Delete` (`Cmd+Backspace` on macOS) | Uninstall (Installed lists; in the sidebar also an installed search result of the selected project) |
+| `Ctrl+Enter` (`Cmd+Enter` on macOS) | Main panel: install the search result into the selected project, or update the package (Updates); a centrally managed update shows the projects it changes first. Sidebar: open the package in the main panel |
+| `Delete` (`Cmd+Backspace` on macOS) | Uninstall. Main panel (Installed and Updates): asks first, with "Do not ask me again" (`nuiget.confirmUninstall`). Sidebar (Installed; an installed search result of the selected project): uninstalls at once |
 | `Space` | Main panel: select the row for a bulk action, or clear it |
 | `Shift+F10` / Menu key | Open the row's actions menu |
 

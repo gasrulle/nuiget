@@ -208,7 +208,7 @@ describe('Listbox', () => {
         expect(JSON.parse((container.querySelector('.nuiget-listbox-root') as HTMLElement).dataset.vscodeContext ?? '{}')).toEqual({ preventDefaultContextMenuItems: true });
     });
 
-    it('a disabled option ignores Enter, Ctrl+Enter and Delete but keeps focus and the context menu', async () => {
+    it('a disabled option ignores Ctrl+Enter and Delete but keeps Enter, focus and the context menu', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();
         const handlers = { onActivate: vi.fn(), onSecondaryActivate: vi.fn(), onDelete: vi.fn() };
@@ -218,7 +218,8 @@ describe('Listbox', () => {
         await user.keyboard('{ArrowDown}');
         expect(option('Broken')).toHaveFocus();
         await user.keyboard('{Enter}{Control>}{Enter}{/Control}{Delete}');
-        expect(handlers.onActivate).not.toHaveBeenCalled();
+        // Enter writes nothing, so it reaches a disabled row (ADR-013 Decision 1, UX-P4.2a); the two write keys do not.
+        expect(handlers.onActivate).toHaveBeenCalledExactlyOnceWith(items[1]);
         expect(handlers.onSecondaryActivate).not.toHaveBeenCalled();
         expect(handlers.onDelete).not.toHaveBeenCalled();
         await user.keyboard('{ContextMenu}');
@@ -571,7 +572,11 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
         await user.keyboard('{ArrowDown}');
         expect(document.activeElement).toBe(second);
         await user.keyboard('{Enter}');
-        expect(onActivate).toHaveBeenCalledTimes(1);
+        expect(onActivate).toHaveBeenCalledTimes(2);
+        expect(onActivate).toHaveBeenLastCalledWith(plain[1]);
+        await user.keyboard(' ');
+        expect(onToggleSelected).toHaveBeenCalledTimes(1);
+        expect(document.activeElement).toBe(second);
     });
 
     it('a list without groups is a listbox of options; a list with groups is a tree whose rows are treeitems', () => {

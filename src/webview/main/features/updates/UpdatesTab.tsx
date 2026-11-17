@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, filterById, isCentral as isCentralRow, projectNameOf, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
+import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { useUpdates } from '../../../shared/store/updates';
 import type { ListView } from '../../MainShell';
@@ -26,7 +27,7 @@ type Item =
     | { kind: 'group'; id: 'direct'; count: number | string }
     | { kind: 'package'; id: string; update: PackageUpdate };
 
-const HINT = 'Space selects the package for a bulk update. Enter updates it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
 /**
  * The Updates tab of the main panel: the updates of the selected project, newest version per package, with the bulk
@@ -43,8 +44,9 @@ export function UpdatesTab(view: ListView): React.JSX.Element {
     return allMode ? <AllProjectsUpdates {...view} /> : <ProjectUpdates {...view} />;
 }
 
-function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Element {
+function ProjectUpdates({ filter, announce, central, uninstall }: ListView): React.JSX.Element {
     const { committed } = useSession();
+    const { projects } = useProjects();
     const updates = useUpdates();
     const installed = useInstalled();
     const { isPackageBusy, active } = useOps();
@@ -130,7 +132,11 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
     const { allSelected } = bulk;
 
     const updateOne = (update: PackageUpdate): void => {
-        if (projectPath === null || isBusy(update.id) || unsupported) {
+        if (projectPath === null || isBusy(update.id)) {
+            return;
+        }
+        if (unsupported) {
+            announce(`${update.id} cannot be updated: ${unsupported.message}`);
             return;
         }
         const obstacle = obstacleOf(update.id);
@@ -147,6 +153,24 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
         run('ops/update', { projectPath, packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl }).catch((error: unknown) => {
             announce(`Update of ${update.id} failed: ${error instanceof Error ? error.message : String(error)}`);
         });
+    };
+
+    const showDetails = (update: PackageUpdate): void => {
+        setCurrentId(keyOf(update.id));
+        select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath, known: { verified: update.verified } });
+    };
+
+    // The Delete key asks first (ADR-013 Decision 3, UX-P4.2a); the menu's rule decides what cannot be uninstalled.
+    const askUninstall = (update: PackageUpdate): void => {
+        if (projectPath === null || isBusy(update.id)) {
+            return;
+        }
+        const obstacle = whyNotDeletable(update.id, entryOf(update.id), installed.result);
+        if (obstacle !== undefined) {
+            announce(obstacle);
+            return;
+        }
+        uninstall.ask({ projectPath, projectName: projectNameOf(projects, projectPath), packageId: update.id });
     };
 
     const toggle = (update: PackageUpdate): void => {
@@ -221,15 +245,24 @@ function ProjectUpdates({ filter, announce, central }: ListView): React.JSX.Elem
                     }
                 }}
                 onSelect={item => {
-                    if (item.kind !== 'package') {
-                        return;
+                    if (item.kind === 'package') {
+                        showDetails(item.update);
                     }
-                    setCurrentId(item.id);
-                    select({ packageId: item.update.id, version: item.update.latestVersion, sourceUrl: item.update.sourceUrl, origin: 'updates', projectPath, known: { verified: item.update.verified } });
                 }}
+                // Enter shows the details, as a click does; Ctrl+Enter writes (ADR-013 Decisions 1 and 2, UX-P4.2a).
                 onActivate={item => {
                     if (item.kind === 'package') {
+                        showDetails(item.update);
+                    }
+                }}
+                onSecondaryActivate={item => {
+                    if (item.kind === 'package') {
                         updateOne(item.update);
+                    }
+                }}
+                onDelete={item => {
+                    if (item.kind === 'package') {
+                        askUninstall(item.update);
                     }
                 }}
                 // The marker names the two empty cells only: nothing installed, and no update (not a filter that matches nothing).

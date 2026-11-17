@@ -35,4 +35,8 @@ describe('the webviews\' controls', () => {
     it('the central-change dialog is mounted once, in MainShell.tsx', () => {
         expect(holders('<CentralUpdateDialog')).toEqual(['MainShell.tsx']);
     });
+
+    it('the Delete key\'s confirmation is mounted once in the main panel, in MainShell.tsx (UX-P4.2a)', () => {
+        expect(holders('<UninstallConfirmDialog')).toEqual(['MainShell.tsx']);
+    });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -76,8 +76,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
-        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog'];
-        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
+        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog'];
+        expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
         expect(definition('DS-DIVIDER-2')?.states).toEqual(dialogStates);
@@ -262,6 +262,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(groups['main-installed-hover-current']).toBe('details');
         expect(groups['main-installed-bulk-dialog']).toBe('dialogs');
         expect(groups['sidebar-update-all-dialog']).toBe('dialogs');
+        // A dialog state is named `-dialog` (`stateGroup`, `scripts/check-rule-coverage.mjs`): every `DIALOG_STATES` entry is one (UX-P4.2a follow-up 2).
+        expect(DIALOG_STATES.filter(state => stateGroup(state) !== 'dialogs')).toEqual([]);
         expect(groups['sidebar-sections']).toBe('sidebar');
         expect(groups['main-browse-details']).toBe('details');
         expect(stateGroup('main-sources-list')).toBe('sources');

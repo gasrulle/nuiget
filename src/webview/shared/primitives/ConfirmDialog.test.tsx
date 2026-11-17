@@ -111,4 +111,35 @@ describe('ConfirmDialog', () => {
         expect(results).toHaveNoViolations();
         expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
     });
+
+    it('doNotAsk renders "Do not ask me again" below the message, outside the description, before the buttons; without it there is no body (UX-P4.2a)', async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        const { unmount } = render(
+            <ConfirmDialog open title="Uninstall Serilog from App?" confirmLabel="Uninstall" onConfirm={() => undefined} onCancel={() => undefined} doNotAsk={{ checked: false, onChange }}>
+                Removes the package reference from the project file.
+            </ConfirmDialog>,
+        );
+        const dialog = screen.getByRole('alertdialog');
+        const box = screen.getByRole('checkbox', { name: 'Do not ask me again' });
+        expect(box).toHaveAttribute('data-testid', 'confirm-dialog-do-not-ask');
+        expect(dialog).toHaveAccessibleDescription('Removes the package reference from the project file.');
+        const described = document.getElementById(dialog.getAttribute('aria-describedby') ?? '');
+        expect(described).not.toBeNull();
+        expect(described?.contains(box)).toBe(false);
+        expect(screen.getByTestId('confirm-dialog-cancel')).toHaveFocus();
+        // Tab order: the check box, then Cancel and the action.
+        const focusable = [...dialog.querySelectorAll<HTMLElement>('input, button')].map(element => element.dataset.testid ?? element.textContent);
+        expect(focusable).toEqual(['confirm-dialog-do-not-ask', 'confirm-dialog-cancel', 'confirm-dialog-confirm']);
+        await user.click(box);
+        expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+        expect(axeRuleOutcome(results, 'aria-dialog-name')).toBe('passes');
+        unmount();
+
+        renderBulkUninstall();
+        expect(document.querySelector('.nuiget-dialog-body')).toBeNull();
+        expect(screen.queryByTestId('confirm-dialog-do-not-ask')).toBeNull();
+    });
 });

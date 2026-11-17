@@ -126,18 +126,22 @@ describe('main panel: Updates tab', () => {
         const user = userEvent.setup();
         await mountWith();
         await user.click(optionOf('Serilog'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
         await user.keyboard(' ');
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('An operation on this package is running.'));
         expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update All (1)');
     });
 
-    it('Enter or the row button updates one package to its latest version, and the row is busy until the outcome', async () => {
+    it('Ctrl+Enter or the row button updates one package to its latest version, and the row is busy until the outcome; Enter only shows its details', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(optionOf('Serilog'));
+        // Enter writes nothing on a main-panel list (ADR-013 Decision 1, UX-P4.2a): the row is current and its details show.
         await user.keyboard('{Enter}');
+        expect(host.requests('ops/update')).toHaveLength(0);
+        expect(optionOf('Serilog')).toHaveAttribute('aria-current', 'true');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/update').map(sent => sent.payload)).toEqual([{ projectPath: A, packageId: 'Serilog', version: '3.1.0', sourceUrl: FEED }]);
         expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
 
@@ -224,7 +228,7 @@ describe('main panel: Updates tab', () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(optionOf('Newtonsoft.Json'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         const dialog = screen.getByTestId('cpm-preview-dialog');
         expect(dialog).toHaveAccessibleName('Newtonsoft.Json is centrally managed');
         expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3' }]);
@@ -238,21 +242,38 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/update')).toHaveLength(0);
         // Confirm sends the one update.
         await user.click(optionOf('Newtonsoft.Json'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         await hostSays(() => host.respond(host.requests('cpm/preview')[1], { preview: { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Newtonsoft.Json', fromVersion: '13.0.1', toVersion: '13.0.3', affectedProjects: [A] } }));
         await user.click(screen.getByTestId('cpm-preview-confirm'));
         expectFocusAfterClose('updates-cpm-preview-confirm');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
     });
 
-    it('an override row updates in its project alone: Space selects it for the bulk update, Enter sends one ops/update without a preview', async () => {
+    it('Delete on an update row asks to uninstall it from the project and Uninstall removes it; a row that cannot be uninstalled says why (UX-P4.2a)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith(undefined, A, [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0', declaration: 'props' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]);
+        await user.click(optionOf('Serilog'));
+        await user.keyboard('{Delete}');
+        expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Serilog from App?');
+        await user.click(screen.getByTestId('confirm-dialog-confirm'));
+        expectFocusAfterClose('updates-delete-confirm-uninstall');
+        expect(host.requests('ops/remove').map(sent => sent.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
+
+        await user.click(optionOf('Moq'));
+        await user.keyboard('{Delete}');
+        expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Moq is declared in an imported props file and cannot be uninstalled from the project'));
+        expect(host.requests('ops/remove')).toHaveLength(1);
+    });
+
+    it('an override row updates in its project alone: Space selects it for the bulk update, Ctrl+Enter sends one ops/update without a preview', async () => {
         const user = userEvent.setup();
         const host = await mountWith({ updates: [update('Moq', '4.18.0', '4.20.72')] }, A, [pkg('Moq', { version: '4.18.0', declaration: 'central-override' })]);
         await user.click(optionOf('Moq'));
         await user.keyboard(' ');
         expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
         expect(screen.getByTestId('status-live')).not.toHaveTextContent('centrally managed');
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
         expect(host.requests('cpm/preview')).toHaveLength(0);
         expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();
@@ -295,7 +316,7 @@ describe('main panel: Updates tab', () => {
 
         expect(within(screen.getByTestId('updates-list')).queryAllByTestId('row-action-update')).toHaveLength(0);
         await user.click(optionOf('Serilog'));
-        await user.keyboard('{Enter}');
+        await user.keyboard('{Control>}{Enter}{/Control}');
         await user.keyboard(' ');
         expect(host.requests('ops/update')).toHaveLength(0);
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Serilog cannot be updated: requires .NET SDK 10 or newer'));
@@ -476,7 +497,7 @@ describe('main panel: Updates tab', () => {
 
             // A centrally managed row opens the read-only preview; Enter on another updates its own project.
             await user.click(optionOf('Newtonsoft.Json'));
-            await user.keyboard('{Enter}');
+            await user.keyboard('{Control>}{Enter}{/Control}');
             expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
         });
 
@@ -487,13 +508,24 @@ describe('main panel: Updates tab', () => {
             expect(names()).toEqual(['Newtonsoft.Json', 'Serilog', 'Moq']);
         });
 
+        it('All Projects: Delete on an update row asks to uninstall it from the row\'s own project, and Cancel sends nothing (UX-P4.2a)', async () => {
+            const user = userEvent.setup();
+            const host = await mountAll();
+            await user.click(optionOf('Moq'));
+            await user.keyboard('{Delete}');
+            expect(screen.getByTestId('confirm-dialog')).toHaveAccessibleName('Uninstall Moq from Lib?');
+            await user.click(screen.getByTestId('confirm-dialog-cancel'));
+            expectFocusAfterClose('updates-all-projects-delete-confirm-cancel');
+            expect(host.requests('ops/remove')).toHaveLength(0);
+        });
+
         it('All Projects: an override row updates in its own project alone and is a bulk candidate', async () => {
             const user = userEvent.setup();
             const host = await mountAll({}, { projectPath: B, fidelity: 'authoritative', isCpm: true, packages: [pkg('Moq', { version: '4.20.0', declaration: 'central-override' })] });
             await user.click(optionOf('Moq'));
             await user.keyboard(' ');
             expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (1)');
-            await user.keyboard('{Enter}');
+            await user.keyboard('{Control>}{Enter}{/Control}');
             expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: B, packageId: 'Moq', version: '4.20.72', sourceUrl: FEED }]);
             expect(host.requests('cpm/preview')).toHaveLength(0);
             expect(screen.queryByTestId('cpm-preview-dialog')).toBeNull();

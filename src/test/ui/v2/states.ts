@@ -168,6 +168,8 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, the list scrolled to the Serilog row and that row selected, then the focus in the search box; document.activeElement is outside the list and a row is aria-selected.', [LIVE_CARET, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-bulk-dialog', 'main', [primary('main')],
         'Gateway selected, the list scrolled to the Serilog row and that row in the bulk selection, Uninstall selected pressed; the confirm dialog is open and is cancelled after the capture, never confirmed.', [LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-installed-uninstall-dialog', 'main', [primary('main')],
+        'Gateway selected, the Serilog row focused and Delete pressed; the confirmation "Uninstall Serilog from Gateway?" with "Do not ask me again" unchecked is open and is cancelled after the capture, never confirmed (UX-P4.2a).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-transitive-expanded', 'main', [primary('main')],
         'Gateway selected, the Transitive group row expanded; its rows are rendered below the crop\'s edge, PF-2\'s picture.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-transitive-details', 'main', [primary('main')],

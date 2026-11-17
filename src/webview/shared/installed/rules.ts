@@ -77,6 +77,22 @@ export function whyNotRemovable(entry: InstalledPackage, result: InstalledResult
 }
 
 /**
+ * Why the Delete key cannot uninstall an update row's package, in the sentence the menu's rule reads (`updateRowContext`):
+ * the installed entry's `whyNotRemovable`, or, with no entry, an unsupported project's reason; `undefined` when it can
+ * (UX-P4.2a).
+ */
+export function whyNotDeletable(packageId: string, entry: InstalledPackage | undefined, result: InstalledResult | undefined): string | undefined {
+    if (entry !== undefined && result !== undefined) {
+        return whyNotRemovable(entry, result);
+    }
+    return result?.unsupported === undefined ? undefined : `${packageId} cannot be uninstalled: ${result.unsupported.message}`;
+}
+
+/** A project's name as the lists show it: the listed name, else the file name without its extension. */
+export const projectNameOf = (projects: ReadonlyArray<{ name: string; path: string }> | undefined, projectPath: string): string =>
+    projects?.find(project => project.path === projectPath)?.name ?? projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
+
+/**
  * Why a package cannot be updated from this list, in a sentence for the user; `undefined` when it can. A row with a
  * `VersionOverride` updates in its project alone (`dotnet package add --version` rewrites the override and leaves the
  * central entry; probe row `add-override`, N74).

@@ -23,7 +23,7 @@ import { failure } from '../../../shared/updates/sentence';
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
 
-const HINT = 'Space selects the package for a bulk action. Enter shows its details. Delete uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
+const HINT = 'Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.';
 
 const nameOf = (projectPath: string): string => projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
 
@@ -39,7 +39,7 @@ const sentence = (text: string): string => `${text.replace(/\.+$/, '')}.`;
  * `aria-selected`. Nothing is removed from a list here: a row is busy from the request on (ops slice) and leaves
  * when the host's next list no longer has it.
  */
-export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): React.JSX.Element {
+export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: confirmUninstall }: ListView): React.JSX.Element {
     const { committed } = useSession();
     const installed = useInstalled();
     const transitive = useTransitive();
@@ -136,6 +136,19 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
         run('ops/remove', { projectPath: section.projectPath, packageId: entry.id }).catch((error: unknown) => {
             announce(`Uninstall of ${entry.id} failed: ${error instanceof Error ? error.message : String(error)}`);
         });
+    };
+
+    // The Delete key asks first (ADR-013 Decision 3, UX-P4.2a); the row button names the action and uninstalls at once.
+    const askUninstall = (section: Section, entry: InstalledPackage): void => {
+        if (section.result === undefined || isPackageBusy(section.projectPath, entry.id)) {
+            return;
+        }
+        const obstacle = whyNotRemovable(entry, section.result);
+        if (obstacle !== undefined) {
+            announce(obstacle);
+            return;
+        }
+        confirmUninstall.ask({ projectPath: section.projectPath, projectName: section.projectName, packageId: entry.id });
     };
 
     const confirm = (): void => {
@@ -361,7 +374,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce }: ListView): Re
                     }}
                     onDelete={item => {
                         if (item.kind === 'package') {
-                            uninstall(item.section, item.entry);
+                            askUninstall(item.section, item.entry);
                         } else if (item.kind === 'transitive') {
                             announce('Transitive packages cannot be uninstalled: uninstall the package that requires them.');
                         }

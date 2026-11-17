@@ -294,8 +294,11 @@ export function Listbox<T extends { id: string }>(props: ListboxProps<T>): React
             }
         } else if (event.key === 'Enter') {
             handled();
-            if (!disabled) {
-                (command ? onSecondaryActivate : onActivate)?.(item);
+            // Enter writes nothing, so a disabled row keeps it (ADR-013 Decision 1); Ctrl/Cmd+Enter is a write.
+            if (!command) {
+                onActivate?.(item);
+            } else if (!disabled) {
+                onSecondaryActivate?.(item);
             }
         } else if (event.key === 'Delete' || (event.key === 'Backspace' && event.metaKey)) {
             handled();

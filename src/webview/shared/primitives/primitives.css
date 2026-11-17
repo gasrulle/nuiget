@@ -1371,6 +1371,14 @@
     overflow-wrap: anywhere;
 }
 
+/* A confirmation's "Do not ask me again": the check box and its words, as the main panel's toggles (UX-P4.2a). */
+.nuiget-dialog-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nuiget-space-2);
+    min-height: var(--nuiget-target-min);
+}
+
 /* A confirmation's message (its words, then its lists) and DialogGroups' lists: 8 apart, a lead 4 above its list (UX-P3.5). */
 .nuiget-dialog-message,
 .nuiget-dialog-groups {

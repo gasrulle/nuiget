@@ -275,7 +275,7 @@ project has several and one block per project in All Projects; no version select
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |
 | `add-source-button`, `add-source-url`, `add-source-credentials`, `add-source-password`, `add-source-submit`, `add-source-error`, `add-source-clear-text` | The sources dialog's Add Source... button, the add form's URL field, Credentials toggle, password field and submit button, its inline error under the URL field and the clear-text sentence of a `%VAR%` password (UX-P3.6) |
 | `source-settings-list`, `source-settings-progress`, `source-settings-empty`, `source-settings-error` | The sources dialog's list (`aria-busy` while it refreshes), its progress bar over the top, its empty state and its inline error with Retry above the kept list (UX-P3.6) |
-| `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel` | Dialog primitive |
+| `confirm-dialog`, `confirm-dialog-confirm`, `confirm-dialog-cancel`, `confirm-dialog-do-not-ask` | Dialog primitive; `confirm-dialog-do-not-ask` is the "Do not ask me again" check box of the Delete key's confirmation (UX-P4.2a) |
 | `status-live` | `role="status"` live region |
 | `sash` | Split sash |
 | `main-header` | The main panel's header bar (title, check boxes, selectors, gear, refresh) and its search row: its insets, height and wrapping are measured on it |
@@ -346,8 +346,7 @@ These hooks are the ones the UX overhaul's harness and tests will read. Each row
 plan whose item renders it; that item moves the row into the tables above, hook first, in the same change. `<name>`
 is a project or section name lower-cased, as above.
 
-| Added by | Test id or attribute | Element |
-|---|---|---|
-| P4.2a | `confirm-dialog-do-not-ask` | The "Do not ask me again" check box of the Delete key's confirmation |
+No hook waits for its item: the last one, `confirm-dialog-do-not-ask`, moved into the table above with the dialog
+primitive's hooks at UX-P4.2a.
 
 **Hooks that change with the grouped list** (D-C, round 1). A grouped list has one id, the view's, and every group in it is a row with the three hooks of the `group-row-<id>` row above. The Installed tab has been one since UX-P2.1d and UX-P2.1e, the Updates tab of one project since UX-P3.1a (its Direct packages group row) and of All Projects since UX-P3.1b (a group row per project, `group-row-project-<name>`, under a group row per workspace folder when there are several): `installed-list-<name>`, `transitive-list`, `transitive-list-<tfm>`, `updates-list-<name>` and `section-header-updates-<name>` have left. UX-P2.1f reconciled the three hooks and moved the readers of a row to `.nuiget-row-option`, which holds in a listbox and in a tree. The sidebar's Installed pane under All Projects has been one tree since UX-P3.7c (`group-row-folder-<folder>`, `group-row-project-<name>`, `section-header-project-<name>`; `sidebar-installed-list-<name>` left at UX-P3.7c); its Updates pane since UX-P3.7d (`group-row-updates-folder-<folder>`, `group-row-updates-project-<name>`, `section-header-updates-project-<name>`; `sidebar-updates-list-<name>` left at UX-P3.7d), so no per-project list id remains.

@@ -15,6 +15,7 @@ import { useInstallAction, type InstallAction } from './features/details/useInst
 import { useSearchTyping } from './features/search/useSearchTyping';
 import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { useCentralChange, type CentralChange } from './features/updates/useCentralChange';
+import { UninstallConfirmDialog, useUninstallConfirm, type UninstallConfirm } from '../shared/installed/uninstallConfirm';
 import { SourcesControl } from './features/sources/SourcesControl';
 import { FirstUsefulRenderMark } from './FirstUsefulRenderMark';
 import { MainTabs } from './MainTabs';
@@ -33,6 +34,8 @@ export interface ListView {
     announce: (message: string) => void;
     /** Asks the panel's one central-change dialog for a centrally managed row's update. */
     central: Pick<CentralChange, 'ask'>;
+    /** Asks the panel's one Delete confirmation before a row is uninstalled by the key (UX-P4.2a). */
+    uninstall: Pick<UninstallConfirm, 'ask'>;
 }
 
 /** What the browse results are given by the shell. */
@@ -104,6 +107,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     // One central change and one install action for the whole panel, handed to the features (X53, N77).
     const central = useCentralChange(announce);
     const installAction = useInstallAction(announce, central.ask);
+    const uninstall = useUninstallConfirm(announce);
     const listPaneId = `${useId()}-list`;
 
     // The split is a layout preference the host keeps (ADR-001); once per page, under StrictMode too.
@@ -159,7 +163,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     // The details pane shows the active view's own selection; Browse starts without one.
     const { showView } = useDetailsActions();
     useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
-    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central };
+    const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central, uninstall };
 
     const selectTab = (next: MainTab): void => {
         setChosenTab(next);
@@ -267,6 +271,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                 </section>
             </div>
             <CentralUpdateDialog request={central.request} onClose={central.close} onConfirm={central.confirm} />
+            <UninstallConfirmDialog request={uninstall.request} onClose={uninstall.close} onConfirm={uninstall.confirm} />
             <LiveStatus message={live.message} repeat={live.repeat} />
         </main>
     );

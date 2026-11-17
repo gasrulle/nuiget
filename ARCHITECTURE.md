@@ -658,7 +658,13 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   `ask`, `BrowseView.install`, the details view's `install` and `useSearchTyping`'s `install` carry the install action.
   The one `CentralUpdateDialog` is mounted by the shell on `central.request`; its confirm runs `ops/install` or
   `ops/update` by the request's `kind` through the ops slice, and a change of the committed project closes it (X53,
-  N77).
+  N77). The shell also owns the Delete key's confirmation (`src/webview/shared/installed/uninstallConfirm.tsx`:
+  `useUninstallConfirm` and the one `UninstallConfirmDialog`, a `ConfirmDialog` with its `doNotAsk` check box;
+  ADR-013 Decision 3, UX-P4.2a): `ListView.uninstall` carries `ask`, which the Installed and Updates lists call from
+  their Delete key only (the row button, the details button and the menu uninstall at once); it uninstalls at once
+  when `ExtensionConfig.confirmUninstall` is false, else opens the dialog, whose Uninstall sends
+  `config/doNotConfirmUninstall` first when the box is checked, then `ops/remove`. Enter on a main-panel row shows its
+  details, Ctrl+Enter (Cmd+Enter) runs its write, and a disabled row keeps Enter (`Listbox`).
 
 | Part | Behaviour |
 |---|---|

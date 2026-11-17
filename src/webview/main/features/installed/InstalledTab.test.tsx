@@ -217,7 +217,7 @@ describe('main panel: Installed tab', () => {
 
     it('the tree is described by the hint that names the group keys', async () => {
         await mountWith();
-        expect(screen.getByTestId('installed-list')).toHaveAccessibleDescription('Space selects the package for a bulk action. Enter shows its details. Delete uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.');
+        expect(screen.getByTestId('installed-list')).toHaveAccessibleDescription('Space selects the package for a bulk action. Enter shows its details. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it.');
     });
 
     it('a busy row cannot join the bulk set and Space says why', async () => {
@@ -341,6 +341,95 @@ describe('main panel: Installed tab', () => {
         // The metadata request of the rows is answered `unsupported` until the feeds exist: still the rows.
         await hostSays(() => host.fail(host.requests('transitive/metadata')[0], 'unsupported', 'not yet available'));
         expect(transitiveRows()).toHaveLength(1);
+    });
+
+    describe('the Delete key asks before it uninstalls (ADR-013 Decision 3, UX-P4.2a)', () => {
+        const dialog = (): HTMLElement => screen.getByTestId('confirm-dialog');
+        const config = (confirmUninstall: boolean) => ({ searchDebounceMode: 'quicksearch' as const, quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall, treeIndent: 8, look: 'classic' as const, density: 'default' as const, uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false });
+
+        it('Delete opens "Uninstall <id> from <project>?" on Cancel; Cancel and Escape send nothing, whatever the box says', async () => {
+            const user = userEvent.setup();
+            const host = await mountWith();
+            await user.click(optionOf('Serilog'));
+            await user.keyboard('{Delete}');
+            expect(dialog()).toHaveAccessibleName('Uninstall Serilog from App?');
+            expect(dialog()).toHaveAccessibleDescription('Removes the package reference from the project file.');
+            expect(screen.getByTestId('confirm-dialog-cancel')).toHaveFocus();
+            expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Uninstall');
+            expect(screen.getByRole('checkbox', { name: 'Do not ask me again' })).not.toBeChecked();
+            await user.click(screen.getByTestId('confirm-dialog-do-not-ask'));
+            await user.click(screen.getByTestId('confirm-dialog-cancel'));
+            expectFocusAfterClose('installed-delete-confirm-cancel');
+            expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+
+            await user.click(optionOf('Serilog'));
+            await user.keyboard('{Delete}');
+            // The box starts unchecked at every open.
+            expect(screen.getByRole('checkbox', { name: 'Do not ask me again' })).not.toBeChecked();
+            await user.keyboard('{Escape}');
+            expectFocusAfterClose('installed-delete-confirm-escape');
+            expect(host.requests('ops/remove')).toHaveLength(0);
+            expect(host.requests('config/doNotConfirmUninstall')).toHaveLength(0);
+        });
+
+        it('Uninstall removes the package; with the box checked the setting is turned off first', async () => {
+            const user = userEvent.setup();
+            const host = await mountWith();
+            await user.click(optionOf('Serilog'));
+            await user.keyboard('{Delete}');
+            await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            expectFocusAfterClose('installed-delete-confirm-uninstall');
+            expect(host.requests('ops/remove').map(sent => sent.payload)).toEqual([{ projectPath: A, packageId: 'Serilog' }]);
+            expect(host.requests('config/doNotConfirmUninstall')).toHaveLength(0);
+
+            await user.click(optionOf('Moq'));
+            await user.keyboard('{Delete}');
+            await user.click(screen.getByTestId('confirm-dialog-do-not-ask'));
+            await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            const order = host.sent.flatMap(message => (message.kind === 'request' && (message.type === 'config/doNotConfirmUninstall' || message.type === 'ops/remove') ? [message.type === 'ops/remove' ? `ops/remove ${(message.payload as { packageId: string }).packageId}` : message.type] : []));
+            expect(order).toEqual(['ops/remove Serilog', 'config/doNotConfirmUninstall', 'ops/remove Moq']);
+        });
+
+        it('with nuiget.confirmUninstall off Delete uninstalls at once; the row button never asks', async () => {
+            const user = userEvent.setup();
+            const host = await mountWith();
+            await user.click(within(screen.getByTestId('package-row-moq')).getByTestId('row-action-uninstall'));
+            expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+            expect(host.requests('ops/remove').map(sent => sent.payload.packageId)).toEqual(['Moq']);
+
+            await hostSays(() => host.event('config/changed', config(false)));
+            await user.click(optionOf('Serilog'));
+            await user.keyboard('{Delete}');
+            expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+            expect(host.requests('ops/remove').map(sent => sent.payload.packageId)).toEqual(['Moq', 'Serilog']);
+        });
+
+        it('a change of the selected project closes the confirmation and sends nothing; a failed uninstall is said in the live region', async () => {
+            const user = userEvent.setup();
+            const host = await mountWith();
+            await user.click(optionOf('Moq'));
+            await user.keyboard('{Delete}');
+            await user.click(screen.getByTestId('confirm-dialog-confirm'));
+            await hostSays(() => host.fail(host.requests('ops/remove')[0], 'failed', 'the project file is read-only'));
+            await waitFor(() => expect(said()).toBe('Uninstall of Moq failed: the project file is read-only'));
+
+            await user.click(optionOf('Serilog'));
+            await user.keyboard('{Delete}');
+            expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+            await hostSays(() => host.event('session/changed', snapshot(2, B)));
+            expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+            expect(host.requests('ops/remove')).toHaveLength(1);
+        });
+
+        it('Enter on an unresolved row shows its details and writes nothing', async () => {
+            const user = userEvent.setup();
+            const host = await mountWith([pkg('Serilog', { version: '', versionType: 'unresolved', declaration: 'unresolved' })]);
+            optionOf('Serilog').focus();
+            await user.keyboard('{Enter}');
+            expect(optionOf('Serilog')).toHaveAttribute('aria-current', 'true');
+            expect(host.requests('ops/remove')).toHaveLength(0);
+            expect(host.requests('ops/update')).toHaveLength(0);
+        });
     });
 
     it('Space and Delete on a transitive row change nothing and the live region says why', async () => {
