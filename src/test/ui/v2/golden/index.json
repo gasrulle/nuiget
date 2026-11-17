@@ -317,6 +317,12 @@
     "sha256": "277df7b0159504872706062d8a2ec712c7da0ba4382053024a92d9f4ef3757f2",
     "sidecarSha256": "36eb4ab5a6e450ed1a32600cd5cbac337754ebb7222789b7c7fcf8941c9da428"
   },
+  "main-installed-uninstall-dialog.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "44017225108",
+    "sha256": "45dbee8d849f87e8b79e42704dd02404916069d774145bc0100291d59a4ae054",
+    "sidecarSha256": "d313d62c4745c8657acf08b33720eb5cc987d2be59065ad35aee1482422dfadf"
+  },
   "main-installed-unresolved.dark-modern.1200.png": {
     "status": "approved",
     "run": "43776489839",

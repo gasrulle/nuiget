@@ -1,0 +1,70 @@
+{
+ "item": "P4.2a",
+ "runs": [
+  {
+   "runId": "44017225108",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "01748673 (proving push)",
+   "look": "modern",
+   "workflow": "wf_1705a18a-c35",
+   "note": "The new state main-installed-uninstall-dialog has no artboard (design-advisor ruling of 2026-11-17, DO 9; the precedent of main-sources-remove-dialog): judged against main-installed-details.dark-modern.1200 as the page beneath. No standing finding; the two candidates were refuted.",
+   "captures": {
+    "main-installed-uninstall-dialog": {
+     "png": "captures/44017225108/main-installed-uninstall-dialog.dark-modern.1200.png",
+     "sha256": "45dbee8d849f87e8b79e42704dd02404916069d774145bc0100291d59a4ae054",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png (the page beneath)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 2,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 2,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "findings": [],
+   "refuted": [
+    {
+     "id": "native-1",
+     "lens": "native",
+     "state": "main-installed-uninstall-dialog",
+     "finding": "The search box placeholder reads \"Search or type @ to filter\" where the artboard's search-input (rect 16,42,1168,26) draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's prompt no longer names the filter keywords the artboard shows.",
+     "severity": "minor",
+     "box": [
+      23,
+      47,
+      165,
+      16
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard crop shows \"Search packages, or filter: @…\". But docs/design/design-system.md (main header overflow row) declares that copy as the search box's placeholder since UX-P3.fix-15, so the artboard copy is out of date and the capture follows the rule. The accessible name still lists @installed, @updates and @vulnerable, so this is not a defect of this state.",
+     "method": "crop",
+     "refuterSeverity": "minor",
+     "disposition": "refuted-by-measurement: the placeholder \"Search or type @ to filter\" is the Design System's copy since UX-P3.fix-15; the artboard draws the older one (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
+    },
+    {
+     "id": "geometry-1",
+     "lens": "geometry",
+     "state": "main-installed-uninstall-dialog",
+     "finding": "Under the scrim, the details pane holds only the 'Select a package to see its details.' line. The approved artboard draws the full Newtonsoft.Json details there: the header with the Installed and Version lines, the Uninstall and Update buttons, the Details/README tab strip, the properties, the vulnerability and the dependency groups. The capture also has no current-row band and no trash action on the Newtonsoft.Json row (artboard band [0, 415, 412, 72]). The artboard is the main-installed-details state's scene, so the refuter should rule whether this dialog state is meant to sit on that scene. Everything else under the scrim matches the spec rects to the pixel: search-input, tab-bar, select-all-button, uninstall-selected-button and the row check boxes. The dialog itself measures clean: centred, 16 px side insets, 26 px buttons 8 apart, an 18 px check box and 8 px block gaps.",
+     "severity": "blocking",
+     "box": [
+      431,
+      95,
+      440,
+      652
+     ],
+     "rule": "judge-only",
+     "verdict": "refuted",
+     "reason": "The crop shows the uninstall dialog for Serilog over an empty details pane (\"Select a package to see its details.\"). The artboard is the main-installed-details scene, with Newtonsoft.Json current, and is not this state's scene: a Serilog uninstall dialog cannot sit over Newtonsoft.Json's details. The capture shows what its name promises, and the dialog measures clean (DS-GRID-2a gaps 8, DS-HEIGHT-6 26 ×2, DS-HEIGHT-9 18×18, DS-INSET-2 footer 0/0 0/0, all hard), so the missing details content and band are a different scene, not a missing element.",
+     "method": "crop",
+     "refuterSeverity": "blocking",
+     "disposition": "refuted-by-measurement: the dialog's own hard measurements are green (DS-GRID-2a gaps 8, DS-INSET-2 footer 0/0, DS-HEIGHT-6 26 ×2, DS-HEIGHT-9 18×18, DS-RADIUS-2 layer 8, DS-DIVIDER-2, DS-DIVIDER-5, DS-TYPE-7); the artboard is the page beneath, not this scene (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
+    }
+   ]
+  }
+ ]
+}
