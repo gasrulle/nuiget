@@ -235,7 +235,7 @@ describe('sidebar: Installed section', () => {
         const host = await mountWith([pkg('Serilog', { version: '3.1.1' })]);
         await user.click(option('Serilog'));
         await user.keyboard('{Control>}{Enter}{/Control}');
-        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.1' }]);
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.1', projectPath: A, tab: 'installed' }]);
         expect(host.requests('ops/remove')).toHaveLength(0);
 
         await user.keyboard('{Enter}');

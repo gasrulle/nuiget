@@ -432,6 +432,21 @@ describe('main panel: Installed tab', () => {
         });
     });
 
+    it('a row another surface asks for is made current on the Installed tab, its group opened first (UX-P4.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        // The group collapsed, then the sidebar's Enter on Moq: the tab shows it current, its details asked.
+        groupItem('direct').focus();
+        await user.keyboard('{Enter}');
+        await waitFor(() => expect(screen.queryByTestId('package-row-moq')).toBeNull());
+        await hostSays(() => host.event('ui/selectProject', { projectPath: A, initialTab: 'installed', packageId: 'Moq' }));
+        await waitFor(() => expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true'));
+        expect(host.requests('package/metadata').map(sent => sent.payload.packageId)).toContain('Moq');
+        // A package the project does not have changes nothing.
+        await hostSays(() => host.event('ui/selectProject', { projectPath: A, initialTab: 'installed', packageId: 'Absent' }));
+        expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true');
+    });
+
     it('Space and Delete on a transitive row change nothing and the live region says why', async () => {
         const user = userEvent.setup();
         const host = await mountWith();

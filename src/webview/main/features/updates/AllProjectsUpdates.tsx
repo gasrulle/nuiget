@@ -268,6 +268,29 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall }: Lis
         });
     };
 
+    // A row another surface asked to show (UX-P4.2b): once its project's chunk has arrived, its groups open and the row is
+    // made current as a click makes it; a package without an update in that project only clears it.
+    const { reveal } = useDetails();
+    const { setReveal } = useDetailsActions();
+    useEffect(() => {
+        if (reveal === null || reveal.tab !== 'updates') {
+            return;
+        }
+        const section = sections.find(candidate => candidate.projectPath === reveal.projectPath);
+        if (section?.chunk === undefined) {
+            return;
+        }
+        setReveal(null);
+        const update = section.chunk.updates.find(candidate => candidate.id.toLowerCase() === reveal.packageId.toLowerCase());
+        if (update === undefined) {
+            return;
+        }
+        const groupIds = [projectGroups.get(section.projectPath) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`, `folder-${(section.workspaceFolder ?? 'Other').toLowerCase()}`];
+        setCollapsed(previous => (groupIds.some(id => previous.has(id)) ? new Set([...previous].filter(id => !groupIds.includes(id))) : previous));
+        setCurrent(rowId(section.projectPath, update.id));
+        select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath: section.projectPath, known: { verified: update.verified } });
+    }, [reveal, sections, projectGroups, select, setReveal]);
+
     const makeCurrent = (section: Section, update: PackageUpdate): void => {
         setCurrent(rowId(section.projectPath, update.id));
         select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath: section.projectPath, known: { verified: update.verified } });

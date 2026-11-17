@@ -151,7 +151,7 @@ function AllProjectsTree({ chunks, filter, announce, revalidating, labelledBy, o
                 onDelete={act}
                 onSecondaryActivate={item => {
                     if (item.kind === 'package') {
-                        viewDetails(item.entry.id, item.entry.resolvedVersion ?? item.entry.version);
+                        viewDetails(item.entry.id, item.entry.resolvedVersion ?? item.entry.version, { projectPath: item.chunk.projectPath, tab: 'installed' });
                     }
                 }}
                 isDisabled={item => item.kind === 'package' && item.entry.declaration === 'unresolved'}

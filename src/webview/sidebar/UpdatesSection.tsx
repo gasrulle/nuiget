@@ -166,7 +166,7 @@ function AllProjectsUpdatesTree({ chunks, installedOf, filter, sourcesUnavailabl
             }}
             onSecondaryActivate={item => {
                 if (item.kind === 'package') {
-                    viewDetails(item.update.id, item.update.latestVersion);
+                    viewDetails(item.update.id, item.update.latestVersion, { projectPath: item.chunk.projectPath, tab: 'updates' });
                 }
             }}
             renderRow={(item, placement) => (item.kind === 'package' ? renderUpdateRow(item.chunk.projectPath, item.installed, item.update, placement) : null)}

@@ -208,10 +208,12 @@ same rules; the Installed list has no Ctrl+Enter action.
 - View Package Details on a sidebar row opens the main panel at that row: an Installed row opens the Installed tab of
   the row's project with the row selected and its details shown, an Updates row the Updates tab, and a Browse row
   runs an exact Browse search for the id and selects it (`ui/navigateToPackage`: the search box is filled with the
-  id, browse mode runs, the package is selected and the Details tab shows). The actions menu reaches the right tab
-  through the row's context and `ui/selectProject`; a key on the row carries only the id (`ui/viewPackage`) and lands
-  in Browse until P4.2b acts on the project and tab the request now carries. Manage NuGet Packages in the sidebar's `...` menu only reveals the
-  panel.
+  id, browse mode runs, the package is selected and the Details tab shows). The key on the row and the actions menu take
+  one route (UX-P4.2b): `ui/viewPackage` with the row's project and tab, which the host checks against the listed
+  projects and answers with `ui/selectProject` (`initialTab` and the row's `packageId`); the tab's list makes the row
+  current as a click does, opening its group first. Under All Projects the main panel stays on All Projects and the row
+  is made current in its project's group; from another project the session moves to the row's. Manage NuGet Packages in
+  the sidebar's `...` menu only reveals the panel.
 - Source settings open in the main panel (`ui/openSourceSettings`) even when triggered from the
   sidebar.
 

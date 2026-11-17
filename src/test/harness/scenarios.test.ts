@@ -336,6 +336,41 @@ describe('two-surface harness', () => {
         [main, sidebar].forEach(expectOneResponsePerRequest);
     });
 
+    it('sidebar Enter opens the row\'s own tab', async () => {
+        // UX-P4.2b (architecture-advisor ruling of 2026-11-17): the sidebar asks `ui/viewPackage` with the row's project and
+        // tab; the main panel is told the tab and the row; the session stays under All Projects, moves from another project,
+        // and an unknown project or tab opens Browse as before.
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        const ask = async (payload: Record<string, unknown>) => resultOf(await h!.request('sidebar', 'ui/viewPackage', payload as never).response);
+
+        // Under All Projects the session stays where it is on both surfaces; the panel gets the row's project, tab and package.
+        await h.selectProject('sidebar', ALL_PROJECTS);
+        await h.settle(() => expect(h!.services.session.snapshot.selectedProject).toBe(ALL_PROJECTS));
+        const rev = h.services.session.snapshot.rev;
+        await ask({ packageId: 'Serilog', version: '3.0.0', projectPath: B, tab: 'updates' });
+        await h.settle(() => expect(main.events('ui/selectProject').at(-1)).toEqual({ projectPath: B, initialTab: 'updates', packageId: 'Serilog' }));
+        expect(h.services.session.snapshot).toMatchObject({ selectedProject: ALL_PROJECTS, rev });
+
+        // From another project the session moves to the row's on both surfaces.
+        await h.selectProject('sidebar', A);
+        await ask({ packageId: 'Serilog', version: '3.0.0', projectPath: B, tab: 'installed' });
+        await h.settle(() => expect(main.events('ui/selectProject').at(-1)).toEqual({ projectPath: B, initialTab: 'installed', packageId: 'Serilog' }));
+        await h.expectState({ selectedProject: B, projects: [A, B] });
+
+        // A project the host does not list, or a tab it does not know: Browse, as before, and the session stays.
+        const navigations = main.events('ui/navigateToPackage').length;
+        const selections = main.events('ui/selectProject').length;
+        await ask({ packageId: 'Serilog', version: '3.0.0', projectPath: h.path('C/C.csproj'), tab: 'installed' });
+        await ask({ packageId: 'Serilog', version: '3.0.0', projectPath: A, tab: 'browse' });
+        await h.settle(() => expect(main.events('ui/navigateToPackage').length).toBe(navigations + 2));
+        expect(main.events('ui/selectProject')).toHaveLength(selections);
+        expect(h.services.session.snapshot.selectedProject).toBe(B);
+    });
+
     it('surface disposed with pending ops: the operations finish, the other surface hears of them, the closed one hears nothing', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];

@@ -6,7 +6,8 @@
 
 import * as vscode from 'vscode';
 import type { InvalidationEvent } from '../core/contracts';
-import type { EventPayload, EventType } from '../protocol';
+import { normalizeProjectPath } from '../core/util/paths';
+import { ALL_PROJECTS, type EventPayload, type EventType, type RequestPayload } from '../protocol';
 import { registerSharedHandlers } from './handlers';
 import { renderWebviewHtml, type HostServices } from './services';
 import { WebviewHost } from './WebviewHost';
@@ -44,6 +45,28 @@ export class MainPanelHost extends WebviewHost {
         return MainPanelHost.current;
     }
 
+    /**
+     * Open the panel on a row of a list (UX-P4.2b): with a listed project and its tab, the panel shows that tab and the
+     * list makes the row current (`ui/selectProject` with `packageId`); anything else opens the package in Browse as
+     * before. The session is left as it is under All Projects or on that project, and moves to it otherwise (one session
+     * for both surfaces, ADR-001; architecture-advisor ruling of 2026-11-17). The payload is webview input: the project is
+     * matched against the listing and the listing's own path is sent on.
+     */
+    public static async showPackage(services: HostServices, { packageId, version, projectPath, tab }: RequestPayload<'ui/viewPackage'>): Promise<void> {
+        const listed = projectPath === undefined || (tab !== 'installed' && tab !== 'updates')
+            ? undefined
+            : (await services.catalog.projects().then(result => result.value, () => [])).find(project => normalizeProjectPath(project.path) === normalizeProjectPath(projectPath));
+        if (listed === undefined || (tab !== 'installed' && tab !== 'updates')) {
+            MainPanelHost.navigateToPackage(services, packageId, version);
+            return;
+        }
+        const selected = services.session.snapshot.selectedProject;
+        if (selected !== ALL_PROJECTS && (selected === undefined || normalizeProjectPath(selected) !== normalizeProjectPath(listed.path))) {
+            await services.session.apply({ selectedProject: listed.path }, 'host');
+        }
+        MainPanelHost.createOrShow(services).sendOrQueue('ui/selectProject', { projectPath: listed.path, initialTab: tab, packageId });
+    }
+
     /** Open the panel and navigate to a package (used by the sidebar's "View Package Details"). */
     public static navigateToPackage(services: HostServices, packageId: string, version?: string): void {
         MainPanelHost.createOrShow(services).sendOrQueue('ui/navigateToPackage', { packageId, version });
@@ -68,7 +91,7 @@ export class MainPanelHost extends WebviewHost {
 
         registerSharedHandlers(this, services);
         this.on('ui/openSourceSettings', async () => { this.sendEvent('ui/openSourceSettings', {}); return {}; });
-        this.on('ui/viewPackage', async ({ packageId, version }) => { this.sendEvent('ui/navigateToPackage', { packageId, version }); return {}; });
+        this.on('ui/viewPackage', async payload => { await MainPanelHost.showPackage(services, payload); return {}; });
         const sessionGet = async () => {
             this.ready = true;
             this.flushPending();

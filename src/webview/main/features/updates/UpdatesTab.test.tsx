@@ -249,6 +249,13 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/update').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Newtonsoft.Json', version: '13.0.3', sourceUrl: FEED }]);
     });
 
+    it('a row another surface asks for opens the Updates tab with the row current (UX-P4.2b)', async () => {
+        const host = await mountWith();
+        await hostSays(() => host.event('ui/selectProject', { projectPath: A, initialTab: 'updates', packageId: 'Moq' }));
+        await waitFor(() => expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true'));
+        expect(screen.getByTestId('updates-tab')).toHaveAttribute('aria-selected', 'true');
+    });
+
     it('Delete on an update row asks to uninstall it from the project and Uninstall removes it; a row that cannot be uninstalled says why (UX-P4.2a)', async () => {
         const user = userEvent.setup();
         const host = await mountWith(undefined, A, [pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0', declaration: 'props' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]);
@@ -506,6 +513,12 @@ describe('main panel: Updates tab', () => {
             expect(iconOf(screen.getByTestId('package-row-serilog'))).toBe(DATA);
             expect(iconOf(screen.getByTestId('package-row-moq'))).toBe(DEFAULT_ICON);
             expect(names()).toEqual(['Newtonsoft.Json', 'Serilog', 'Moq']);
+        });
+
+        it('All Projects: a row another surface asks for is made current in its project\'s group (UX-P4.2b)', async () => {
+            const host = await mountAll();
+            await hostSays(() => host.event('ui/selectProject', { projectPath: B, initialTab: 'updates', packageId: 'Moq' }));
+            await waitFor(() => expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true'));
         });
 
         it('All Projects: Delete on an update row asks to uninstall it from the row\'s own project, and Cancel sends nothing (UX-P4.2a)', async () => {

@@ -274,6 +274,18 @@ export function registerRowMenuCommands(services: HostServices, register: (comma
                 services.logger.warn(`${command}: the row is read-only`);
                 return;
             }
+            if (action === 'view-details') {
+                // The row's own tab, from the section the menu was opened on, never from the context's list (a transitive
+                // row maps to "installed" there) (UX-P4.2b, architecture-advisor ruling of 2026-11-17, DO 3).
+                const tab = arg.webviewSection === 'installedRow' ? 'installed' : arg.webviewSection === 'updateRow' ? 'updates' : undefined;
+                const version = arg.latestVersion ?? arg.installedVersion;
+                if (tab === undefined) {
+                    MainPanelHost.navigateToPackage(services, arg.packageId, version);
+                } else {
+                    await MainPanelHost.showPackage(services, { packageId: arg.packageId, version, projectPath: arg.projectPath, tab });
+                }
+                return;
+            }
             await runRowAction(services, action, {
                 packageId: arg.packageId,
                 projectPath: arg.projectPath,

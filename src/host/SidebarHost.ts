@@ -23,7 +23,7 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
         super('sidebar', services.logger);
         registerSharedHandlers(this, services);
         this.on('ui/openSourceSettings', async () => { MainPanelHost.openSourceSettings(services); return {}; });
-        this.on('ui/viewPackage', async ({ packageId, version }) => { MainPanelHost.navigateToPackage(services, packageId, version); return {}; });
+        this.on('ui/viewPackage', async payload => { await MainPanelHost.showPackage(services, payload); return {}; });
 
         this.disposables.push(
             vscode.Disposable.from(services.session.onDidChange(snapshot => {

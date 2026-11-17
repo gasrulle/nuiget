@@ -160,6 +160,24 @@ function ProjectUpdates({ filter, announce, central, uninstall }: ListView): Rea
         select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath, known: { verified: update.verified } });
     };
 
+    // A row another surface asked to show (UX-P4.2b): once this project's updates have answered, the group opens and the
+    // row is made current as a click makes it; a package without an update here only clears it.
+    const { reveal } = useDetails();
+    const { setReveal } = useDetailsActions();
+    useEffect(() => {
+        if (reveal === null || reveal.tab !== 'updates' || projectPath === null || reveal.projectPath !== projectPath || updates.status === 'loading' || updates.status === 'idle') {
+            return;
+        }
+        setReveal(null);
+        const update = rows.find(candidate => candidate.id.toLowerCase() === reveal.packageId.toLowerCase());
+        if (update === undefined) {
+            return;
+        }
+        setCollapsed(previous => (previous.has('direct') ? new Set([...previous].filter(id => id !== 'direct')) : previous));
+        setCurrentId(rowId(projectPath, update.id));
+        select({ packageId: update.id, version: update.latestVersion, sourceUrl: update.sourceUrl, origin: 'updates', projectPath, known: { verified: update.verified } });
+    }, [reveal, projectPath, rows, updates.status, select, setReveal]);
+
     // The Delete key asks first (ADR-013 Decision 3, UX-P4.2a); the menu's rule decides what cannot be uninstalled.
     const askUninstall = (update: PackageUpdate): void => {
         if (projectPath === null || isBusy(update.id)) {

@@ -45,6 +45,18 @@ export interface DetailsState {
      * answered yet: the content stays, read-only, until that list confirms the package (or the selection goes).
      */
     stale: boolean;
+    /**
+     * A row another surface asked to show (the sidebar's Enter or View Package Details, UX-P4.2b): the list of `tab`
+     * makes it current from its own data, as a click does, and clears it; `null` when none is pending.
+     */
+    reveal: DetailsReveal | null;
+}
+
+/** The row a list is asked to make current: its tab, its project as the host listed it, and its package. */
+export interface DetailsReveal {
+    tab: 'installed' | 'updates';
+    projectPath: string;
+    packageId: string;
 }
 
 /** The views of the main panel that keep a selection of their own: the Installed tab (transitive rows too), Updates, Browse. */
@@ -58,6 +70,8 @@ export interface DetailsActions {
     chooseVersion: (version: string) => void;
     /** The README tab is shown: from now on the README of the chosen version is asked for. */
     showReadme: () => void;
+    /** Asks the list of `reveal.tab` to make the row current; a later reveal replaces it, `null` clears it. */
+    setReveal: (reveal: DetailsReveal | null) => void;
     retryVersions: () => void;
     retryMetadata: () => void;
     retryReadme: () => void;
@@ -148,6 +162,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     latestViews.current = views;
     const [version, setVersion] = useState<string | null>(null);
     const [readmeWanted, setReadmeWanted] = useState(false);
+    const [reveal, setReveal] = useState<DetailsReveal | null>(null);
     const [attempts, setAttempts] = useState({ versions: 0, metadata: 0, readme: 0 });
 
     const includePrerelease = committed?.includePrerelease ?? false;
@@ -259,11 +274,12 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
         retryVersions: () => setAttempts(previous => ({ ...previous, versions: previous.versions + 1 })),
         retryMetadata: () => setAttempts(previous => ({ ...previous, metadata: previous.metadata + 1 })),
         retryReadme: () => setAttempts(previous => ({ ...previous, readme: previous.readme + 1 })),
+        setReveal,
     }), [select, showView]);
 
     const state = useMemo<DetailsState>(
-        () => ({ selection, version, versions, metadata, readme, stale }),
-        [selection, version, versions, metadata, readme, stale],
+        () => ({ selection, version, versions, metadata, readme, stale, reveal }),
+        [selection, version, versions, metadata, readme, stale, reveal],
     );
 
     return (

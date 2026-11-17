@@ -138,14 +138,19 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
             // A store that cannot be written keeps nothing; the tab still changes.
         }
     }, [viewState]);
-    // The host has applied the project already; the event says which tab to show it on.
-    useEffect(() => bus.onEvent('ui/selectProject', ({ initialTab }) => {
+    const { setReveal } = useDetailsActions();
+    // The host has applied the project already, or the session shows All Projects (UX-P4.2b); the event says which tab to
+    // show it on and, from a sidebar row, which row the tab's list makes current (the list reads the reveal, as a click).
+    useEffect(() => bus.onEvent('ui/selectProject', ({ projectPath, initialTab, packageId }) => {
         if (initialTab) {
             setQuery('');
             setChosenTab(initialTab);
             keepTab(initialTab);
+            if (packageId) {
+                setReveal({ tab: initialTab, projectPath, packageId });
+            }
         }
-    }), [bus, keepTab]);
+    }), [bus, keepTab, setReveal]);
 
     const parsed = parseSearchQuery(query);
     const browsing = parsed.mode === 'browse';

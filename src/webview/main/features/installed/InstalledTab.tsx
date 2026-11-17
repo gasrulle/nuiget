@@ -258,6 +258,31 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         }
     }, [detailsSelection, items]);
 
+    // A row another surface asked to show (UX-P4.2b): once its project's list has answered, its groups open and the row
+    // is made current as a click makes it, from this list's own data; a package the list does not have only clears it.
+    const { reveal } = useDetails();
+    const { setReveal } = useDetailsActions();
+    useEffect(() => {
+        if (reveal === null || reveal.tab !== 'installed') {
+            return;
+        }
+        const section = sections.find(candidate => candidate.projectPath === reveal.projectPath);
+        if (section?.result === undefined) {
+            return;
+        }
+        setReveal(null);
+        const entry = section.result.packages.find(candidate => candidate.id.toLowerCase() === reveal.packageId.toLowerCase());
+        if (entry === undefined) {
+            return;
+        }
+        const groupIds = allMode
+            ? [projectGroups.get(section.projectPath) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`, `folder-${(section.workspaceFolder ?? 'Other').toLowerCase()}`]
+            : ['direct'];
+        setCollapsed(previous => (groupIds.some(id => previous.has(id)) ? new Set([...previous].filter(id => !groupIds.includes(id))) : previous));
+        setCurrent(rowId(section.projectPath, entry.id));
+        select({ packageId: entry.id, version: entry.resolvedVersion ?? entry.version, origin: 'installed', projectPath: section.projectPath, known: { verified: section.metadata.get(entry.id.toLowerCase())?.verified } });
+    }, [reveal, sections, allMode, projectGroups, select, setReveal]);
+
     const { enableTransitive: enableAllTransitive } = all;
     const { enable: enableTransitive } = transitive;
     const groups = useMemo((): ListboxGroups<TreeItem> => ({

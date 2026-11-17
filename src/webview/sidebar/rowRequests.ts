@@ -2,8 +2,11 @@ import { useCallback } from 'react';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 
 export interface RowRequests {
-    /** Ctrl+Enter (Cmd+Enter on macOS): the package in the main panel, at this version. */
-    viewDetails: (packageId: string, version: string | undefined) => void;
+    /**
+     * The package in the main panel, at this version; with the row's project and list (an Installed or Updates row) the
+     * panel opens on that tab with the row current (UX-P4.2b), else in Browse.
+     */
+    viewDetails: (packageId: string, version: string | undefined, row?: { projectPath: string; tab: 'installed' | 'updates' }) => void;
 }
 
 /**
@@ -15,8 +18,8 @@ export function useRowRequests(announce: (message: string) => void): RowRequests
     const fail = useCallback((what: string) => (error: unknown): void => {
         announce(`${what} failed: ${error instanceof Error ? error.message : String(error)}`);
     }, [announce]);
-    const viewDetails = useCallback((packageId: string, version: string | undefined): void => {
-        bus.request('ui/viewPackage', version === undefined ? { packageId } : { packageId, version }).catch(fail(`Opening ${packageId}`));
+    const viewDetails = useCallback((packageId: string, version: string | undefined, row?: { projectPath: string; tab: 'installed' | 'updates' }): void => {
+        bus.request('ui/viewPackage', { packageId, ...(version === undefined ? {} : { version }), ...(row ?? {}) }).catch(fail(`Opening ${packageId}`));
     }, [bus, fail]);
     return { viewDetails };
 }

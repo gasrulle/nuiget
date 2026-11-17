@@ -283,7 +283,7 @@ describe('sidebar: Updates section', () => {
         await user.keyboard('{Control>}{Enter}{/Control}');
 
         expect(menus.contexts).toEqual([{ preventDefaultContextMenuItems: true, 'nuiget.floating': false, 'nuiget.central': false, 'nuiget.readOnly': false, packageId: 'Serilog', installedVersion: '3.0.0', latestVersion: '3.1.0', webviewSection: 'updateRow', projectPath: A, versionType: 'standard', sourceUrl: FEED }]);
-        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0' }]);
+        expect(host.requests('ui/viewPackage').map(request => request.payload)).toEqual([{ packageId: 'Serilog', version: '3.1.0', projectPath: A, tab: 'updates' }]);
         expect(host.requests('ops/update')).toHaveLength(0);
     });
 

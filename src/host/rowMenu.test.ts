@@ -12,7 +12,7 @@ const handlers = vi.hoisted(() => ({
 vi.mock('./handlers', () => handlers);
 const pickers = vi.hoisted(() => ({ pickVersion: vi.fn(async () => '2.0.0'), pickProjectsForInstall: vi.fn(async () => ['/w/A.csproj']), pickSingleProject: vi.fn(async () => '/w/A.csproj') }));
 vi.mock('./pickers', () => pickers);
-const panel = vi.hoisted(() => ({ MainPanelHost: { navigateToPackage: vi.fn() } }));
+const panel = vi.hoisted(() => ({ MainPanelHost: { navigateToPackage: vi.fn(), showPackage: vi.fn(async () => undefined) } }));
 vi.mock('./MainPanelHost', () => panel);
 
 const A = '/w/A.csproj';
@@ -74,6 +74,19 @@ describe('the row menu commands (UX-P2.9a)', () => {
         ask.mockResolvedValueOnce('Update Central Version' as never);
         await commands.get('nuiget.row.updateLatest')?.(row({ webviewSection: 'updateRow', 'nuiget.central': true }));
         expect(handlers.submitFromHost).toHaveBeenCalledTimes(1);
+    });
+
+    it('View Package Details on an Installed or an Updates row opens its own tab in its project; a Browse row opens Browse (UX-P4.2b)', async () => {
+        const { commands } = setUp();
+        await commands.get('nuiget.row.viewDetails')?.(row());
+        await commands.get('nuiget.row.viewDetails')?.(row({ webviewSection: 'updateRow' }));
+        expect(panel.MainPanelHost.showPackage.mock.calls.map(call => (call as unknown[])[1])).toEqual([
+            { packageId: 'Serilog', version: '2.0.0', projectPath: A, tab: 'installed' },
+            { packageId: 'Serilog', version: '2.0.0', projectPath: A, tab: 'updates' },
+        ]);
+        await commands.get('nuiget.row.viewDetails')?.(row({ webviewSection: 'browseRow', installedVersion: undefined }));
+        expect(panel.MainPanelHost.navigateToPackage).toHaveBeenLastCalledWith(expect.anything(), 'Serilog', '2.0.0');
+        expect(panel.MainPanelHost.showPackage).toHaveBeenCalledTimes(2);
     });
 
     it('a transitive row copies and shows, and writes nothing', async () => {

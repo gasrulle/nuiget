@@ -47,7 +47,7 @@ export function ProjectPackages({ projectPath, result, filter, announce, labelle
             onSelect={item => onSelectedChange(item.id)}
             onActivate={({ entry }) => uninstall(projectPath, result, entry)}
             onDelete={({ entry }) => uninstall(projectPath, result, entry)}
-            onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version)}
+            onSecondaryActivate={({ entry }) => viewDetails(entry.id, entry.resolvedVersion ?? entry.version, { projectPath, tab: 'installed' })}
             empty={<EmptyState data-testid="sidebar-installed-empty" message={nothing} />}
             isDisabled={({ entry }) => entry.declaration === 'unresolved'}
             renderRow={({ entry }, placement) => renderPackageRow(projectPath, result, entry, placement)}

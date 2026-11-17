@@ -49,7 +49,7 @@ export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
             busy={revalidating}
             onSelect={item => onSelectedChange(item.id)}
             onActivate={({ update }) => updateOne(projectPath, installed, update)}
-            onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion)}
+            onSecondaryActivate={({ update }) => viewDetails(update.id, update.latestVersion, { projectPath, tab: 'updates' })}
             empty={<EmptyState data-testid="sidebar-updates-empty" message={empty} />}
             renderRow={({ update }, placement) => renderUpdateRow(projectPath, installed, update, placement)}
         />
