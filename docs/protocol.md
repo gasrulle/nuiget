@@ -18,6 +18,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | Session | `session/get` | both | `Record<string, never>` | `SessionSnapshot` | — |  |
 | Session | `session/set` | both | `{ selectedProject?: string \| undefined; selectedSource?: string \| undefined; includePrerelease?: boolean \| undefined; restoreEnabled?: boolean \| undefined; }` | `SessionSnapshot` | — |  |
 | Config & layout | `config/get` | both | `Record<string, never>` | `ExtensionConfig` | — |  |
+| Config & layout | `config/doNotConfirmUninstall` | both | `Record<string, never>` | `Record<string, never>` | — | "Do not ask me again" of the Delete confirmation (ADR-013 Decision 3): writes `nuiget.confirmUninstall` to false in the user settings; the new value follows as `config/changed`. |
 | Config & layout | `layout/get` | both | `Record<string, never>` | `LayoutPreferences` | — |  |
 | Config & layout | `layout/set` | both | `LayoutPreferences` | `LayoutPreferences` | — |  |
 | Projects | `projects/list` | both | `Record<string, never>` | `ProjectListing` | — |  |
@@ -53,9 +54,8 @@ without correlation. Both webviews share the same maps; surface-specific request
 | Operations | `ops/bulkRemoveAllProjects` | both | `{ projectRemovals: ProjectBulkRemoval[]; }` | `BulkOutcome` | `OperationProgress` |  |
 | Central Package Management | `cpm/preview` | both | `{ projectPath: string; packageId: string; version: string; }` | `{ preview: CpmImpactPreview \| null; }` | — | The projects a central version change would reach, asked before `ops/update` or `ops/install` of a centrally managed package (ADR-004 tier 3, interaction model §5). `preview` is `null` when the project does not use Central Package Management or the package has no central entry, or when the project overrides the central version with `VersionOverride` (the edit reaches that project alone, N74); the edit itself goes through `ops/*`, whose gate decides. |
 | Invalidation | `refresh/all` | both | `Record<string, never>` | `Record<string, never>` | — |  |
-| UI delegation to VS Code chrome | `ui/contextMenu` | sidebar | `ContextMenuRequest` | `{ handled: boolean; }` | — |  |
 | UI delegation to VS Code chrome | `ui/openSourceSettings` | sidebar → main | `Record<string, never>` | `Record<string, never>` | — |  |
-| UI delegation to VS Code chrome | `ui/viewPackage` | sidebar → main | `{ packageId: string; version?: string; }` | `Record<string, never>` | — |  |
+| UI delegation to VS Code chrome | `ui/viewPackage` | sidebar → main | `{ packageId: string; version?: string; projectPath?: string; tab?: "installed" \| "updates"; }` | `Record<string, never>` | — | `projectPath` and `tab` name the row's project and list (a sidebar Installed or Updates row); without `tab` the package opens in Browse. |
 | UI delegation to VS Code chrome | `ui/copyToClipboard` | both | `{ text: string; }` | `Record<string, never>` | — |  |
 | UI delegation to VS Code chrome | `ui/openExternal` | both | `{ url: string; }` | `Record<string, never>` | — |  |
 | Diagnostics | `perf/mark` | both | `{ name: "webviewReady" \| "firstUsefulRender"; detail?: string; }` | `Record<string, never>` | — |  |
@@ -75,4 +75,4 @@ without correlation. Both webviews share the same maps; surface-specific request
 | `ui/navigateToPackage` | `{ packageId: string; version?: string; }` |  |
 | `ui/openSourceSettings` | `Record<string, never>` |  |
 | `ui/focusSearch` | `Record<string, never>` |  |
-| `ui/selectProject` | `{ projectPath: string; initialTab?: "installed" \| "updates"; }` |  |
+| `ui/selectProject` | `{ projectPath: string; initialTab?: "installed" \| "updates"; packageId?: string; }` | `packageId` names the row to make current on `initialTab`. |

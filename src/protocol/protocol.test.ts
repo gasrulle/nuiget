@@ -146,8 +146,8 @@ describe('shapes changed by plan item P2.9', () => {
     });
 
     it('ExtensionConfig has enablePerformanceLogging and no recentSearchesLimit', () => {
-        const config = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 16, isWindows: false } satisfies ExtensionConfig;
-        expect(Object.keys(config).sort()).toEqual(['enablePerformanceLogging', 'isWindows', 'quickSearchResultsPerSource', 'searchDebounceMode', 'searchResultLimit', 'treeIndent']);
+        const config = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'modern', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false } satisfies ExtensionConfig;
+        expect(Object.keys(config).sort()).toEqual(['alwaysShowHeaderActions', 'confirmUninstall', 'density', 'enablePerformanceLogging', 'isWindows', 'look', 'quickSearchResultsPerSource', 'searchDebounceMode', 'searchResultLimit', 'treeIndent', 'uppercaseViewHeaders']);
         expect('recentSearchesLimit' in config).toBe(false);
     });
 });

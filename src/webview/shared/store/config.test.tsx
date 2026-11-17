@@ -5,7 +5,7 @@ import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
 import { ConfigProvider, useConfig, type ConfigState } from './config';
 
-const config = (changes: Partial<ExtensionConfig> = {}): ExtensionConfig => ({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false, ...changes });
+const config = (changes: Partial<ExtensionConfig> = {}): ExtensionConfig => ({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false, ...changes });
 
 let slice: ConfigState;
 function Config() {

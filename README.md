@@ -96,6 +96,7 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | `nuiget.quickSearchResultsPerSource` | `5` | Suggestions per source in the main panel's quick search (1-10). |
 | `nuiget.searchResultLimit` | `20` | Maximum number of packages a full search returns (1-100). |
 | `nuiget.enablePerformanceLogging` | `false` | Writes the webviews' `[perf]` marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use. |
+| `nuiget.confirmUninstall` | `true` | Whether the Delete key asks for confirmation before it uninstalls a package. |
 
 ## 📋 Commands
 

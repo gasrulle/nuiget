@@ -49,7 +49,7 @@ describe('WebviewHost', () => {
 
     it('rejects unsupported request types and ignores malformed messages', async () => {
         const host = new TestHost();
-        await host.receiveRaw(makeRequest('ui/contextMenu', { packageId: 'x', context: 'browse', projectPath: '' }, 'r4'));
+        await host.receiveRaw(makeRequest('ui/viewPackage', { packageId: 'x' }, 'r4'));
         await host.receiveRaw({ type: 'getProjects' });
         await host.receiveRaw(null);
         expect(responses(host)).toHaveLength(1);

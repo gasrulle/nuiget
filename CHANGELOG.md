@@ -12,8 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sidebar names the active package source** — A line above the search box shows the source the lists come from.
 - **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
 - **Works with the .NET 11 SDK** — Installing and updating packages in a Central Package Management project works on the .NET 11 SDK as it does on SDK 10.
+- **Update All stays visible when VS Code always shows header actions** — With VS Code's `workbench.view.alwaysShowHeaderActions` setting on, the Update All button of the sidebar's Updates section is shown without hovering.
 
 ### Changed
+- **The views follow a change of VS Code's Modern UI, density or view header casing without reopening**
 - **A scrolled list shows a shadow along its top edge, as VS Code's own lists do**
 - **The sidebar's search box is ready for typing when the keyboard focus first moves into the sidebar view**
 - **The divider between the package list and the details is a thin line that highlights when you rest the pointer on it**

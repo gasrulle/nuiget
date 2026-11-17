@@ -243,10 +243,10 @@ describe('search slice: quick-search', () => {
         const host = mount();
         await withSession(host);
         await withSources(host);
-        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false }));
+        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false }));
         await act(async () => slice.suggest('ser'));
         expect(host.requests('search/autocomplete')).toHaveLength(0);
-        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'off', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false }));
+        await hostSays(() => host.event('config/changed', { searchDebounceMode: 'off', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false }));
         await act(async () => slice.suggest('ser'));
         expect(host.requests('search/autocomplete')).toHaveLength(0);
     });

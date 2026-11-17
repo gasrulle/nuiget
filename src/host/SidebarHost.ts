@@ -1,16 +1,15 @@
 /**
  * Sidebar host: the Activity Bar `WebviewView`. Registers the shared handlers plus the
- * requests that only the host's own UI serves (the retired context menu request until P4.1, open the main panel), keeps the view title in sync with the
+ * requests that only the host's own UI serves (open the main panel), keeps the view title in sync with the
  * active project, and exposes the title-bar command implementations (pickers/toggles).
  */
 
 import * as vscode from 'vscode';
 import type { InvalidationEvent } from '../core/contracts';
-import { ALL_PROJECTS, type ContextMenuRequest, type EventPayload, type SessionSnapshot } from '../protocol';
+import { ALL_PROJECTS, type EventPayload, type SessionSnapshot } from '../protocol';
 import { registerSharedHandlers, sourceDirectory } from './handlers';
 import { MainPanelHost } from './MainPanelHost';
-import { MANAGE_SOURCES, pickContextMenuAction, pickProject, pickSource, projectDisplayName } from './pickers';
-import { runRowAction } from './rowMenu';
+import { MANAGE_SOURCES, pickProject, pickSource, projectDisplayName } from './pickers';
 import { renderWebviewHtml, type HostServices } from './services';
 import { WebviewHost } from './WebviewHost';
 
@@ -23,7 +22,6 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
     constructor(private readonly services: HostServices) {
         super('sidebar', services.logger);
         registerSharedHandlers(this, services);
-        this.on('ui/contextMenu', async request => ({ handled: await this.showContextMenu(request) }));
         this.on('ui/openSourceSettings', async () => { MainPanelHost.openSourceSettings(services); return {}; });
         this.on('ui/viewPackage', async ({ packageId, version }) => { MainPanelHost.navigateToPackage(services, packageId, version); return {}; });
 
@@ -109,28 +107,6 @@ export class SidebarHost extends WebviewHost implements vscode.WebviewViewProvid
 
     refresh(): void {
         this.services.invalidate({ kind: 'workspace' }, 'manual-refresh');
-    }
-
-    // ── context menu ──
-
-    private async showContextMenu(request: ContextMenuRequest): Promise<boolean> {
-        const isAllProjectsBrowse = (!request.projectPath || request.projectPath === ALL_PROJECTS) && request.context === 'browse';
-        if ((!request.projectPath || request.projectPath === ALL_PROJECTS) && !isAllProjectsBrowse) {
-            void vscode.window.showWarningMessage('nUIget: Select a specific project for this action.');
-            return false;
-        }
-        const action = await pickContextMenuAction({
-            packageId: request.packageId,
-            context: request.context,
-            installedVersion: request.installedVersion,
-            latestVersion: request.latestVersion,
-            partiallyInstalled: request.partiallyInstalled,
-            floatingOrRange: request.versionType === 'floating' || request.versionType === 'range',
-        });
-        if (!action) {
-            return false;
-        }
-        return runRowAction(this.services, action, request);
     }
 
     private async updateTitle(snapshot: SessionSnapshot): Promise<void> {

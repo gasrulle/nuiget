@@ -344,6 +344,13 @@ export interface ExtensionConfig {
     searchResultLimit: number;
     /** `nuiget.enablePerformanceLogging`: the webviews send `perf/mark` and the host logs `[perf]` lines at `info` only while it is on. */
     enablePerformanceLogging: boolean;
+    /** `nuiget.confirmUninstall`: the Delete key asks before it uninstalls (ADR-013 Decision 3); `config/doNotConfirmUninstall` turns it off. */
+    confirmUninstall: boolean;
     treeIndent: number;
+    /** The host's look (ADR-011 Decision 2), read from four workbench settings; each entry writes them onto the document element on `config/changed`. */
+    look: 'modern' | 'classic';
+    density: 'compact' | 'default';
+    uppercaseViewHeaders: boolean;
+    alwaysShowHeaderActions: boolean;
     isWindows: boolean;
 }

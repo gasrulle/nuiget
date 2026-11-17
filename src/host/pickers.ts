@@ -90,42 +90,4 @@ export async function pickSingleProject(title: string, placeHolder: string, cand
     return selected?.detail;
 }
 
-export type ContextMenuAction = 'install-latest' | 'install-version' | 'uninstall' | 'change-version' | 'update-latest' | 'update-version' | 'copy-id' | 'view-details';
-
-interface ActionItem extends vscode.QuickPickItem {
-    action: ContextMenuAction;
-}
-
-export async function pickContextMenuAction(options: { packageId: string; context: 'browse' | 'installed' | 'updates'; installedVersion?: string; latestVersion?: string; partiallyInstalled?: boolean; floatingOrRange?: boolean }): Promise<ContextMenuAction | undefined> {
-    const items: ActionItem[] = [];
-    const { context, installedVersion, latestVersion } = options;
-    if (context === 'browse') {
-        if (options.partiallyInstalled && installedVersion) {
-            items.push({ label: '$(add) Install Latest Version', description: latestVersion ?? '', action: 'install-latest' });
-            items.push({ label: '$(list-ordered) Install Version...', action: 'install-version' });
-            items.push({ label: '$(close) Uninstall', description: installedVersion, action: 'uninstall' });
-            items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
-        } else if (installedVersion) {
-            items.push({ label: '$(close) Uninstall', description: installedVersion, action: 'uninstall' });
-            items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
-        } else {
-            items.push({ label: '$(add) Install Latest Version', description: latestVersion ?? '', action: 'install-latest' });
-            items.push({ label: '$(list-ordered) Install Version...', action: 'install-version' });
-        }
-    } else if (context === 'installed') {
-        items.push({ label: '$(list-ordered) Change Version...', action: 'change-version' });
-        items.push({ label: '$(close) Uninstall', description: installedVersion ?? '', action: 'uninstall' });
-    } else {
-        if (!options.floatingOrRange) {
-            items.push({ label: `$(arrow-up) Update to ${latestVersion ?? 'latest'}`, action: 'update-latest' });
-        }
-        items.push({ label: '$(list-ordered) Update to Version...', action: 'update-version' });
-        items.push({ label: '$(close) Uninstall', description: installedVersion ?? '', action: 'uninstall' });
-    }
-    items.push({ label: '$(clippy) Copy Package ID', description: options.packageId, action: 'copy-id' });
-    items.push({ label: '$(eye) View Package Details', description: 'Open in the main panel', action: 'view-details' });
-    const selected = await vscode.window.showQuickPick(items, { placeHolder: `${options.packageId} — actions`, title: `nUIget — ${options.packageId}` });
-    return selected?.action;
-}
-
 export { projectDisplayName };

@@ -198,7 +198,7 @@ describe('main panel: sources', () => {
         const host = await mountReady();
         await openDialog();
         await waitFor(() => expect(host.requests('config/get').length).toBeGreaterThan(0));
-        await hostSays(() => host.respond(host.requests('config/get')[0], { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 16, isWindows: true }));
+        await hostSays(() => host.respond(host.requests('config/get')[0], { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: true }));
         await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
         const panel = screen.getByTestId('add-source-panel');
         await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');

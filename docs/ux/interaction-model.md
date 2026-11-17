@@ -210,7 +210,7 @@ same rules; the Installed list has no Ctrl+Enter action.
   runs an exact Browse search for the id and selects it (`ui/navigateToPackage`: the search box is filled with the
   id, browse mode runs, the package is selected and the Details tab shows). The actions menu reaches the right tab
   through the row's context and `ui/selectProject`; a key on the row carries only the id (`ui/viewPackage`) and lands
-  in Browse until the UX plan's contract item adds the project to that request. Manage NuGet Packages in the sidebar's `...` menu only reveals the
+  in Browse until P4.2b acts on the project and tab the request now carries. Manage NuGet Packages in the sidebar's `...` menu only reveals the
   panel.
 - Source settings open in the main panel (`ui/openSourceSettings`) even when triggered from the
   sidebar.
@@ -320,7 +320,7 @@ All Projects (§3; `<name>` = project name lower-cased):
 | `sidebar-update-all-button` | Update All in the sidebar's Updates header (its count only while the list is known, UX-P3.11) |
 | `section-header-project-<name>` | The title of a project's group row in the Installed and Updates tabs (the Updates tab since UX-P3.1b) and in the sidebar's Installed tree (UX-P3.7c) |
 
-Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` (so no webview file renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`) and `data-uppercase-headers` (present when the host capitalises view headers) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
+Attributes of the document element of both webviews, which the host writes in `renderWebviewHtml` and each entry rewrites on `config/changed` (so no component renders them and they are no table row): `data-look` (`modern` or `classic`), `data-density` (`default` or `compact`), `data-uppercase-headers` (present when the host capitalises view headers) and `data-always-show-header-actions` (present when the host always shows a view pane header's actions, in either look) (ADR-011). The harness reads the look of a capture here. Every icon carries `data-codicon` with the name of its drawing (`src/webview/shared/primitives/icons.tsx`, generated).
 
 Every package row's wrapper (`package-row-<id>`, `role="presentation"`) carries `data-vscode-context`, the context object of VS Code's `webview/context` menu on both surfaces: `webviewSection` (`installedRow`, `updateRow`, `browseRow` or `transitiveRow`), the row's package id, project path and versions, the facts the `when` clauses read, and `preventDefaultContextMenuItems`; the list's root carries that last key alone (ADR-013 Decision 4, UX-P2.9a). It is an attribute, not a test id, and no table row.
 

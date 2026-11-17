@@ -15,7 +15,7 @@ import type { EventType, RequestType } from './messages';
 // drop a valid message.
 const REQUEST_TYPE_RECORD = {
     'session/get': true, 'session/set': true,
-    'config/get': true, 'layout/get': true, 'layout/set': true,
+    'config/get': true, 'config/doNotConfirmUninstall': true, 'layout/get': true, 'layout/set': true,
     'projects/list': true,
     'installed/get': true, 'updates/get': true, 'transitive/get': true, 'transitive/metadata': true,
     'allProjects/installed': true, 'allProjects/updates': true, 'allProjects/transitive': true,
@@ -28,7 +28,7 @@ const REQUEST_TYPE_RECORD = {
     'ops/bulkUpdateAllProjects': true, 'ops/bulkRemoveAllProjects': true,
     'cpm/preview': true,
     'refresh/all': true,
-    'ui/contextMenu': true, 'ui/openSourceSettings': true, 'ui/viewPackage': true, 'ui/copyToClipboard': true,
+    'ui/openSourceSettings': true, 'ui/viewPackage': true, 'ui/copyToClipboard': true,
     'ui/openExternal': true, 'ui/reportError': true,
     'perf/mark': true,
 } satisfies Record<RequestType, true>;

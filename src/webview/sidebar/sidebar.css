@@ -95,10 +95,16 @@ body {
 }
 
 /*
- * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with alwaysShowHeaderActions
- * off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in the accessibility tree and the Tab order.
- * --nuiget-header-actions-rest is the hook P3.9's setting mirror sets.
+ * A pane header's actions are drawn on the section's hover and focus only, as the workbench's with
+ * workbench.view.alwaysShowHeaderActions off (judge P3.7a sidebar-hover#D2, UX-P3.7b); by opacity, so they stay in
+ * the accessibility tree and the Tab order. With the setting on the host writes data-always-show-header-actions on
+ * the document element in either look (ADR-011 Decision 2, UX-P4.1) and the actions rest visible:
+ * --nuiget-header-actions-rest is the carrier that rule sets and the section reads.
  */
+:root[data-always-show-header-actions] {
+    --nuiget-header-actions-rest: 1;
+}
+
 .nuiget-sidebar-section {
     --nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0);
 }

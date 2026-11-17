@@ -85,20 +85,6 @@ export interface ProjectListing {
     projects: Project[];
 }
 
-export type ContextMenuContext = 'browse' | 'installed' | 'updates';
-
-export interface ContextMenuRequest {
-    packageId: string;
-    installedVersion?: string;
-    latestVersion?: string;
-    context: ContextMenuContext;
-    projectPath: string;
-    versionType?: string;
-    sourceUrl?: string;
-    installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>;
-    partiallyInstalled?: boolean;
-}
-
 // ─── Request map ────────────────────────────────────────────────────────────
 
 /**
@@ -112,6 +98,8 @@ export interface RequestMap {
 
     // Config & layout
     'config/get': { payload: Record<string, never>; result: ExtensionConfig };
+    /** "Do not ask me again" of the Delete confirmation (ADR-013 Decision 3): writes `nuiget.confirmUninstall` to false in the user settings; the new value follows as `config/changed`. */
+    'config/doNotConfirmUninstall': { payload: Record<string, never>; result: Record<string, never> };
     'layout/get': { payload: Record<string, never>; result: LayoutPreferences };
     'layout/set': { payload: LayoutPreferences; result: LayoutPreferences };
 
@@ -170,9 +158,9 @@ export interface RequestMap {
     'refresh/all': { payload: Record<string, never>; result: Record<string, never> };
 
     // UI delegation to VS Code chrome
-    'ui/contextMenu': { payload: ContextMenuRequest; result: { handled: boolean } };                 // sidebar
     'ui/openSourceSettings': { payload: Record<string, never>; result: Record<string, never> };       // sidebar → main
-    'ui/viewPackage': { payload: { packageId: string; version?: string }; result: Record<string, never> }; // sidebar → main
+    /** `projectPath` and `tab` name the row's project and list (a sidebar Installed or Updates row); without `tab` the package opens in Browse. */
+    'ui/viewPackage': { payload: { packageId: string; version?: string; projectPath?: string; tab?: 'installed' | 'updates' }; result: Record<string, never> }; // sidebar → main
     'ui/copyToClipboard': { payload: { text: string }; result: Record<string, never> };
     'ui/openExternal': { payload: { url: string }; result: Record<string, never> };
 
@@ -202,7 +190,8 @@ export interface EventMap {
     'ui/navigateToPackage': { packageId: string; version?: string };
     'ui/openSourceSettings': Record<string, never>;
     'ui/focusSearch': Record<string, never>;
-    'ui/selectProject': { projectPath: string; initialTab?: 'installed' | 'updates' };
+    /** `packageId` names the row to make current on `initialTab`. */
+    'ui/selectProject': { projectPath: string; initialTab?: 'installed' | 'updates'; packageId?: string };
 }
 
 export type EventType = keyof EventMap;

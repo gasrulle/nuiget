@@ -13,7 +13,7 @@ const A = '/w/App/App.csproj';
 const FEED = 'https://api.nuget.org/v3/index.json';
 const CONTOSO = 'https://pkgs.contoso.test/v3/index.json';
 const snapshot = (rev: number, selectedProject = A): SessionSnapshot => ({ rev, selectedProject, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' });
-const config = (searchDebounceMode: ExtensionConfig['searchDebounceMode']): ExtensionConfig => ({ searchDebounceMode, quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent: 16, isWindows: false });
+const config = (searchDebounceMode: ExtensionConfig['searchDebounceMode']): ExtensionConfig => ({ searchDebounceMode, quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false });
 const SOURCES: NuGetSource[] = [{ name: 'nuget.org', url: FEED, enabled: true }];
 
 const hostSays = (say: () => void): Promise<void> => act(async () => {

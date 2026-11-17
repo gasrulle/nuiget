@@ -17,6 +17,10 @@ describe('sidebar 2.0 entry', () => {
         document.body.replaceChildren();
         vi.doUnmock('./SidebarView');
         vi.doUnmock('../shared/store/StoreProvider');
+        vi.doUnmock('../shared/bus/MessageBus');
+        for (const name of ['data-look', 'data-density', 'data-uppercase-headers', 'data-always-show-header-actions']) {
+            document.documentElement.removeAttribute(name);
+        }
         vi.restoreAllMocks();
     });
 
@@ -92,5 +96,41 @@ describe('sidebar 2.0 entry', () => {
 
         expect(seen.length).toBeGreaterThan(0);
         expect(seen[0]?.prefetch).toBe(false);
+    });
+
+    it('a config/changed event writes the host\'s look onto the document element (ADR-011 Decision 2, UX-P4.1)', async () => {
+        const handlers: Array<{ type: string; handler: (payload: unknown) => void }> = [];
+        vi.doMock('../shared/bus/MessageBus', async importOriginal => {
+            const actual = await importOriginal<typeof import('../shared/bus/MessageBus')>();
+            return {
+                ...actual,
+                createMessageBus: (...args: Parameters<typeof actual.createMessageBus>) => {
+                    const bus = actual.createMessageBus(...args);
+                    const onEvent = bus.onEvent.bind(bus);
+                    bus.onEvent = ((type: string, handler: (payload: unknown) => void) => {
+                        handlers.push({ type, handler });
+                        return onEvent(type as never, handler as never);
+                    }) as typeof bus.onEvent;
+                    return bus;
+                },
+            };
+        });
+        const root = document.createElement('div');
+        root.id = 'sidebar-root';
+        document.body.append(root);
+
+        await act(async () => {
+            await import('./index');
+        });
+
+        const look = handlers.find(entry => entry.type === 'config/changed' && entry.handler.name === 'applyLook');
+        expect(look).toBeDefined();
+        await act(async () => {
+            look!.handler({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 8, look: 'modern', density: 'compact', uppercaseViewHeaders: false, alwaysShowHeaderActions: true, isWindows: false });
+        });
+        expect(document.documentElement.getAttribute('data-look')).toBe('modern');
+        expect(document.documentElement.getAttribute('data-density')).toBe('compact');
+        expect(document.documentElement.hasAttribute('data-uppercase-headers')).toBe(false);
+        expect(document.documentElement.hasAttribute('data-always-show-header-actions')).toBe(true);
     });
 });

@@ -17,10 +17,10 @@ const manifest = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'
 const settings = manifest.contributes.configuration.properties;
 
 // `satisfies`: tsc fails here when the interface gains a key or loses one, so the list below cannot fall behind it.
-const CONFIG = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 8, isWindows: false } satisfies ExtensionConfig;
+const CONFIG = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 8, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false } satisfies ExtensionConfig;
 
-/** Keys of `ExtensionConfig` that no `nuiget.*` setting backs: `workbench.tree.indent` and the platform. */
-const NOT_SETTINGS = new Set<keyof ExtensionConfig>(['treeIndent', 'isWindows']);
+/** Keys of `ExtensionConfig` that no `nuiget.*` setting backs: `workbench.tree.indent`, the platform and the workbench's look (ADR-011 Decision 2). */
+const NOT_SETTINGS = new Set<keyof ExtensionConfig>(['treeIndent', 'isWindows', 'look', 'density', 'uppercaseViewHeaders', 'alwaysShowHeaderActions']);
 
 const settingKeys = (Object.keys(CONFIG) as Array<keyof ExtensionConfig>).filter(key => !NOT_SETTINGS.has(key));
 

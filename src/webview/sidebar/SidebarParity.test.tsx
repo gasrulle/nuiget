@@ -12,7 +12,7 @@ const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
 const snapshot = (rev: number, selectedProject: string): SessionSnapshot => ({ rev, selectedProject, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' });
 const pkg = (id: string): InstalledPackage => ({ id, version: '1.0.0', versionType: 'standard', declaration: 'project' });
-const config = (treeIndent: number): ExtensionConfig => ({ searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, treeIndent, isWindows: false });
+const config = (treeIndent: number): ExtensionConfig => ({ searchDebounceMode: 'full', quickSearchResultsPerSource: 5, searchResultLimit: 50, enablePerformanceLogging: false, confirmUninstall: true, treeIndent, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false });
 
 
 const hostSays = (say: () => void): Promise<void> => act(async () => {

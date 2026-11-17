@@ -1,7 +1,8 @@
 # ADR-013: Keyboard and menus: Enter never writes; one native actions menu on both surfaces
 
 Status: accepted · Date: 2026-10-23 · Decision 7 (success feedback) supersedes the 2.0 plan's D17: the owner confirmed
-it in design round 1 (D50). Decision 1's sidebar Enter is the owner's round-1 pick (D-D).
+it in design round 1 (D50). Decision 1's sidebar Enter is the owner's round-1 pick (D-D). · Amended: 2026-11-17 (UX
+plan item UX-P4.1: the contract additions of Decision 3 and the Consequences landed; `ui/contextMenu` removed)
 
 ## Context
 
@@ -50,10 +51,11 @@ model of 2.0 at odds with both the interaction model and the workbench:
    Projects, the row's project), Uninstall and Cancel, opening on Cancel as every `ConfirmDialog` does, and a "Do not
    ask me again" check box. The Uninstall button, the row action and the menu item, which name the action, do not
    confirm (the Extensions view's Uninstall does not either). The preference is one value for both surfaces and
-   survives reloads, so it is a contributed boolean setting (the Explorer's pattern, default on, reset in the Settings
-   editor) that the webviews receive through `ExtensionConfig` and that the check box writes through a host request.
-   Both are contract additions of the UX plan's contract item (sentinel procedure). If that item is cut, the
-   confirmation ships without the check box.
+   survives reloads, so it is a contributed boolean setting, `nuiget.confirmUninstall` (the Explorer's pattern,
+   default on, reset in the Settings editor), that the webviews receive as `ExtensionConfig.confirmUninstall` and that
+   the check box turns off through the host request `config/doNotConfirmUninstall`, which writes the user setting.
+   Both landed with the UX plan's contract item (UX-P4.1, sentinel procedure); the confirmation and its check box are
+   the keyboard items'.
 4. **One actions menu, native, on both surfaces.**
    - `package.json` contributes `menus["webview/context"]` items for `webviewId == 'nugetManager'` (the main panel)
      and `webviewId == 'nuiget.sidebarView'` (the sidebar), each item shown by a `when` clause on the row's
@@ -61,7 +63,7 @@ model of 2.0 at odds with both the interaction model and the workbench:
      sidebar's QuickPick decides on today (installed version, latest version, central, floating or range). The
      commands are hidden from the palette and carry Title Case titles.
    - The row wrapper (`role="presentation"`, test id `package-row-<id>`) carries `data-vscode-context`: those keys,
-     the ids the command needs (package id, project path, versions; the fields `ContextMenuRequest` carries today) and
+     the ids the command needs (package id, project path, versions; the fields of `RowMenuContext` in `src/host/rowMenu.ts`) and
      `preventDefaultContextMenuItems: true`. A `data-*` attribute is what the wrapper may carry (the gotcha "Attributes
      on the row wrapper").
    - `Listbox` stops calling `preventDefault` on `contextmenu`, so a right-click reaches VS Code's handler. For
@@ -73,7 +75,7 @@ model of 2.0 at odds with both the interaction model and the workbench:
      and its Ctrl+Enter keep `CentralUpdateDialog`; both list the same projects from the same preview. Making them one
      needs a host-confirmed request behind the sentinel (X9) and is not part of this decision.
    - The sidebar's QuickPick menu migrates to the contribution in the same item, because `Listbox` serves both
-     surfaces. `ui/contextMenu` stays in the frozen protocol, unsent, until a contract item removes it.
+     surfaces. `ui/contextMenu` stayed in the frozen protocol, unsent, until the contract item removed it (UX-P4.1).
    - The item that ships the menu proves the right-click and Shift+F10 paths in the E2E job at the floor (1.90.0).
 5. **Queued operations are busy on every surface.** The host merges a progress emitter with the queue's progress and
    fires `ops/progress` with status `queued`, `projectPaths` and `packageIds` for every operation it submits itself.
@@ -111,15 +113,16 @@ model of 2.0 at odds with both the interaction model and the workbench:
 - Gotcha rows change with the items: "Central row without the preview" (the menu route and the host modal on both
   surfaces), "Context menu under All Projects" (the context object, not `ui/contextMenu`), "An operation that waits in
   the queue has no `ops/progress`" (Decision 5) and "Buttons inside `role="option"`" (the key list).
-- The UX plan's contract item carries, besides ADR-011's look fields: the delete-confirmation setting in
-  `ExtensionConfig` and the request that writes it (Decision 3), the project on `ui/viewPackage` for precise
-  navigation from a sidebar row, and the removal of `ui/contextMenu`.
+- The UX plan's contract item (UX-P4.1) carried, besides ADR-011's look fields: the delete-confirmation setting in
+  `ExtensionConfig` and the request that turns it off (Decision 3); for precise navigation from a sidebar row,
+  `projectPath?` and `tab?` on `ui/viewPackage` and `packageId?` on `ui/selectProject`; and the removal of
+  `ui/contextMenu`.
 - Decision 7 removes the single-success toast from `src/host/feedback.ts` and the captures that show it; the item
   rewrites the tests that assert that toast in place and names them. Decisions 1 to 6 do not depend on it.
 - Decision 8 rebuilds `Listbox` with group rows and moves its eight consumers onto one list per view (the research
   costs it at about seven planned days, the Updates merge included); the per-project list hooks of the interaction
   model's §8 become group-row hooks in the same item (P2.1f). The listbox contract of ADR-008 (always virtualized,
   one tab stop) then holds for the Installed tab again, which today mounts every row.
-- The sidebar's Enter sends the row to the main panel through `ui/viewPackage`, which carries only the id: it lands
-  in Browse until the contract item adds the project (above); the menu's View Package Details lands on the right tab
-  without it.
+- The sidebar's Enter sends the row to the main panel through `ui/viewPackage`. The request can name the row's
+  project and tab since UX-P4.1; the item that moves Enter (the UX plan's P4.2b) makes the sidebar, the host and the
+  main panel use them, and until then a key on the row and the menu's View Package Details both land in Browse.

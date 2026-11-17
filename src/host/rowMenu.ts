@@ -1,22 +1,38 @@
 /**
  * The row's actions, on the host: what the commands of VS Code's `webview/context` menu run on both surfaces (ADR-013
- * Decision 4, UX-P2.9a) and what the sidebar's `ui/contextMenu` handler still reaches until the request is retired (P4.1).
+ * Decision 4, UX-P2.9a), the one route of a row's actions since the sidebar's QuickPick menu was retired (UX-P4.1).
  * A context object is webview input: a command takes it through `isRowMenuContext`, never as it comes.
  */
 
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { redact } from '../core/logging';
-import { ALL_PROJECTS, type ContextMenuRequest, type OperationKind } from '../protocol';
+import { ALL_PROJECTS, type OperationKind } from '../protocol';
 import { operations, sourceDirectory, submitFromHost } from './handlers';
 import { MainPanelHost } from './MainPanelHost';
-import { pickProjectsForInstall, pickSingleProject, pickVersion, type ContextMenuAction } from './pickers';
+import { pickProjectsForInstall, pickSingleProject, pickVersion } from './pickers';
 import type { HostServices } from './services';
 
 type RowSection = 'installedRow' | 'updateRow' | 'browseRow' | 'transitiveRow';
 
+/** The actions of the row menu, one per command of `COMMANDS`. */
+export type RowAction = 'install-latest' | 'install-version' | 'uninstall' | 'change-version' | 'update-latest' | 'update-version' | 'copy-id' | 'view-details';
+
+/** What an action runs on: the row's ids and versions, and the list the row is in. */
+export interface RowActionRequest {
+    packageId: string;
+    installedVersion?: string;
+    latestVersion?: string;
+    context: 'browse' | 'installed' | 'updates';
+    projectPath: string;
+    versionType?: string;
+    sourceUrl?: string;
+    installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>;
+    partiallyInstalled?: boolean;
+}
+
 /** What a row's `data-vscode-context` carries: the request's fields, the section and the facts the `when` clauses read. */
-export interface RowMenuContext extends Omit<ContextMenuRequest, 'context'> {
+export interface RowMenuContext extends Omit<RowActionRequest, 'context'> {
     webviewSection: RowSection;
     'nuiget.installed'?: boolean;
     'nuiget.partial'?: boolean;
@@ -28,7 +44,7 @@ export interface RowMenuContext extends Omit<ContextMenuRequest, 'context'> {
     webview?: string;
 }
 
-const SECTION_CONTEXT: Record<RowSection, ContextMenuRequest['context']> = { installedRow: 'installed', transitiveRow: 'installed', updateRow: 'updates', browseRow: 'browse' };
+const SECTION_CONTEXT: Record<RowSection, RowActionRequest['context']> = { installedRow: 'installed', transitiveRow: 'installed', updateRow: 'updates', browseRow: 'browse' };
 
 const isOptional = (value: unknown, type: 'string' | 'boolean'): boolean => value === undefined || typeof value === type;
 
@@ -50,7 +66,7 @@ export function isRowMenuContext(arg: unknown): arg is RowMenuContext {
 }
 
 /** Runs one of the row's actions; true when it went through. */
-export async function runRowAction(services: HostServices, action: ContextMenuAction, request: ContextMenuRequest): Promise<boolean> {
+export async function runRowAction(services: HostServices, action: RowAction, request: RowActionRequest): Promise<boolean> {
     switch (action) {
         case 'copy-id':
             await vscode.env.clipboard.writeText(request.packageId);
@@ -232,7 +248,7 @@ async function withoutCentralEntries(services: HostServices, targets: string[], 
     return kept;
 }
 
-const COMMANDS: ReadonlyArray<readonly [string, ContextMenuAction]> = [
+const COMMANDS: ReadonlyArray<readonly [string, RowAction]> = [
     ['nuiget.row.installLatest', 'install-latest'],
     ['nuiget.row.installVersion', 'install-version'],
     ['nuiget.row.uninstall', 'uninstall'],
@@ -244,7 +260,7 @@ const COMMANDS: ReadonlyArray<readonly [string, ContextMenuAction]> = [
 ];
 
 /** What a read-only row admits: it copies and shows, and nothing else reaches it, whatever the argument says. */
-const READ_ONLY: readonly ContextMenuAction[] = ['copy-id', 'view-details'];
+const READ_ONLY: readonly RowAction[] = ['copy-id', 'view-details'];
 
 /** Binds the hidden commands of the `webview/context` menu; VS Code hands each the row's context object as its first argument. */
 export function registerRowMenuCommands(services: HostServices, register: (command: string, handler: (...args: unknown[]) => unknown) => void): void {

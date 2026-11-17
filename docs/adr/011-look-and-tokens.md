@@ -2,7 +2,8 @@
 
 Status: accepted · Date: 2026-10-23 · Amends: ADR-008 (its typography bullet: type moves from `em` to px) and ADR-000
 (its floor sentence: `engines.vscode` is raised from `^1.85.0` to `^1.90.0` by the owner's round-2 pick of
-2026-10-23; ADR-000 edited by UX-P0.5b on 2026-10-23 under the D6 sentinel).
+2026-10-23; ADR-000 edited by UX-P0.5b on 2026-10-23 under the D6 sentinel). · Amended: 2026-11-17 (UX plan item
+UX-P4.1: Decision 2's fourth attribute; the live change through `config/changed`)
 
 ## Context
 
@@ -48,13 +49,15 @@ workbench is the exemplar for every rule. The research of 2026-10-23 (`docs/rese
    - `data-look`: `modern` when `workbench.experimental.modernUI` is true, otherwise `classic`;
    - `data-density`: `compact` or `default`, from `window.density.layout`;
    - `data-uppercase-headers`: present when `workbench.experimental.modernUIUppercaseViewHeaders` is true (it
-     matters under Modern UI only).
+     matters under Modern UI only);
+   - `data-always-show-header-actions`: present when `workbench.view.alwaysShowHeaderActions` is true (a pane
+     header's actions then stay visible at rest).
 
-   The host reads the three keys as it reads `workbench.tree.indent`, and writes the attributes into the page in
-   `renderWebviewHtml`, so the first paint is right without a contract change. Live changes reach an open webview
-   through `config/changed`: `ExtensionConfig` gains the three values in the UX plan's contract item (sentinel
-   procedure, regenerated `docs/protocol.md`), and each entry writes them onto the document element. Until that item
-   lands, or if it is cut, an open webview shows a changed look at its next render.
+   The host reads the four keys as it reads `workbench.tree.indent`, in one function that serves the page and the
+   settings it sends. `renderWebviewHtml` writes the attributes into the page, so the first paint is right.
+   `ExtensionConfig` carries the four values (`look`, `density`, `uppercaseViewHeaders`, `alwaysShowHeaderActions`;
+   UX-P4.1), so a live change reaches an open webview through `config/changed`, where each entry writes the
+   attributes onto the document element.
 3. **Only the metrics that differ switch, and they switch as tokens.** `tokens.css` re-values a small set of look
    tokens under `:root[data-look="modern"]` and the density and uppercase attributes; no primitive declares a second
    rule per look (ADR-010, single owner). The switched set is exactly what the probe found different: the pane-style

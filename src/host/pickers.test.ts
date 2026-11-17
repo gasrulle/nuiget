@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { ALL_PROJECTS } from '../protocol';
-import { MANAGE_SOURCES, pickContextMenuAction, pickProject, pickProjectsForInstall, pickSingleProject, pickSource, pickVersion } from './pickers';
+import { MANAGE_SOURCES, pickProject, pickProjectsForInstall, pickSingleProject, pickSource, pickVersion } from './pickers';
 
-type Item = vscode.QuickPickItem & { value?: string; action?: string; detail?: string };
+type Item = vscode.QuickPickItem & { value?: string; detail?: string };
 
 const showQuickPick = vi.mocked(vscode.window.showQuickPick);
 const createQuickPick = vi.mocked(vscode.window.createQuickPick);
@@ -104,27 +104,5 @@ describe('pickSingleProject', () => {
         showQuickPick.mockImplementationOnce(async items => (items as Item[])[1]);
         await expect(pickSingleProject('t', 'p', [{ projectPath: '/b', projectName: 'B', version: '2.0.0' }, { projectPath: '/a', projectName: 'A' }])).resolves.toBe('/b');
         expect(shownItems().map(item => [item.label, item.description])).toEqual([['A', ''], ['B', '2.0.0']]);
-    });
-});
-
-describe('pickContextMenuAction', () => {
-    const actionsFor = async (options: Parameters<typeof pickContextMenuAction>[0]): Promise<string[]> => {
-        showQuickPick.mockImplementationOnce(async () => undefined);
-        await pickContextMenuAction(options);
-        return shownItems().map(item => item.action ?? '');
-    };
-
-    it('the item sets of the three contexts, with a partly installed package and a floating version', async () => {
-        expect(await actionsFor({ packageId: 'A', context: 'browse', latestVersion: '2.0.0' })).toEqual(['install-latest', 'install-version', 'copy-id', 'view-details']);
-        expect(await actionsFor({ packageId: 'A', context: 'browse', installedVersion: '1.0.0' })).toEqual(['uninstall', 'change-version', 'copy-id', 'view-details']);
-        expect(await actionsFor({ packageId: 'A', context: 'browse', installedVersion: '1.0.0', partiallyInstalled: true })).toEqual(['install-latest', 'install-version', 'uninstall', 'change-version', 'copy-id', 'view-details']);
-        expect(await actionsFor({ packageId: 'A', context: 'installed', installedVersion: '1.0.0' })).toEqual(['change-version', 'uninstall', 'copy-id', 'view-details']);
-        expect(await actionsFor({ packageId: 'A', context: 'updates', latestVersion: '2.0.0' })).toEqual(['update-latest', 'update-version', 'uninstall', 'copy-id', 'view-details']);
-        expect(await actionsFor({ packageId: 'A', context: 'updates', latestVersion: '2.0.0', floatingOrRange: true })).toEqual(['update-version', 'uninstall', 'copy-id', 'view-details']);
-    });
-
-    it('answers the action chosen', async () => {
-        showQuickPick.mockImplementationOnce(async items => (items as Item[]).find(item => item.action === 'view-details'));
-        await expect(pickContextMenuAction({ packageId: 'A', context: 'installed', installedVersion: '1.0.0' })).resolves.toBe('view-details');
     });
 });

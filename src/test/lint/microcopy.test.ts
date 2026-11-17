@@ -21,6 +21,12 @@ function sources(dir: string): string[] {
 }
 
 const FILES = sources(path.join(ROOT, 'src/webview')).map(file => ({ file: path.relative(ROOT, file), text: readFileSync(file, 'utf8') }));
+/**
+ * The titles of the row menu, VS Code's `webview/context` menu the webviews open (ADR-013 Decision 4): since UX-P4.1 retired
+ * the sidebar's QuickPick, the manifest is where "Install Version..." and its siblings are rendered.
+ */
+const manifest = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { contributes: { commands: Array<{ command: string; title: string }>; menus: Record<string, Array<{ command: string }>> } };
+const ROW_MENU_TITLES = manifest.contributes.menus['webview/context'].map(item => manifest.contributes.commands.find(command => command.command === item.command)?.title ?? item.command);
 /** UX-P3.11b: every non-test source of `src/host` and the composition root. */
 const HOST_FILES = [...sources(path.join(ROOT, 'src/host')), path.join(ROOT, 'src/extension.ts')].map(file => ({ file: path.relative(ROOT, file).split(path.sep).join('/'), text: readFileSync(file, 'utf8') }));
 
@@ -35,7 +41,7 @@ describe('the webviews\' microcopy (DS-COPY-1, DS-COPY-4; UX-P3.11)', () => {
     });
 
     it('ends every label that opens further UI with three periods, and only those (DS-COPY-4)', () => {
-        const labels = new Set([...FILES.flatMap(({ file, text }) => labelsOf(file, text)), ...HOST_FILES.flatMap(({ file, text }) => hostLabelsOf(file, text))]);
+        const labels = new Set([...FILES.flatMap(({ file, text }) => labelsOf(file, text)), ...HOST_FILES.flatMap(({ file, text }) => hostLabelsOf(file, text)), ...ROW_MENU_TITLES]);
         for (const label of OPENS_UI) {
             expect(label.endsWith('...'), label).toBe(true);
             expect(labels.has(label), `${label} is rendered`).toBe(true);

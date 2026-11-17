@@ -24,7 +24,7 @@ import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { registerOperationFeedback } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
 import { registerRowMenuCommands } from './host/rowMenu';
-import { HostEvents, createWorkflowDeps, loggerFor, mergeEvents, readExtensionConfig, type HostServices } from './host/services';
+import { HostEvents, LOOK_SETTINGS, createWorkflowDeps, loggerFor, mergeEvents, readExtensionConfig, type HostServices } from './host/services';
 import { sweepLegacyState } from './host/legacyState';
 import { SidebarHost } from './host/SidebarHost';
 import { ALL_PROJECTS, type InvalidationReason, type InvalidationScope, type NuGetSource, type Project } from './protocol';
@@ -338,7 +338,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
             catalog.invalidate({ kind: 'workspace' }, 'workspace-folders');
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('nuiget') || e.affectsConfiguration('workbench.tree.indent')) {
+            if (e.affectsConfiguration('nuiget') || e.affectsConfiguration('workbench.tree.indent') || LOOK_SETTINGS.some(key => e.affectsConfiguration(key))) {
                 events.configChanged.fire(readExtensionConfig());
             }
             if (e.affectsConfiguration('http') && transport instanceof NodeTransport) {

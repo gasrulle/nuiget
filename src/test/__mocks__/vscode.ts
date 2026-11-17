@@ -131,6 +131,12 @@ export const QuickPickItemKind = {
     Default: 0,
 } as const;
 
+export const ConfigurationTarget = {
+    Global: 1,
+    Workspace: 2,
+    WorkspaceFolder: 3,
+} as const;
+
 // ---------- RelativePattern ----------
 
 export class RelativePattern {

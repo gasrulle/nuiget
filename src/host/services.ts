@@ -96,18 +96,40 @@ export function readExtensionConfig(): ExtensionConfig {
         quickSearchResultsPerSource: config.get<number>('quickSearchResultsPerSource', 5),
         searchResultLimit: config.get<number>('searchResultLimit', 20),
         enablePerformanceLogging: config.get<boolean>('enablePerformanceLogging', false),
+        confirmUninstall: config.get<boolean>('confirmUninstall', true),
         treeIndent: vscode.workspace.getConfiguration('workbench.tree').get<number>('indent', 8),
+        ...readLook(),
         isWindows: process.platform === 'win32',
     };
 }
 
+type Look = Pick<ExtensionConfig, 'look' | 'density' | 'uppercaseViewHeaders' | 'alwaysShowHeaderActions'>;
+
+/** The four workbench settings the webviews follow (ADR-011 Decision 2): the page's first paint and `config/changed` both read them here. */
+function readLook(): Look {
+    const experimental = vscode.workspace.getConfiguration('workbench.experimental');
+    return {
+        look: experimental.get<boolean>('modernUI', false) ? 'modern' : 'classic',
+        density: vscode.workspace.getConfiguration('window.density').get<string>('layout', 'default') === 'compact' ? 'compact' : 'default',
+        uppercaseViewHeaders: experimental.get<boolean>('modernUIUppercaseViewHeaders', false) === true,
+        alwaysShowHeaderActions: vscode.workspace.getConfiguration('workbench.view').get<boolean>('alwaysShowHeaderActions', false) === true,
+    };
+}
+
+/** The workbench settings `readLook` reads; a change to any of them is announced as `config/changed`. */
+export const LOOK_SETTINGS = [
+    'workbench.experimental.modernUI',
+    'window.density.layout',
+    'workbench.experimental.modernUIUppercaseViewHeaders',
+    'workbench.view.alwaysShowHeaderActions',
+] as const;
+
 /** The host's look as attributes of the document element (ADR-011 Decision 2), so a portalled dialog inherits them; fixed values, nothing to escape. */
 function lookAttributes(): string {
-    const experimental = vscode.workspace.getConfiguration('workbench.experimental');
-    const look = experimental.get<boolean>('modernUI', false) ? 'modern' : 'classic';
-    const density = vscode.workspace.getConfiguration('window.density').get<string>('layout', 'default') === 'compact' ? 'compact' : 'default';
-    const uppercase = experimental.get<boolean>('modernUIUppercaseViewHeaders', false) ? ' data-uppercase-headers' : '';
-    return `data-look="${look}" data-density="${density}"${uppercase}`;
+    const { look, density, uppercaseViewHeaders, alwaysShowHeaderActions } = readLook();
+    const uppercase = uppercaseViewHeaders ? ' data-uppercase-headers' : '';
+    const headerActions = alwaysShowHeaderActions ? ' data-always-show-header-actions' : '';
+    return `data-look="${look}" data-density="${density}"${uppercase}${headerActions}`;
 }
 
 /** Build the webview HTML with a hardened CSP (ADR-006: no remote origins; images are `data:` URIs). */

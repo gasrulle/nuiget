@@ -252,6 +252,11 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     host.on('session/get', async () => session.snapshot);
     host.on('session/set', async intent => session.apply(intent, host.surface));
     host.on('config/get', async () => services.config());
+    // The Delete confirmation's "Do not ask me again" (ADR-013 Decision 3): user settings, like the Explorer's; `config/changed` follows.
+    host.on('config/doNotConfirmUninstall', async () => {
+        await vscode.workspace.getConfiguration('nuiget').update('confirmUninstall', false, vscode.ConfigurationTarget.Global);
+        return {};
+    });
     host.on('layout/get', async () => ({
         splitPosition: services.context.globalState.get<number>('nuiget.layout.splitPosition'),
         sidebarSectionSplit: services.context.workspaceState.get<number>('nuiget.layout.sidebarSectionSplit'),

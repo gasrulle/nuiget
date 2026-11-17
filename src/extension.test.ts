@@ -200,6 +200,45 @@ describe('extension (2.0 composition root)', () => {
         expect(eventsOf(sidebar, 'config/changed')).toEqual([expect.objectContaining({ searchResultLimit: 20, enablePerformanceLogging: false })]);
     });
 
+    it('look change reaches an open webview', async () => {
+        await start();
+        const sidebar = resolveSidebar();
+        const panel = await openPanel();
+        let settings: Record<string, unknown> = {};
+        vi.mocked(vscode.workspace.getConfiguration).mockImplementation(((section?: string) => ({
+            get: <T>(key: string, fallback?: T) => (settings[`${section}.${key}`] ?? fallback) as T,
+            has: () => false,
+            inspect: () => undefined,
+            update: async () => undefined,
+        })) as unknown as typeof vscode.workspace.getConfiguration);
+        const configListener = vi.mocked(vscode.workspace.onDidChangeConfiguration).mock.calls.at(-1)![0];
+        const changed = (key: string, value: unknown) => {
+            settings = { ...settings, [key]: value };
+            configListener({ affectsConfiguration: section => section === key });
+        };
+        const last = (webview: MockWebview) => eventsOf(webview, 'config/changed').at(-1);
+
+        changed('workbench.experimental.modernUI', true);
+        changed('window.density.layout', 'compact');
+        changed('workbench.experimental.modernUIUppercaseViewHeaders', true);
+        changed('workbench.view.alwaysShowHeaderActions', true);
+
+        for (const webview of [sidebar, panel.webview as unknown as MockWebview]) {
+            const events = eventsOf(webview, 'config/changed');
+            expect(events).toHaveLength(4);
+            expect(events.map(event => [event.look, event.density, event.uppercaseViewHeaders, event.alwaysShowHeaderActions])).toEqual([
+                ['modern', 'default', false, false],
+                ['modern', 'compact', false, false],
+                ['modern', 'compact', true, false],
+                ['modern', 'compact', true, true],
+            ]);
+        }
+        // A key outside the look and the extension's own settings announces nothing.
+        configListener({ affectsConfiguration: section => section === 'workbench.colorTheme' });
+        expect(eventsOf(sidebar, 'config/changed')).toHaveLength(4);
+        expect(last(sidebar)).toEqual(last(panel.webview as unknown as MockWebview));
+    });
+
     it('readExtensionConfig takes searchDebounceMode as contributed, and anything else as quicksearch (N57)', () => {
         const withMode = (mode: unknown) => {
             vi.mocked(vscode.workspace.getConfiguration).mockImplementationOnce((() => ({
@@ -213,6 +252,20 @@ describe('extension (2.0 composition root)', () => {
         expect(withMode('instant').searchDebounceMode).toBe('quicksearch');
         // Unset: the contributed defaults (`package.json`), the result limit included.
         expect(readExtensionConfig()).toMatchObject({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false });
+    });
+
+    it('readExtensionConfig reads nuiget.confirmUninstall, on when unset as the manifest contributes it (UX-P4.1)', () => {
+        const withConfirm = (value: unknown) => {
+            vi.mocked(vscode.workspace.getConfiguration).mockImplementationOnce((() => ({
+                get: <T>(key: string, fallback?: T) => (key === 'confirmUninstall' && value !== undefined ? value : fallback) as T,
+            })) as unknown as typeof vscode.workspace.getConfiguration);
+            return readExtensionConfig().confirmUninstall;
+        };
+        expect(withConfirm(undefined)).toBe(true);
+        expect(withConfirm(false)).toBe(false);
+        expect(withConfirm(true)).toBe(true);
+        const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { contributes: { configuration: { properties: Record<string, { default?: unknown }> } } };
+        expect(manifest.contributes.configuration.properties['nuiget.confirmUninstall'].default).toBe(true);
     });
 
     it('proxyConfigured follows http.proxySupport, http.proxy and the proxy environment', () => {

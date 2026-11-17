@@ -186,6 +186,27 @@ describe('2.0 webview stylesheets', () => {
         expect(listRules.filter(rule => rule.declarations.some(declaration => /^position:\s*sticky/.test(declaration))).map(rule => rule.prelude)).toEqual([]);
     });
 
+    it('a pane header\'s actions rest hidden unless the host says always (UX-P3.7b, UX-P4.1)', () => {
+        const rules = stylesheets().flatMap(file => parseRules(readFileSync(file, 'utf8')).map(rule => ({ file: file.split(/[\\/]/).pop() ?? file, ...rule })));
+        const declaring = (property: string) => rules.filter(rule => rule.declarations.some(declaration => declaration.startsWith(`${property}:`)));
+        const reading = (property: string) => rules.flatMap(rule => rule.declarations.filter(declaration => declaration.includes(`var(${property}`)).map(declaration => `${rule.file} ${rule.prelude} { ${declaration} }`));
+
+        // (a) One rule sets the carrier, from the document element's attribute, and nothing else.
+        expect(declaring('--nuiget-header-actions-rest').map(rule => [rule.file, rule.prelude, rule.declarations])).toEqual([
+            ['sidebar.css', ':root[data-always-show-header-actions]', ['--nuiget-header-actions-rest: 1']],
+        ]);
+        // (b) One declaration reads it.
+        expect(reading('--nuiget-header-actions-rest')).toEqual(['sidebar.css .nuiget-sidebar-section { --nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0) }']);
+        // (c) The section rests at the carrier and shows on hover and focus; the actions read the opacity once.
+        expect(declaring('--nuiget-section-actions-opacity').map(rule => [rule.file, rule.prelude, rule.declarations])).toEqual([
+            ['sidebar.css', '.nuiget-sidebar-section', ['--nuiget-section-actions-opacity: var(--nuiget-header-actions-rest, 0)']],
+            ['sidebar.css', '.nuiget-sidebar-section:hover, .nuiget-sidebar-section:focus-within', ['--nuiget-section-actions-opacity: 1']],
+        ]);
+        expect(reading('--nuiget-section-actions-opacity')).toEqual(['primitives.css .nuiget-section-actions { opacity: var(--nuiget-section-actions-opacity, 1) }']);
+        // (d) The three look attributes switch tokens in tokens.css only.
+        expect(rules.filter(rule => /data-look|data-density|data-uppercase-headers/.test(rule.prelude)).map(rule => `${rule.file} ${rule.prelude}`)).toEqual([]);
+    });
+
     it('the main split hides the details pane and the sash below the sum of both pane minimums and the line, after the base rules (DS-OVERFLOW-5, UX-P3.fix-15)', () => {
         const tokens = readFileSync(TOKENS, 'utf8');
         const token = (name: string): number => {

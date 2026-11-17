@@ -386,6 +386,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Writes the webviews' [perf] marks (webview ready, first useful render) to the nUIget output channel at Info level instead of Debug. The duration of every dotnet command is always logged. Keep it off in normal use."
+                },
+                "nuiget.confirmUninstall": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Controls whether the Delete key asks for confirmation before it uninstalls a package."
                 }
             }
         }

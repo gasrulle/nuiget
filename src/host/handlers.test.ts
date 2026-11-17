@@ -20,6 +20,7 @@ import {
 } from '../protocol';
 import { createMockExtensionContext } from '../test/__mocks__/vscode';
 import { invalidateAfter, registerSharedHandlers, REPORTED_ERROR_LIMIT, submitFromHost } from './handlers';
+import { runRowAction, type RowAction, type RowActionRequest } from './rowMenu';
 import { createWorkflowDeps, HostEvents, renderWebviewHtml, type HostServices } from './services';
 import { SidebarHost } from './SidebarHost';
 import { WebviewHost, type WebviewLike } from './WebviewHost';
@@ -112,7 +113,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         invalidate,
         announceOperation,
         announceProgress: vi.fn(),
-        config: () => ({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, treeIndent: 8, isWindows: false }),
+        config: () => ({ searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 8, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false }),
         workspaceFolderFor: () => workspaceFolder,
     };
     return { services, catalog, workflows, sources, session, queue, announceOperation, invalidate, logger };
@@ -123,6 +124,7 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
     'session/get': {},
     'session/set': { includePrerelease: true },
     'config/get': {},
+    'config/doNotConfirmUninstall': {},
     'layout/get': {},
     'layout/set': { splitPosition: 40 },
     'projects/list': {},
@@ -158,7 +160,6 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
     'ops/bulkRemoveAllProjects': { projectRemovals: [{ projectPath: appPath, projectName: 'App', packages: ['X'] }] },
     'cpm/preview': { projectPath: appPath, packageId: 'Serilog', version: '4.1.0' },
     'refresh/all': {},
-    'ui/contextMenu': { packageId: 'X', context: 'installed', projectPath: appPath },
     'ui/openSourceSettings': {},
     'ui/viewPackage': { packageId: 'X' },
     'ui/copyToClipboard': { text: 'X' },
@@ -168,7 +169,7 @@ const payloads: { [T in RequestType]: RequestPayload<T> } = {
 };
 
 /** Requests that only a concrete host registers, not the shared handlers. */
-const hostOnly: RequestType[] = ['ui/contextMenu', 'ui/openSourceSettings', 'ui/viewPackage'];
+const hostOnly: RequestType[] = ['ui/openSourceSettings', 'ui/viewPackage'];
 
 /** The requests whose result is a resource of the query coordinator. */
 const resourceReads: RequestType[] = ['projects/list', 'installed/get', 'updates/get', 'transitive/get', 'sources/list', 'sources/refresh', 'sources/add', 'sources/remove', 'sources/enable', 'sources/disable'];
@@ -280,6 +281,19 @@ describe('shared handlers: every request of the protocol', () => {
         expect(catalog.transitiveMetadata).toHaveBeenCalledWith(directory, packages, expect.any(AbortSignal));
         expect(resultOf(host, 'v')).toEqual({ packageId: 'A', versions: ['1.0.0'] });
         expect('generation' in host.responses('v')[0]).toBe(false);
+    });
+
+    it('config/doNotConfirmUninstall turns the Delete confirmation off in the user settings and answers {}', async () => {
+        const { services } = makeServices();
+        const update = vi.fn(async () => undefined);
+        const reads = vi.mocked(vscode.workspace.getConfiguration);
+        reads.mockImplementationOnce((() => ({ get: vi.fn(), has: vi.fn(), inspect: vi.fn(), update })) as unknown as typeof vscode.workspace.getConfiguration);
+        const host = new TestHost(services);
+        await host.receiveRaw(makeRequest('config/doNotConfirmUninstall', {}, 'c'));
+
+        expect(reads).toHaveBeenLastCalledWith('nuiget');
+        expect(update).toHaveBeenCalledExactlyOnceWith('confirmUninstall', false, vscode.ConfigurationTarget.Global);
+        expect(resultOf(host, 'c')).toEqual({});
     });
 
     it('package/versions: no versions and sourcesUnavailable is a failed response, otherwise the list', async () => {
@@ -633,6 +647,12 @@ describe('services', () => {
             })).toBe('<html lang="en" data-look="modern" data-density="compact" data-uppercase-headers>');
         });
 
+        it('writes data-always-show-header-actions in either look when the workbench always shows header actions, and nothing otherwise', () => {
+            expect(htmlTag({ 'workbench.view.alwaysShowHeaderActions': true })).toBe('<html lang="en" data-look="classic" data-density="default" data-always-show-header-actions>');
+            expect(htmlTag({ 'workbench.experimental.modernUI': true, 'workbench.view.alwaysShowHeaderActions': true })).toBe('<html lang="en" data-look="modern" data-density="default" data-always-show-header-actions>');
+            expect(htmlTag({ 'workbench.view.alwaysShowHeaderActions': false })).toBe('<html lang="en" data-look="classic" data-density="default">');
+        });
+
         it('reads classic and default density on a host without the settings, and leaves the uppercase attribute out', () => {
             expect(htmlTag({})).toBe('<html lang="en" data-look="classic" data-density="default">');
             expect(htmlTag({ 'workbench.experimental.modernUI': true, 'window.density.layout': 'an unknown value' })).toBe('<html lang="en" data-look="modern" data-density="default">');
@@ -735,12 +755,11 @@ describe('submitFromHost', () => {
     });
 });
 
-describe('SidebarHost', () => {
-    it('SidebarHost: a context-menu action submits a typed operation and never fabricates a request', async () => {
+describe('row menu', () => {
+    it('row menu: a context-menu action submits a typed operation and never fabricates a request', async () => {
         const { services, workflows, announceOperation, queue } = makeServices();
         const submit = vi.spyOn(queue, 'submit');
         const posted: OutboundEnvelope[] = [];
-        let deliver!: (message: unknown) => void;
         const view = {
             webview: {
                 options: {},
@@ -748,131 +767,92 @@ describe('SidebarHost', () => {
                 cspSource: 'https://mock-csp-source',
                 asWebviewUri: (uri: vscode.Uri) => uri,
                 postMessage: (message: unknown) => { posted.push(message as OutboundEnvelope); return true; },
-                onDidReceiveMessage: (listener: (message: unknown) => void) => { deliver = listener; return { dispose: () => undefined }; },
+                onDidReceiveMessage: () => ({ dispose: () => undefined }),
             },
             visible: true,
             title: undefined as string | undefined,
             onDidChangeVisibility: () => ({ dispose: () => undefined }),
             onDidDispose: () => ({ dispose: () => undefined }),
         };
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Uninstall', action: 'uninstall' } as never);
 
         const sidebar = new SidebarHost(services);
         sidebar.resolveWebviewView(view as unknown as vscode.WebviewView);
         expect(view.webview.html).toContain('sidebar.js');
-        deliver(makeRequest('ui/contextMenu', { packageId: 'X', context: 'installed', projectPath: appPath, installedVersion: '1.0.0' }, 'menu'));
-        await vi.waitFor(() => expect(posted.some(message => message.kind === 'response')).toBe(true));
+        expect(await runRowAction(services, 'uninstall', { packageId: 'X', context: 'installed', projectPath: appPath, installedVersion: '1.0.0' })).toBe(true);
 
         expect(submit).toHaveBeenCalledTimes(1);
         expect(submit.mock.calls[0][0]).toBe('uninstall X');
         expect(workflows.single).toHaveBeenCalledWith(expect.anything(), { kind: 'remove', projectPath: appPath, packageId: 'X' }, { skipRestore: false });
         expect(announceOperation).toHaveBeenCalledTimes(1);
-        // The only response is the one for the request the webview sent; the outcome travels as an event.
-        expect(posted.filter(message => message.kind === 'response')).toEqual([{ kind: 'response', id: 'menu', type: 'ui/contextMenu', ok: true, result: { handled: true } }]);
+        // The webview asked nothing, so nothing is answered: what it is sent are events.
+        expect(posted.filter(message => message.kind !== 'event')).toEqual([]);
         sidebar.dispose();
     });
 
-    /** A resolved sidebar whose webview records what it is sent; `send` delivers a request and waits for its response. */
-    function resolvedSidebar(services: ReturnType<typeof makeServices>['services']) {
-        const posted: OutboundEnvelope[] = [];
-        let deliver!: (message: unknown) => void;
-        const view = {
-            webview: {
-                options: {}, html: '', cspSource: 'https://mock-csp-source', asWebviewUri: (uri: vscode.Uri) => uri,
-                postMessage: (message: unknown) => { posted.push(message as OutboundEnvelope); return true; },
-                onDidReceiveMessage: (listener: (message: unknown) => void) => { deliver = listener; return { dispose: () => undefined }; },
-            },
-            visible: true, title: undefined as string | undefined,
-            onDidChangeVisibility: () => ({ dispose: () => undefined }), onDidDispose: () => ({ dispose: () => undefined }),
-        };
-        const sidebar = new SidebarHost(services);
-        sidebar.resolveWebviewView(view as unknown as vscode.WebviewView);
-        const send = async (payload: Record<string, unknown>, id: string): Promise<unknown> => {
-            deliver(makeRequest('ui/contextMenu', payload as never, id));
-            await vi.waitFor(() => expect(posted.some(message => message.kind === 'response' && message.id === id)).toBe(true));
-            const response = posted.find(message => message.kind === 'response' && message.id === id) as { result?: unknown };
-            return response.result;
-        };
-        return { sidebar, send };
-    }
+    /** Runs a row action as the menu's command does; the answer is whether it went through. */
+    const run = (services: ReturnType<typeof makeServices>['services'], action: RowAction, request: Record<string, unknown>): Promise<boolean> => runRowAction(services, action, request as unknown as RowActionRequest);
 
     const centralPreview = (affectedProjects: string[]) => ({ centralPropsPath: path.join(workspace, 'Directory.Packages.props'), packageId: 'X', fromVersion: '1.0.0', toVersion: '2.0.0', affectedProjects });
 
-    it('SidebarHost: an update of a centrally managed package shows the projects it changes first and submits only when confirmed', async () => {
+    it('row menu: an update of a centrally managed package shows the projects it changes first and submits only when confirmed', async () => {
         const { services, workflows } = makeServices();
         vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(centralPreview([appPath, libPath]));
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
         const warning = vi.mocked(vscode.window.showWarningMessage);
         warning.mockResolvedValueOnce('Update Central Version' as never);
-        const { sidebar, send } = resolvedSidebar(services);
-        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: true });
+        expect(await run(services, 'update-latest', { packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' })).toBe(true);
         expect(services.contextFor).toHaveBeenCalledWith(appPath);
         expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: appPath }), 'X', '2.0.0');
         expect(warning).toHaveBeenCalledWith('Update the central version of X?', { modal: true, detail: '1.0.0 → 2.0.0 in Directory.Packages.props applies to: App.csproj, Lib.csproj' }, 'Update Central Version');
         expect(workflows.single).toHaveBeenCalledTimes(1);
         expect(workflows.single).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: 'update', projectPath: appPath, packageId: 'X', version: '2.0.0' }), { skipRestore: false });
-        sidebar.dispose();
     });
 
-    it('SidebarHost: the central change cancelled in the modal submits nothing', async () => {
+    it('row menu: the central change cancelled in the modal submits nothing', async () => {
         const { services, workflows, queue } = makeServices();
         const submit = vi.spyOn(queue, 'submit');
         vi.mocked(services.mutator.previewCpmImpact).mockResolvedValueOnce(centralPreview([appPath, libPath]));
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
-        const { sidebar, send } = resolvedSidebar(services);
-        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: false });
+        expect(await run(services, 'update-latest', { packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' })).toBe(false);
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
         expect(submit).not.toHaveBeenCalled();
         expect(workflows.single).not.toHaveBeenCalled();
-        sidebar.dispose();
     });
 
-    it('SidebarHost: a package without a central entry is submitted without a modal', async () => {
+    it('row menu: a package without a central entry is submitted without a modal', async () => {
         const { services, workflows } = makeServices();
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: 'Update to 2.0.0', action: 'update-latest' } as never);
-        const { sidebar, send } = resolvedSidebar(services);
-        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: true });
+        expect(await run(services, 'update-latest', { packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' })).toBe(true);
         expect(services.mutator.previewCpmImpact).toHaveBeenCalledTimes(1);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(workflows.single).toHaveBeenCalledTimes(1);
-        sidebar.dispose();
     });
 
-    it('SidebarHost: no versions and every source unreachable says so and submits nothing', async () => {
+    it('row menu: no versions and every source unreachable says so and submits nothing', async () => {
         const { services, catalog, queue } = makeServices();
         const submit = vi.spyOn(queue, 'submit');
         catalog.versions.mockResolvedValueOnce({ versions: [], sourcesUnavailable: true });
-        vi.mocked(vscode.window.showQuickPick).mockResolvedValueOnce({ label: '$(list-ordered) Update to Version...', action: 'update-version' } as never);
         const warning = vi.mocked(vscode.window.showWarningMessage);
         warning.mockClear();
-        const { sidebar, send } = resolvedSidebar(services);
 
-        expect(await send({ packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' }, 'menu')).toEqual({ handled: false });
+        expect(await run(services, 'update-version', { packageId: 'X', context: 'updates', projectPath: appPath, installedVersion: '1.0.0', latestVersion: '2.0.0' })).toBe(false);
         expect(warning).toHaveBeenCalledWith('nUIget: No package source could be reached for this package.');
         // No version list was shown and nothing was submitted.
-        expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(0);
         expect(submit).not.toHaveBeenCalled();
-        sidebar.dispose();
     });
 
-    it('SidebarHost: install from browse under All Projects picks the projects; one project is ops/install, several are ops/bulkInstall', async () => {
+    it('row menu: install from browse under All Projects picks the projects; one project is ops/install, several are ops/bulkInstall', async () => {
         const { services, workflows } = makeServices();
         const pick = vi.mocked(vscode.window.showQuickPick);
-        const { sidebar, send } = resolvedSidebar(services);
         const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [{ projectPath: libPath, projectName: 'Lib.csproj', version: '1.0.0' }] };
 
-        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => (items as unknown as Array<{ detail: string; picked: boolean }>).filter(item => item.picked) as never);
-        expect(await send(request, 'one')).toEqual({ handled: true });
+        expect(await run(services, 'install-latest', request)).toBe(true);
         expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
 
-        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => items as never);
-        expect(await send(request, 'two')).toEqual({ handled: true });
+        expect(await run(services, 'install-latest', request)).toBe(true);
         const [, projects, packageId, version] = workflows.bulkInstall.mock.calls.at(-1) as unknown as [unknown, Array<{ path: string } | string>, string, string];
         expect(projects.map(project => (typeof project === 'string' ? project : project.path))).toEqual([appPath, libPath]);
         expect([packageId, version]).toEqual(['X', '2.0.0']);
-        sidebar.dispose();
     });
 
     it('bulk install from the actions menu leaves out the projects where the package has a central entry and says so', async () => {
@@ -880,13 +860,11 @@ describe('SidebarHost', () => {
         const pick = vi.mocked(vscode.window.showQuickPick);
         const info = vi.mocked(vscode.window.showInformationMessage);
         info.mockClear();
-        const { sidebar, send } = resolvedSidebar(services);
         const request = { packageId: 'X', context: 'browse', projectPath: ALL_PROJECTS, latestVersion: '2.0.0', installedProjects: [] };
         vi.mocked(services.mutator.previewCpmImpact).mockImplementation(async context => (context.projectPath === libPath ? centralPreview([libPath]) : undefined));
 
-        pick.mockResolvedValueOnce({ label: '$(add) Install Latest Version', action: 'install-latest' } as never);
         pick.mockImplementationOnce(async items => items as never);
-        expect(await send(request, 'bulk')).toEqual({ handled: true });
+        expect(await run(services, 'install-latest', request)).toBe(true);
 
         expect(services.mutator.previewCpmImpact).toHaveBeenCalledWith(expect.objectContaining({ projectPath: libPath }), 'X', '2.0.0');
         expect(info).toHaveBeenCalledWith('nUIget: Not installed in Lib.csproj: X has a central entry there. Install it from the project to see the preview.');
@@ -894,6 +872,5 @@ describe('SidebarHost', () => {
         expect(workflows.bulkInstall).not.toHaveBeenCalled();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(workflows.single).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ kind: 'install', projectPath: appPath, packageId: 'X', version: '2.0.0' }), expect.anything());
-        sidebar.dispose();
     });
 });
