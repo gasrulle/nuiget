@@ -1,0 +1,69 @@
+{
+ "item": "P4.5",
+ "runs": [
+  {
+   "runId": "44191260179",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "a52f9d65 (proving push)",
+   "look": "modern",
+   "workflow": "wf_4b49d067-ab7",
+   "note": "Four of the 15 former LIVE_MOTION states, judged against main-installed-all.dark-modern.1200 as the row reference (no loading artboard). No standing finding.",
+   "captures": {
+    "main-installed-loading": {
+     "png": "captures/44191260179/main-installed-loading.dark-modern.1200.png",
+     "sha256": "e812b1e224fb97fd0a0ba8def27a4da23ab4cf54a055e7fa2b5d62b1e4d5ce44"
+    },
+    "main-installed-revalidating": {
+     "png": "captures/44191260179/main-installed-revalidating.dark-modern.1200.png",
+     "sha256": "aedc8e8a8561b209e0feaa82ca280c1b2500c088073d32ffcd7bb76b6d736df9"
+    },
+    "sidebar-installed-loading": {
+     "png": "captures/44191260179/sidebar-installed-loading.dark-modern.300.png",
+     "sha256": "c2f5faca11049f2f1501c976c08a620a86529d8a2689f6c84de523b93c3335aa"
+    },
+    "main-browse-loading": {
+     "png": "captures/44191260179/main-browse-loading.dark-modern.1200.png",
+     "sha256": "60c99e877c3d89a25abb92f9b0c4a7e21a624a92a080fa68fd5525a46bbd3d2e"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 2,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 1,
+    "singleJudge": 1,
+    "incomplete": 0
+   },
+   "singleJudge": [
+    {
+     "id": "main-installed-revalidating#D1",
+     "state": "main-installed-revalidating",
+     "finding": "[native] While the list revalidates, the 1 px divider between the bulk toolbar and the list (artboard: a #2b2b2b line at y 147, x 4 to 407) is gone across its whole width. Only the 2 px stripe shows, at x 0 to 125. The bar's track paints the list background over the divider, whereas the workbench's progress container is transparent outside its moving bit, so the header line stays visible under the bar.",
+     "severity": "major",
+     "box": [
+      0,
+      146,
+      408,
+      3
+     ],
+     "rule": "DS-DIVIDER-4",
+     "lenses": [
+      "native"
+     ],
+     "note": "informational: the revalidation bar's track paints the list background over the toolbar divider (DS-DIVIDER-4 reads computed colour, not pixels); older than this item (the bar since UX-P2.8b), not touched by it; reported to the planning session"
+    }
+   ],
+   "findings": [],
+   "refuted": [
+    {
+     "id": "states-1",
+     "state": "main-installed-loading",
+     "rule": "judge-only",
+     "finding": "The search box placeholder reads \"Search or type @ to filter\", while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's copy differs from the artboard and no longer names the available filters.",
+     "reason": "The crop does show \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, ...\", but this copy is the declared design: design-system.md's main-header overflow row names it as the main search box's placeholder (the side bar's hint, since UX-P3.fix-15, DECISIONS 2026-11-16, with the Filter button carrying the filter names). The hard measurement agrees: \"DS-OVERFLOW-2@main-installed-all/placeholder: placeholder \\\"Search or type @ to filter\\\" 164 of 1136 px (hard)\". So the round-3 artboard text is stale, not a product defect."
+    }
+   ]
+  }
+ ]
+}
