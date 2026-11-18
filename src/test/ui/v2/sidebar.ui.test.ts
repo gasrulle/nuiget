@@ -3,6 +3,19 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ActivityBar, By, EditorView, Key, NotificationType, Origin, type WebElement, Workbench } from 'vscode-extension-tester';
 import { FEEDBACK_STATUS, feedbackLines } from './a11y';
+
+/** The notification centre's texts, of every severity and of information ones; cleared after the read when `clear` (UX-P4.7). */
+async function readNotificationCentre(clear: boolean): Promise<{ info: string[]; all: string[]; }> {
+    await leaveWebview();
+    const center = await new Workbench().openNotificationsCenter();
+    const texts = async (type: NotificationType): Promise<string[]> => Promise.all((await center.getNotifications(type)).map(notification => notification.getMessage()));
+    const read = { info: await texts(NotificationType.Info), all: await texts(NotificationType.Any) };
+    if (clear) {
+        await center.clearAllNotifications();
+    }
+    await center.close().catch(() => undefined);
+    return read;
+}
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, tokenPx, typeHeld, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
@@ -251,6 +264,9 @@ describe('2.0 sidebar', () => {
 
     it('uninstalls through the sidebar and the project file follows', async function () {
         this.timeout(300_000);
+        // UX-P4.7 (DS-STATE-5; design-advisor follow-up ruling of 2026-11-18): the centre cleared before the operation, so the read
+        // after it holds what this operation raised; what was cleared is listed in the line.
+        const clearedBefore = (await readNotificationCentre(true)).all;
         await openSidebarView();
         await enterSidebarWebview();
         const option = await serilogOption();
@@ -265,13 +281,10 @@ describe('2.0 sidebar', () => {
         // region says it. Read in the notification centre, which keeps a notification after its toast hides; never through the
         // palette. What the operation raised is cleared after the read.
         const said = (await (await findByTestId('status-live')).getAttribute('textContent')) ?? '';
-        await leaveWebview();
-        const center = await new Workbench().openNotificationsCenter();
-        const notifications = await Promise.all((await center.getNotifications(NotificationType.Info)).map(notification => notification.getMessage()));
-        const feedback = feedbackLines('sidebar', notifications, said);
+        // Read once after the operation, nothing cleared in between; what it raised is cleared after the read.
+        const after = await readNotificationCentre(true);
+        const feedback = feedbackLines('sidebar', { done: 'Uninstalled', packageId: 'Serilog' }, after, clearedBefore, said);
         console.warn(feedback.lines[0]);
-        await center.clearAllNotifications().catch(() => undefined);
-        await center.close().catch(() => undefined);
         await enterSidebarWebview();
         if (FEEDBACK_STATUS === 'hard' && feedback.failures.length > 0) {
             throw new Error(`[feedback] ${feedback.failures.join('; ')}`);

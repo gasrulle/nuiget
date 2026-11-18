@@ -433,17 +433,24 @@ describe('the accessibility harness (UX-P0.23)', () => {
         }
     });
 
-    it('reads DS-STATE-5 after a single operation: no information notification for a single success, the live region said (UX-P4.7)', () => {
+    it('reads DS-STATE-5 after a single operation: no information notification naming its package, the live region said, every text read and cleared listed (UX-P4.7)', () => {
         expect(FEEDBACK_STATUS).toEqual({ pending: 'P4.7' });
-        expect(feedbackLines('main-search', ['nUIget: Restored 1 project.'], 'Installed NUnit 4.2.2 in TestProject')).toEqual({
-            lines: ['[feedback] DS-STATE-5@main-search: information notifications 0; status-live "Installed NUnit 4.2.2 in TestProject" (pending P4.7)'],
+        const install = { done: 'Installed' as const, packageId: 'NUnit' };
+        expect(feedbackLines('main-search', install, { info: [], all: [] }, ['nUIget: Uninstalled 2 packages.'], 'Installed NUnit 5.0.0')).toEqual({
+            lines: ['[feedback] DS-STATE-5@main-search: information notifications 0; read 0; cleared 1 before: "nUIget: Uninstalled 2 packages."; status-live "Installed NUnit 5.0.0" (pending P4.7)'],
             failures: [],
         });
-        expect(feedbackLines('sidebar', ['nUIget: Uninstalled Serilog from TestProject.'], 'Uninstalled Serilog', 'hard')).toEqual({
-            lines: ['[feedback] DS-STATE-5@sidebar: information notifications 1; status-live "Uninstalled Serilog" (hard)'],
-            failures: ['1 information notification for a single success'],
+        // Only the operation's own package counts; a bulk summary or another package's line is listed, not counted.
+        const after = { info: ['nUIget: Installed NUnit 5.0.0 in TestProject.', 'nUIget: Installed Moq in 2 projects.'], all: ['nUIget: Installed NUnit 5.0.0 in TestProject.', 'nUIget: Installed Moq in 2 projects.', 'nUIget: Restore failed.'] };
+        expect(feedbackLines('main-search', install, after, [], 'Installed NUnit 5.0.0', 'hard')).toEqual({
+            lines: ['[feedback] DS-STATE-5@main-search: information notifications 1; read 3: "nUIget: Installed NUnit 5.0.0 in TestProject." | "nUIget: Installed Moq in 2 projects." | "nUIget: Restore failed."; cleared 0 before; status-live "Installed NUnit 5.0.0" (hard)'],
+            failures: ['1 information notification naming NUnit'],
         });
-        expect(feedbackLines('sidebar', [], '  ', 'hard').failures).toEqual(['status-live empty']);
+        expect(feedbackLines('sidebar', { done: 'Uninstalled', packageId: 'Serilog' }, { info: [], all: [] }, [], '  ', 'hard').failures).toEqual(['status-live empty']);
+        // The id is matched as text: a dotted id counts its own sentence and not one whose dot is another character.
+        const json = { done: 'Updated' as const, packageId: 'Newtonsoft.Json' };
+        expect(feedbackLines('s', json, { info: ['nUIget: Updated Newtonsoft.Json to 13.0.3 in App.'], all: [] }, [], 'x').failures).toEqual(['1 information notification naming Newtonsoft.Json']);
+        expect(feedbackLines('s', json, { info: ['nUIget: Updated NewtonsoftXJson to 13.0.3 in App.'], all: [] }, [], 'x').failures).toEqual([]);
     });
 
     it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar printed (a11y-first-load-announced, UX-P4.6)', () => {

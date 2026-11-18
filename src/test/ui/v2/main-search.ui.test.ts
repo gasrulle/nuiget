@@ -3,6 +3,19 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { By, Key, NotificationType, Workbench } from 'vscode-extension-tester';
 import { FEEDBACK_STATUS, feedbackLines } from './a11y';
+
+/** The notification centre's texts, of every severity and of information ones; cleared after the read when `clear` (UX-P4.7). */
+async function readNotificationCentre(clear: boolean): Promise<{ info: string[]; all: string[]; }> {
+    await leaveWebview();
+    const center = await new Workbench().openNotificationsCenter();
+    const texts = async (type: NotificationType): Promise<string[]> => Promise.all((await center.getNotifications(type)).map(notification => notification.getMessage()));
+    const read = { info: await texts(NotificationType.Info), all: await texts(NotificationType.Any) };
+    if (clear) {
+        await center.clearAllNotifications();
+    }
+    await center.close().catch(() => undefined);
+    return read;
+}
 import { enterMainWebview, openMainPanel } from './mainWebview';
 import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone, waitForText } from './sidebarWebview';
 
@@ -142,6 +155,10 @@ describe('2.0 main panel: browse', () => {
         // moves when it narrows: a click aimed before that lands next to the button (N85).
         const selector = await findByTestId('version-selector', 60_000);
         await poll(async () => (((await selector.getAttribute('textContent')) ?? '').includes('loading versions') ? undefined : true), 'the versions of NUnit', 60_000);
+        // UX-P4.7 (DS-STATE-5; design-advisor follow-up ruling of 2026-11-18): the centre cleared before the operation, so the read
+        // after it holds what this operation raised; what was cleared is listed in the line.
+        const clearedBefore = (await readNotificationCentre(true)).all;
+        await enterMainWebview();
         const install = await findByTestId('install-update-button', 60_000);
         await poll(async () => (/Install/.test(await install.getText()) && (await install.isEnabled()) ? true : undefined), 'the Install button', 60_000);
         await install.click();
@@ -156,13 +173,10 @@ describe('2.0 main panel: browse', () => {
         // region says it. Read in the notification centre, which keeps a notification after its toast hides; never through the
         // palette. What the operation raised is cleared after the read.
         const said = (await (await findByTestId('status-live')).getAttribute('textContent')) ?? '';
-        await leaveWebview();
-        const center = await new Workbench().openNotificationsCenter();
-        const notifications = await Promise.all((await center.getNotifications(NotificationType.Info)).map(notification => notification.getMessage()));
-        const feedback = feedbackLines('main-search', notifications, said);
+        // Read once after the operation, nothing cleared in between; what it raised is cleared after the read.
+        const after = await readNotificationCentre(true);
+        const feedback = feedbackLines('main-search', { done: 'Installed', packageId: 'NUnit' }, after, clearedBefore, said);
         console.warn(feedback.lines[0]);
-        await center.clearAllNotifications().catch(() => undefined);
-        await center.close().catch(() => undefined);
         await enterMainWebview();
         if (FEEDBACK_STATUS === 'hard' && feedback.failures.length > 0) {
             throw new Error(`[feedback] ${feedback.failures.join('; ')}`);

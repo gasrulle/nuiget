@@ -822,22 +822,24 @@ export function motionOnLines(state: string, facts: MotionOnFacts, status: RuleS
 /** DS-STATE-5's `[feedback]` line: pending until UX-P4.7's closing commit reads it at 0 (design-advisor ruling of 2026-11-18, DO 10). */
 export const FEEDBACK_STATUS: RuleStatus = { pending: 'P4.7' };
 
-/** The sentence of a single success the host would have toasted before D50 (`feedback.ts` `doneSentence`). */
-export const SINGLE_SUCCESS = /^nUIget: (Installed|Updated|Uninstalled) /;
+const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const quoted = (texts: readonly string[]): string => (texts.length === 0 ? '' : `: ${texts.map(text => `"${text}"`).join(' | ')}`);
 
 /**
- * The `[feedback] DS-STATE-5@<suite>: information notifications <n>; status-live "<text>"` line, read after a single operation a
- * UI suite runs (UX-P4.7): the information notifications in VS Code's notification centre whose text is a single success
- * sentence, and the live region of the surface that asked; it fails above 0 or on an empty region.
+ * The `[feedback] DS-STATE-5@<suite>: …` line, read after a single operation a UI suite runs (UX-P4.7; design-advisor follow-up
+ * ruling of 2026-11-18): the information notifications naming the operation's package (`nUIget: <Done> <id>`), which the
+ * centre holds after it was cleared before the operation; every notification read and every one cleared before, listed; and the
+ * live region of the surface that asked. It fails above 0 or on an empty region.
  */
-export function feedbackLines(suite: string, notifications: readonly string[], live: string, status: RuleStatus = FEEDBACK_STATUS): { lines: string[]; failures: string[] } {
-    const count = notifications.filter(text => SINGLE_SUCCESS.test(text)).length;
+export function feedbackLines(suite: string, operation: { done: 'Installed' | 'Updated' | 'Uninstalled'; packageId: string }, read: { info: readonly string[]; all: readonly string[] }, clearedBefore: readonly string[], live: string, status: RuleStatus = FEEDBACK_STATUS): { lines: string[]; failures: string[] } {
+    const own = new RegExp(`^nUIget: ${operation.done} ${escape(operation.packageId)}\\b`);
+    const count = read.info.filter(text => own.test(text)).length;
     const said = live.trim();
     const failures = [
-        ...(count === 0 ? [] : [`${count} information notification${count === 1 ? '' : 's'} for a single success`]),
+        ...(count === 0 ? [] : [`${count} information notification${count === 1 ? '' : 's'} naming ${operation.packageId}`]),
         ...(said === '' ? ['status-live empty'] : []),
     ];
-    return { lines: [`[feedback] DS-STATE-5@${suite}: information notifications ${count}; status-live "${said}" (${statusText(status)})`], failures };
+    return { lines: [`[feedback] DS-STATE-5@${suite}: information notifications ${count}; read ${read.all.length}${quoted(read.all)}; cleared ${clearedBefore.length} before${quoted(clearedBefore)}; status-live "${said}" (${statusText(status)})`], failures };
 }
 
 // ---- UX-P4.6: the first load said in the live region (a11y-first-load-announced) --------------------------------------
