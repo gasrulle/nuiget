@@ -97,6 +97,12 @@ export interface SplitFit {
  */
 export const SPLIT_STATUS: RuleStatus = 'hard';
 
+/**
+ * DS-STATE-3's `block` clause: every shown empty state's computed padding-top and padding-bottom, 8, or 20 in the details pane
+ * (DECISIONS 2026-11-18 "A list's empty state keeps the 8 px block inset"; UX-P4.fix-12).
+ */
+export const EMPTY_BLOCK_STATUS: RuleStatus = { pending: 'P4.fix-12' };
+
 /** DS-OVERFLOW-2's `placeholder` clause on the main search box (the sidebar's copy fits from 400; UX-P3.fix-15). Hard since that item's closing (proving run 43776489839). */
 export const MAIN_PLACEHOLDER_STATUS: RuleStatus = 'hard';
 
@@ -1265,7 +1271,7 @@ export interface StateCells {
     progressTop: number | undefined;
     contentTop: number | undefined;
     /** `dialogInset`: the padding-left of the dialog an empty state sits in, whose inset carries it there (UX-P3.6). */
-    empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; gap: number; buttons: number; buttonWidth: number | undefined; width: number; dialogInset?: number }>;
+    empties: Array<{ textAlign: string; paddingLeft: number; paddingRight: number; paddingTop?: number; paddingBottom?: number; inDetails?: boolean; gap: number; buttons: number; buttonWidth: number | undefined; width: number; dialogInset?: number }>;
     banners: Array<{ severity: string; glyphs: string[]; buttons: number; text: string }>;
     roles: Array<{ role: string; key: string; actual: string; expected: string }>;
     // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): what the new clauses read; absent on a collector error.
@@ -2200,7 +2206,7 @@ const stateCells = {
     empties: shown('.nuiget-empty').map(el => {
         const style = getComputedStyle(el);
         const buttons = [...el.querySelectorAll('button')];
-        return { textAlign: style.textAlign, paddingLeft: px(style.paddingLeft), paddingRight: px(style.paddingRight), gap: px(style.rowGap), buttons: buttons.length, buttonWidth: buttons[0] ? rectOf(buttons[0]).width : undefined, width: rectOf(el).width, dialogInset: el.closest('.nuiget-dialog') ? px(getComputedStyle(el.closest('.nuiget-dialog')).paddingLeft) : undefined };
+        return { textAlign: style.textAlign, paddingLeft: px(style.paddingLeft), paddingRight: px(style.paddingRight), paddingTop: px(style.paddingTop), paddingBottom: px(style.paddingBottom), inDetails: el.closest('.nuiget-main-details') ? true : undefined, gap: px(style.rowGap), buttons: buttons.length, buttonWidth: buttons[0] ? rectOf(buttons[0]).width : undefined, width: rectOf(el).width, dialogInset: el.closest('.nuiget-dialog') ? px(getComputedStyle(el.closest('.nuiget-dialog')).paddingLeft) : undefined };
     }),
     banners: shown('.nuiget-banner').map(el => ({
         severity: (el.className.match(/nuiget-banner--(\\w+)/) || [])[1] || '',
@@ -3954,7 +3960,18 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             });
             const first = cells.empties[0];
             const inset = first.dialogInset === undefined ? `${first.paddingLeft}/${first.paddingRight}` : `${first.paddingLeft}/${first.paddingRight} in a dialog inset ${first.dialogInset}`;
-            return { value: off.length === 0 ? `${first.textAlign}, ${inset}, ${first.buttons} buttons, gap ${first.gap} (${cells.empties.length})` : off.join('; '), pass: off.length === 0 };
+            const base = off.length === 0 ? `${first.textAlign}, ${inset}, ${first.buttons} buttons, gap ${first.gap} (${cells.empties.length})` : off.join('; ');
+            // The `block` clause (UX-P4.fix-12): every shown empty state, 8/8, or 20/20 in the details pane; a dialog's reads 8/8.
+            const blocks = cells.empties.map(empty => {
+                const target = empty.inDetails === true ? 20 : 8;
+                const top = empty.paddingTop ?? Number.NaN;
+                const bottom = empty.paddingBottom ?? Number.NaN;
+                const onTarget = Math.abs(top - target) <= tolerance && Math.abs(bottom - target) <= tolerance;
+                const where = empty.inDetails === true ? ' in details' : empty.dialogInset !== undefined ? ' in a dialog' : '';
+                return { onTarget, text: `${top}/${bottom}${where}${onTarget ? '' : ` (target ${target}/${target})`}` };
+            });
+            const clause = `block ${blocks.map(block => block.text).join(', ')}${EMPTY_BLOCK_STATUS === 'hard' ? '' : ` (pending ${EMPTY_BLOCK_STATUS.pending})`}`;
+            return { value: `${base}; ${clause}`, pass: off.length === 0 && (EMPTY_BLOCK_STATUS !== 'hard' || blocks.every(block => block.onTarget)) };
         }
         case 'DS-STATE-4': {
             if (cells.banners.length === 0) {

@@ -409,7 +409,9 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
 
     it('reads the details empty state\'s top inset and the split\'s sash bounds with the two pane minimums (UX-P3.3b)', () => {
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
-        panel.insertAdjacentHTML('beforeend', '<div id="empty" class="nuiget-empty" data-testid="details-empty" style="padding-top: 20px" data-rect="620,77,880,140"><p class="nuiget-empty-text" data-rect="640,97,860,115" data-text="640,97,800,115">Select a package</p></div>');
+        // The details pane's section (MainShell's `.nuiget-main-details`): its empty state reads 20/20 (UX-P4.fix-12).
+        panel.classList.add('nuiget-main-details');
+        panel.insertAdjacentHTML('beforeend', '<div id="empty" class="nuiget-empty" data-testid="details-empty" style="padding-top: 20px; padding-bottom: 20px" data-rect="620,77,880,140"><p class="nuiget-empty-text" data-rect="640,97,860,115" data-text="640,97,800,115">Select a package</p></div>');
         const app = document.querySelector('[data-testid="nuiget-app"]') as HTMLElement;
         app.insertAdjacentHTML('beforeend', '<div id="split" class="nuiget-main-split" style="--nuiget-list-pane-min: 170px; --nuiget-details-pane-min: 220px" data-rect="0,77,1200,803"><div role="separator" aria-valuemin="15" aria-valuemax="81" data-rect="420,77,424,803"></div></div>');
         const split = document.getElementById('split') as HTMLElement;
@@ -418,7 +420,9 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             const facts = collect().endOfP0;
             expect(facts.detailsEmpty).toEqual({ top: 20 });
             expect(facts.split).toEqual({ width: 1200, sash: 4, min: 15, max: 81, listMin: 170, detailsMin: 220 });
+            expect(facts.stateCells.empties).toContainEqual(expect.objectContaining({ paddingTop: 20, paddingBottom: 20, inDetails: true }));
         } finally {
+            panel.classList.remove('nuiget-main-details');
             document.getElementById('empty')?.remove();
             split.remove();
         }
@@ -674,7 +678,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
     });
 
     it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
-        document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; row-gap: 8px; }</style>');
+        document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;
         list.insertAdjacentHTML('afterbegin', [
             '<div class="nuiget-progress" data-testid="installed-progress" data-rect="0,100,600,102"><div class="nuiget-progress-bar" data-rect="0,100,180,102"></div></div>',
@@ -689,7 +693,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(cells.skeletonRows).toBe(2);
         expect(cells.progressTop).toBe(100);
         expect(cells.contentTop).toBeGreaterThanOrEqual(100);
-        expect(cells.empties).toEqual([{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 300, width: 600 }]);
+        expect(cells.empties).toEqual([{ textAlign: 'start', paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, gap: 8, buttons: 1, buttonWidth: 300, width: 600 }]);
         expect(cells.banners).toEqual([{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }]);
         expect([...new Set(cells.roles.map(role => role.key))]).toEqual(expect.arrayContaining(['--vscode-progressBar-background', '--vscode-problemsErrorIcon-foreground', '--vscode-descriptionForeground', '--vscode-list-hoverBackground']));
         expect(cells.roles.filter(role => role.role === 'skeleton')).toHaveLength(2);

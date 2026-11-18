@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -1211,14 +1211,16 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-loading', { progressTop: 152, contentTop: 150, skeletonRows: 3 }, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
         expect(line('main-installed-loading', {}, 'DS-STATE-2@main-installed-loading')).toMatchObject({ pass: false });
 
-        const empty = { textAlign: 'start', paddingLeft: 20, paddingRight: 20, gap: 8, buttons: 1, buttonWidth: 260, width: 300 };
-        expect(line('main-installed-empty', { empties: [empty] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: true });
-        expect(line('main-installed-empty', { empties: [{ ...empty, textAlign: 'center' }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'text-align center' });
-        expect(line('main-installed-empty', { empties: [{ ...empty, buttonWidth: 200 }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'button 200 (target 260)' });
+        // The `block` clause's suffix while it is pending (UX-P4.fix-12); the base text and verdict are the rule's own.
+        const blockSuffix = EMPTY_BLOCK_STATUS === 'hard' ? '' : ' (pending ' + EMPTY_BLOCK_STATUS.pending + ')';
+        const empty = { textAlign: 'start', paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, gap: 8, buttons: 1, buttonWidth: 260, width: 300 };
+        expect(line('main-installed-empty', { empties: [empty] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: true, value: 'start, 20/20, 1 buttons, gap 8 (1); block 8/8' + blockSuffix });
+        expect(line('main-installed-empty', { empties: [{ ...empty, textAlign: 'center' }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'text-align center; block 8/8' + blockSuffix });
+        expect(line('main-installed-empty', { empties: [{ ...empty, buttonWidth: 200 }] }, 'DS-STATE-3@main-installed-empty')).toMatchObject({ pass: false, value: 'button 200 (target 260); block 8/8' + blockSuffix });
         // UX-P3.6: inside a dialog the empty state's inline padding is 0 and the dialog's 16 px inset carries it.
-        const inDialog = { textAlign: 'start', paddingLeft: 0, paddingRight: 0, gap: 8, buttons: 0, buttonWidth: undefined, width: 418, dialogInset: 16 };
-        expect(line('main-sources-empty', { empties: [inDialog] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: true, value: 'start, 0/0 in a dialog inset 16, 0 buttons, gap 8 (1)' });
-        expect(line('main-sources-empty', { empties: [{ ...inDialog, paddingLeft: 20, paddingRight: 20 }] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: false, value: 'padding 20/20 in a dialog inset 16 (target 0/0 in 16)' });
+        const inDialog = { textAlign: 'start', paddingLeft: 0, paddingRight: 0, paddingTop: 8, paddingBottom: 8, gap: 8, buttons: 0, buttonWidth: undefined, width: 418, dialogInset: 16 };
+        expect(line('main-sources-empty', { empties: [inDialog] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: true, value: 'start, 0/0 in a dialog inset 16, 0 buttons, gap 8 (1); block 8/8 in a dialog' + blockSuffix });
+        expect(line('main-sources-empty', { empties: [{ ...inDialog, paddingLeft: 20, paddingRight: 20 }] }, 'DS-STATE-3@main-sources-empty')).toMatchObject({ pass: false, value: 'padding 20/20 in a dialog inset 16 (target 0/0 in 16); block 8/8 in a dialog' + blockSuffix });
         // The sources rows count as rows under the bar.
         expect(line('main-sources-revalidating', { progressTop: 150, contentTop: 150, rows: 1, listBusy: true }, 'DS-STATE-2@main-sources-revalidating')).toMatchObject({ pass: true, value: 'bar at list top; rows 1; aria-busy' });
 
@@ -1232,6 +1234,30 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-loading', { roles: [{ ...role, actual: 'rgb(9, 9, 9)' }] }, 'DS-COLOR-1@main-installed-loading')).toMatchObject({ pass: false });
     });
 
+
+    it('reads every empty state\'s block inset: 8/8 in a list, the sidebar and a dialog, 20/20 in the details pane (DS-STATE-3, UX-P4.fix-12)', () => {
+        const facts = (cells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });
+        const line = (state: string, empties: unknown[]) => lineOf(state, facts({ empties }), `DS-STATE-3@${state}`);
+        const suffix = EMPTY_BLOCK_STATUS === 'hard' ? '' : ' (pending ' + EMPTY_BLOCK_STATUS.pending + ')';
+        const offPass = EMPTY_BLOCK_STATUS !== 'hard';
+        const list = { textAlign: 'start', paddingLeft: 20, paddingRight: 20, paddingTop: 8, paddingBottom: 8, gap: 8, buttons: 0, buttonWidth: undefined, width: 400 };
+        const details = { ...list, paddingTop: 20, paddingBottom: 20, inDetails: true };
+        const dialog = { ...list, paddingLeft: 0, paddingRight: 0, dialogInset: 16 };
+        // (a) one list empty state, on target.
+        expect(line('main-installed-empty', [list])).toMatchObject({ pass: true, value: 'start, 20/20, 0 buttons, gap 8 (1); block 8/8' + suffix });
+        // (b) a list's beside the details pane's, every one listed in document order.
+        expect(line('main-installed-empty', [list, details])).toMatchObject({ pass: true, value: 'start, 20/20, 0 buttons, gap 8 (2); block 8/8, 20/20 in details' + suffix });
+        // (c) 20/20 outside the details pane, (d) 8/8 inside it: off.
+        expect(line('main-installed-empty', [{ ...list, paddingTop: 20, paddingBottom: 20 }])).toMatchObject({ pass: offPass, value: 'start, 20/20, 0 buttons, gap 8 (1); block 20/20 (target 8/8)' + suffix });
+        expect(line('main-details-empty', [{ ...details, paddingTop: 8, paddingBottom: 8 }])).toMatchObject({ pass: offPass, value: 'start, 20/20, 0 buttons, gap 8 (1); block 8/8 in details (target 20/20)' + suffix });
+        // (e) a dialog's reads 8/8, the carrier's default; 0/0 is off.
+        expect(line('main-sources-empty', [dialog])).toMatchObject({ pass: true, value: 'start, 0/0 in a dialog inset 16, 0 buttons, gap 8 (1); block 8/8 in a dialog' + suffix });
+        expect(line('main-sources-empty', [{ ...dialog, paddingTop: 0, paddingBottom: 0 }])).toMatchObject({ pass: offPass, value: 'start, 0/0 in a dialog inset 16, 0 buttons, gap 8 (1); block 0/0 in a dialog (target 8/8)' + suffix });
+        // (f) each side read on its own.
+        expect(line('sidebar-installed-empty', [{ ...list, paddingBottom: 20 }])).toMatchObject({ pass: offPass, value: 'start, 20/20, 0 buttons, gap 8 (1); block 8/20 (target 8/8)' + suffix });
+        // (g) a base miss with the block on target still fails and prints both parts.
+        expect(line('main-installed-empty', [{ ...list, gap: 4 }])).toMatchObject({ pass: false, value: 'gap 4; block 8/8' + suffix });
+    });
     it('checks the rules registered with the theme dump: focus rings and disabled reasons (UX-P0.14)', () => {
         const colours = { focusBorder: '#0078d4', listFocusOutline: '#0078d4', contrastActiveBorder: '#f38518' };
         const ring = (width: number, style: string, colour: string, offset: number) => ({ width, style, colour, offset });
