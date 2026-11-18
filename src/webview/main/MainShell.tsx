@@ -20,6 +20,7 @@ import { SourcesControl } from './features/sources/SourcesControl';
 import { FirstUsefulRenderMark } from './FirstUsefulRenderMark';
 import { MainTabs } from './MainTabs';
 import { clampTo, useSplitBounds } from './useSplitBounds';
+import { useHiddenDetailsFocus } from './useHiddenDetailsFocus';
 import { failure } from '../shared/updates/sentence';
 
 export type MainTab = 'installed' | 'updates';
@@ -178,6 +179,9 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
     const { showView } = useDetailsActions();
     useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
     const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central, uninstall, focusSearch };
+    // The list beside the details pane: Ctrl+DownArrow in the search box goes there, and so does the focus of a hidden pane.
+    const visibleListId = browsing ? 'browse-list' : tab === 'updates' ? 'updates-list' : 'installed-list';
+    useHiddenDetailsFocus(splitRef, visibleListId, listPaneId);
 
     const selectTab = (next: MainTab): void => {
         setChosenTab(next);
@@ -258,7 +262,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                         onQuickInstall={typing.quickInstall}
                         onFocusChange={setFocused}
                         hint={SEARCH_HINT}
-                        onFocusList={() => { focusList(browsing ? 'browse-list' : tab === 'updates' ? 'updates-list' : 'installed-list'); }}
+                        onFocusList={() => { focusList(visibleListId); }}
                     />
                 </div>
                 <FirstUsefulRenderMark />

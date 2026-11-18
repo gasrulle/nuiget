@@ -1,7 +1,8 @@
 import { expect } from 'chai';
-import { Key } from 'vscode-extension-tester';
+import { By, Key } from 'vscode-extension-tester';
+import { setPanelWidth, webviewRect } from './layout';
 import { enterMainWebview, openMainPanel } from './mainWebview';
-import { driverOf, findByTestId, leaveWebview, poll } from './sidebarWebview';
+import { driverOf, findByTestId, leaveWebview, poll, waitForText } from './sidebarWebview';
 
 /**
  * The 2.0 main panel shell in VS Code (plan item P5.3), on the VSIX that `npm run test:ui` packages: the panel loads
@@ -81,5 +82,55 @@ describe('2.0 main panel shell', () => {
         for (const [name, x] of Object.entries(edges)) {
             expect(Math.abs(x - edges.title), name).to.be.at.most(1);
         }
+    });
+
+    describe('the panel narrows below 391 px with the focus in the details pane (UX-P4.fix-6)', () => {
+        // The panel's width before the case, restored after it whatever the case did (gotcha "A UI case that outlives its Mocha timeout").
+        let restoreWidth: number | undefined;
+
+        afterEach(async function () {
+            this.timeout(120_000);
+            if (restoreWidth !== undefined) {
+                const width = restoreWidth;
+                restoreWidth = undefined;
+                await setPanelWidth(width);
+            }
+        });
+
+        /** Where the focus is in the panel's document, and whether that document has the focus. */
+        const focusReading = async (): Promise<{ hasFocus: boolean; active: string; text: string }> => {
+            await enterMainWebview();
+            return driverOf().executeScript<{ hasFocus: boolean; active: string; text: string }>(`
+                const active = document.activeElement;
+                const name = active === null ? 'none' : active.getAttribute('data-testid') || active.getAttribute('role') || active.tagName.toLowerCase();
+                const list = active && active.closest('[data-testid$="-list"]');
+                return { hasFocus: document.hasFocus(), active: name + (list ? ' of ' + list.getAttribute('data-testid') : ''), text: active && active.getAttribute('role') === 'treeitem' ? (active.querySelector('.nuiget-row-name') || active).textContent.trim() : '' };`);
+        };
+
+        it('the focus in the details pane moves to the Installed list\'s active row when the panel narrows from 400 to 220, never to <body> (UX-P4.fix-6)', async function () {
+            this.timeout(300_000);
+            await openMainPanel();
+            await enterMainWebview();
+            restoreWidth = Math.round((await webviewRect('nuiget-app')).width);
+            await setPanelWidth(400);
+            await enterMainWebview();
+            await (await findByTestId('installed-tab')).click();
+            const row = await findByTestId('package-row-newtonsoft.json', 120_000);
+            await (await row.findElement(By.css('.nuiget-row-option'))).click();
+            await waitForText('package-details-panel', 'Newtonsoft.Json', 30_000);
+            await (await findByTestId('details-tab-readme')).click();
+            const before = await focusReading();
+            console.warn(`[focus] main-shell narrow: before hasFocus=${before.hasFocus} active=${before.active}`);
+            expect(before.active, 'the focus starts in the details pane').to.equal('details-tab-readme');
+            await setPanelWidth(220);
+            // Read with a bounded poll, never once: the move follows the split's resize.
+            const after = await poll(async () => {
+                const reading = await focusReading();
+                return reading.active === 'treeitem of installed-list' && reading.hasFocus ? reading : undefined;
+            }, 'the focus on a row of the Installed list', 30_000);
+            console.warn(`[focus] main-shell narrow 400→220: treeitem of installed-list "${after.text}" hasFocus=${after.hasFocus}`);
+            // The row the case made current, the list's tab stop.
+            expect(after.text).to.equal('Newtonsoft.Json');
+        });
     });
 });

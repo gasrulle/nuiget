@@ -188,7 +188,10 @@ is gone or disabled (a bulk action that emptied its list), focus goes, in this o
 to the opener when it can take the focus, to the active row of the nearest list from the opener upward, to the first
 enabled control of the opener's toolbar, and else to the first control of the page, never to the page itself (A6,
 UX-P4.4). A dialog the host opens with nothing focused takes the control that opens it as its opener (the sources
-dialog's gear).
+dialog's gear). When the main panel narrows below 391 px while focus is inside the details pane, the pane is hidden and focus
+moves to the active row of the visible list (the tab's list, or the Browse results), or, when that list has no row, to the
+first control of the page, never to the page itself; the move happens only while the panel's document has the focus,
+otherwise on its next focus gain (UX-P4.fix-6).
 
 Main panel Ctrl+Enter (D16). In the Browse list Ctrl+Enter (Cmd+Enter on macOS) installs the row's version, the
 newest the search found under the prerelease setting, into the selected project with the row's source, and makes the

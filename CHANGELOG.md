@@ -85,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **In a narrow editor the package details give way to the list**
 
 ### Fixed
+- **Keyboard focus is no longer lost when the panel narrows and hides the package details**
 - **Keyboard focus stays in the list after a bulk update or uninstall**
 - **Links in the package details show the theme's focus ring**
 - **Showing the side bar no longer takes the focus from the editor**
