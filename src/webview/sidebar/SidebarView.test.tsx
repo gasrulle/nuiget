@@ -318,6 +318,18 @@ describe('sidebar: Installed section', () => {
         await waitFor(() => expect(said()).toBe('Uninstall of Serilog failed: The project is gone'));
     });
 
+    it('a row whose operation waits behind a running one reads Queued, with aria-busy (UX-P4.7, X77)', async () => {
+        const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
+        await hostSays(() => host.event('ops/progress', running('op-run', 'Serilog')));
+        await hostSays(() => host.event('ops/progress', running('op-wait', 'Moq', { status: 'queued', kind: 'update' })));
+        expect(option('Serilog')).toHaveAccessibleDescription('Uninstalling');
+        expect(option('Moq')).toHaveAttribute('aria-busy', 'true');
+        expect(option('Moq')).toHaveAccessibleDescription('Queued');
+        // The running one ends: the waiting one is no longer behind anything.
+        await hostSays(() => host.event('ops/completed', removed('op-run', 'Serilog')));
+        expect(option('Moq')).toHaveAccessibleDescription('Updating');
+    });
+
     it('an operation started on the other surface shows on the row and is not announced here (UX-P4.6, A10)', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
         await hostSays(() => host.event('ops/progress', running('op-main', 'serilog')));

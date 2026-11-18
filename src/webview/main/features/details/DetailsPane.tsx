@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../../../protocol';
-import { isCentral, whyNotRemovable } from '../../../shared/installed/rules';
+import { busyEntry, busyText, isCentral, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, Button, EmptyState, Select, Tabs, type TabItem } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -57,7 +57,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
     const [picking, setPicking] = useState(false);
     const { projects } = useProjects();
     const { sources } = useSources();
-    const { isPackageBusy } = useOps();
+    const { isPackageBusy, active } = useOps();
     const { run } = useOpsActions();
     const [tab, setTab] = useState<DetailsTab>('details');
     const { asking } = install;
@@ -132,6 +132,9 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
     // A disabled button says why: the visible note when it shows, the tooltip when it does not (DS-STATE-7).
     const noteShown = primaryWhy !== undefined && primaryWhy !== 'This version is installed';
     const busyWhy = busy ? 'An operation on this package is running.' : undefined;
+    // The button of the action in progress reads its -ing word, or Queued (DS-STATE-6, UX-P4.7); the other keeps its label.
+    const busyWord = busy && target !== null ? busyText(active, target, selection.packageId) : undefined;
+    const removing = busy && target !== null && busyEntry(active, target, selection.packageId)?.kind === 'remove';
 
     const fail = (what: string) => (error: unknown): void => announce(`${what} of ${selection.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
     const changeVersion = (): void => {
@@ -183,7 +186,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                                 title={busyWhy ?? removalBlocked}
                                 onClick={uninstall}
                             >
-                                Uninstall
+                                {removing ? busyWord : 'Uninstall'}
                             </Button>
                         </>
                     ) : null}
@@ -205,7 +208,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         aria-describedby={noteShown ? noteId : undefined}
                         onClick={changeVersion}
                     >
-                        {busy ? 'Working...' : pickProjects ? 'Install...' : action}
+                        {busy && !removing ? busyWord : pickProjects ? 'Install...' : action}
                     </Button>
                     {offerPicker ? (
                         <Button

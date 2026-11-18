@@ -73,6 +73,25 @@ describe('busyText (UX-P3.12b)', () => {
         expect(busyText(new Map([['a', progress({ kind: undefined })]]), '/w/App.csproj', 'Serilog')).toBe('In progress');
         expect(busyText(new Map(), '/w/App.csproj', 'Serilog')).toBe('In progress');
     });
+    describe('reads Queued only while another operation runs (UX-P4.7, X77)', () => {
+        const other = (changes: Partial<OperationProgress>): OperationProgress => progress({ opId: 'other', packageIds: ['Moq'], ...changes });
+        it('a queued entry alone reads the word of its kind, the surface\'s own unnamed entry and a host one alike', () => {
+            expect(busyText(new Map([['local:1', progress({ opId: 'local:1', status: 'queued' })]]), '/w/App.csproj', 'Serilog')).toBe('Updating');
+            expect(busyText(new Map([['op', progress({ status: 'queued' })]]), '/w/App.csproj', 'Serilog')).toBe('Updating');
+        });
+        it('a queued entry beside another that runs or restores reads Queued', () => {
+            expect(busyText(new Map([['op', progress({ status: 'queued' })], ['other', other({ status: 'running' })]]), '/w/App.csproj', 'Serilog')).toBe('Queued');
+            expect(busyText(new Map([['op', progress({ status: 'queued' })], ['other', other({ status: 'restoring' })]]), '/w/App.csproj', 'Serilog')).toBe('Queued');
+        });
+        it('two queued entries with nothing running both read the word of their kind', () => {
+            const active = new Map([['op', progress({ status: 'queued' })], ['other', other({ status: 'queued', kind: 'remove' })]]);
+            expect(busyText(active, '/w/App.csproj', 'Serilog')).toBe('Updating');
+            expect(busyText(active, '/w/App.csproj', 'Moq')).toBe('Uninstalling');
+        });
+        it('a running entry beside a queued one reads the word of its kind', () => {
+            expect(busyText(new Map([['op', progress({ status: 'running' })], ['other', other({ status: 'queued' })]]), '/w/App.csproj', 'Serilog')).toBe('Updating');
+        });
+    });
 });
 
 describe('filterById (UX-P3.12b)', () => {

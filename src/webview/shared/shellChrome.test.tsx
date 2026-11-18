@@ -91,7 +91,7 @@ describe('useShellChrome', () => {
             expect(said()).toHaveAttribute('data-repeat', '0');
         });
 
-        it('says nothing of an operation the host started itself (the row menu): its toast speaks', async () => {
+        it('says nothing of an operation the host started itself (the row menu): the host says it (UX-P4.7)', async () => {
             const host = createFakeHost();
             render(mount(host));
             await hostSays(() => host.event('ops/progress', { opId: 'host1', status: 'queued', kind: 'remove', projectPaths: [OUTCOME.projectPath], packageIds: [packageId] }));

@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_BREATHE_MS, MOTION_ON, type MotionOnFacts, motionOnLines, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, FEEDBACK_STATUS, feedbackLines, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_BREATHE_MS, MOTION_ON, type MotionOnFacts, motionOnLines, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
@@ -431,6 +431,19 @@ describe('the accessibility harness (UX-P0.23)', () => {
             delete (document as unknown as { getAnimations?: unknown }).getAnimations;
             document.body.innerHTML = '';
         }
+    });
+
+    it('reads DS-STATE-5 after a single operation: no information notification for a single success, the live region said (UX-P4.7)', () => {
+        expect(FEEDBACK_STATUS).toEqual({ pending: 'P4.7' });
+        expect(feedbackLines('main-search', ['nUIget: Restored 1 project.'], 'Installed NUnit 4.2.2 in TestProject')).toEqual({
+            lines: ['[feedback] DS-STATE-5@main-search: information notifications 0; status-live "Installed NUnit 4.2.2 in TestProject" (pending P4.7)'],
+            failures: [],
+        });
+        expect(feedbackLines('sidebar', ['nUIget: Uninstalled Serilog from TestProject.'], 'Uninstalled Serilog', 'hard')).toEqual({
+            lines: ['[feedback] DS-STATE-5@sidebar: information notifications 1; status-live "Uninstalled Serilog" (hard)'],
+            failures: ['1 information notification for a single success'],
+        });
+        expect(feedbackLines('sidebar', [], '  ', 'hard').failures).toEqual(['status-live empty']);
     });
 
     it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar printed (a11y-first-load-announced, UX-P4.6)', () => {

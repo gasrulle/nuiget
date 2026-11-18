@@ -817,6 +817,29 @@ export function motionOnLines(state: string, facts: MotionOnFacts, status: RuleS
     return { lines: [`${name}: motion on; ${read.join(', ')} ms; running ${running} (${statusText(status)})`], failures };
 }
 
+// ---- UX-P4.7: a single success raises no notification (DS-STATE-5) ----------------------------------------------------
+
+/** DS-STATE-5's `[feedback]` line: pending until UX-P4.7's closing commit reads it at 0 (design-advisor ruling of 2026-11-18, DO 10). */
+export const FEEDBACK_STATUS: RuleStatus = { pending: 'P4.7' };
+
+/** The sentence of a single success the host would have toasted before D50 (`feedback.ts` `doneSentence`). */
+export const SINGLE_SUCCESS = /^nUIget: (Installed|Updated|Uninstalled) /;
+
+/**
+ * The `[feedback] DS-STATE-5@<suite>: information notifications <n>; status-live "<text>"` line, read after a single operation a
+ * UI suite runs (UX-P4.7): the information notifications in VS Code's notification centre whose text is a single success
+ * sentence, and the live region of the surface that asked; it fails above 0 or on an empty region.
+ */
+export function feedbackLines(suite: string, notifications: readonly string[], live: string, status: RuleStatus = FEEDBACK_STATUS): { lines: string[]; failures: string[] } {
+    const count = notifications.filter(text => SINGLE_SUCCESS.test(text)).length;
+    const said = live.trim();
+    const failures = [
+        ...(count === 0 ? [] : [`${count} information notification${count === 1 ? '' : 's'} for a single success`]),
+        ...(said === '' ? ['status-live empty'] : []),
+    ];
+    return { lines: [`[feedback] DS-STATE-5@${suite}: information notifications ${count}; status-live "${said}" (${statusText(status)})`], failures };
+}
+
 // ---- UX-P4.6: the first load said in the live region (a11y-first-load-announced) --------------------------------------
 
 /**

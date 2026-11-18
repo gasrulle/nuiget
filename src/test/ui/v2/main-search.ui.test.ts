@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { By, Key } from 'vscode-extension-tester';
+import { By, Key, NotificationType, Workbench } from 'vscode-extension-tester';
+import { FEEDBACK_STATUS, feedbackLines } from './a11y';
 import { enterMainWebview, openMainPanel } from './mainWebview';
 import { findByTestId, leaveWebview, poll, screenshot, waitForTestIdGone, waitForText } from './sidebarWebview';
 
@@ -146,11 +147,27 @@ describe('2.0 main panel: browse', () => {
         await install.click();
         // The operation is busy from the click on; the first check runs long before `dotnet package add` and the restore
         // after it could end and enable the button again.
-        await poll(async () => (!(await install.isEnabled()) || /Working/.test(await install.getText()) ? true : undefined), 'the Install click to start an operation (N85)', 10_000);
+        await poll(async () => (!(await install.isEnabled()) || /Installing/.test(await install.getText()) ? true : undefined), 'the Install click to start an operation (N85)', 10_000);
 
         // `dotnet package add` writes the reference; the outcome is announced after the restore that follows it.
         await poll(async () => (fs.readFileSync(csprojPath, 'utf-8').includes('Include="NUnit"') ? true : undefined), 'NUnit in TestProject.csproj', 240_000);
         await waitForText('status-live', 'Installed NUnit', 240_000);
+        // UX-P4.7 (DS-STATE-5; design-advisor ruling of 2026-11-18, DO 10): a single success raises no notification and the live
+        // region says it. Read in the notification centre, which keeps a notification after its toast hides; never through the
+        // palette. What the operation raised is cleared after the read.
+        const said = (await (await findByTestId('status-live')).getAttribute('textContent')) ?? '';
+        await leaveWebview();
+        const center = await new Workbench().openNotificationsCenter();
+        const notifications = await Promise.all((await center.getNotifications(NotificationType.Info)).map(notification => notification.getMessage()));
+        const feedback = feedbackLines('main-search', notifications, said);
+        console.warn(feedback.lines[0]);
+        await center.clearAllNotifications().catch(() => undefined);
+        await center.close().catch(() => undefined);
+        await enterMainWebview();
+        if (FEEDBACK_STATUS === 'hard' && feedback.failures.length > 0) {
+            throw new Error(`[feedback] ${feedback.failures.join('; ')}`);
+        }
+
 
         await search.click();
         await search.sendKeys(Key.ESCAPE);

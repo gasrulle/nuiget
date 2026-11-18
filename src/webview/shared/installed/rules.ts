@@ -10,17 +10,26 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Operati
 export const IN_PROGRESS: Record<OperationKind, string> = { install: 'Installing', update: 'Updating', remove: 'Uninstalling', restore: 'Restoring' };
 
 /**
- * What the row of a busy package says on either surface: the kind of the operation the store reports on that project and
- * package, from the call that asked for it on (UX-P3.12b, V30); an operation without a kind yet says it is in progress.
+ * What the row or button of a busy package says on either surface: the kind of the operation the store reports on that
+ * project and package, from the call that asked for it on (UX-P3.12b, V30); an operation without a kind yet says it is in
+ * progress. It reads "Queued" while that operation is `queued` and another one runs or restores (UX-P4.7, X77; design-advisor
+ * follow-up ruling of 2026-11-18): the queue runs one operation at a time and both surfaces hear every report, so on an idle
+ * queue a row never reads Queued, and while another operation runs it reads Queued from the call. A queue that ever runs more
+ * than one operation at a time re-rules this text and the status bar's.
  */
 export function busyText(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): string {
-    const id = packageId.toLowerCase();
-    for (const progress of active.values()) {
-        if (progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id)) {
-            return IN_PROGRESS[progress.kind];
-        }
+    const progress = busyEntry(active, projectPath, packageId);
+    if (progress?.kind === undefined) {
+        return 'In progress';
     }
-    return 'In progress';
+    const waits = progress.status === 'queued' && [...active.values()].some(other => other.opId !== progress.opId && (other.status === 'running' || other.status === 'restoring'));
+    return waits ? 'Queued' : IN_PROGRESS[progress.kind];
+}
+
+/** The operation `busyText` reads for that project and package: the first one with a kind (UX-P4.7: its button and its word agree). */
+export function busyEntry(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): OperationProgress | undefined {
+    const id = packageId.toLowerCase();
+    return [...active.values()].find(progress => progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id));
 }
 
 /** The rows whose id holds the filter (trimmed, any case), sorted by id, as every list on both surfaces shows them (MU9, P9.10; UX-P3.12b). */

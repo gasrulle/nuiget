@@ -7,7 +7,7 @@ import { describeOutcome } from './store/outcomes';
 /**
  * What both shells duplicate (CA-R3): the live region, the `webviewReady` mark, the host's `ui/focusSearch` and the
  * announcement of how an operation ended, by the surface that asked for it only (UX-P4.6, A10): the other surface and an
- * operation the host started itself say nothing here (its toast speaks until UX-P4.7).
+ * operation the host started itself say nothing here (the host says its single success in the status bar since UX-P4.7).
  */
 export function useShellChrome(): { announce: (message: string) => void; live: { message: string | null; repeat: number }; searchRef: React.RefObject<HTMLInputElement | null> } {
     const bus = useMessageBus();

@@ -161,7 +161,7 @@ describe('two-surface harness', () => {
                 expect(webview.events('ops/progress')).toContainEqual(expect.objectContaining(queued));
             }
         });
-        expect(h.statusBar.text).toBe('$(sync~spin) nUIget: 1 running, 1 queued');
+        expect(h.statusBar.text).toBe('$(sync~spin) nUIget: Installing P1, 1 queued');
         const reports = (): Array<{ opId: string; status: string }> => sidebar.events('ops/progress') as Array<{ opId: string; status: string }>;
         const { opId } = reports().find(report => report.status === 'queued' && (report as unknown as { kind: string }).kind === 'remove') as { opId: string };
         expect(opId).toMatch(UUID);
@@ -198,7 +198,7 @@ describe('two-surface harness', () => {
                 expect(webview.completed().filter(outcome => outcome.opId === refused.opId).map(statusOf)).toEqual(['rejected']);
             }
         });
-        expect(h.statusBar.text).toBe('$(sync~spin) nUIget: 1 running, 5 queued');
+        expect(h.statusBar.text).toBe('$(sync~spin) nUIget: Installing P1, 5 queued');
         expect(h.statusBar.hide).not.toHaveBeenCalled();
 
         add.release();

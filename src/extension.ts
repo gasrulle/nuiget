@@ -21,7 +21,7 @@ import { DefaultQueryCoordinator } from './core/queries';
 import { DefaultSessionStore, firstProject } from './core/session';
 import { DotnetSourceProvider, NuGetConfigReader } from './core/sources';
 import { isPathInside, normalizeProjectPath } from './core/util/paths';
-import { registerOperationFeedback } from './host/feedback';
+import { registerOperationFeedback, registerQueueStatus } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
 import { registerRowMenuCommands } from './host/rowMenu';
 import { HostEvents, LOOK_SETTINGS, createWorkflowDeps, loggerFor, mergeEvents, readExtensionConfig, type HostServices } from './host/services';
@@ -273,19 +273,12 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     );
 
     // ── queue status ──
+    // The queue's status bar item: its text and its life are feedback.ts's (UX-P4.7; architecture-advisor rulings of 2026-11-18).
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    context.subscriptions.push(statusBar, queue.onDidChange(({ active, pending }) => {
-        if (active + pending === 0) {
-            statusBar.hide();
-            return;
-        }
-        statusBar.text = pending > 0
-            ? `$(sync~spin) nUIget: ${active} running, ${pending} queued`
-            : '$(sync~spin) nUIget: operation running';
-        statusBar.show();
-    }));
-    // The progress notification of a bulk operation and one toast per outcome (P9.9).
-    context.subscriptions.push(registerOperationFeedback({ onProgress: queue.onProgress, onCompleted: events.operationCompleted.event, output }));
+    context.subscriptions.push(statusBar, registerQueueStatus({ statusBar, onDidChange: queue.onDidChange, onProgress: queue.onProgress, onCompleted: events.operationCompleted.event }));
+    // The progress notification and summary of a bulk operation, warnings and failures, and the status bar line of a single
+    // success the host started itself (P9.9; D50, UX-P4.7).
+    context.subscriptions.push(registerOperationFeedback({ onProgress: queue.onProgress, onCompleted: events.operationCompleted.event, onHostSubmitted: events.operationProgress.event, output }));
 
     // ── watchers → invalidation ──
     type ScopeFor = (fsPath: string) => InvalidationScope | undefined | Promise<InvalidationScope | undefined>;

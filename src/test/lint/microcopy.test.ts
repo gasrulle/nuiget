@@ -79,10 +79,14 @@ describe('the host\'s microcopy (DS-COPY-1, DS-COPY-3, DS-COPY-4, DS §10 item 1
             'notification nUIget: Updated ${} ${}; ${} failed.',
             'name nUIget: Installing packages',
             'label Show Output',
+            // The queue's status bar item, whose text feedback.ts assigns since UX-P4.7.
+            'name $(sync~spin) nUIget: operation running',
+            'name $(sync~spin) nUIget: Installing ${}',
+            'name $(sync~spin) nUIget: Restoring projects',
+            'name $(sync~spin) nUIget: Uninstalling packages, ${} queued',
         ]));
         expect(texts('src/host/rowMenu.ts')).toEqual(expect.arrayContaining(['label nUIget — ${}', 'prompt Select the project to uninstall from', 'prompt Select the project to change the version in', 'label Update Central Version']));
         expect(texts('src/host/SidebarHost.ts')).toEqual(expect.arrayContaining(['notification nUIget: Pre-release versions are ${}.', 'notification nUIget: Restore after operations is ${}.']));
-        expect(texts('src/extension.ts')).toEqual(expect.arrayContaining(['name $(sync~spin) nUIget: operation running']));
         expect(texts('src/host/pickers.ts')).toEqual(expect.arrayContaining(['label $(gear) Manage Package Sources...', 'prompt Select project', 'label nUIget — ${} Versions']));
     });
 });

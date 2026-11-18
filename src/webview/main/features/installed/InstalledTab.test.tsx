@@ -777,6 +777,15 @@ describe('main panel: Installed tab', () => {
         expect(screen.queryByTestId('package-row-a.core')).toBeNull();
         expect(screen.getByTestId('package-row-b.core')).toBeInTheDocument();
     });
+    it('a row whose operation waits behind a running one reads Queued, with aria-busy (UX-P4.7, X77)', async () => {
+        const host = await mountWith();
+        await hostSays(() => host.event('ops/progress', { opId: 'op-run', status: 'running', kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] }));
+        await hostSays(() => host.event('ops/progress', { opId: 'op-wait', status: 'queued', kind: 'update', projectPaths: [A], packageIds: ['Moq'] }));
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Uninstalling/);
+        expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
+        expect(optionOf('Moq')).toHaveAccessibleDescription(/Queued/);
+    });
+
     describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
         /** The panel with the Installed tab's own announcements recorded, passed on to the panel's live region. */
         function mountHeard(): { host: FakeHost; heard: string[] } {

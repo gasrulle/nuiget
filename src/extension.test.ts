@@ -757,6 +757,20 @@ describe('extension (2.0 composition root)', () => {
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
     });
 
+    it('a single success the host started itself is said in the status bar and a webview-asked one is not (UX-P4.7)', async () => {
+        const { services } = await start();
+        const said = vi.mocked(vscode.window.setStatusBarMessage);
+        said.mockClear();
+        const outcome = (opId: string) => ({ opId, kind: 'remove' as const, status: 'completed' as const, projectPath: '/w/App/App.csproj', packageId: 'Serilog' });
+        // A webview's operation: its outcome is announced with no host report before it.
+        services.announceOperation(outcome('asked'));
+        expect(said).not.toHaveBeenCalled();
+        // The row menu's: the host reports it queued (submitFromHost), then its outcome.
+        services.announceProgress({ opId: 'menu', status: 'queued', kind: 'remove', projectPaths: ['/w/App/App.csproj'], packageIds: ['Serilog'] });
+        services.announceOperation(outcome('menu'));
+        expect(said.mock.calls).toEqual([['nUIget: Uninstalled Serilog from App.', 5000]]);
+    });
+
     it('the status bar shows the queue and hides when it is idle', async () => {
         const extension = await start();
         const item = mockWindow.createStatusBarItem.mock.results.at(-1)!.value;
@@ -766,7 +780,7 @@ describe('extension (2.0 composition root)', () => {
         await vi.waitFor(() => expect(item.text).toBe('$(sync~spin) nUIget: operation running'));
         expect(item.show).toHaveBeenCalled();
         const second = submitHeld(extension);
-        await vi.waitFor(() => expect(item.text).toBe('$(sync~spin) nUIget: 1 running, 1 queued'));
+        await vi.waitFor(() => expect(item.text).toBe('$(sync~spin) nUIget: operation running, 1 queued'));
 
         first.gate.resolve();
         await first.ticket.completion;

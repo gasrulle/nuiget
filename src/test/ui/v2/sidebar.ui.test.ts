@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ActivityBar, By, EditorView, Key, Origin, type WebElement, Workbench } from 'vscode-extension-tester';
+import { ActivityBar, By, EditorView, Key, NotificationType, Origin, type WebElement, Workbench } from 'vscode-extension-tester';
+import { FEEDBACK_STATUS, feedbackLines } from './a11y';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, screenshot, tokenPx, typeHeld, waitForTestIdGone, waitForText } from './sidebarWebview';
 
 /**
@@ -260,6 +261,21 @@ describe('2.0 sidebar', () => {
 
         // The outcome is announced, and the row leaves with the host's next list; the restore may take a while.
         await waitForText('status-live', 'Uninstalled Serilog', 180_000);
+        // UX-P4.7 (DS-STATE-5; design-advisor ruling of 2026-11-18, DO 10): a single success raises no notification and the live
+        // region says it. Read in the notification centre, which keeps a notification after its toast hides; never through the
+        // palette. What the operation raised is cleared after the read.
+        const said = (await (await findByTestId('status-live')).getAttribute('textContent')) ?? '';
+        await leaveWebview();
+        const center = await new Workbench().openNotificationsCenter();
+        const notifications = await Promise.all((await center.getNotifications(NotificationType.Info)).map(notification => notification.getMessage()));
+        const feedback = feedbackLines('sidebar', notifications, said);
+        console.warn(feedback.lines[0]);
+        await center.clearAllNotifications().catch(() => undefined);
+        await center.close().catch(() => undefined);
+        await enterSidebarWebview();
+        if (FEEDBACK_STATUS === 'hard' && feedback.failures.length > 0) {
+            throw new Error(`[feedback] ${feedback.failures.join('; ')}`);
+        }
         await waitForTestIdGone('package-row-serilog', 120_000);
         await findByTestId('package-row-newtonsoft.json');
 

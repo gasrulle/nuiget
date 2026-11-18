@@ -651,6 +651,22 @@ describe('main panel: details', () => {
         expect(option('installed-list', 'Serilog')).toHaveAttribute('aria-current', 'true');
     });
 
+    it('the button of the action in progress reads its -ing word, or Queued behind a running one; the other keeps its label (DS-STATE-6, UX-P4.7)', async () => {
+        const host = await mountReady([pkg('Serilog', '3.0.0'), pkg('Moq', '4.20.0')]);
+        await selectInstalled(host);
+        await hostSays(() => host.event('ops/progress', { opId: 'op-1', status: 'running', kind: 'update', projectPaths: [A], packageIds: ['Serilog'] }));
+        expect(primary()).toHaveTextContent('Updating');
+        expect(primary()).toBeDisabled();
+        expect(screen.getByTestId('uninstall-button')).toHaveTextContent('Uninstall');
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog' }));
+        // An uninstall waiting behind another package's running operation: Uninstall reads Queued, the primary keeps its label.
+        await hostSays(() => host.event('ops/progress', { opId: 'op-run', status: 'running', kind: 'install', projectPaths: [A], packageIds: ['Moq'] }));
+        await hostSays(() => host.event('ops/progress', { opId: 'op-2', status: 'queued', kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] }));
+        expect(screen.getByTestId('uninstall-button')).toHaveTextContent('Queued');
+        expect(primary()).not.toHaveTextContent('Queued');
+        expect(primary()).not.toHaveTextContent('Working');
+    });
+
     describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
         it('the details and the README of the shown package, once each: not on a revalidation, another version or a tab shown again; again for another package', async () => {
             const user = userEvent.setup();

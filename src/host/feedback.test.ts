@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { Emitter } from '../core/util/events';
 import type { BulkOutcome, OperationOutcome, OperationProgress } from '../protocol';
-import { registerOperationFeedback } from './feedback';
+import { queueStatusText, registerOperationFeedback, registerQueueStatus } from './feedback';
 
 const information = vi.mocked(vscode.window.showInformationMessage);
 const warning = vi.mocked(vscode.window.showWarningMessage);
 const withProgress = vi.mocked(vscode.window.withProgress);
+const statusMessage = vi.mocked(vscode.window.setStatusBarMessage);
 
 const APP = '/w/App/App.csproj';
 const LIB = '/w/Lib/Lib.csproj';
@@ -16,9 +17,10 @@ const bulk = (changes: Partial<BulkOutcome>): BulkOutcome => ({ opId: 'bulk-1', 
 function setup() {
     const progress = new Emitter<OperationProgress>();
     const completed = new Emitter<OperationOutcome | BulkOutcome>();
+    const hostSubmitted = new Emitter<OperationProgress>();
     const output = { show: vi.fn() };
-    const disposable = registerOperationFeedback({ onProgress: progress.event, onCompleted: completed.event, output });
-    return { progress, completed, output, disposable };
+    const disposable = registerOperationFeedback({ onProgress: progress.event, onCompleted: completed.event, onHostSubmitted: hostSubmitted.event, output });
+    return { progress, completed, hostSubmitted, output, disposable };
 }
 
 /** Lets the `then` of a warning's Show Output button run. */
@@ -29,6 +31,7 @@ describe('operation feedback', () => {
         information.mockClear();
         warning.mockClear();
         withProgress.mockClear();
+        statusMessage.mockClear();
     });
 
     afterEach(() => {
@@ -36,7 +39,7 @@ describe('operation feedback', () => {
         warning.mockResolvedValue(undefined);
     });
 
-    it('one toast per outcome: information on completed, warning with Show Output on partial, failed and rejected, none on cancelled', () => {
+    it('no toast for a single success: a warning with Show Output on partial, failed and rejected, none on cancelled (D50)', () => {
         const { completed } = setup();
         completed.fire(single({ status: 'completed' }));
         completed.fire(single({ opId: 'op-2', kind: 'update', status: 'completed', affectedProjects: [LIB] }));
@@ -47,10 +50,9 @@ describe('operation feedback', () => {
         // A host reason that ends in its own period keeps one final period (UX-P3.11b, design-advisor follow-up 2).
         completed.fire(single({ opId: 'op-7', kind: 'remove', status: 'failed', message: 'The project file is locked.' }));
 
-        expect(information.mock.calls).toEqual([
-            ['nUIget: Installed Serilog 4.0.0 in App.'],
-            ['nUIget: Updated Serilog to 4.0.0 in App; also restored 1 other project.'],
-        ]);
+        expect(information).not.toHaveBeenCalled();
+        // A webview asked these: its surface says them; the host says nothing (UX-P4.7).
+        expect(statusMessage).not.toHaveBeenCalled();
         expect(warning.mock.calls).toEqual([
             ['nUIget: Uninstalled Serilog from App, but the restore failed: NU1101.', 'Show Output'],
             ['nUIget: Install of Serilog in App failed: exit code 1.', 'Show Output'],
@@ -152,12 +154,98 @@ describe('operation feedback', () => {
         }
     });
 
+    it('a single success the host started itself is said in the status bar, never in a toast', () => {
+        const { completed, hostSubmitted } = setup();
+        hostSubmitted.fire({ opId: 'menu-1', status: 'queued', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'] });
+        completed.fire(single({ opId: 'menu-1' }));
+        expect(statusMessage.mock.calls).toEqual([['nUIget: Installed Serilog 4.0.0 in App.', 5000]]);
+        expect(information).not.toHaveBeenCalled();
+        // The id is forgotten after its outcome: the same id again (a webview's) says nothing.
+        completed.fire(single({ opId: 'menu-1' }));
+        expect(statusMessage).toHaveBeenCalledTimes(1);
+        // A central update also restored other projects: the line says so.
+        hostSubmitted.fire({ opId: 'menu-4', status: 'queued', kind: 'update', projectPaths: [APP], packageIds: ['Serilog'] });
+        completed.fire(single({ opId: 'menu-4', kind: 'update', affectedProjects: [LIB] }));
+        expect(statusMessage).toHaveBeenLastCalledWith('nUIget: Updated Serilog to 4.0.0 in App; also restored 1 other project.', 5000);
+    });
+
+    it('a host-started failure still warns, and a cancelled operation the host started says nothing', () => {
+        const { completed, hostSubmitted } = setup();
+        hostSubmitted.fire({ opId: 'menu-2', status: 'queued', kind: 'remove', projectPaths: [APP], packageIds: ['Serilog'] });
+        completed.fire(single({ opId: 'menu-2', kind: 'remove', status: 'failed', message: 'exit code 1' }));
+        hostSubmitted.fire({ opId: 'menu-3', status: 'queued', kind: 'update', projectPaths: [APP], packageIds: ['Serilog'] });
+        completed.fire(single({ opId: 'menu-3', kind: 'update', status: 'cancelled' }));
+        expect(warning.mock.calls).toEqual([['nUIget: Uninstall of Serilog from App failed: exit code 1.', 'Show Output']]);
+        expect(statusMessage).not.toHaveBeenCalled();
+        expect(information).not.toHaveBeenCalled();
+    });
+
+    it('a one-project restore keeps its summary toast', () => {
+        const { completed } = setup();
+        completed.fire(bulk({ opId: 'restore-1', status: 'completed', results: [single({ opId: 'restore-1', kind: 'restore', packageId: undefined, version: undefined })], restores: [{ projectPath: APP, ok: true }] }));
+        expect(information.mock.calls).toEqual([['nUIget: Restored 1 project.']]);
+    });
+
+    it('the status bar names what runs and how many wait (UX-P4.7)', () => {
+        const report = (changes: Partial<OperationProgress>): OperationProgress => ({ opId: 'op', status: 'running', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'], ...changes });
+        expect(queueStatusText({ active: 0, pending: 0 }, undefined)).toBeUndefined();
+        expect(queueStatusText({ active: 1, pending: 0 }, undefined)).toBe('$(sync~spin) nUIget: operation running');
+        expect(queueStatusText({ active: 1, pending: 0 }, report({}))).toBe('$(sync~spin) nUIget: Installing Serilog');
+        expect(queueStatusText({ active: 1, pending: 2 }, report({ kind: 'update' }))).toBe('$(sync~spin) nUIget: Updating Serilog, 2 queued');
+        expect(queueStatusText({ active: 1, pending: 0 }, report({ kind: 'remove', packageIds: ['Serilog', 'Moq'] }))).toBe('$(sync~spin) nUIget: Uninstalling packages');
+        expect(queueStatusText({ active: 1, pending: 0 }, report({ projectPaths: [APP, LIB] }))).toBe('$(sync~spin) nUIget: Installing packages');
+        expect(queueStatusText({ active: 1, pending: 0 }, report({ kind: 'update', total: 3 }))).toBe('$(sync~spin) nUIget: Updating packages');
+        expect(queueStatusText({ active: 1, pending: 1 }, report({ kind: 'restore', packageIds: undefined }))).toBe('$(sync~spin) nUIget: Restoring projects, 1 queued');
+        expect(queueStatusText({ active: 0, pending: 1 }, undefined)).toBe('$(sync~spin) nUIget: operation running, 1 queued');
+    });
+
     it('a single operation\'s reports open no notification', () => {
         const { progress, completed } = setup();
         progress.fire({ opId: 'op-1', status: 'running', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'] });
         progress.fire({ opId: 'op-1', status: 'restoring', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'] });
         completed.fire(single({}));
         expect(withProgress).not.toHaveBeenCalled();
-        expect(information).toHaveBeenCalledTimes(1);
+        // D50: a single success raises no toast (UX-P4.7).
+        expect(information).not.toHaveBeenCalled();
+    });
+});
+
+describe('the queue\'s status bar item (UX-P4.7)', () => {
+    function status() {
+        const changed = new Emitter<{ active: number; pending: number }>();
+        const progress = new Emitter<OperationProgress>();
+        const completed = new Emitter<OperationOutcome | BulkOutcome>();
+        const statusBar = { text: '', show: vi.fn(), hide: vi.fn() };
+        const disposable = registerQueueStatus({ statusBar, onDidChange: changed.event, onProgress: progress.event, onCompleted: completed.event });
+        return { changed, progress, completed, statusBar, disposable };
+    }
+    const report = (opId: string, changes: Partial<OperationProgress> = {}): OperationProgress => ({ opId, status: 'running', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'], ...changes });
+
+    it('names the running operation from its report and the waiting count, and hides when idle', () => {
+        const { changed, progress, completed, statusBar } = status();
+        changed.fire({ active: 1, pending: 0 });
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: operation running');
+        progress.fire(report('a'));
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: Installing Serilog');
+        changed.fire({ active: 1, pending: 1 });
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: Installing Serilog, 1 queued');
+        // A restore step names no package: the operation keeps its kind and package.
+        progress.fire(report('a', { status: 'restoring', packageIds: undefined, kind: undefined }));
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: Installing Serilog, 1 queued');
+        completed.fire(single({ opId: 'a' }));
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: operation running, 1 queued');
+        changed.fire({ active: 0, pending: 0 });
+        expect(statusBar.hide).toHaveBeenCalled();
+    });
+
+    it('keeps the next operation\'s report when it arrives before the change and the old outcome', () => {
+        const { changed, progress, completed, statusBar } = status();
+        changed.fire({ active: 1, pending: 1 });
+        progress.fire(report('a'));
+        // The queue starts B and B reports before A's change and outcome fire.
+        progress.fire(report('b', { kind: 'remove', packageIds: ['Moq'] }));
+        changed.fire({ active: 1, pending: 0 });
+        completed.fire(single({ opId: 'a' }));
+        expect(statusBar.text).toBe('$(sync~spin) nUIget: Uninstalling Moq');
     });
 });
