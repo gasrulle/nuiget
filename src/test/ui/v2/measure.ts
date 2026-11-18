@@ -287,7 +287,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -449,6 +449,8 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
 export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
+/** The dialog cells that render a list (`.nuiget-dialog-list`), whose items DS-COPY-2 `dialog-list` reads (UX-P4.fix-5). */
+export const DIALOG_LIST_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'];
 /** The cells with a dialog open whose text line heights DS-TYPE-4 `dialog-text` reads: the dialog states and the sources dialog's cells (UX-P4.fix-3). */
 export const DIALOG_TEXT_STATES: readonly string[] = [...DIALOG_STATES, 'main-sources', 'main-sources-add', 'main-sources-add-invalid', 'main-sources-revalidating', 'main-sources-empty', 'main-sources-error'];
 /** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
@@ -652,7 +654,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.fontExact, exceptStates: SIDEBAR_BROWSE_NO_LIST_STATES }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
-    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_HEADER_STATES }),
+    // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1d): `dialog-list`, no list item of an open dialog writes a
+    // package and its versions as a label and a value (`Id: old → new`).
+    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard', 'dialog-list': { pending: 'P4.fix-5' } }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_HEADER_STATES, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
     // UX-P2.7 (design trigger 6).
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
@@ -821,7 +825,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split'];
         case 'dialogs':
             // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
-            return ['chrome', 'layers', 'labels', 'dialog-text'];
+            // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1b): a dialog list's items, DS-COPY-2.
+            return ['chrome', 'layers', 'labels', 'dialog-text', 'dialog-list'];
         case 'sources':
             return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text'];
         // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
@@ -1279,6 +1284,8 @@ export interface StateCells {
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
     /** The topmost dialog's title and text containers, each with its computed line height as the page gives it (`normal` kept; UX-P4.fix-3). */
     dialogText?: Array<{ part: 'title' | 'description' | 'body' | 'option'; lineHeight: string }>;
+    /** The trimmed text of each visible list item of the topmost dialog, never its lead (UX-P4.fix-5). */
+    dialogListItems?: string[];
     /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
     disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
     clauseError?: string;
@@ -2228,6 +2235,8 @@ const stateCells = {
                 })(),
                 // UX-P4.fix-3 (DO 2a): the topmost dialog's title and text containers, the raw computed line height (px() reads normal as 0).
                 dialogText: dialog ? [['title', '.nuiget-dialog-title'], ['description', '.nuiget-dialog-description'], ['body', '.nuiget-dialog-body'], ['option', '.nuiget-dialog-option']].flatMap(([part, selector]) => [...dialog.querySelectorAll(selector)].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => ({ part, lineHeight: getComputedStyle(el).lineHeight }))) : undefined,
+                // UX-P4.fix-5 (DO 1e): the topmost dialog's list items, never a lead or a covered dialog's.
+                dialogListItems: dialog ? [...dialog.querySelectorAll('.nuiget-dialog-list > li')].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => el.textContent.trim()) : undefined,
                 messageLeaves: shown('.nuiget-row-message--compact').map(el => {
                     const range = document.createRange();
                     range.selectNodeContents(el);
@@ -4188,7 +4197,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || (definition.id === 'DS-COPY-2' && scope === 'dialog-list');
     if (!own) {
         return undefined;
     }
@@ -4242,6 +4251,9 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     if (scope === 'dialog-text') {
         return dialogTextClause(cells.dialogText, tolerance);
     }
+    if (scope === 'dialog-list') {
+        return dialogListClause(cells.dialogListItems);
+    }
     const leaves = cells.messageLeaves ?? [];
     if (leaves.length === 0) {
         return notMeasurable('no compact message leaf');
@@ -4252,6 +4264,23 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         value: leaves.map(leaf => `${leaf.lines} line${leaf.lines === 1 ? '' : 's'}: height ${leaf.height}, line ${leaf.lineHeight} (target ${targetOf(leaf.lines)}${leaf.lines === 1 ? '' : `, line ${COMPACT_LINE}`})`).join('; '),
         pass: leaves.every(holds),
     };
+}
+
+/** A list item that writes a package and its versions as a label and a value: a leading token, a colon, a version (DS-COPY-2). */
+const LABEL_VALUE_ITEM = /^\S+:\s+\d/;
+
+/**
+ * DS-COPY-2 `dialog-list` (UX-P4.fix-5, design-advisor opening ruling of 2026-11-18, DO 1f-g): no list item of the topmost
+ * dialog writes `<id>: <version>`; the first off item is printed alone, since versions are live content.
+ */
+function dialogListClause(items: StateCells['dialogListItems']): { value: string; pass: boolean } {
+    if (items === undefined || items.length === 0) {
+        return { value: `${NOT_MEASURABLE} (no dialog list item)`, pass: false };
+    }
+    const off = items.filter(item => LABEL_VALUE_ITEM.test(item));
+    return off.length === 0
+        ? { value: `list items ${items.length}: ok`, pass: true }
+        : { value: `list items ${items.length}; off ${off.length}: "${off[0]}"`, pass: false };
 }
 
 /** UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 2c): a dialog title's line box is 18 × 1.4, its text containers' 13 × 1.4. */

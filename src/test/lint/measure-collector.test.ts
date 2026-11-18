@@ -659,6 +659,20 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         ]);
     });
 
+    it('reads the topmost dialog\'s list items, never a lead or a covered dialog\'s (DS-COPY-2 dialog-list, UX-P4.fix-5)', () => {
+        expect(collect().endOfP0.stateCells.dialogListItems).toBeUndefined();
+        document.body.insertAdjacentHTML('beforeend', [
+            '<div class="nuiget-dialog-layer" data-rect="0,0,900,700"><div class="nuiget-dialog covered" data-rect="100,100,800,600">',
+            '<ul class="nuiget-dialog-list" data-rect="120,140,780,200"><li data-rect="120,140,780,160">Covered: 1.0.0 → 2.0.0</li></ul>',
+            '<div class="nuiget-dialog-body" data-rect="120,210,780,580">',
+            '<div class="nuiget-dialog" data-rect="200,220,700,500">',
+            '<div class="nuiget-dialog-group"><p class="nuiget-dialog-lead" data-rect="220,240,680,258">In App:</p>',
+            '<ul class="nuiget-dialog-list" data-rect="220,260,680,300"><li data-rect="220,260,680,278"> Dapper 2.1.35 → 2.1.89 </li><li style="display: none" data-rect="220,280,680,298">Hidden 1.0.0 → 1.0.1</li></ul></div>',
+            '</div></div></div></div>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.dialogListItems).toEqual(['Dapper 2.1.35 → 2.1.89']);
+    });
+
     it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; row-gap: 8px; }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;

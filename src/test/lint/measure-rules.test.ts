@@ -192,7 +192,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         // UX-P3.10 push C: the details cells with no facts block, by fact.
         expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme', 'main-details-empty', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error']);
-        expect(scopes('DS-COPY-2')).toEqual({ details: 'hard' });
+        // UX-P4.fix-5: a dialog list's items, pending until the item's closing flips it.
+        expect(scopes('DS-COPY-2')).toEqual({ details: 'hard', 'dialog-list': { pending: 'P4.fix-5' } });
         // UX-P3.3a: the details pane's weights and headings, hard with the facts.
         expect(scopes('DS-TYPE-3')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, 'hard'])));
         expect((scopes('DS-TYPE-9') as Record<string, unknown>).details).toBe('hard');
@@ -1789,6 +1790,19 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
             .toMatchObject({ pass: false, status: 'hard', value: '1 line: height 22, line 22 (target 22); 2 lines: height 44, line 22 (target 40.2, line 18.2)' });
         expect(lineOf('sidebar-all-projects-updates', withCells({ messageLeaves: [{ lineHeight: 18.2, height: 22, lines: 1 }, { lineHeight: 18.2, height: 40.2, lines: 2 }] }), name)?.pass).toBe(true);
         expect(lineOf('sidebar-all-projects-tools', withCells({ messageLeaves: [] }), 'DS-TYPE-4@sidebar-all-projects-tools/message-leaf')).toMatchObject({ pass: false, value: 'not measurable (no compact message leaf)' });
+    });
+
+    it('reads a dialog list\'s items: a package and its versions without a colon, as a row writes them (DS-COPY-2 dialog-list, UX-P4.fix-5)', () => {
+        const name = 'DS-COPY-2@sidebar-update-all-dialog/dialog-list';
+        expect(lineOf('sidebar-update-all-dialog', withCells({ dialogListItems: ['Dapper 2.1.35 → 2.1.89', 'Polly 8.4.2 → 8.9.1'] }), name)).toMatchObject({ pass: true, value: 'list items 2: ok' });
+        expect(lineOf('main-installed-bulk-dialog', withCells({ dialogListItems: ['Serilog'] }), 'DS-COPY-2@main-installed-bulk-dialog/dialog-list')).toMatchObject({ pass: true, value: 'list items 1: ok' });
+        expect(lineOf('sidebar-update-all-dialog', withCells({ dialogListItems: ['Dapper: 2.1.35 → 2.1.89', 'Polly: 8.4.2 → 8.9.1', 'xunit 2.9.0 → 2.9.3'] }), name))
+            .toMatchObject({ pass: false, value: 'list items 3; off 2: "Dapper: 2.1.35 → 2.1.89"' });
+        expect(lineOf('sidebar-update-all-dialog', withCells({ dialogListItems: [] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog list item)' });
+        // Only the two cells that render a dialog list.
+        expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogListItems: ['Dapper: 2.1.35 → 2.1.89'] }), 'DS-COPY-2@sidebar-uninstall-dialog/dialog-list')).toBeUndefined();
+        expect(elementGroups('dialogs')).toContain('dialog-list');
+        expect(elementGroups('sources')).not.toContain('dialog-list');
     });
 
     it('reads a dialog\'s title at 25.2 and its text containers at 18.2, a normal line height red (DS-TYPE-4 dialog-text, UX-P4.fix-3)', () => {
