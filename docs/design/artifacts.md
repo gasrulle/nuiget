@@ -9,6 +9,7 @@ of this file; the other two are records of their date.
 |---|---|---|---|
 | 2026-10-23 | nUIget UX Research (report, private page) | https://claude.ai/artifact/MTypaXSUY5Toervj1aAQgS | `docs/research/2026-10-23-ux-research.md` |
 | 2026-10-23 | nUIget Design System (Design System type; viewing copy) | https://claude.ai/artifact/JbL87uhkYTL3gEsREDxe19 | `docs/design/design-system.md`, `docs/design/tokens.json` |
+| 2026-11-18 | nUIget Design System refreshed (version 17; 87 rules, 179 tokens) | https://claude.ai/artifact/JbL87uhkYTL3gEsREDxe19 | snapshot of `labs/ux` @ 3327b0ea (the two files above at that commit; hovered text colour and first-load announcements, the dialog list line, the empty state inset, feedback in place) |
 | 2026-11-18 | nUIget Design System refreshed (version 16; 87 rules, 179 tokens) | https://claude.ai/artifact/JbL87uhkYTL3gEsREDxe19 | snapshot of `labs/ux` @ fc801f11 (the two files above at that commit; the dialog's own line height, links and the empty slot's focus ring, the motion measurements) |
 | 2026-11-17 | nUIget Design System refreshed (version 14; 87 rules, 179 tokens) | https://claude.ai/artifact/JbL87uhkYTL3gEsREDxe19 | snapshot of `labs/ux` @ 7d12d3a6 (the two files above at that commit; the fourth look attribute, the list's page, type-ahead and search-box keys, the sidebar sash hit area) |
 | 2026-11-16 | nUIget Design System refreshed (version 11; 87 rules, 179 tokens) | https://claude.ai/artifact/JbL87uhkYTL3gEsREDxe19 | snapshot of `labs/ux` @ f95c8e7 (the two files above at that commit) |
