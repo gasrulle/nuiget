@@ -7,9 +7,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { redact } from '../core/logging';
-import { ALL_PROJECTS, type OperationKind } from '../protocol';
+import { ALL_PROJECTS, type OperationKind, type Surface } from '../protocol';
 import { operations, sourceDirectory, submitFromHost } from './handlers';
 import { MainPanelHost } from './MainPanelHost';
+import { SidebarHost } from './SidebarHost';
 import { pickProjectsForInstall, pickSingleProject, pickVersion } from './pickers';
 import type { HostServices } from './services';
 
@@ -29,6 +30,8 @@ export interface RowActionRequest {
     sourceUrl?: string;
     installedProjects?: Array<{ projectPath: string; projectName: string; version: string }>;
     partiallyInstalled?: boolean;
+    /** The surface whose menu ran the action, from the `webview` key VS Code adds to the argument; its live region says the outcome (UX-P4.fix-11). */
+    surface?: Surface;
 }
 
 /** What a row's `data-vscode-context` carries: the request's fields, the section and the facts the `when` clauses read. */
@@ -57,7 +60,7 @@ export function isRowMenuContext(arg: unknown): arg is RowMenuContext {
     return typeof context.webviewSection === 'string' && Object.hasOwn(SECTION_CONTEXT, context.webviewSection)
         && typeof context.packageId === 'string' && context.packageId !== ''
         && typeof context.projectPath === 'string'
-        && ['installedVersion', 'latestVersion', 'versionType', 'sourceUrl'].every(key => isOptional(context[key], 'string'))
+        && ['installedVersion', 'latestVersion', 'versionType', 'sourceUrl', 'webview'].every(key => isOptional(context[key], 'string'))
         && ['partiallyInstalled', 'nuiget.installed', 'nuiget.partial', 'nuiget.floating', 'nuiget.central', 'nuiget.readOnly'].every(key => isOptional(context[key], 'boolean'))
         && (projects === undefined || (Array.isArray(projects) && projects.every(project => typeof project === 'object' && project !== null
             && typeof (project as Record<string, unknown>).projectPath === 'string'
@@ -128,9 +131,9 @@ export async function runRowAction(services: HostServices, action: RowAction, re
                 if (!await confirmCentralChange(services, targets[0], request.packageId, version)) {
                     return false;
                 }
-                await submitFromHost(services, operations.install(services, { projectPath: targets[0], packageId: request.packageId, version, sourceUrl }), facts('install', [targets[0]]));
+                await submitFromHost(services, operations.install(services, { projectPath: targets[0], packageId: request.packageId, version, sourceUrl }), facts('install', [targets[0]]), request.surface);
             } else {
-                await submitFromHost(services, operations.bulkInstall(services, { projectPaths: targets, packageId: request.packageId, version }), facts('install', targets));
+                await submitFromHost(services, operations.bulkInstall(services, { projectPaths: targets, packageId: request.packageId, version }), facts('install', targets), request.surface);
             }
             return true;
         }
@@ -140,14 +143,14 @@ export async function runRowAction(services: HostServices, action: RowAction, re
             return false;
         }
         if (action === 'uninstall') {
-            await submitFromHost(services, operations.remove(services, { projectPath: target, packageId: request.packageId }), facts('remove', [target]));
+            await submitFromHost(services, operations.remove(services, { projectPath: target, packageId: request.packageId }), facts('remove', [target]), request.surface);
             return true;
         }
         const version = await versionFor();
         if (!version || !await confirmCentralChange(services, target, request.packageId, version)) {
             return false;
         }
-        await submitFromHost(services, operations.install(services, { projectPath: target, packageId: request.packageId, version, sourceUrl }), facts('install', [target]));
+        await submitFromHost(services, operations.install(services, { projectPath: target, packageId: request.packageId, version, sourceUrl }), facts('install', [target]), request.surface);
         return true;
     }
 
@@ -157,13 +160,13 @@ export async function runRowAction(services: HostServices, action: RowAction, re
             if (!await confirmCentralChange(services, projectPath, request.packageId, request.latestVersion)) {
                 return false;
             }
-            await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('install', [projectPath]));
+            await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('install', [projectPath]), request.surface);
             return true;
         case 'update-latest':
             if (!request.latestVersion || !await confirmCentralChange(services, projectPath, request.packageId, request.latestVersion)) {
                 return false;
             }
-            await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('update', [projectPath]));
+            await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version: request.latestVersion, sourceUrl }), facts('update', [projectPath]), request.surface);
             return true;
         case 'install-version':
         case 'change-version':
@@ -173,14 +176,14 @@ export async function runRowAction(services: HostServices, action: RowAction, re
                 return false;
             }
             if (action === 'update-version') {
-                await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('update', [projectPath]));
+                await submitFromHost(services, operations.update(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('update', [projectPath]), request.surface);
             } else {
-                await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('install', [projectPath]));
+                await submitFromHost(services, operations.install(services, { projectPath, packageId: request.packageId, version, sourceUrl }), facts('install', [projectPath]), request.surface);
             }
             return true;
         }
         case 'uninstall':
-            await submitFromHost(services, operations.remove(services, { projectPath, packageId: request.packageId }), facts('remove', [projectPath]));
+            await submitFromHost(services, operations.remove(services, { projectPath, packageId: request.packageId }), facts('remove', [projectPath]), request.surface);
             return true;
         default:
             return false;
@@ -259,6 +262,11 @@ const COMMANDS: ReadonlyArray<readonly [string, RowAction]> = [
     ['nuiget.row.viewDetails', 'view-details'],
 ];
 
+/** The surface of a menu's webview id; an absent or unknown id is no origin (UX-P4.fix-11). */
+function surfaceOf(webview: string | undefined): Surface | undefined {
+    return webview === MainPanelHost.viewType ? 'main' : webview === SidebarHost.viewType ? 'sidebar' : undefined;
+}
+
 /** What a read-only row admits: it copies and shows, and nothing else reaches it, whatever the argument says. */
 const READ_ONLY: readonly RowAction[] = ['copy-id', 'view-details'];
 
@@ -296,6 +304,7 @@ export function registerRowMenuCommands(services: HostServices, register: (comma
                 installedProjects: arg.installedProjects,
                 partiallyInstalled: arg.partiallyInstalled,
                 context: SECTION_CONTEXT[arg.webviewSection],
+                surface: surfaceOf(arg.webview),
             });
         });
     }

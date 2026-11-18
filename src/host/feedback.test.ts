@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { Emitter } from '../core/util/events';
-import type { BulkOutcome, OperationOutcome, OperationProgress } from '../protocol';
+import type { BulkOutcome, EventPayload, OperationOutcome, OperationProgress } from '../protocol';
 import { queueStatusText, registerOperationFeedback, registerQueueStatus } from './feedback';
 
 const information = vi.mocked(vscode.window.showInformationMessage);
@@ -16,7 +16,7 @@ const bulk = (changes: Partial<BulkOutcome>): BulkOutcome => ({ opId: 'bulk-1', 
 
 function setup() {
     const progress = new Emitter<OperationProgress>();
-    const completed = new Emitter<OperationOutcome | BulkOutcome>();
+    const completed = new Emitter<EventPayload<'ops/completed'>>();
     const hostSubmitted = new Emitter<OperationProgress>();
     const output = { show: vi.fn() };
     const disposable = registerOperationFeedback({ onProgress: progress.event, onCompleted: completed.event, onHostSubmitted: hostSubmitted.event, output });
@@ -154,7 +154,7 @@ describe('operation feedback', () => {
         }
     });
 
-    it('a single success the host started itself is said in the status bar, never in a toast', () => {
+    it('a single success the host started with no origin is said in the status bar, never in a toast', () => {
         const { completed, hostSubmitted } = setup();
         hostSubmitted.fire({ opId: 'menu-1', status: 'queued', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'] });
         completed.fire(single({ opId: 'menu-1' }));
@@ -172,12 +172,23 @@ describe('operation feedback', () => {
     it('a host-started failure still warns, and a cancelled operation the host started says nothing', () => {
         const { completed, hostSubmitted } = setup();
         hostSubmitted.fire({ opId: 'menu-2', status: 'queued', kind: 'remove', projectPaths: [APP], packageIds: ['Serilog'] });
-        completed.fire(single({ opId: 'menu-2', kind: 'remove', status: 'failed', message: 'exit code 1' }));
+        completed.fire({ ...single({ opId: 'menu-2', kind: 'remove', status: 'failed', message: 'exit code 1' }), origin: 'main' });
         hostSubmitted.fire({ opId: 'menu-3', status: 'queued', kind: 'update', projectPaths: [APP], packageIds: ['Serilog'] });
-        completed.fire(single({ opId: 'menu-3', kind: 'update', status: 'cancelled' }));
+        completed.fire({ ...single({ opId: 'menu-3', kind: 'update', status: 'cancelled' }), origin: 'sidebar' });
         expect(warning.mock.calls).toEqual([['nUIget: Uninstall of Serilog from App failed: exit code 1.', 'Show Output']]);
         expect(statusMessage).not.toHaveBeenCalled();
         expect(information).not.toHaveBeenCalled();
+    });
+
+    it('a row-menu success whose origin is a surface raises no status bar line and no toast: that surface says it (UX-P4.fix-11)', () => {
+        const { completed, hostSubmitted } = setup();
+        for (const origin of ['main', 'sidebar'] as const) {
+            hostSubmitted.fire({ opId: `menu-${origin}`, status: 'queued', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'] });
+            completed.fire({ ...single({ opId: `menu-${origin}` }), origin });
+        }
+        expect(statusMessage).not.toHaveBeenCalled();
+        expect(information).not.toHaveBeenCalled();
+        expect(warning).not.toHaveBeenCalled();
     });
 
     it('a one-project restore keeps its summary toast', () => {

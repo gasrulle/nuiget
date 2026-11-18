@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { OperationTicket } from '../core/contracts';
 import type { WorkflowOptions } from '../core/ops';
-import { ALL_PROJECTS, type BulkOutcome, type OperationKind, type OperationOutcome, type OperationProgress, type RequestPayload } from '../protocol';
+import { ALL_PROJECTS, type BulkOutcome, type OperationKind, type OperationOutcome, type OperationProgress, type RequestPayload, type Surface } from '../protocol';
 import { ABORT_DISPOSED, HostRequestError, type WebviewHost } from './WebviewHost';
 import type { HostServices } from './services';
 
@@ -153,10 +153,13 @@ function requirePackages(count: number): void {
     }
 }
 
-/** Wait for a ticket, tell every surface about the outcome and invalidate what it changed. */
-export async function settleOperation<T extends OperationOutcome | BulkOutcome>(services: HostServices, ticket: OperationTicket<T>): Promise<T> {
+/**
+ * Wait for a ticket, tell every surface about the outcome and invalidate what it changed. `origin` names the surface whose
+ * row menu started an operation the host submitted itself; that surface says it (UX-P4.fix-11).
+ */
+export async function settleOperation<T extends OperationOutcome | BulkOutcome>(services: HostServices, ticket: OperationTicket<T>, origin?: Surface): Promise<T> {
     const outcome = await ticket.completion;
-    services.announceOperation(outcome);
+    services.announceOperation(origin === undefined ? outcome : { ...outcome, origin });
     invalidateAfter(services, outcome);
     return outcome;
 }
@@ -165,11 +168,11 @@ export async function settleOperation<T extends OperationOutcome | BulkOutcome>(
  * An operation the host submitted itself (the row menu): no request's stream carries its progress and the queue reports
  * running work only, so every surface hears here that it waits (ADR-013 Decision 5). A refused ticket reports nothing.
  */
-export async function submitFromHost<T extends OperationOutcome | BulkOutcome>(services: HostServices, ticket: OperationTicket<T>, facts: { kind: OperationKind; projectPaths: string[]; packageIds: string[] }): Promise<T> {
+export async function submitFromHost<T extends OperationOutcome | BulkOutcome>(services: HostServices, ticket: OperationTicket<T>, facts: { kind: OperationKind; projectPaths: string[]; packageIds: string[] }, origin?: Surface): Promise<T> {
     if (ticket.admitted) {
         services.announceProgress({ opId: ticket.opId, status: 'queued', ...facts });
     }
-    return settleOperation(services, ticket);
+    return settleOperation(services, ticket, origin);
 }
 
 /**
@@ -292,15 +295,9 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
         ctx.generation = result.generation;
         return { projectPath: result.projectPath, updates: result.updates, sourcesUnavailable: result.sourcesUnavailable || undefined };
     });
-    host.on('transitive/get', async ({ projectPath, forceRestore }, ctx) => {
+    host.on('transitive/get', async ({ projectPath }, ctx) => {
+        // A restore is `ops/restore` on the queue (Y3); its invalidation lists again (UX-P4.fix-10, UX-P4.fix-11).
         const project = requireProject(projectPath);
-        if (forceRestore) {
-            // The restore runs on the queue like any other (Y3). Its progress travels as `ops/progress`.
-            const outcome = await awaitTicket(operations.restore(services, { projectPaths: [project] }), services, { signal: ctx.signal });
-            if (outcome.status === 'rejected') {
-                throw new HostRequestError('failed', outcome.message ?? 'Restore was not admitted');
-            }
-        }
         const { value, generation } = await catalog.transitive(project, ctx.signal);
         ctx.generation = generation;
         return value;

@@ -175,6 +175,31 @@ describe('two-surface harness', () => {
         expect(statuses).toContain('running');
     });
 
+    it('a row-menu outcome names the surface whose menu ran it, on both surfaces, and a webview\'s own operation carries no origin', async () => {
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+
+        // The sidebar's menu: both surfaces hear the outcome, named as the sidebar's (UX-P4.fix-11).
+        await h.command('nuiget.row.uninstall', { webviewSection: 'installedRow', packageId: 'Serilog', projectPath: A, installedVersion: '3.0.0', preventDefaultContextMenuItems: true, webview: 'nuiget.sidebarView' });
+        await h.settle(() => {
+            for (const webview of [sidebar, main]) {
+                expect(webview.events('ops/completed'), webview.surface).toContainEqual(expect.objectContaining({ kind: 'remove', packageId: 'Serilog', origin: 'sidebar' }));
+            }
+        });
+
+        // An operation a webview asked for: its response says it; the event carries no origin.
+        const asked = h.operate('main', 'ops/install', { projectPath: A, packageId: 'P1', version: '1.0.0' });
+        await asked.response;
+        await h.settle(() => expect(sidebar.events('ops/completed')).toContainEqual(expect.objectContaining({ kind: 'install', packageId: 'P1' })));
+        for (const webview of [sidebar, main]) {
+            const event = (webview.events('ops/completed') as Array<{ packageId?: string; origin?: string }>).find(outcome => outcome.packageId === 'P1');
+            expect(event, webview.surface).not.toHaveProperty('origin');
+        }
+    });
+
     it('queue saturation + exception after admission: the seventh is refused with its ticket, a throwing operation fails and the queue goes on', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];

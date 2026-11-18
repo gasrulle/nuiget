@@ -111,7 +111,8 @@ each fence through the ESLint API.
 
 Every operation ends in exactly one outcome ([ADR-003](docs/adr/003-operation-queue-and-dotnet-runner.md)):
 the ticket's `completion` resolves once and never rejects, and the host answers the request with it and
-announces it to both surfaces as `ops/completed`. The statuses (`OperationStatus`, `src/protocol/domain.ts`):
+announces it to both surfaces as `ops/completed`; an operation the host submitted from a row's menu carries `origin`, the
+surface whose menu ran it (read from the `webview` key VS Code adds to the command's argument; UX-P4.fix-11). The statuses (`OperationStatus`, `src/protocol/domain.ts`):
 
 | Status | Produced by | Meaning |
 | --- | --- | --- |
@@ -130,7 +131,8 @@ restore the user switched off is `{ ok: true, skipped: true }`. A `BulkOutcome` 
 queue's progress, to the announced outcomes and to what the host announces of the operations it submits itself
 (`events.operationProgress`, fired by `submitFromHost` only). `settleOperation` announces each ticket once, whichever surface
 started it. A single success raises no toast: the surface that asked shows it in place and says it in its live region (UX-P4.6);
-one the host started itself (the row menu) is said in the status bar for five seconds (`setStatusBarMessage`). A warning with a
+one started from a row's menu is said by the surface its `origin` names, and one the host started with no surface to name
+is said in the status bar for five seconds (`setStatusBarMessage`; UX-P4.7, UX-P4.fix-11). A warning with a
 *Show Output* button follows `partial`, `failed` and `rejected`, nothing follows `cancelled`; a `failed` outcome also reveals
 the output channel. `registerQueueStatus` keeps the queue's status bar item: what runs, from the running operation's last report
 ("Installing Serilog", "Updating packages", "Restoring projects"), and how many wait (", 2 queued"); a row or button whose
@@ -514,8 +516,7 @@ starts; the other slices ask when they have something to ask for.
 - `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
   the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects; never in the sidebar, whose
   entry passes `prefetch={false}` to `StoreProvider`, P9.fix-1, N87) or at once when the section is opened
-  first (`enable()`); another project starts again. The slice never sends `forceRestore` (it stays in the protocol until
-  UX-P4.fix-11): the banner's Restore is the feature's `ops/restore` through the ops slice, and the host's invalidation of
+  first (`enable()`); another project starts again. The protocol has no forced restore (removed at UX-P4.fix-11): the banner's Restore is the feature's `ops/restore` through the ops slice, and the host's invalidation of
   `transitive:<path>` after it lists again (UX-P4.fix-10). The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
   answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
 - `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per
@@ -583,7 +584,8 @@ starts; the other slices ask when they have something to ask for.
   operation that waits) and removes both when the request settles (N61). The last outcome comes from
   `ops/completed` with a sequence number for the live region. `isPackageBusy(project, id)` is true on both
   surfaces, whoever started the operation. `run` resolves with the outcome; the surface that asked receives it
-  as response and as event, and it counts once (by `opId`).
+  as response and as event, and it counts once (by `opId`). `own`, what the live region says, is set from that response, or
+  from an `ops/completed` event whose `origin` is the surface `StoreProvider` was given (its row menu ran it; UX-P4.fix-11).
 
 Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
 what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.
@@ -616,8 +618,9 @@ links.
   filters the installed packages by id, a progress bar while the list is revalidated, a banner for an
   unsupported project and one with "Retry" for an error, the Installed section and the one live region
   (`status-live`). It announces, through `describeOutcome` (`outcomes.ts`), how an
-  operation it asked for ended: announced by the surface that asked (the ops slice's `own`, set from the response alone;
-  UX-P4.6), never from the `ops/completed` event, which both surfaces still receive. The search box claims the focus when the sidebar's
+  operation it asked for ended: announced by the surface that asked (the ops slice's `own`, set from the response;
+  UX-P4.6), or by the surface whose row menu ran it (the event's `origin`, UX-P4.fix-11), never from an `ops/completed`
+  event of another surface's or without an origin, which both surfaces still receive. The search box claims the focus when the sidebar's
   document has the focus and nothing in it holds it, at mount and on every later `focus` of the document (SB14, UX-P3.8;
   every gain since UX-P4.fix-4, the document being retained for the session), except a gain that follows a `pointerdown`
   in the document, so a press on a blank spot leaves the box alone; a mount never takes the focus from an editor. The
@@ -726,8 +729,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   their project's name; Confirm sends `ops/bulkRemove` for one project or `ops/bulkRemoveAllProjects` with the
   project names, closes the dialog and empties the sent part of the set. The rows are busy from the request on
   (ops slice, N61), and leave only with the host's next list: nothing is removed by guessing, so a failed package
-  of a `partial` batch stays where it is. The shell announces an outcome once, on the surface that asked for it (UX-P4.6); a single success the host started
-  itself (the row menu) is said in the status bar (UX-P4.7). The transitive banner's Restore is an `ops/restore` the main panel
+  of a `partial` batch stays where it is. The shell announces an outcome once, on the surface that asked for it (UX-P4.6) or whose row menu ran it
+  (UX-P4.fix-11); a single success the host started with no surface to name is said in the status bar (UX-P4.7). The transitive banner's Restore is an `ops/restore` the main panel
   asked for (UX-P4.fix-10): it says the outcome in the words of a single operation ("Restored App", "Restored 2 projects"),
   and while `restoringProjects` (the ops slice) holds the project the Transitive group shows its bar and spinner; the
   summary toast stays.

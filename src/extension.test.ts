@@ -757,7 +757,7 @@ describe('extension (2.0 composition root)', () => {
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
     });
 
-    it('a single success the host started itself is said in the status bar and a webview-asked one is not (UX-P4.7)', async () => {
+    it('a host-started single success without an origin is said in the status bar; one with an origin and a webview-asked one are not (UX-P4.fix-11)', async () => {
         const { services } = await start();
         const said = vi.mocked(vscode.window.setStatusBarMessage);
         said.mockClear();
@@ -769,6 +769,10 @@ describe('extension (2.0 composition root)', () => {
         services.announceProgress({ opId: 'menu', status: 'queued', kind: 'remove', projectPaths: ['/w/App/App.csproj'], packageIds: ['Serilog'] });
         services.announceOperation(outcome('menu'));
         expect(said.mock.calls).toEqual([['nUIget: Uninstalled Serilog from App.', 5000]]);
+        // The row menu's with a surface named: that surface's live region says it, the status bar does not (UX-P4.fix-11).
+        services.announceProgress({ opId: 'menu2', status: 'queued', kind: 'remove', projectPaths: ['/w/App/App.csproj'], packageIds: ['Serilog'] });
+        services.announceOperation({ ...outcome('menu2'), origin: 'sidebar' });
+        expect(said).toHaveBeenCalledTimes(1);
     });
 
     it('the status bar shows the queue and hides when it is idle', async () => {

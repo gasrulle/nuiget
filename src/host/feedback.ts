@@ -9,12 +9,12 @@
 
 import * as vscode from 'vscode';
 import type { Event } from '../core/contracts';
-import type { BulkOutcome, OperationKind, OperationOutcome, OperationProgress } from '../protocol';
+import type { BulkOutcome, EventPayload, OperationKind, OperationOutcome, OperationProgress } from '../protocol';
 import { projectDisplayName } from './services';
 
 export interface OperationFeedbackDeps {
     onProgress: Event<OperationProgress>;
-    onCompleted: Event<OperationOutcome | BulkOutcome>;
+    onCompleted: Event<EventPayload<'ops/completed'>>;
     /** What the host announces of the operations it submits itself (the row menu, `submitFromHost`): a `queued` report each. */
     onHostSubmitted: Event<OperationProgress>;
     output: Pick<vscode.LogOutputChannel, 'show'>;
@@ -272,8 +272,9 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
         }
         switch (outcome.status) {
             case 'completed':
-                // D50: no toast. The surface that asked says it; the host says only what it started itself.
-                if (fromHost) {
+                // D50: no toast. The surface that asked says it, the row menu's surface by the outcome's origin (UX-P4.fix-11);
+                // the host says only what it started with no surface to say it.
+                if (fromHost && outcome.origin === undefined) {
                     vscode.window.setStatusBarMessage(`${PREFIX}${doneSentence(outcome)}.`, 5000);
                 }
                 return;

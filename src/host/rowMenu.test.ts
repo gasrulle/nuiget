@@ -12,7 +12,7 @@ const handlers = vi.hoisted(() => ({
 vi.mock('./handlers', () => handlers);
 const pickers = vi.hoisted(() => ({ pickVersion: vi.fn(async () => '2.0.0'), pickProjectsForInstall: vi.fn(async () => ['/w/A.csproj']), pickSingleProject: vi.fn(async () => '/w/A.csproj') }));
 vi.mock('./pickers', () => pickers);
-const panel = vi.hoisted(() => ({ MainPanelHost: { navigateToPackage: vi.fn(), showPackage: vi.fn(async () => undefined) } }));
+const panel = vi.hoisted(() => ({ MainPanelHost: { viewType: 'nugetManager', navigateToPackage: vi.fn(), showPackage: vi.fn(async () => undefined) } }));
 vi.mock('./MainPanelHost', () => panel);
 
 const A = '/w/A.csproj';
@@ -43,12 +43,21 @@ describe('the row menu commands (UX-P2.9a)', () => {
 
     it('refuses a malformed context: it is webview input', async () => {
         const { commands, warn } = setUp();
-        for (const bad of [undefined, 'x', {}, row({ packageId: 3 }), row({ webviewSection: 'constructor' }), row({ installedProjects: [{ projectPath: 1 }] }), row({ 'nuiget.installed': 'yes' })]) {
+        for (const bad of [undefined, 'x', {}, row({ packageId: 3 }), row({ webviewSection: 'constructor' }), row({ installedProjects: [{ projectPath: 1 }] }), row({ 'nuiget.installed': 'yes' }), row({ webview: 3 })]) {
             expect(isRowMenuContext(bad)).toBe(false);
             await commands.get('nuiget.row.uninstall')?.(bad);
         }
-        expect(warn).toHaveBeenCalledTimes(7);
+        expect(warn).toHaveBeenCalledTimes(8);
         expect(handlers.submitFromHost).not.toHaveBeenCalled();
+    });
+
+    it('the menu\'s webview id becomes the operation\'s origin; an unknown or absent id gives none (UX-P4.fix-11)', async () => {
+        const { commands } = setUp();
+        for (const [webview, origin] of [['nugetManager', 'main'], ['nuiget.sidebarView', 'sidebar'], ['someone.elsesView', undefined], [undefined, undefined]] as const) {
+            await commands.get('nuiget.row.uninstall')?.(row({ webview }));
+            expect((vi.mocked(handlers.submitFromHost).mock.lastCall as unknown[] | undefined)?.[3]).toBe(origin);
+        }
+        expect(handlers.submitFromHost).toHaveBeenCalledTimes(4);
     });
 
     it('each command submits its typed operation', async () => {

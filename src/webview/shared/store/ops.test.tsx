@@ -234,7 +234,7 @@ describe('ops slice', () => {
         })).toEqual({ kind: 'update', projectPaths: [B], packageIds: ['Moq'] });
     });
 
-    it('the own outcome is the response alone: an event before or after it changes it not, and an event alone sets none (UX-P4.6, A10)', () => {
+    it('the own outcome is the response, or an event whose origin is this surface; an event without an origin or of the other surface sets none, and one outcome counts once (UX-P4.fix-11)', () => {
         const answered = opsReducer(INITIAL_OPS, { type: 'answered', outcome: removed('op1') });
         expect(answered.own).toEqual({ outcome: removed('op1'), sequence: 1 });
         // The event after the response is counted in `last` and keeps `own` as it was.
@@ -247,6 +247,29 @@ describe('ops slice', () => {
         expect(opsReducer(eventFirst, { type: 'answered', outcome: removed('op2') }).own).toEqual({ outcome: removed('op2'), sequence: 1 });
         // The same outcome answered twice is two.
         expect(opsReducer(answered, { type: 'answered', outcome: removed('op1') }).own?.sequence).toBe(2);
+        // A row-menu outcome: the event whose origin is this surface (`mine`) sets `own`, once though it comes twice; an event
+        // of the other surface or without an origin (`mine` false or absent) sets none (UX-P4.fix-11).
+        const menu = { ...removed('op3'), origin: 'main' as const };
+        const mine = opsReducer(INITIAL_OPS, { type: 'completed', outcome: menu, mine: true });
+        expect(mine.own).toEqual({ outcome: menu, sequence: 1 });
+        expect(opsReducer(mine, { type: 'completed', outcome: menu, mine: true }).own).toBe(mine.own);
+        const theirs = { ...removed('op4'), origin: 'sidebar' as const };
+        expect(opsReducer(INITIAL_OPS, { type: 'completed', outcome: theirs, mine: false }).own).toBeUndefined();
+    });
+
+    it('a completed event whose origin is this surface sets own once; a repeat of the same opId does not (UX-P4.fix-11)', async () => {
+        const host = createFakeHost();
+        function Own() {
+            const { own } = useOps();
+            return <output data-testid="own">{own === undefined ? 'none' : `${own.sequence} ${own.outcome.opId}`}</output>;
+        }
+        render(<MessageBusProvider bus={host.bus}><OpsProvider surface="sidebar"><Own /></OpsProvider></MessageBusProvider>);
+        await hostSays(() => host.event('ops/completed', { ...removed('menu1'), origin: 'main' }));
+        await hostSays(() => host.event('ops/completed', removed('menu2')));
+        expect(text('own')).toBe('none');
+        await hostSays(() => host.event('ops/completed', { ...removed('menu3'), origin: 'sidebar' }));
+        await hostSays(() => host.event('ops/completed', { ...removed('menu3'), origin: 'sidebar' }));
+        expect(text('own')).toBe('1 menu3');
     });
 
     it('a per-step report keeps every package of the operation busy', () => {

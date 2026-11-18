@@ -34,7 +34,7 @@ if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <ErrorBoundary onError={report}>
-                <StoreProvider bus={bus} prefetch={false}>
+                <StoreProvider bus={bus} prefetch={false} surface="sidebar">
                     <SidebarView viewState={api} />
                 </StoreProvider>
             </ErrorBoundary>

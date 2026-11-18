@@ -31,6 +31,7 @@ import type {
     ResourceKey,
     SessionIntent,
     SessionSnapshot,
+    Surface,
     TransitiveFrameworkSection,
     TransitiveResult,
     TransitiveErrorKind,
@@ -110,7 +111,7 @@ export interface RequestMap {
     /** The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). */
     'installed/get': { payload: { projectPath: string }; result: InstalledResult; chunk: { kind: 'provisional'; result: InstalledResult } };
     'updates/get': { payload: { projectPath: string; includePrerelease: boolean }; result: { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean }; chunk: { kind: 'found'; update: PackageUpdate } };
-    'transitive/get': { payload: { projectPath: string; forceRestore?: boolean }; result: TransitiveResult };
+    'transitive/get': { payload: { projectPath: string }; result: TransitiveResult };
     'transitive/metadata': { payload: { packages: Array<{ id: string; version: string }> }; result: { metadata: PackageMetadataLite[] } };
 
     // All-projects resources (streamed per project)
@@ -184,8 +185,12 @@ export interface EventMap {
     'resources/invalidated': { scope: InvalidationScope; reason: InvalidationReason; generation: number; keys: Array<{ key: ResourceKey; generation: number }> };
     'sources/health': { failed: FailedSource[] };
     'ops/progress': OperationProgress;
-    /** Outcome of an operation started by *any* surface (the originating surface also gets it as its response). */
-    'ops/completed': OperationOutcome | BulkOutcome;
+    /**
+     * Outcome of an operation started by *any* surface (the originating surface also gets it as its response). `origin` is the
+     * surface whose row menu started an operation the host submitted itself; absent for an operation a webview asked for (its
+     * response says it) and when the host cannot name the surface (UX-P4.fix-11).
+     */
+    'ops/completed': (OperationOutcome | BulkOutcome) & { origin?: Surface };
     'config/changed': ExtensionConfig;
     'ui/navigateToPackage': { packageId: string; version?: string };
     'ui/openSourceSettings': Record<string, never>;

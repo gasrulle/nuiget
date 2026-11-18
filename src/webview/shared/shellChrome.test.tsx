@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import { StrictMode } from 'react';
 import type React from 'react';
 import { describe, expect, it } from 'vitest';
-import type { OperationOutcome } from '../../protocol';
+import type { BulkOutcome, OperationOutcome, Surface } from '../../protocol';
 import { createFakeHost, type FakeHost } from './bus/testSupport';
 import { useFirstUsefulRenderMark, useShellChrome } from './shellChrome';
 import { useOpsActions, type OpsActions } from './store/ops';
@@ -18,7 +18,7 @@ function Chrome({ shown = false }: { shown?: boolean }): React.JSX.Element {
     return <><input aria-label="Search" ref={searchRef} /><output data-testid="said" data-repeat={live.repeat}>{live.message}</output></>;
 }
 
-const mount = (host: FakeHost, shown = false) => <StrictMode><StoreProvider bus={host.bus}><Chrome shown={shown} /></StoreProvider></StrictMode>;
+const mount = (host: FakeHost, shown = false, surface: Surface = 'main') => <StrictMode><StoreProvider bus={host.bus} surface={surface}><Chrome shown={shown} /></StoreProvider></StrictMode>;
 const packageId = 'Serilog';
 const OUTCOME: OperationOutcome = { opId: 'op1', kind: 'remove', status: 'completed', projectPath: '/w/App/App.csproj', packageId };
 const marks = (host: FakeHost): string[] => host.requests('perf/mark').map(request => request.payload.name);
@@ -91,13 +91,38 @@ describe('useShellChrome', () => {
             expect(said()).toHaveAttribute('data-repeat', '0');
         });
 
-        it('says nothing of an operation the host started itself (the row menu): the host says it (UX-P4.7)', async () => {
+        it('says a row-menu outcome whose origin is this surface, once, and nothing of the other surface\'s or of one without an origin (UX-P4.fix-11)', async () => {
             const host = createFakeHost();
             render(mount(host));
+            // Another surface's menu, and an operation the host started with no surface to name: nothing here.
             await hostSays(() => host.event('ops/progress', { opId: 'host1', status: 'queued', kind: 'remove', projectPaths: [OUTCOME.projectPath], packageIds: [packageId] }));
-            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host1' }));
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host1', origin: 'sidebar' }));
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host2' }));
             expect(said().textContent).toBe('');
             expect(said()).toHaveAttribute('data-repeat', '0');
+            // This surface's menu: said once, though the event comes twice.
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host3', origin: 'main' }));
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host3', origin: 'main' }));
+            expect(said().textContent).toBe('Uninstalled Serilog');
+            expect(said()).toHaveAttribute('data-repeat', '1');
+        });
+
+        it('says a cancelled row-menu operation of this surface in the existing sentence (UX-P4.fix-11)', async () => {
+            const host = createFakeHost();
+            render(mount(host, false, 'sidebar'));
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host4', status: 'cancelled', origin: 'sidebar' }));
+            expect(said().textContent).toBe('Uninstall of Serilog was cancelled');
+        });
+
+        it('says a bulk row-menu outcome of this surface in the bulk sentence (UX-P4.fix-11)', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            const bulk: BulkOutcome = {
+                opId: 'host5', status: 'completed', restores: [],
+                results: [{ ...OUTCOME, opId: 'host5', kind: 'install' }, { ...OUTCOME, opId: 'host5', kind: 'install', projectPath: '/w/Lib/Lib.csproj' }],
+            };
+            await hostSays(() => host.event('ops/completed', { ...bulk, origin: 'main' }));
+            expect(said().textContent).toBe('2 of 2 operations completed');
         });
 
         it('announces the same outcome twice when it is asked for twice', async () => {

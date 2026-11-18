@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import type React from 'react';
-import type { BulkOutcome, OperationKind, OperationOutcome, OperationProgress, OperationStatus, RequestChunk, RequestPayload, RequestResult, RequestType } from '../../../protocol';
+import type { BulkOutcome, OperationKind, OperationOutcome, OperationProgress, OperationStatus, RequestChunk, RequestPayload, RequestResult, RequestType, Surface } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
 
 /** The requests that run on the operation queue: their response is an outcome. */
@@ -14,8 +14,9 @@ export interface OpsState {
     /** The last operation that ended, on either surface, from the event or the response. `sequence` goes up with each. */
     last: { outcome: AnyOutcome; sequence: number } | undefined;
     /**
-     * The last outcome this surface asked for, from the response to its own request (UX-P4.6, A10): the one message only
-     * the asking surface gets. `sequence` goes up with each, so the same outcome twice is two announcements.
+     * The last outcome this surface asked for, from the response to its own request (UX-P4.6, A10), or from an event whose
+     * `origin` is this surface, the operation its row menu started (UX-P4.fix-11): what only that surface says. `sequence`
+     * goes up with each, so the same outcome twice is two announcements.
      */
     own: { outcome: AnyOutcome; sequence: number } | undefined;
     /** Ids of operations whose end was already recorded: an outcome arrives as an event and, where it was asked for, as a response. */
@@ -24,7 +25,8 @@ export interface OpsState {
 
 export type OpsAction =
     | { type: 'progress'; progress: OperationProgress }
-    | { type: 'completed'; outcome: AnyOutcome }
+    /** `mine`: the event's `origin` is this surface (its row menu ran the operation, UX-P4.fix-11). */
+    | { type: 'completed'; outcome: AnyOutcome; mine?: boolean }
     /** The response to this surface's own request: its outcome, whether or not the event came first. */
     | { type: 'answered'; outcome: AnyOutcome }
     /** This surface asked for an operation: it is in progress from the call on, under an id of this surface. */
@@ -119,7 +121,7 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
     return {
         active,
         last: { outcome, sequence: (state.last?.sequence ?? 0) + 1 },
-        own: state.own,
+        own: action.mine === true ? { outcome, sequence: (state.own?.sequence ?? 0) + 1 } : state.own,
         ended: [...state.ended, outcome.opId].slice(-REMEMBERED),
     };
 }
@@ -216,17 +218,17 @@ const OpsActionsContext = createContext<OpsActions | null>(null);
  * operation, so a row is busy on the surface that did not ask as well. The surface that asked also gets the outcome as
  * its response; `last` counts it once, and `own` holds it.
  */
-export function OpsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function OpsProvider({ children, surface }: { children: React.ReactNode; surface?: Surface }): React.JSX.Element {
     const bus = useMessageBus();
     const [state, dispatch] = useReducer(opsReducer, INITIAL_OPS);
 
     useEffect(() => {
         const unsubscribes = [
             bus.onEvent('ops/progress', progress => dispatch({ type: 'progress', progress })),
-            bus.onEvent('ops/completed', outcome => dispatch({ type: 'completed', outcome })),
+            bus.onEvent('ops/completed', outcome => dispatch({ type: 'completed', outcome, mine: surface !== undefined && outcome.origin === surface })),
         ];
         return () => unsubscribes.forEach(unsubscribe => unsubscribe());
-    }, [bus]);
+    }, [bus, surface]);
 
     const nextLocal = useRef(0);
 

@@ -333,7 +333,7 @@ describe('shared handlers: every request of the protocol', () => {
         const { services, workflows, catalog } = makeServices();
         const host = new TestHost(services);
         await host.receiveRaw(makeRequest('installed/get', { projectPath: ALL_PROJECTS }, 'a'));
-        await host.receiveRaw(makeRequest('transitive/get', { projectPath: ALL_PROJECTS, forceRestore: true }, 'b'));
+        await host.receiveRaw(makeRequest('transitive/get', { projectPath: ALL_PROJECTS }, 'b'));
         await host.receiveRaw(makeRequest('ops/install', { projectPath: ALL_PROJECTS, packageId: 'X' }, 'c'));
         await host.receiveRaw(makeRequest('ops/bulkUpdate', { projectPath: ALL_PROJECTS, packages: [{ id: 'X', version: '2.0.0' }] }, 'd'));
         await host.receiveRaw(makeRequest('ops/remove', { projectPath: '', packageId: 'X' }, 'e'));
@@ -518,29 +518,27 @@ describe('shared handlers: operations', () => {
         expect(host.sent.find(message => message.kind === 'stream')).toMatchObject({ id: 'a', chunk: { opId: outcome.opId, status: 'queued' } });
     });
 
-    it('transitive/get: forceRestore runs through the queue as PackageWorkflows.restore (Y3)', async () => {
+    it('ops/restore: runs through the queue as PackageWorkflows.restore (Y3)', async () => {
         const { services, workflows, catalog, announceOperation } = makeServices();
         const host = new TestHost(services);
-        const order: string[] = [];
-        workflows.restore.mockImplementation(async (ctx, projectPaths) => { order.push('restore'); return bulkOutcome(ctx, projectPaths); });
-        catalog.transitive.mockImplementation(async projectPath => { order.push('transitive'); return { value: { projectPath, frameworks: [], dataSourceAvailable: true }, generation: 4 }; });
-        await host.receiveRaw(makeRequest('transitive/get', { projectPath: appPath, forceRestore: true }, 'a'));
-        expect(order).toEqual(['restore', 'transitive']);
+        workflows.restore.mockImplementation(async (ctx, projectPaths) => bulkOutcome(ctx, projectPaths));
+        await host.receiveRaw(makeRequest('ops/restore', { projectPaths: [appPath] }, 'a'));
         const announced = announceOperation.mock.calls[0][0];
         expect(workflows.restore).toHaveBeenCalledWith(expect.objectContaining({ opId: announced.opId }), [appPath]);
-        expect(resultOf(host, 'a')).toEqual({ projectPath: appPath, frameworks: [], dataSourceAvailable: true });
-        // The request declares no chunk: the restore's progress is the `ops/progress` event, not a stream.
-        expect(host.sent.filter(message => message.kind === 'stream')).toEqual([]);
+        expect(resultOf(host, 'a')).toMatchObject({ opId: announced.opId });
+        // The request sees its own progress: the opening chunk carries the ticket's id; it lists nothing itself.
+        expect(host.sent.find(message => message.kind === 'stream')).toMatchObject({ id: 'a', chunk: { opId: announced.opId, status: 'queued' } });
+        expect(catalog.transitive).not.toHaveBeenCalled();
 
-        // A restore that the queue refuses is an error, not stale data presented as fresh.
+        // A restore that the queue refuses is a rejected outcome, never run.
         const full = makeServices();
         const release = blockedSingle(full.workflows);
         const fullHost = new TestHost(full.services);
         const pending = [1, 2, 3, 4, 5, 6].map(n => fullHost.receiveRaw(makeRequest('ops/install', { projectPath: appPath, packageId: `P${n}` }, `r${n}`)));
         await tick();
-        await fullHost.receiveRaw(makeRequest('transitive/get', { projectPath: appPath, forceRestore: true }, 'refused'));
-        expect(errorOf(fullHost, 'refused')).toMatchObject({ code: 'failed', message: 'the operation queue is full (1 running, 5 waiting)' });
-        expect(full.catalog.transitive).not.toHaveBeenCalled();
+        await fullHost.receiveRaw(makeRequest('ops/restore', { projectPaths: [appPath] }, 'refused'));
+        expect(resultOf(fullHost, 'refused')).toMatchObject({ status: 'rejected', message: 'the operation queue is full (1 running, 5 waiting)' });
+        expect(full.workflows.restore).not.toHaveBeenCalled();
         release();
         await Promise.all(pending);
     });
@@ -746,12 +744,24 @@ describe('submitFromHost', () => {
         expect(announceOperation).toHaveBeenCalledWith(outcome);
     });
 
-    it('a refused ticket reports nothing, and its outcome still reaches the surfaces', async () => {
+    it('a refused ticket reports nothing, and its outcome still reaches the surfaces, with its origin', async () => {
         const { services, announceOperation } = makeServices();
         const refused = { ...outcome, status: 'rejected' } as OperationOutcome;
         await submitFromHost(services, { opId: 'op', admitted: false, completion: Promise.resolve(refused), cancel: () => undefined }, facts);
         expect(services.announceProgress).not.toHaveBeenCalled();
         expect(announceOperation).toHaveBeenCalledWith(refused);
+        // The surface whose menu ran it is named on the outcome; the returned outcome stays bare (UX-P4.fix-11).
+        const returned = await submitFromHost(services, { opId: 'op2', admitted: false, completion: Promise.resolve({ ...refused, opId: 'op2' }), cancel: () => undefined }, facts, 'sidebar');
+        expect(announceOperation).toHaveBeenLastCalledWith({ ...refused, opId: 'op2', origin: 'sidebar' });
+        expect(returned).not.toHaveProperty('origin');
+    });
+
+    it('a cancelled host-submitted ticket is announced with its origin (UX-P4.fix-11)', async () => {
+        const { services, announceOperation } = makeServices();
+        const cancelled = { ...outcome, status: 'cancelled' } as OperationOutcome;
+        await submitFromHost(services, { opId: 'op', admitted: true, completion: Promise.resolve(cancelled), cancel: () => undefined }, facts, 'main');
+        expect(services.announceProgress).toHaveBeenCalledWith(expect.objectContaining({ opId: 'op', status: 'queued' }));
+        expect(announceOperation).toHaveBeenCalledWith({ ...cancelled, origin: 'main' });
     });
 });
 

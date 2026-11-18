@@ -24,7 +24,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | Projects | `projects/list` | both | `Record<string, never>` | `ProjectListing` | — |  |
 | Single-project resources | `installed/get` | both | `{ projectPath: string; }` | `InstalledResult` | `{ kind: "provisional"; result: InstalledResult; }` | The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). |
 | Single-project resources | `updates/get` | both | `{ projectPath: string; includePrerelease: boolean; }` | `{ projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean; }` | `{ kind: "found"; update: PackageUpdate; }` |  |
-| Single-project resources | `transitive/get` | both | `{ projectPath: string; forceRestore?: boolean; }` | `TransitiveResult` | — |  |
+| Single-project resources | `transitive/get` | both | `{ projectPath: string; }` | `TransitiveResult` | — |  |
 | Single-project resources | `transitive/metadata` | both | `{ packages: Array<{ id: string; version: string; }>; }` | `{ metadata: PackageMetadataLite[]; }` | — |  |
 | All-projects resources | `allProjects/installed` | both | `Record<string, never>` | `{ projectPaths: string[]; errored: Array<{ projectPath: string; error: string; }>; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectInstalledChunk; } \| { kind: "metadata"; projectPath: string; packages: PackageMetadataLite[]; }` |  |
 | All-projects resources | `allProjects/updates` | both | `{ includePrerelease: boolean; }` | `{ projectPaths: string[]; sourcesUnavailable?: boolean; }` | `{ kind: "start"; projects: Project[]; } \| { kind: "project"; chunk: ProjectUpdatesChunk; } \| { kind: "icons"; icons: Record<string, string>; }` |  |
@@ -70,7 +70,7 @@ without correlation. Both webviews share the same maps; surface-specific request
 | `resources/invalidated` | `{ scope: InvalidationScope; reason: InvalidationReason; generation: number; keys: Array<{ key: ResourceKey; generation: number; }>; }` | The coordinator's `InvalidationEvent` forwarded unchanged (ADR-002). `generation` is the event's sequence number and is not comparable with a response's generation; `keys` lists every key the coordinator has seen that `scope` reached, with its generation after this invalidation, which is what an ok response for that key carries. A key absent from `keys` was never queried. |
 | `sources/health` | `{ failed: FailedSource[]; }` |  |
 | `ops/progress` | `OperationProgress` |  |
-| `ops/completed` | `OperationOutcome \| BulkOutcome` | Outcome of an operation started by *any* surface (the originating surface also gets it as its response). |
+| `ops/completed` | `(OperationOutcome \| BulkOutcome) & { origin?: Surface; }` | Outcome of an operation started by *any* surface (the originating surface also gets it as its response). `origin` is the surface whose row menu started an operation the host submitted itself; absent for an operation a webview asked for (its response says it) and when the host cannot name the surface (UX-P4.fix-11). |
 | `config/changed` | `ExtensionConfig` |  |
 | `ui/navigateToPackage` | `{ packageId: string; version?: string; }` |  |
 | `ui/openSourceSettings` | `Record<string, never>` |  |

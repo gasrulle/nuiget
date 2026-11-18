@@ -37,7 +37,7 @@ if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <ErrorBoundary onError={report}>
-                <StoreProvider bus={bus}>
+                <StoreProvider bus={bus} surface="main">
                     <MainShell viewState={api} installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} browse={view => <BrowseList {...view} />} details={view => <DetailsPane {...view} />} />
                 </StoreProvider>
             </ErrorBoundary>

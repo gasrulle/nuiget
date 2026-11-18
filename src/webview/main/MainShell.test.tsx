@@ -484,6 +484,21 @@ describe('main panel shell', () => {
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Moq'));
     });
 
+    it('a row-menu outcome with this surface\'s origin is said in status-live (UX-P4.fix-11)', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus} surface="main"><MainShell installed={() => <p>Installed list</p>} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        const outcome = { opId: 'menu1', kind: 'remove' as const, status: 'completed' as const, projectPath: A, packageId: 'Serilog' };
+        // The sidebar's menu: not said here.
+        await hostSays(() => host.event('ops/completed', { ...outcome, origin: 'sidebar' as const }));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        expect(screen.getByTestId('status-live')).not.toHaveTextContent('Uninstalled Serilog');
+        // This panel's menu: said here.
+        await hostSays(() => host.event('ops/completed', { ...outcome, opId: 'menu2', packageId: 'Moq', origin: 'main' as const }));
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Moq'));
+    });
+
     it('has no axe violations', async () => {
         // React reports invalid markup (an option outside a select, a controlled input without onChange) here.
         const consoleError = vi.spyOn(console, 'error');

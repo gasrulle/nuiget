@@ -10,7 +10,7 @@ import type { DotnetRunner, Event, Logger, OperationQueue, ProjectExecutionConte
 import type { Catalog } from '../core/catalog';
 import type { PackageWorkflows, WorkflowDeps } from '../core/ops';
 import type { ProjectContextProvider } from '../core/project';
-import type { BulkOutcome, ExtensionConfig, InvalidationReason, InvalidationScope, OperationOutcome, OperationProgress, Project } from '../protocol';
+import type { EventPayload, ExtensionConfig, InvalidationReason, InvalidationScope, OperationProgress, Project } from '../protocol';
 import { Emitter } from '../core/util/events';
 import { normalizeProjectPath } from '../core/util/paths';
 
@@ -27,7 +27,7 @@ export interface HostServices {
     contextFor(projectPath: string): Promise<ProjectExecutionContext>;
     readonly sources: SourceProvider;
     /** Fired after any operation completes (either surface); hosts forward it as `ops/completed`. */
-    readonly onOperationCompleted: Event<OperationOutcome | BulkOutcome>;
+    readonly onOperationCompleted: Event<EventPayload<'ops/completed'>>;
     /** `queue.onProgress` and what the host reports of the operations it submits itself (ADR-013 Decision 5); hosts forward it as `ops/progress`. */
     readonly onOperationProgress: Event<OperationProgress>;
     readonly onConfigChanged: Event<ExtensionConfig>;
@@ -35,7 +35,7 @@ export interface HostServices {
     /** Invalidate resources and let both hosts broadcast. */
     invalidate(scope: InvalidationScope, reason: InvalidationReason): void;
     /** Emit a completed operation to every surface. */
-    announceOperation(outcome: OperationOutcome | BulkOutcome): void;
+    announceOperation(outcome: EventPayload<'ops/completed'>): void;
     /** Report the progress of an operation the host submitted itself, which no request's stream carries. */
     announceProgress(progress: OperationProgress): void;
     config(): ExtensionConfig;
@@ -197,7 +197,7 @@ export const mergeEvents = <T>(...events: Array<Event<T>>): Event<T> => listener
 
 /** Small typed broadcast hub used by `extension.ts` to implement `HostServices` events. */
 export class HostEvents {
-    readonly operationCompleted = new Emitter<OperationOutcome | BulkOutcome>();
+    readonly operationCompleted = new Emitter<EventPayload<'ops/completed'>>();
     readonly operationProgress = new Emitter<OperationProgress>();
     readonly configChanged = new Emitter<ExtensionConfig>();
     readonly projectsChanged = new Emitter<Project[]>();

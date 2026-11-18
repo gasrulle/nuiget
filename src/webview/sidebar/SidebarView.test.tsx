@@ -464,6 +464,23 @@ describe('sidebar: Installed section', () => {
         expect(heard).toEqual(['Loading installed packages', 'Loading updates']);
     });
 
+    it('a row-menu outcome with this surface\'s origin is said in status-live (UX-P4.fix-11)', async () => {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus} surface="sidebar"><SidebarView /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, [pkg('Serilog'), pkg('Moq')]), 1));
+        // The main panel's menu: not said here.
+        await hostSays(() => host.event('ops/completed', { ...removed('menu1', 'Serilog'), origin: 'main' }));
+        await act(async () => {
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        });
+        expect(said()).not.toContain('Uninstalled Serilog');
+        // This view's menu: said here.
+        await hostSays(() => host.event('ops/completed', { ...removed('menu2', 'Moq'), origin: 'sidebar' }));
+        await waitFor(() => expect(said()).toBe('Uninstalled Moq'));
+    });
+
     it('another project: its packages replace the list after skeleton rows, never mixed', async () => {
         const host = await mountWith([pkg('Serilog')]);
         await hostSays(() => host.event('session/changed', snapshot(2, B)));

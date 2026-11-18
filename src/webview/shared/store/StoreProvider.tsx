@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { Surface } from '../../../protocol';
 import type { MessageBus } from '../bus/MessageBus';
 import { MessageBusProvider } from '../bus/useMessageBus';
 import { AllProjectsProvider } from './allProjects';
@@ -17,9 +18,10 @@ import { UpdatesProvider } from './updates';
  * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
  * component renders for the slice it reads and no other. Mounting it is what makes the surface ask the host
  * for the session and the projects. `prefetch={false}` keeps the transitive slice from asking before a
- * view opens it (the sidebar shows no transitive packages).
+ * view opens it (the sidebar shows no transitive packages). `surface` is the surface this store belongs to: an
+ * operation its row menu ran carries it as the outcome's `origin`, and only this surface says it (UX-P4.fix-11).
  */
-export function StoreProvider({ bus, children, prefetch = true }: { bus: MessageBus; children: React.ReactNode; prefetch?: boolean }): React.JSX.Element {
+export function StoreProvider({ bus, children, prefetch = true, surface }: { bus: MessageBus; children: React.ReactNode; prefetch?: boolean; surface?: Surface }): React.JSX.Element {
     return (
         <MessageBusProvider bus={bus}>
             <SessionProvider>
@@ -32,7 +34,7 @@ export function StoreProvider({ bus, children, prefetch = true }: { bus: Message
                                         <SourcesProvider>
                                             <SearchProvider>
                                                 <DetailsProvider>
-                                                    <OpsProvider>{children}</OpsProvider>
+                                                    <OpsProvider surface={surface}>{children}</OpsProvider>
                                                 </DetailsProvider>
                                             </SearchProvider>
                                         </SourcesProvider>

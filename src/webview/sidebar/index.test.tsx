@@ -75,8 +75,8 @@ describe('sidebar 2.0 entry', () => {
         expect(reports[0].payload?.stack).toContain('boom');
     });
 
-    it('the entry mounts the store without the transitive prefetch (P9.fix-1, N87)', async () => {
-        const seen: Array<{ prefetch?: boolean }> = [];
+    it('the entry mounts the store without the transitive prefetch (P9.fix-1, N87) and as the sidebar surface (UX-P4.fix-11)', async () => {
+        const seen: Array<{ prefetch?: boolean; surface?: string }> = [];
         vi.doMock('../shared/store/StoreProvider', async importOriginal => {
             const actual = await importOriginal<typeof import('../shared/store/StoreProvider')>();
             return {
@@ -96,6 +96,8 @@ describe('sidebar 2.0 entry', () => {
 
         expect(seen.length).toBeGreaterThan(0);
         expect(seen[0]?.prefetch).toBe(false);
+        // A row-menu outcome whose origin is the sidebar is said here only when the store knows its surface.
+        expect(seen[0]?.surface).toBe('sidebar');
     });
 
     it('a config/changed event writes the host\'s look onto the document element (ADR-011 Decision 2, UX-P4.1)', async () => {
