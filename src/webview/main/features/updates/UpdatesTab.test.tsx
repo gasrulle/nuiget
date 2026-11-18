@@ -161,7 +161,7 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByTestId('update-all-button')).not.toHaveAttribute('title');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
-        expect(within(dialog).getByText('Serilog: 3.0.0 → 3.1.0')).toBeInTheDocument();
+        expect(within(dialog).getByText('Serilog 3.0.0 → 3.1.0')).toBeInTheDocument();
         expect(within(dialog).queryByText(/Newtonsoft/)).toBeNull();
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
@@ -494,7 +494,7 @@ describe('main panel: Updates tab', () => {
             await user.click(optionOf('Moq').querySelector('.nuiget-row-check') as Element);
             expect(screen.getByTestId('update-all-button')).toHaveTextContent('Update Selected (2)');
             await user.click(screen.getByTestId('update-all-button'));
-            expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
+            expect(screen.getByRole('alertdialog')).toHaveTextContent('In App:Serilog 3.0.0 → 3.1.0In Lib:Moq 4.20.0 → 4.20.72');
             await user.click(screen.getByTestId('confirm-dialog-confirm'));
             expectFocusOnListTabStop('updates-list');
             expectFocusAfterClose('updates-all-projects-update-confirm');

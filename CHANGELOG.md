@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Screen readers announce when the main panel's package lists, details or README start loading**
 - **Screen readers hear how an install, update or uninstall ended once, in the view that started it**
 - **A hovered package row keeps its version and authors readable in every theme**
+- **The Update All confirmation lists each package and its versions as the package row does**
 - **Screen readers hear a README's headings under the package's own heading, and why a project cannot be picked when installing into several projects**
 - **Loading indicators follow VS Code's timing**
 - **Breaking: Enter on a package in the main panel's Updates list shows its details; Ctrl+Enter (Cmd+Enter) updates it**

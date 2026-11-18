@@ -11,9 +11,12 @@ export interface UpdateAllDialogProps {
     onCancel: () => void;
 }
 
-/** The confirmation of a bulk update (interaction model §5): every package with the version it goes from and to. */
+/**
+ * The confirmation of a bulk update (interaction model §5): every package with the version it goes from and to, written as a
+ * row writes them, `<id> <old> → <new>` with no colon (DS-COPY-2, UX-P4.fix-5).
+ */
 export function UpdateAllDialog({ open, updates, groups, onConfirm, onCancel }: UpdateAllDialogProps): React.JSX.Element | null {
-    const line = (update: PackageUpdate): string => `${update.id}: ${update.installedVersion} → ${update.latestVersion}`;
+    const line = (update: PackageUpdate): string => `${update.id} ${update.installedVersion} → ${update.latestVersion}`;
     return (
         <ConfirmDialog
             open={open}

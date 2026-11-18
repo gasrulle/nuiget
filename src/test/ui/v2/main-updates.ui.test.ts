@@ -94,7 +94,7 @@ describe('2.0 main panel: Updates tab', () => {
         await findByTestId('package-row-newtonsoft.json', 120_000);
         await (await findByTestId('update-all-button')).click();
         const dialog = await findByTestId('confirm-dialog', 10_000);
-        expect(await dialog.getAttribute('textContent')).to.contain('Newtonsoft.Json: 13.0.2 →');
+        expect(await dialog.getAttribute('textContent')).to.contain('Newtonsoft.Json 13.0.2 →');
         await (await findByTestId('confirm-dialog-cancel')).sendKeys(Key.ESCAPE);
         await waitForTestIdGone('confirm-dialog', 10_000);
         expect(fs.readFileSync(csprojPath, 'utf-8')).to.equal(originalCsproj);

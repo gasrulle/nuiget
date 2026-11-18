@@ -361,7 +361,7 @@ describe('sidebar: Updates section', () => {
         expect(button).toHaveAccessibleName('Update All (1)');
         await user.click(button);
         const dialog = screen.getByTestId('confirm-dialog');
-        expect(dialog).toHaveTextContent('Serilog: 3.0.0 → 3.1.0');
+        expect(dialog).toHaveTextContent('Serilog 3.0.0 → 3.1.0');
         expect(dialog).not.toHaveTextContent('Newtonsoft.Json');
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
@@ -402,7 +402,7 @@ describe('sidebar: Updates section', () => {
 
         await user.click(screen.getByTestId('sidebar-update-all-button'));
         const dialog = screen.getByTestId('confirm-dialog');
-        expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0In Lib:Moq: 4.20.0 → 4.20.72');
+        expect(dialog).toHaveTextContent('In App:Serilog 3.0.0 → 3.1.0In Lib:Moq 4.20.0 → 4.20.72');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
         expectFocusOnListTabStop('sidebar-updates-list');
         expectFocusAfterClose('sidebar-all-projects-update-all-confirm');
@@ -461,7 +461,7 @@ describe('sidebar: Updates section', () => {
         expect(screen.getByTestId('sidebar-update-all-button')).toHaveAccessibleName('Update All (1)');
         await user.click(screen.getByTestId('sidebar-update-all-button'));
         const dialog = screen.getByTestId('confirm-dialog');
-        expect(dialog).toHaveTextContent('In App:Serilog: 3.0.0 → 3.1.0');
+        expect(dialog).toHaveTextContent('In App:Serilog 3.0.0 → 3.1.0');
         expect(dialog).not.toHaveTextContent('Newtonsoft.Json');
         expect(dialog).not.toHaveTextContent('Lib');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
