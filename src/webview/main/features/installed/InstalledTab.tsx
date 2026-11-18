@@ -19,6 +19,7 @@ import { parseRowId, rowId, type Section, type TreeItem } from './installedTree'
 import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
 import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
 import { failure } from '../../../shared/updates/sentence';
+import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../firstLoad';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
@@ -94,6 +95,11 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         }
         return [];
     }, [allMode, all.projects, all.chunks, all.metadata, all.status, all.error, all.revalidating, all.refresh, installed.projectPath, installed.result, installed.status, installed.error, installed.metadata, installed.revalidating, installed.refresh, projects]);
+
+    // A first load of the selection is said once (a11y-first-load-announced, UX-P4.6): All Projects while its fan-out
+    // has no answer yet, a project while its list has neither an answer nor an error.
+    const firstLoad = allMode ? all.status === 'loading' : installed.result === undefined && installed.status !== 'error' && installed.error === undefined;
+    useFirstLoadAnnouncement(announce, LOADING_INSTALLED, allMode ? ALL_PROJECTS : installed.projectPath, firstLoad);
 
     /** The rows a bulk action may take: shown under the filter, removable, not busy. */
     const removable = (section: Section): string[] => (section.result === undefined ? [] : visibleRows(section.result, section.metadata, filter, vulnerableOnly).items
@@ -343,7 +349,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     let body: React.ReactNode;
     if (sections.length === 0) {
         body = committed === undefined || (allMode && all.status === 'loading')
-            ? <><div className="nuiget-installed-progress"><ProgressBar label="Loading installed packages" data-testid="installed-progress" /></div><Skeleton density="comfortable" /></>
+            ? <><div className="nuiget-installed-progress"><ProgressBar label={LOADING_INSTALLED} data-testid="installed-progress" /></div><Skeleton density="comfortable" /></>
             : <EmptyState message={allMode ? 'No projects to list.' : 'No .NET projects found in this workspace.'} />;
     } else {
         const single = allMode ? undefined : sections[0];
@@ -351,11 +357,10 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         const listed = single?.result !== undefined && (single.result.unsupported === undefined || single.result.packages.length > 0);
         const open = !collapsed.has('direct');
         const failed = (section: Section): boolean => section.status === 'error' || section.error !== undefined;
-        const firstLoad = single !== undefined ? single.result === undefined && !failed(single) : all.status === 'loading';
         const revalidating = sections.some(section => section.revalidating);
         body = (
             <>
-                {firstLoad || revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={firstLoad ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="installed-progress" /></div> : null}
+                {firstLoad || revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={firstLoad ? LOADING_INSTALLED : 'Refreshing installed packages'} data-testid="installed-progress" /></div> : null}
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {!allMode && section.result?.unsupported ? <Banner severity="warning" data-testid="installed-unsupported">{`Unsupported project: ${sentence(section.result.unsupported.message)}`}</Banner> : null}

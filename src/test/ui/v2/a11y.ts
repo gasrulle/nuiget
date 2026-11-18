@@ -719,6 +719,42 @@ export function motionRootLines(facts: MotionFacts, status: RuleStatus = MOTION_
     return { lines: [line], failures: holds ? [] : ['DS-MOTION-1 durations or easings off'] };
 }
 
+// ---- UX-P4.6: the first load said in the live region (a11y-first-load-announced) --------------------------------------
+
+/**
+ * The held loading cells and the sentence each one's live region holds after its shot (design-advisor ruling of
+ * 2026-11-18, DO 11): the four main-panel first loads are asserted, Browse's waits for UX-P5.9, and the sidebar's three are
+ * printed with no status, read for the record only.
+ */
+export const LIVE_EXPECTED: Readonly<Record<string, { text: string; status: RuleStatus | 'printed' }>> = {
+    'main-installed-loading': { text: 'Loading installed packages', status: 'hard' },
+    'main-updates-loading': { text: 'Loading updates', status: 'hard' },
+    'main-details-loading': { text: 'Loading details', status: 'hard' },
+    'main-readme-loading': { text: 'Loading the README', status: 'hard' },
+    'main-browse-loading': { text: 'Searching', status: { pending: 'P5.9' } },
+    'sidebar-installed-loading': { text: 'Loading installed packages', status: 'printed' },
+    'sidebar-updates-loading': { text: 'Loading updates', status: 'printed' },
+    'sidebar-browse-loading': { text: 'Searching', status: 'printed' },
+};
+
+/** Runs in the webview: the text of the surface's one live region, `null` when it has none. */
+export const READ_LIVE = 'const region = document.querySelector(\'[data-testid="status-live"]\'); return region === null ? null : region.textContent;';
+
+/**
+ * The `[live] <state>: "<text>"` line of a held loading cell; a `hard` cell fails unless its region holds exactly its
+ * sentence. A cell outside `LIVE_EXPECTED` prints nothing.
+ */
+export function liveLines(state: string, text: string | null, expected: Readonly<Record<string, { text: string; status: RuleStatus | 'printed' }>> = LIVE_EXPECTED): { lines: string[]; failures: string[] } {
+    const cell = expected[state];
+    if (cell === undefined) {
+        return { lines: [], failures: [] };
+    }
+    const read = text === null ? 'no live region' : `"${text.trim()}"`;
+    const line = `[live] ${state}: ${read}${cell.status === 'printed' ? '' : ` (${statusText(cell.status)})`}`;
+    const failures = cell.status === 'hard' && (text === null || text.trim() !== cell.text) ? [`[live] ${state}: ${read}, expected "${cell.text}"`] : [];
+    return { lines: [line], failures };
+}
+
 // ---- UX-P0.25: contrast axe could not decide, and the theme pass's moments ------------------------------------------
 
 /** The roots of a layer: text inside one is measured against the layer's own background. */

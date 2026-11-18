@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
@@ -377,6 +377,21 @@ describe('the accessibility harness (UX-P0.23)', () => {
             failures: ['DS-MOTION-1 not measurable: prefers-reduced-motion matches'],
         });
         expect(MOTION_STATES).toHaveLength(15);
+    });
+
+    it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar printed (a11y-first-load-announced, UX-P4.6)', () => {
+        expect(Object.entries(LIVE_EXPECTED).filter(([, cell]) => cell.status === 'hard').map(([state]) => state)).toEqual(['main-installed-loading', 'main-updates-loading', 'main-details-loading', 'main-readme-loading']);
+        expect(liveLines('main-installed-loading', 'Loading installed packages')).toEqual({ lines: ['[live] main-installed-loading: "Loading installed packages" (hard)'], failures: [] });
+        expect(liveLines('main-updates-loading', 'Refreshed')).toEqual({ lines: ['[live] main-updates-loading: "Refreshed" (hard)'], failures: ['[live] main-updates-loading: "Refreshed", expected "Loading updates"'] });
+        expect(liveLines('main-details-loading', null).failures).toEqual(['[live] main-details-loading: no live region, expected "Loading details"']);
+        expect(liveLines('main-browse-loading', '')).toEqual({ lines: ['[live] main-browse-loading: "" (pending P5.9)'], failures: [] });
+        expect(liveLines('sidebar-updates-loading', '')).toEqual({ lines: ['[live] sidebar-updates-loading: ""'], failures: [] });
+        expect(liveLines('main-installed-single', 'Loading installed packages')).toEqual({ lines: [], failures: [] });
+        // The reading script, run against a page with the region.
+        document.body.innerHTML = '<div data-testid="status-live" role="status">Loading details</div>';
+        expect(new Function(READ_LIVE)()).toBe('Loading details');
+        document.body.innerHTML = '';
+        expect(new Function(READ_LIVE)()).toBeNull();
     });
 
     it('expects only tab stops that the screen\'s committed ARIA snapshot holds, or that KEYS_AWAITING_ARIA names for the item adopting the snapshot (UX-P0.24, UX-P2.1d)', () => {

@@ -686,4 +686,49 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByText('No packages installed.')).toBeInTheDocument();
         expect(screen.queryByText('No updates available.')).toBeNull();
     });
+    describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
+        /** The panel with the Updates tab's own announcements recorded, passed on to the panel's live region. */
+        function mountHeard(): { host: FakeHost; heard: string[] } {
+            const host = createFakeHost();
+            const heard: string[] = [];
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} announce={message => { heard.push(message); view.announce(message); }} />} /></StoreProvider>);
+            return { host, heard };
+        }
+
+        it('once on a first load, not on a revalidation, not for updates the store holds, and again for another prerelease choice', async () => {
+            const user = userEvent.setup();
+            const { host, heard } = mountHeard();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+            await hostSays(() => host.respond(host.requests('installed/get')[0], installed([pkg('Serilog', { version: '3.0.0' })]), 1));
+            await user.click(screen.getByTestId('updates-tab'));
+            expect(heard).toEqual(['Loading updates']);
+            await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading updates'));
+            await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: UPDATES }, 1));
+            await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
+            expect(screen.getByTestId('updates-progress')).toHaveAccessibleName('Refreshing updates');
+            await hostSays(() => host.respond(host.requests('updates/get').at(-1)!, { projectPath: A, updates: UPDATES }, 2));
+            await user.click(screen.getByTestId('installed-tab'));
+            await user.click(screen.getByTestId('updates-tab'));
+            expect(names()).toHaveLength(3);
+            expect(heard).toEqual(['Loading updates']);
+            await hostSays(() => host.event('session/changed', { ...snapshot(2), includePrerelease: true }));
+            expect(heard).toEqual(['Loading updates', 'Loading updates']);
+        });
+
+        it('All Projects: once while the stream has no answer', async () => {
+            const B = '/w/Lib/Lib.csproj';
+            const user = userEvent.setup();
+            const { host, heard } = mountHeard();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            await user.click(screen.getByTestId('updates-tab'));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+            expect(heard).toEqual(['Loading updates']);
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+            expect(heard).toEqual(['Loading updates']);
+        });
+    });
 });

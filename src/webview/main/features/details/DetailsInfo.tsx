@@ -6,6 +6,7 @@ import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
+import { LOADING_DETAILS, useFirstLoadAnnouncement } from '../firstLoad';
 
 const formatSize = (bytes: number): string => {
     if (bytes >= 1024 * 1024) {
@@ -103,7 +104,7 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
  * framework, collapsed, each with its count badge. Details read from the local package cache are marked offline, saying whether a source
  * is down or no source knows the version. The pane keys it by package and version, so another package starts collapsed.
  */
-export function DetailsInfo(): React.JSX.Element {
+export function DetailsInfo({ announce, shownKey }: { announce: (message: string) => void; shownKey: string | null }): React.JSX.Element {
     const { metadata, selection } = useDetails();
     const { retryMetadata } = useDetailsActions();
     const { sources, failed, enable } = useSources();
@@ -111,12 +112,15 @@ export function DetailsInfo(): React.JSX.Element {
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
 
     useEffect(() => enable(), [enable]);
+    // The shown package's first details are said once (a11y-first-load-announced, UX-P4.6).
+    const loading = metadata.status === 'loading' || metadata.status === 'idle';
+    useFirstLoadAnnouncement(announce, LOADING_DETAILS, shownKey, loading);
 
     // The selection's first metadata: the 2 px bar over the skeleton facts (DS-STATE-2; UX-P3.10, design-advisor DO 11).
-    if (metadata.status === 'loading' || metadata.status === 'idle') {
+    if (loading) {
         return (
             <>
-                <ProgressBar label="Loading details" data-testid="details-progress" />
+                <ProgressBar label={LOADING_DETAILS} data-testid="details-progress" />
                 <Skeleton density="compact" />
             </>
         );

@@ -9,6 +9,7 @@ import { StoreProvider } from '../shared/store/StoreProvider';
 import type { ViewStateStore } from '../shared/viewState';
 import { MainShell, type BrowseView, type DetailsView, type ListView } from './MainShell';
 import { splitBounds } from './useSplitBounds';
+import { InstalledTab } from './features/installed/InstalledTab';
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
@@ -45,6 +46,17 @@ async function mountReady(changes: Partial<SessionSnapshot> = {}, viewState?: Vi
 const search = (): HTMLInputElement => screen.getByTestId('search-input');
 
 describe('main panel shell', () => {
+    it('the live region holds a first load\'s sentence after the frame, said once under StrictMode (a11y-first-load-announced, UX-P4.6)', async () => {
+        const host = createFakeHost();
+        const heard: string[] = [];
+        render(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} announce={message => { heard.push(message); view.announce(message); }} />} /></StoreProvider></StrictMode>);
+        await hostSays(() => host.respond(host.requests('session/get').at(-1)!, snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list').at(-1)!, { projects: [{ name: 'App', path: A }] }, 1));
+        expect(heard).toEqual(['Loading installed packages']);
+        // Filled on the next frame (LiveStatus).
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading installed packages'));
+    });
+
     it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
         const host = createFakeHost();
         const { rerender } = render(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list</p>} /></StoreProvider></StrictMode>);

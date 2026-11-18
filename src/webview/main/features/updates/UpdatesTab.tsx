@@ -18,6 +18,7 @@ import { AllProjectsUpdates } from './AllProjectsUpdates';
 import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { bulkUpdateButton, noCandidateWhy, singleKnowledge } from '../../../shared/updates/updateAll';
+import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../firstLoad';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
@@ -227,8 +228,10 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
 
     // The bar lies over the list area's top edge while the list loads or asks again (DS-STATE-2, UX-P3.1b).
     const loading = committed === undefined || (projectPath !== null && updates.status === 'loading');
+    // Said once per project and prerelease choice, on a first load only (a11y-first-load-announced, UX-P4.6).
+    useFirstLoadAnnouncement(announce, LOADING_UPDATES, projectPath === null ? null : `${projectPath}|${updates.includePrerelease}`, updates.status === 'loading');
     const bar = loading || updates.revalidating
-        ? <div className="nuiget-installed-progress"><ProgressBar label={loading ? 'Loading updates' : 'Refreshing updates'} data-testid="updates-progress" /></div>
+        ? <div className="nuiget-installed-progress"><ProgressBar label={loading ? LOADING_UPDATES : 'Refreshing updates'} data-testid="updates-progress" /></div>
         : null;
     let body: React.ReactNode;
     if (committed === undefined) {

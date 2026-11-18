@@ -760,4 +760,46 @@ describe('main panel: Installed tab', () => {
         expect(screen.queryByTestId('package-row-a.core')).toBeNull();
         expect(screen.getByTestId('package-row-b.core')).toBeInTheDocument();
     });
+    describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
+        /** The panel with the Installed tab's own announcements recorded, passed on to the panel's live region. */
+        function mountHeard(): { host: FakeHost; heard: string[] } {
+            const host = createFakeHost();
+            const heard: string[] = [];
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} announce={message => { heard.push(message); view.announce(message); }} />} updates={() => null} /></StoreProvider>);
+            return { host, heard };
+        }
+
+        it('once on a first load, not on a revalidation, not for a list the store holds, and again for another project', async () => {
+            const user = userEvent.setup();
+            const { host, heard } = mountHeard();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            expect(heard).toEqual(['Loading installed packages']);
+            // The region empties and takes the sentence on the next frame (LiveStatus).
+            await waitFor(() => expect(said()).toBe('Loading installed packages'));
+            await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, THREE), 1));
+            await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+            expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Refreshing installed packages');
+            await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, THREE), 2));
+            // The tab shown again over the list the store holds: no first load.
+            await user.click(screen.getByTestId('updates-tab'));
+            await user.click(screen.getByTestId('installed-tab'));
+            expect(names()).toHaveLength(3);
+            expect(heard).toEqual(['Loading installed packages']);
+            await hostSays(() => host.event('session/changed', snapshot(2, B)));
+            expect(heard).toEqual(['Loading installed packages', 'Loading installed packages']);
+        });
+
+        it('All Projects: once while the fan-out has no answer', async () => {
+            const { host, heard } = mountHeard();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            const request = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(request, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(request, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));
+            expect(heard).toEqual(['Loading installed packages']);
+            await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
+            expect(heard).toEqual(['Loading installed packages']);
+        });
+    });
 });

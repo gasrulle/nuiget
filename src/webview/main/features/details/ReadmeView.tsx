@@ -4,6 +4,7 @@ import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Banner, EmptyState, ProgressBar, Skeleton } from '../../../shared/primitives';
 import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
+import { LOADING_README, useFirstLoadAnnouncement } from '../firstLoad';
 import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages } from './markdown';
 
 /**
@@ -12,7 +13,7 @@ import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markC
  * button over each code block copies its text (the webview's clipboard, else the host's `ui/copyToClipboard`) and says
  * Copied for two seconds, also in the live region. No README is an empty state; a failure is an inline Retry.
  */
-export function ReadmeView({ announce }: { announce: (message: string) => void }): React.JSX.Element {
+export function ReadmeView({ announce, shownKey }: { announce: (message: string) => void; shownKey: string | null }): React.JSX.Element {
     const bus = useMessageBus();
     const { readme, selection } = useDetails();
     const { retryReadme } = useDetailsActions();
@@ -44,6 +45,10 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
         return () => controller.abort();
     }, [bus, html, sourceUrl]);
 
+    // The shown package's first README is said once (a11y-first-load-announced, UX-P4.6).
+    const loading = readme.status === 'loading' || readme.status === 'idle';
+    useFirstLoadAnnouncement(announce, LOADING_README, shownKey, loading);
+
     const onClick = (event: React.MouseEvent<HTMLDivElement>): void => {
         const button = copyButtonOf(event.target);
         const code = copyCodeOf(event.target);
@@ -60,10 +65,10 @@ export function ReadmeView({ announce }: { announce: (message: string) => void }
     };
 
     // The README loads: the 2 px bar over its skeleton (DS-STATE-2; UX-P3.10, design-advisor DO 12).
-    if (readme.status === 'loading' || readme.status === 'idle') {
+    if (loading) {
         return (
             <>
-                <ProgressBar label="Loading the README" data-testid="readme-progress" />
+                <ProgressBar label={LOADING_README} data-testid="readme-progress" />
                 <Skeleton density="compact" />
             </>
         );

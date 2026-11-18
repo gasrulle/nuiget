@@ -14,7 +14,7 @@ import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -1840,13 +1840,21 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
     }
     // UX-P4.5 (design-advisor ruling of 2026-11-17, DO 6): a state whose loading cue moved until reduced motion stilled it reads
     // DS-MOTION-2 after its shot, before its hold is released, in the Modern UI pass.
-    const motionFailures: string[] = [];
+    // What a held cell reads before its hold is released: DS-MOTION-2 and the live region.
+    const heldFailures: string[] = [];
     if (LOOK === 'modern' && MOTION_STATES.includes(state.name)) {
         const motion = motionLines(state.name, await script<MotionFacts>(RUNNING_ANIMATIONS));
         printLines(motion.lines);
         if (MOTION_STATUS === 'hard') {
-            motionFailures.push(...motion.failures.map(failure => `[motion] ${failure}`));
+            heldFailures.push(...motion.failures.map(failure => `[motion] ${failure}`));
         }
+    }
+    // UX-P4.6 (design-advisor ruling of 2026-11-18, DO 11): a held loading cell's live region, read after its shot, before
+    // its hold is released, in the Modern UI pass.
+    if (LOOK === 'modern') {
+        const live = liveLines(state.name, await script<string | null>(READ_LIVE));
+        printLines(live.lines);
+        heldFailures.push(...live.failures);
     }
     // After the shot and the measurements, never before them: the snapshot and axe read the state's settled data.
     if (!HELD_STATES.includes(state.name)) {
@@ -1896,7 +1904,7 @@ async function auditAccessibility(state: NamedState): Promise<string[]> {
             pendingLines.push(line);
         }
     }
-    return [...motionFailures, ...(FULL_AXE_STATUS === 'hard' ? failures : []), ...(CONTRAST_STATUS === 'hard' ? contrast.failures : [])];
+    return [...heldFailures, ...(FULL_AXE_STATUS === 'hard' ? failures : []), ...(CONTRAST_STATUS === 'hard' ? contrast.failures : [])];
 }
 
 /** The audit with its own errors caught: an error is a failure, which fails the capture only once the rule is `hard`. */

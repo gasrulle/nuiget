@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ALL_PROJECTS, type InstalledPackage, type NuGetSource, type PackageMetadata, type SessionSnapshot } from '../../../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type NuGetSource, type PackageMetadata, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../../../shared/primitives/testSupport';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
@@ -27,7 +27,8 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
     await Promise.resolve();
 });
 
-async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0')], isCpm = false, unsupported?: { reason: 'sdk-too-old'; message: string }): Promise<FakeHost> {
+/** The panel on project A, its packages listed; `heard` records what the details pane announces (UX-P4.6). */
+async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0')], isCpm = false, unsupported?: { reason: 'sdk-too-old'; message: string }, heard?: string[]): Promise<FakeHost> {
     const host = createFakeHost();
     render(
         <StoreProvider bus={host.bus}>
@@ -35,7 +36,7 @@ async function mountReady(packages: InstalledPackage[] = [pkg('Serilog', '3.0.0'
                 installed={view => <InstalledTab {...view} />}
                 updates={view => <UpdatesTab {...view} />}
                 browse={view => <BrowseList {...view} />}
-                details={view => <DetailsPane {...view} />}
+                details={view => <DetailsPane {...view} announce={message => { heard?.push(message); view.announce(message); }} />}
             />
         </StoreProvider>,
     );
@@ -648,6 +649,33 @@ describe('main panel: details', () => {
         await user.click(screen.getByTestId('installed-tab'));
         expect(pane()).toHaveTextContent('Serilog');
         expect(option('installed-list', 'Serilog')).toHaveAttribute('aria-current', 'true');
+    });
+
+    describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
+        it('the details and the README of the shown package, once each: not on a revalidation, another version or a tab shown again; again for another package', async () => {
+            const user = userEvent.setup();
+            const heard: string[] = [];
+            const host = await mountReady([pkg('Serilog', '3.0.0'), pkg('Moq', '4.20.0')], false, undefined, heard);
+            await selectInstalled(host);
+            expect(heard).toEqual(['Loading details']);
+            await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading details'));
+            await hostSays(() => host.respond(metadataOf(host).at(-1)!, { metadata: metadata('Serilog', '3.0.0') }));
+            await hostSays(() => host.invalidate([[resourceKeys.metadata('Serilog', '3.0.0', undefined), 2]]));
+            await hostSays(() => host.respond(metadataOf(host).at(-1)!, { metadata: metadata('Serilog', '3.0.0') }));
+            // Another version of the shown package is the same shown key.
+            await user.selectOptions(selector(), '3.1.0');
+            await hostSays(() => host.respond(metadataOf(host).at(-1)!, { metadata: metadata('Serilog', '3.1.0') }));
+            expect(heard).toEqual(['Loading details']);
+            await user.click(screen.getByTestId('details-tab-readme'));
+            expect(heard).toEqual(['Loading details', 'Loading the README']);
+            await hostSays(() => host.respond(host.requests('package/readme').at(-1)!, { readme: '# Serilog' }));
+            await user.click(screen.getByTestId('details-tab-details'));
+            await user.click(screen.getByTestId('details-tab-readme'));
+            expect(screen.getByTestId('readme-content')).toBeInTheDocument();
+            expect(heard).toEqual(['Loading details', 'Loading the README']);
+            await selectInstalled(host, 'Moq', ['4.20.0']);
+            expect(heard).toEqual(['Loading details', 'Loading the README', 'Loading details']);
+        });
     });
 });
 

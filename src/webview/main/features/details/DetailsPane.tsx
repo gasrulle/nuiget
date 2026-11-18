@@ -233,7 +233,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{failure('The versions', 'listed', versions.error.message)}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections" data-testid="details-tab-bar">
-                {tab === 'details' ? <DetailsInfo key={shownKey} /> : <ReadmeView announce={announce} />}
+                {tab === 'details' ? <DetailsInfo key={shownKey} announce={announce} shownKey={shownKey} /> : <ReadmeView announce={announce} shownKey={shownKey} />}
             </Tabs>
             <MultiInstallDialog
                 open={picking}

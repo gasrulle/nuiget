@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../../../protocol';
+import { ALL_PROJECTS, type InstalledResult, type PackageUpdate, type ProjectUpdatesChunk } from '../../../../protocol';
 import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
@@ -9,12 +9,14 @@ import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useOps, useOpsActions } from '../../../shared/store/ops';
+import { useSession } from '../../../shared/store/session';
 import type { ListView } from '../../MainShell';
 import { directCount } from '../installed/InstalledProjectSection';
 import { rowId } from '../installed/installedTree';
 import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
+import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../firstLoad';
 
 const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 
@@ -108,6 +110,9 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
     const candidateTotal = candidateIds.length;
 
     const loading = updates.status === 'loading';
+    // Said once per All Projects listing and prerelease choice, on a first load only (a11y-first-load-announced, UX-P4.6).
+    const includePrerelease = useSession().committed?.includePrerelease === true;
+    useFirstLoadAnnouncement(announce, LOADING_UPDATES, `${ALL_PROJECTS}|${includePrerelease}`, loading);
     const items = useMemo((): Item[] => {
         const list: Item[] = [];
         const project = (section: Section, level: number): void => {
@@ -299,13 +304,13 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
     let body: React.ReactNode;
     if (sections.length === 0) {
         body = loading || updates.status === 'idle'
-            ? <><div className="nuiget-installed-progress"><ProgressBar label="Loading updates" data-testid="updates-progress" /></div><Skeleton density="comfortable" /></>
+            ? <><div className="nuiget-installed-progress"><ProgressBar label={LOADING_UPDATES} data-testid="updates-progress" /></div><Skeleton density="comfortable" /></>
             : <EmptyState message="No projects to list." />;
     } else {
         const firstLoad = loading && updates.chunks.size === 0;
         body = (
             <>
-                {loading || updates.revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={loading ? 'Loading updates' : 'Refreshing updates'} data-testid="updates-progress" /></div> : null}
+                {loading || updates.revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={loading ? LOADING_UPDATES : 'Refreshing updates'} data-testid="updates-progress" /></div> : null}
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {section.chunk?.error !== undefined
