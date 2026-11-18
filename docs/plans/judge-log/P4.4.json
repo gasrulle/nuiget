@@ -109,8 +109,8 @@
       "geometry"
      ],
      "disposition": "accepted-as-design",
-     "evidence": "primitives.css: an empty state's block inset is 8 by default and 20 in the details pane, set by the carrier at UX-P3.3b; DS-INSET-4 empty top 20 (hard) and DS-STATE-3 20/20 (hard) green; the cell at 0 px, untouched by this item; proposed as a planning row (DO 10)",
-     "ruling": "design-advisor GOLDEN ruling of 2026-11-17, UX-P4.4 (docs/plans/handoff/P4.4.md, Advisor decisions)"
+     "evidence": "DECISIONS.md 2026-11-18 (UX-P4.fix-7): a list's empty state keeps the carrier's default 8 px block inset (premise P-1), the details pane alone sets 20 (DS-INSET-4; DECISIONS 2026-11-07, UX-P3.3b); the two columns start on different lines by design; DS-STATE-3 20/20 gap 8 (hard) and DS-INSET-4 empty top 20 (hard) green on run 44290207055",
+     "ruling": "design-advisor ruling of 2026-11-18, UX-P4.fix-7 (decided; replaces the proposed planning row of the UX-P4.4 GOLDEN ruling, DO 10)"
     },
     {
      "id": "main-installed-bulk-dialog#D1",
