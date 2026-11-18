@@ -577,7 +577,7 @@ System cites them and does not restate them.
 | a11y-reduced-motion-both-signals | Durations are zero under both reduced-motion signals (the loop tokens included, T-9). |
 | a11y-text-contrast-all-states | Text pairs reach 4.5:1 in every state and theme. |
 | a11y-nontext-contrast | Control boundaries and state marks reach 3:1. |
-| a11y-first-load-announced | A loading area puts "Loading …" in the live region. Measured as `[live] <state>` in the held loading cells: the region's text equals the bar's words in the four main-panel cells (UX-P4.6); Browse's from UX-P5.9. |
+| a11y-first-load-announced | A loading area puts "Loading …" in the live region. Measured as `[live] <state>` in the held loading cells: the region's text equals the bar's words in the four main-panel cells (UX-P4.6) and in the sidebar's Installed and Updates cells, each pane saying its own first load from the pane (UX-P4.fix-9); Browse's from UX-P5.9. |
 | a11y-full-axe-real-page | Zero axe violations in the real webview, every state, every layer. |
 | a11y-sr-speech | What a screen reader speaks is understandable and not repeated. |
 | LST-1 | The VSIX packages without vsce errors. |
