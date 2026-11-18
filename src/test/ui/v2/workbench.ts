@@ -261,3 +261,30 @@ export async function measureExemplar(): Promise<Exemplar> {
     await driver.switchTo().defaultContent();
     return exemplar;
 }
+
+/**
+ * Writes `workbench.reduceMotion` through the workbench's Settings editor and reads it back (UX-P4.fix-8, architecture-advisor
+ * ruling of 2026-11-18, DO 2): the setter returns without a word when no option matches, so the value is polled until it reads
+ * as written. The one place a suite writes the key; ExTester writes `on` again at every launch. Closing the editors closes the
+ * nUIget panel too: the caller reopens it.
+ */
+export async function setReduceMotion(value: 'on' | 'off'): Promise<void> {
+    const driver = driverOf();
+    await driver.switchTo().defaultContent();
+    // The palette leaves Ctrl/Cmd+Shift held (UX-P3.fix-11): released before and after it.
+    await driver.actions().clear();
+    const settings = await new Workbench().openSettings();
+    const setting = await settings.findSettingByID('workbench.reduceMotion');
+    if (setting === undefined) {
+        throw new Error('[motion] workbench.reduceMotion not found in the Settings editor');
+    }
+    await setting.setValue(value);
+    try {
+        await poll(async () => ((await setting.getValue()) === value ? true : undefined), `workbench.reduceMotion reading ${value}`, 30_000);
+    } catch {
+        throw new Error(`[motion] workbench.reduceMotion not set to ${value}`);
+    }
+    await driver.actions().clear();
+    await driver.switchTo().defaultContent();
+    await new EditorView().closeAllEditors().catch(() => undefined);
+}

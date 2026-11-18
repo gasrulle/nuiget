@@ -719,6 +719,104 @@ export function motionRootLines(facts: MotionFacts, status: RuleStatus = MOTION_
     return { lines: [line], failures: holds ? [] : ['DS-MOTION-1 durations or easings off'] };
 }
 
+// ---- UX-P4.fix-8: the motion-on reading (DS-MOTION-1 on elements) -----------------------------------------------------
+
+/** The skeleton's breath, `calc(var(--nuiget-duration-normal) * 6)`, the one derived duration (DECISIONS "Motion (UX-P4.5)"). */
+export const MOTION_BREATHE_MS = MOTION_TARGET.normal * 6;
+
+/** One element's computed transition or animation: its property or animation name and its first duration in ms. */
+export interface MotionOnPart { what: string; ms: number | null }
+
+/** What `MOTION_ON` reads in the held `sidebar-installed-loading` cell with `workbench.reduceMotion` off. */
+export interface MotionOnFacts {
+    reduceMotion: boolean;
+    mediaReduce: boolean;
+    icon: MotionOnPart | null;
+    chevron: MotionOnPart | null;
+    spinner: MotionOnPart | null;
+    stripe: MotionOnPart | null;
+    skeleton: MotionOnPart | null;
+    /** Running `document.getAnimations()` by animation name. */
+    running: Record<string, number>;
+}
+
+/** Runs in the side bar webview: the five elements' computed transitions and animations, parsed to ms (UX-P4.fix-8). */
+export const MOTION_ON = `
+const ms = value => {
+    const match = /^(-?\\d*\\.?\\d+)(ms|s)$/.exec(String(value || '').split(',')[0].trim());
+    return match ? parseFloat(match[1]) * (match[2] === 's' ? 1000 : 1) : null;
+};
+const transition = selector => {
+    const element = document.querySelector(selector);
+    if (element === null) return null;
+    const style = getComputedStyle(element);
+    return { what: style.transitionProperty.split(',')[0].trim(), ms: ms(style.transitionDuration) };
+};
+const animation = selector => {
+    const element = document.querySelector(selector);
+    if (element === null) return null;
+    const style = getComputedStyle(element);
+    return { what: style.animationName.split(',')[0].trim(), ms: ms(style.animationDuration) };
+};
+const running = {};
+for (const item of document.getAnimations()) {
+    if (item.playState === 'running' && item.animationName) running[item.animationName] = (running[item.animationName] || 0) + 1;
+}
+return {
+    reduceMotion: document.body.classList.contains('vscode-reduce-motion'),
+    mediaReduce: typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
+    icon: transition('.nuiget-sidebar-search .nuiget-icon-button'),
+    chevron: transition('[data-testid="section-header-installed"] .nuiget-section-chevron'),
+    spinner: animation('[data-testid="section-header-installed"] .nuiget-spinner svg'),
+    stripe: animation('[data-testid="sidebar-installed-progress"] .nuiget-progress-bar'),
+    skeleton: animation('.nuiget-skeleton-row'),
+    running,
+};
+`;
+
+/**
+ * The `[motion] DS-MOTION-1@<state>: motion on; …` line (design-advisor ruling of 2026-11-18, DO 3-5): the search box's icon
+ * button (color, fast), the pane header's chevron (transform, normal), its spinner (nuiget-spin, spin), the indeterminate stripe
+ * (nuiget-progress-cross, progress) and a skeleton row (nuiget-breathe, normal × 6), each loop running; never read as 0 when
+ * absent, never measurable while either reduced-motion signal holds.
+ */
+export function motionOnLines(state: string, facts: MotionOnFacts, status: RuleStatus = MOTION_STATUS): { lines: string[]; failures: string[] } {
+    const name = `[motion] DS-MOTION-1@${state}`;
+    if (facts.mediaReduce || facts.reduceMotion) {
+        const why = facts.mediaReduce ? 'prefers-reduced-motion matches' : 'body.vscode-reduce-motion set';
+        return { lines: [`${name}: not measurable (${why}) (${statusText(status)})`], failures: [`DS-MOTION-1@${state} not measurable: ${why}`] };
+    }
+    const parts: Array<{ label: string; part: MotionOnPart | null; what: string; ms: number }> = [
+        { label: 'icon button', part: facts.icon, what: 'color', ms: MOTION_TARGET.fast },
+        { label: 'chevron', part: facts.chevron, what: 'transform', ms: MOTION_TARGET.normal },
+        { label: 'spinner', part: facts.spinner, what: 'nuiget-spin', ms: MOTION_TARGET.spin },
+        { label: 'stripe', part: facts.stripe, what: 'nuiget-progress-cross', ms: MOTION_TARGET.progress },
+        { label: 'skeleton', part: facts.skeleton, what: 'nuiget-breathe', ms: MOTION_BREATHE_MS },
+    ];
+    const failures: string[] = [];
+    const read = parts.map(({ label, part, what, ms }) => {
+        if (part === null) {
+            failures.push(`${label} absent`);
+            return `${label} absent`;
+        }
+        if (part.what !== what) {
+            failures.push(`${label} ${part.what}, expected ${what}`);
+        }
+        if (part.ms !== ms) {
+            failures.push(`${label} ${part.ms === null ? 'unset' : part.ms} ms, expected ${ms}`);
+        }
+        return `${label} ${part.what} ${part.ms === null ? 'unset' : part.ms}`;
+    });
+    const loops = [['spin', 'nuiget-spin'], ['stripe', 'nuiget-progress-cross'], ['breathe', 'nuiget-breathe']] as const;
+    for (const [, animationName] of loops) {
+        if ((facts.running[animationName] ?? 0) < 1) {
+            failures.push(`no running ${animationName}`);
+        }
+    }
+    const running = loops.map(([label, animationName]) => `${label} ${facts.running[animationName] ?? 0}`).join(', ');
+    return { lines: [`${name}: motion on; ${read.join(', ')} ms; running ${running} (${statusText(status)})`], failures };
+}
+
 // ---- UX-P4.6: the first load said in the live region (a11y-first-load-announced) --------------------------------------
 
 /**

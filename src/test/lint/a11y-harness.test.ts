@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_BREATHE_MS, MOTION_ON, type MotionOnFacts, motionOnLines, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
@@ -377,6 +377,60 @@ describe('the accessibility harness (UX-P0.23)', () => {
             failures: ['DS-MOTION-1 not measurable: prefers-reduced-motion matches'],
         });
         expect(MOTION_STATES).toHaveLength(15);
+    });
+
+    it('reads DS-MOTION-1 on five elements with motion on, each loop running, never as 0 when absent (UX-P4.fix-8)', () => {
+        const on: MotionOnFacts = {
+            reduceMotion: false,
+            mediaReduce: false,
+            icon: { what: 'color', ms: 100 },
+            chevron: { what: 'transform', ms: 150 },
+            spinner: { what: 'nuiget-spin', ms: 1500 },
+            stripe: { what: 'nuiget-progress-cross', ms: 4000 },
+            skeleton: { what: 'nuiget-breathe', ms: MOTION_BREATHE_MS },
+            running: { 'nuiget-spin': 1, 'nuiget-progress-cross': 1, 'nuiget-breathe': 3 },
+        };
+        expect(MOTION_BREATHE_MS).toBe(900);
+        expect(motionOnLines('sidebar-installed-loading', on)).toEqual({
+            lines: ['[motion] DS-MOTION-1@sidebar-installed-loading: motion on; icon button color 100, chevron transform 150, spinner nuiget-spin 1500, stripe nuiget-progress-cross 4000, skeleton nuiget-breathe 900 ms; running spin 1, stripe 1, breathe 3 (hard)'],
+            failures: [],
+        });
+        expect(motionOnLines('s', { ...on, chevron: { what: 'transform', ms: 0 } }).failures).toEqual(['chevron 0 ms, expected 150']);
+        expect(motionOnLines('s', { ...on, icon: { what: 'background-color', ms: 100 } }).failures).toEqual(['icon button background-color, expected color']);
+        expect(motionOnLines('s', { ...on, stripe: null })).toMatchObject({ failures: ['stripe absent'] });
+        expect(motionOnLines('s', { ...on, stripe: null }).lines[0]).toContain('stripe absent');
+        expect(motionOnLines('s', { ...on, running: {} }).failures).toEqual(['no running nuiget-spin', 'no running nuiget-progress-cross', 'no running nuiget-breathe']);
+        expect(motionOnLines('s', { ...on, reduceMotion: true })).toEqual({ lines: ['[motion] DS-MOTION-1@s: not measurable (body.vscode-reduce-motion set) (hard)'], failures: ['DS-MOTION-1@s not measurable: body.vscode-reduce-motion set'] });
+        expect(motionOnLines('s', { ...on, mediaReduce: true })).toEqual({ lines: ['[motion] DS-MOTION-1@s: not measurable (prefers-reduced-motion matches) (hard)'], failures: ['DS-MOTION-1@s not measurable: prefers-reduced-motion matches'] });
+        expect(motionOnLines('s', { ...on, spinner: { what: 'nuiget-spin', ms: null } })).toMatchObject({ failures: ['spinner unset ms, expected 1500'] });
+        expect(motionOnLines('s', { ...on, spinner: { what: 'nuiget-spin', ms: null } }).lines[0]).toContain('spinner nuiget-spin unset');
+    });
+
+    it('reads the five elements\' computed durations in the page, in seconds or milliseconds, an absent one as null (UX-P4.fix-8)', () => {
+        document.body.innerHTML = [
+            '<div class="nuiget-sidebar-search"><button class="nuiget-icon-button" style="transition-property: color; transition-duration: 0.1s"></button></div>',
+            '<div data-testid="section-header-installed"><span class="nuiget-section-chevron" style="transition-property: transform; transition-duration: 150ms"></span>',
+            '<span class="nuiget-spinner"><svg style="animation-name: nuiget-spin; animation-duration: 1.5s"></svg></span></div>',
+            '<div class="nuiget-skeleton-row" style="animation-name: nuiget-breathe; animation-duration: 0.9s, 2s"></div>',
+        ].join('');
+        const animations = [{ playState: 'running', animationName: 'nuiget-spin' }, { playState: 'running', animationName: 'nuiget-breathe' }, { playState: 'paused', animationName: 'nuiget-breathe' }];
+        (document as unknown as { getAnimations: () => unknown[] }).getAnimations = () => animations;
+        try {
+            expect(new Function(MOTION_ON)()).toEqual({
+                reduceMotion: false,
+                mediaReduce: false,
+                icon: { what: 'color', ms: 100 },
+                chevron: { what: 'transform', ms: 150 },
+                spinner: { what: 'nuiget-spin', ms: 1500 },
+                // No progress bar in the page: absent, never read as 0.
+                stripe: null,
+                skeleton: { what: 'nuiget-breathe', ms: 900 },
+                running: { 'nuiget-spin': 1, 'nuiget-breathe': 1 },
+            });
+        } finally {
+            delete (document as unknown as { getAnimations?: unknown }).getAnimations;
+            document.body.innerHTML = '';
+        }
     });
 
     it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar printed (a11y-first-load-announced, UX-P4.6)', () => {

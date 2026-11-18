@@ -9,12 +9,12 @@ import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostRead
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
-import { measureExemplar, measureWorkbench } from '../workbench';
+import { measureExemplar, measureWorkbench, setReduceMotion } from '../workbench';
 import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -2937,6 +2937,68 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await read('sidebar right-click', enterSidebarWebview, async () => driverOf().actions().contextClick(await optionOf('package-row-serilog')).perform());
             }
             await leaveWebview();
+        });
+    }
+
+    if (LANE === 'ui' && LOOK === 'modern') {
+        // UX-P4.fix-8 (architecture-advisor and design-advisor rulings of 2026-11-18): the one reading with motion on. A nested
+        // describe, so it runs after every test above it, the walks and the theme dump included (the dump's body class is tracked
+        // evidence); never a shot, a measure() or a golden. `workbench.reduceMotion` is written off for this reading alone and
+        // written on again in the describe's own afterEach, which proves the restore in both webviews (DS-MOTION-2).
+        describe('motion on (UX-P4.fix-8)', () => {
+            let held = false;
+
+            afterEach(async function () {
+                this.timeout(180_000);
+                await leaveWebview();
+                await driverOf().actions().clear();
+                if (held) {
+                    held = false;
+                    await REACH['sidebar-installed-loading'].leave?.().catch(() => undefined);
+                    await leaveWebview();
+                }
+                await setReduceMotion('on');
+                await openMainPanel();
+                await enterMainWebview();
+                await until('document.body.classList.contains("vscode-reduce-motion")', 'the main panel reduced again', 30_000);
+                const main = motionLines('main panel after motion-on', await script<MotionFacts>(RUNNING_ANIMATIONS));
+                printLines(main.lines);
+                await leaveWebview();
+                await openSidebarView();
+                await enterSidebarWebview();
+                await until('document.body.classList.contains("vscode-reduce-motion")', 'the side bar reduced again', 30_000);
+                const sidebar = motionLines('sidebar after motion-on', await script<MotionFacts>(RUNNING_ANIMATIONS));
+                printLines(sidebar.lines);
+                await leaveWebview();
+                const failures = [...main.failures, ...sidebar.failures];
+                if (MOTION_STATUS === 'hard' && failures.length > 0) {
+                    throw new Error(`[motion] after motion-on: ${failures.join('; ')}`);
+                }
+            });
+
+            it('DS-MOTION-1 with motion on: the computed durations of the held side bar Installed pane (UX-P4.fix-8)', async function () {
+                this.timeout(300_000);
+                await applyTheme('dark-modern');
+                await applyWidth(stateNamed('sidebar-installed-loading'), SIDEBAR_WIDTH);
+                await setReduceMotion('off');
+                await freshMainPanel();
+                await until('!document.body.classList.contains("vscode-reduce-motion")', 'the main panel with motion on', 30_000);
+                await leaveWebview();
+                await openSidebarView();
+                await enterSidebarWebview();
+                await until('!document.body.classList.contains("vscode-reduce-motion")', 'the side bar with motion on', 30_000);
+                held = true;
+                await REACH['sidebar-installed-loading'].reach();
+                await enterSidebarWebview();
+                const facts = await script<MotionOnFacts>(MOTION_ON);
+                held = false;
+                await REACH['sidebar-installed-loading'].leave?.();
+                const reading = motionOnLines('sidebar-installed-loading', facts);
+                printLines(reading.lines);
+                if (MOTION_STATUS === 'hard' && reading.failures.length > 0) {
+                    throw new Error(`[motion] ${reading.failures.join('; ')}`);
+                }
+            });
         });
     }
 
