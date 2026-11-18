@@ -127,7 +127,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
+const HELD_STATES = ['main-installed-busy', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error', 'main-details-error', 'main-readme-error'];
 
@@ -236,6 +236,47 @@ return { count: hold.rewritten, type: hold.type };`, mode, state);
 /** Ends `failHeld` or `rewriteHeld`: the content frame's own `postMessage` back by assignment. */
 async function endHold(): Promise<void> {
     await script<void>('const hold = window.__nuigetHold; if (hold) { window.postMessage = hold.real; delete window.__nuigetHold; }');
+}
+
+/**
+ * A busy row without a write (UX-P4.fix-13, architecture-advisor ruling of 2026-11-18): the frame posts to its own window the
+ * progress event the host sends for a running uninstall of one row, so the ops slice marks the row busy and no request leaves
+ * the webview; `clearBusy` ends it with the terminal progress of the same operation id (cancelled), never an outcome, so the
+ * id is not remembered as ended and the next reach can mark it again. The project path and the package id come verbatim from
+ * the row wrapper's own menu context; a read-only or central row is refused (it has no action for the spinner to replace).
+ */
+const BUSY_SOURCE = `
+const [state, rowTestId] = arguments;
+const row = document.querySelector('[data-testid="' + rowTestId + '"]');
+if (row === null) throw new Error('[busy] ' + state + ': no row ' + rowTestId);
+const context = JSON.parse(row.getAttribute('data-vscode-context') || '{}');
+if (!context.projectPath || !context.packageId) throw new Error('[busy] ' + state + ': the row context names no project or package');
+if (context['nuiget.readOnly'] === true || context['nuiget.central'] === true) throw new Error('[busy] ' + state + ': the row is read-only or central');
+const opId = 'capture-busy:' + state;
+window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId, status: 'running', kind: 'remove', projectPaths: [context.projectPath], packageIds: [context.packageId] } }, '*');
+window.__nuigetBusy = { opId, packageId: context.packageId };
+return context.packageId;`;
+
+const CLEAR_BUSY_SOURCE = `
+const busy = window.__nuigetBusy;
+if (!busy) return null;
+window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId: busy.opId, status: 'cancelled' } }, '*');
+delete window.__nuigetBusy;
+return busy;`;
+
+async function markBusy(state: string, rowTestId: string): Promise<void> {
+    await script<string>(BUSY_SOURCE, state, rowTestId);
+}
+
+/** Ends `markBusy`, waits until no row is busy and the row's own action is back, and prints what it ended. */
+async function clearBusy(state: string, rowTestId: string): Promise<void> {
+    const busy = await script<{ opId: string; packageId: string } | null>(CLEAR_BUSY_SOURCE);
+    if (busy === null) {
+        console.warn(`[busy] ${state}: none`);
+        return;
+    }
+    await until(`document.querySelectorAll('.nuiget-row--busy, .nuiget-row-option[aria-busy="true"]').length === 0 && document.querySelector('[data-testid="${rowTestId}"] [data-testid="row-action-uninstall"]') !== null`, 'no row busy and the row\'s action back', 10_000);
+    console.warn(`[busy] ${state}: ${busy.packageId} busy 1 -> 0 (opId ${busy.opId})`);
 }
 
 /**
@@ -594,6 +635,23 @@ const REACH: Record<string, Reach> = {
             await driverOf().actions().move({ origin: option }).perform();
             await until('document.querySelector(\'[data-testid="package-row-newtonsoft.json"] .nuiget-row-option\').matches(":hover")', 'the current row under the pointer', 10_000);
         },
+    },
+    'main-installed-busy': {
+        reach: async () => {
+            await gatewayInstalled();
+            await markBusy('main-installed-busy', 'package-row-fluentvalidation');
+            await until([
+                'document.querySelector(\'[data-testid="package-row-fluentvalidation"]\').classList.contains("nuiget-row--busy")',
+                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-option\').getAttribute("aria-busy") === "true"',
+                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-actions .nuiget-spinner svg[data-codicon="loading"]\') !== null',
+                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] [data-testid="row-action-uninstall"]\') === null',
+                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-status\')?.textContent.trim() === "Uninstalling"',
+                'document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row--busy\').length === 1',
+                'document.querySelector(\'[data-testid="installed-list"] [aria-current="true"]\') === null',
+                'document.querySelector(\'[data-testid="installed-list"]\').scrollTop === 0',
+            ].join(' && '), 'the FluentValidation row busy: its spinner in the action slot, "Uninstalling", no row current, the list at its top');
+        },
+        leave: () => clearBusy('main-installed-busy', 'package-row-fluentvalidation'),
     },
     'main-installed-toolbar-hover': {
         reach: async () => {

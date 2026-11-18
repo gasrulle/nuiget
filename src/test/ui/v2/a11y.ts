@@ -622,12 +622,14 @@ export function keysLines(screen: KeyScreen, stops: readonly FocusFacts[], outco
 
 /**
  * The states whose loading cues (the indeterminate stripe, the skeleton, the spinner) were masked as `LIVE_MOTION` until
- * UX-P4.5: each reads the DS-MOTION-2 line after its shot (design-advisor ruling of 2026-11-17, DO 6).
+ * UX-P4.5: each reads the DS-MOTION-2 line after its shot (design-advisor ruling of 2026-11-17, DO 6); and the busy row's
+ * spinner since UX-P4.fix-13.
  */
 export const MOTION_STATES: readonly string[] = [
     'main-sources-revalidating', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating',
     'main-browse-loading', 'main-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading',
     'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-readme-loading',
+    'main-installed-busy',
 ];
 
 /** Four duration tokens in milliseconds, `null` when unset or not a time (UX-P4.5: parsed, never compared as strings). */

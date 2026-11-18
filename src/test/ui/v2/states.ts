@@ -157,6 +157,8 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, the list scrolled to the Serilog row (the thirteenth in id order), the pointer on it; the row matches :hover.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-hover-current', 'main', [primary('main')],
         'Gateway selected, the list scrolled to its end, Newtonsoft.Json made current (the details show "Dependencies"), then the pointer on its row; the current row under :hover keeps the selection colour (DS-COLOR-2) (a details state: the pane shows Newtonsoft.Json).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
+    { ...ready('main-installed-busy', 'main', [primary('main')],
+        'Gateway selected, the list at its top, no row current; one running Uninstall reported for the FluentValidation row (an ops/progress event posted in the frame, no request sent): the row is busy, a still 16 px spinner stands in its action slot and its status reads "Uninstalling"; the report is ended with a cancelled one after the capture (DS-STATE-6, UX-P4.fix-13).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-installed-toolbar-hover', 'main', [primary('main')],
         'Gateway selected, the Select all button under the pointer (DS-COLOR-7).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-refresh-hover', 'main', [primary('main')],

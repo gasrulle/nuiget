@@ -733,6 +733,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
+    // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
+    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': { pending: 'P4.fix-13' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
@@ -1294,6 +1296,12 @@ export interface StateCells {
     dialogListItems?: string[];
     /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
     disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
+    /**
+     * Each shown busy row (`.nuiget-row--busy`, UX-P4.fix-13, DS-STATE-6): its option's `aria-busy`, the spinner glyph's box and
+     * computed colour, the action slot's end and the glyph's end from the row wrapper's right edge, the glyph's centre against
+     * the wrapper's, the buttons left in the slot and the status text.
+     */
+    busyRows?: Array<{ testId: string; ariaBusy: boolean; glyph?: { w: number; h: number }; colour?: string; slotEnd?: number; glyphEnd?: number; centreDy?: number; actions: number; status: string }>;
     clauseError?: string;
 }
 
@@ -2225,6 +2233,23 @@ const stateCells = {
                 paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
+                busyRows: shown('.nuiget-row--busy').map(row => {
+                    const rowRect = rectOf(row);
+                    const slot = row.querySelector('.nuiget-row-actions');
+                    const glyph = row.querySelector('.nuiget-row-actions .nuiget-spinner svg');
+                    const glyphRect = glyph ? rectOf(glyph) : undefined;
+                    return {
+                        testId: row.getAttribute('data-testid') || '',
+                        ariaBusy: row.querySelector('.nuiget-row-option')?.getAttribute('aria-busy') === 'true',
+                        glyph: glyphRect ? { w: round(glyphRect.width), h: round(glyphRect.height) } : undefined,
+                        colour: glyph ? getComputedStyle(glyph).color : undefined,
+                        slotEnd: slot ? round(rowRect.right - rectOf(slot).right) : undefined,
+                        glyphEnd: glyphRect ? round(rowRect.right - glyphRect.right) : undefined,
+                        centreDy: glyphRect ? round((glyphRect.top + glyphRect.height / 2) - (rowRect.top + rowRect.height / 2)) : undefined,
+                        actions: slot ? slot.querySelectorAll('button').length : 0,
+                        status: (row.querySelector('.nuiget-row-status')?.textContent || '').trim(),
+                    };
+                }),
                 placeholderFit: (() => {
                     const input = document.querySelector('[data-testid="sidebar-search-input"], [data-testid="search-input"]');
                     if (input === null || !input.placeholder) return undefined;
@@ -3859,6 +3884,8 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
         case 'DS-STATE-4':
         case 'DS-COLOR-1':
             return evaluateStateCell(definition, state, facts);
+        case 'DS-STATE-6':
+            return busyRowsVerdict(facts.stateCells.busyRows ?? [], facts.iconColours.icon, definition.tolerance);
         case 'DS-STATE-7': {
             if (facts.fonts.root === '') {
                 return notMeasurable('no page');
@@ -3896,6 +3923,50 @@ function noListCell(layout: Layout, state: string): boolean {
 function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } | undefined {
     const top = layout.listScrollTop ?? 0;
     return !layout.flatList && top > 0 ? { value: `no group header in the window (scrollTop ${top})`, pass: true } : undefined;
+}
+
+/** The words a busy row's status may read (DS-STATE-6, UX-P4.7). */
+const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued'];
+
+/**
+ * DS-STATE-6 (UX-P4.fix-13): every busy row has `aria-busy` on its option, a 16 × 16 spinner glyph in its action slot whose end
+ * stands 6 inside the band (DS-INSET-3 a) and whose centre is the band's, the glyph in `icon.foreground` (DS-ICON-2), no button
+ * left in the slot, and its "-ing" word or Queued. `glyph end` is printed, never asserted.
+ */
+export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, iconColour: string, tolerance: number): { value: string; pass: boolean } {
+    if (rows.length === 0) {
+        return { value: `${NOT_MEASURABLE} (no busy row)`, pass: false };
+    }
+    const parts = rows.map(row => {
+        const off: string[] = [];
+        if (!row.ariaBusy) {
+            off.push('no aria-busy');
+        }
+        if (row.glyph === undefined) {
+            off.push('no spinner glyph');
+        } else if (row.glyph.w !== 16 || row.glyph.h !== 16) {
+            off.push(`glyph ${row.glyph.w}×${row.glyph.h}`);
+        }
+        if (row.slotEnd === undefined || Math.abs(row.slotEnd - 6) > tolerance) {
+            off.push(`slot end ${row.slotEnd ?? 'none'} (target 6)`);
+        }
+        if (row.centreDy !== undefined && Math.abs(row.centreDy) > tolerance) {
+            off.push(`centre Δy ${row.centreDy}`);
+        }
+        if (row.colour !== undefined && row.colour !== iconColour) {
+            off.push(`colour ${row.colour} (expected icon.foreground)`);
+        }
+        if (row.actions > 0) {
+            off.push(`${row.actions} action${row.actions === 1 ? '' : 's'} beside the spinner`);
+        }
+        if (!BUSY_WORDS.includes(row.status)) {
+            off.push(`status "${row.status}"`);
+        }
+        const glyph = row.glyph === undefined ? 'no spinner' : `spinner ${row.glyph.w}×${row.glyph.h}`;
+        const text = `${row.testId}${row.ariaBusy ? ' aria-busy' : ''}; ${glyph} in the action slot (end ${row.slotEnd ?? 'none'}, centre Δy ${row.centreDy ?? 'none'}; glyph end ${row.glyphEnd ?? 'none'}), colour ${row.colour === iconColour ? 'icon.foreground' : (row.colour ?? 'none')}; actions ${row.actions}; status "${row.status}"`;
+        return { text: off.length === 0 ? text : `${text}; off: ${off.join(', ')}`, pass: off.length === 0 };
+    });
+    return { value: `busy rows ${rows.length}: ${parts.map(part => part.text).join(' | ')}`, pass: parts.every(part => part.pass) };
 }
 
 function evaluateStateCell(definition: RuleDefinition, state: string, facts: EndOfP0): { value: string; pass: boolean } {

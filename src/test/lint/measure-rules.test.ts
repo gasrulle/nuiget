@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS } from '../ui/v2/measure';
+import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -57,7 +57,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2', 'PF-3a', 'PF-4', 'MS-8', 'DS-OVERFLOW-6', 'DS-INSET-3', 'DS-OVERFLOW-2', 'DS-ROW-5',
             'DS-INSET-4', 'DS-ROW-1', 'DS-ROW-2', 'DS-ROW-3', 'DS-RADIUS-1', 'DS-COLOR-6', 'DS-ICON-2', 'DS-COLOR-4', 'DS-TYPE-5', 'DS-COPY-5', 'DS-COPY-2', 'DS-TYPE-7', 'DS-TYPE-9', 'DS-DIVIDER-4', 'DS-TYPE-8', 'DS-HC-1', 'DS-COLOR-7', 'DS-COLOR-3', 'DS-COLOR-2', 'DS-DIVIDER-1', 'DS-RADIUS-2', 'DS-DIVIDER-2', 'DS-DIVIDER-6', 'DS-DIVIDER-5', 'DS-DIVIDER-3', 'DS-COLOR-5', 'DS-ROW-6', 'DS-ICON-3', 'DS-DENSITY-1', 'DS-OVERFLOW-4', 'DS-OVERFLOW-1', 'DS-OVERFLOW-3', 'DS-OVERFLOW-5', 'DS-ALIGN-1', 'DS-ALIGN-2',
             'DS-TYPE-1', 'DS-TYPE-4', 'DS-TYPE-6', 'DS-ROW-4', 'DS-COPY-3', 'SPEC',
-            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1', 'DS-SCROLL-2',
+            'DS-FOCUS-1', 'DS-FOCUS-2', 'DS-FOCUS-3', 'DS-FOCUS-4', 'DS-STATE-7', 'DS-STATE-1', 'DS-STATE-2', 'DS-STATE-3', 'DS-STATE-6', 'DS-STATE-4', 'DS-COLOR-1', 'DS-SCROLL-1', 'DS-SCROLL-2',
             'DS-TYPE-2', 'DS-TYPE-3', 'DS-ICON-4', 'DS-LOOK-1', 'DS-TYPE-10',
         ]);
         const scopes = (id: string): unknown => RULES.find(rule => rule.id === id)?.scopes;
@@ -242,7 +242,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             'PF-2': 1, 'PF-3a': 0, 'PF-4': 1, 'MS-8': 0.5, 'DS-OVERFLOW-6': 0, 'DS-INSET-3': 1, 'DS-OVERFLOW-2': 0, 'DS-ROW-5': 0,
             'DS-INSET-4': 1, 'DS-ROW-1': 1, 'DS-ROW-2': 1, 'DS-ROW-3': 0, 'DS-RADIUS-1': 0, 'DS-COLOR-6': 0, 'DS-ICON-2': 0, 'DS-COLOR-4': 0, 'DS-TYPE-5': 0.1, 'DS-COPY-5': 0, 'DS-COPY-2': 0, 'DS-TYPE-7': 0.1, 'DS-TYPE-9': 0, 'DS-DIVIDER-4': 0, 'DS-TYPE-8': 0.1, 'DS-HC-1': 0, 'DS-COLOR-7': 0, 'DS-COLOR-3': 0, 'DS-COLOR-2': 0, 'DS-DIVIDER-1': 0, 'DS-RADIUS-2': 0, 'DS-DIVIDER-2': 0, 'DS-DIVIDER-6': 0, 'DS-DIVIDER-5': 0, 'DS-DIVIDER-3': 0, 'DS-COLOR-5': 0, 'DS-ROW-6': 0, 'DS-ICON-3': 0, 'DS-DENSITY-1': 1, 'DS-OVERFLOW-4': 0, 'DS-OVERFLOW-1': 0, 'DS-OVERFLOW-3': 0,
             'DS-OVERFLOW-5': 0, 'DS-ALIGN-1': 0, 'DS-ALIGN-2': 0, 'DS-TYPE-1': 0, 'DS-TYPE-4': 0.5, 'DS-TYPE-6': 0.1, 'DS-ROW-4': 0, 'DS-COPY-3': 0, SPEC: 1,
-            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-SCROLL-2': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0, 'DS-TYPE-10': 0,
+            'DS-FOCUS-1': 0, 'DS-FOCUS-2': 0, 'DS-FOCUS-3': 0, 'DS-FOCUS-4': 0, 'DS-STATE-7': 0, 'DS-STATE-1': 0, 'DS-STATE-2': 0, 'DS-STATE-3': 1, 'DS-STATE-6': 1, 'DS-STATE-4': 0, 'DS-COLOR-1': 0, 'DS-SCROLL-1': 0, 'DS-SCROLL-2': 0, 'DS-TYPE-2': 0.1, 'DS-TYPE-3': 0, 'DS-ICON-4': 0, 'DS-LOOK-1': 0, 'DS-TYPE-10': 0,
         });
     });
 
@@ -1234,6 +1234,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(line('main-installed-loading', { roles: [{ ...role, actual: 'rgb(9, 9, 9)' }] }, 'DS-COLOR-1@main-installed-loading')).toMatchObject({ pass: false });
     });
 
+
+    it('reads a busy row: aria-busy on the option, a 16 px spinner in the action slot in icon.foreground, no action left and its "-ing" word or Queued (DS-STATE-6, UX-P4.fix-13)', () => {
+        const icon = 'rgb(204, 204, 204)';
+        const busy = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling' };
+        expect(busyRowsVerdict([busy], icon, 1)).toEqual({ value: 'busy rows 1: package-row-fluentvalidation aria-busy; spinner 16×16 in the action slot (end 6, centre Δy 0; glyph end 10), colour icon.foreground; actions 0; status "Uninstalling"', pass: true });
+        expect(busyRowsVerdict([{ ...busy, status: 'Queued' }], icon, 1).pass).toBe(true);
+        // One red case per clause; `glyph end` is printed, never asserted.
+        expect(busyRowsVerdict([{ ...busy, glyphEnd: 30 }], icon, 1).pass).toBe(true);
+        const off = (changes: Partial<typeof busy>) => busyRowsVerdict([{ ...busy, ...changes }], icon, 1);
+        expect(off({ ariaBusy: false })).toMatchObject({ pass: false, value: expect.stringContaining('; off: no aria-busy') });
+        expect(off({ glyph: { w: 14, h: 14 } })).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph 14×14') });
+        expect(off({ glyph: undefined })).toMatchObject({ pass: false, value: expect.stringContaining('; off: no spinner glyph') });
+        expect(off({ slotEnd: 8 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: slot end 8 (target 6)') });
+        expect(off({ slotEnd: 7 }).pass).toBe(true);
+        expect(off({ centreDy: 2 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: centre Δy 2') });
+        expect(off({ colour: 'rgb(1, 2, 3)' })).toMatchObject({ pass: false, value: expect.stringContaining('; off: colour rgb(1, 2, 3) (expected icon.foreground)') });
+        expect(off({ actions: 1 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: 1 action beside the spinner') });
+        expect(off({ status: 'In progress' })).toMatchObject({ pass: false, value: expect.stringContaining('; off: status "In progress"') });
+        expect(busyRowsVerdict([], icon, 1)).toEqual({ value: 'not measurable (no busy row)', pass: false });
+    });
 
     it('reads every empty state\'s block inset: 8/8 in a list, the sidebar and a dialog, 20/20 in the details pane (DS-STATE-3, UX-P4.fix-12)', () => {
         const facts = (cells: Record<string, unknown>) => layout({ endOfP0: { ...layout().endOfP0, fonts: { root: 'sans', others: [] }, stateCells: { ...layout().endOfP0.stateCells, ...cells } } as Layout['endOfP0'] });

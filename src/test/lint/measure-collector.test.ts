@@ -677,6 +677,30 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.stateCells.dialogListItems).toEqual(['Dapper 2.1.35 → 2.1.89']);
     });
 
+    it('reads the busy rows: the option\'s aria-busy, the spinner glyph\'s box and colour, the action slot\'s end, the buttons left in it and the status (DS-STATE-6, UX-P4.fix-13)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="busy-rows">.nuiget-spinner svg { color: rgb(204, 204, 204); }</style>');
+        const list = document.querySelector('.nuiget-list') as HTMLElement;
+        list.insertAdjacentHTML('afterbegin', [
+            '<div id="busy" class="nuiget-row nuiget-row--comfortable nuiget-row--busy" data-testid="package-row-fluentvalidation" data-rect="0,100,408,172">',
+            '<div class="nuiget-row-option" role="option" aria-busy="true" data-rect="0,100,408,172"><span class="nuiget-row-status" data-rect="100,140,190,156">Uninstalling</span></div>',
+            '<div class="nuiget-row-actions" aria-hidden="true" data-rect="378,124,402,148"><span class="nuiget-spinner" data-rect="378,124,402,148"><svg data-codicon="loading" data-rect="382,128,398,144"></svg></span></div>',
+            '</div>',
+            '<div id="idle" class="nuiget-row nuiget-row--comfortable" data-testid="package-row-dapper" data-rect="0,176,408,248"><div class="nuiget-row-option" role="option" data-rect="0,176,408,248"></div>',
+            '<div class="nuiget-row-actions" data-rect="380,201,402,223"><button data-testid="row-action-uninstall" data-rect="380,201,402,223"></button></div></div>',
+        ].join(''));
+        try {
+            // One entry per busy row; the idle row yields none.
+            expect(collect().endOfP0.stateCells.busyRows).toEqual([{
+                testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: 'rgb(204, 204, 204)',
+                slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling',
+            }]);
+        } finally {
+            document.getElementById('busy')?.remove();
+            document.getElementById('idle')?.remove();
+            document.getElementById('busy-rows')?.remove();
+        }
+    });
+
     it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;
