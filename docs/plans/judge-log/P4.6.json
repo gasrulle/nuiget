@@ -1,0 +1,83 @@
+{
+ "item": "P4.6",
+ "runs": [
+  {
+   "runId": "44263173962",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "476aa077 (proving push C)",
+   "look": "modern",
+   "workflow": "wf_93f0a2f4-674",
+   "note": "The hover cells the item moved (main-installed-hover, sidebar-hover) and two it touched without a pixel change (main-updates-hover, main-details-readme), against the nearest committed artboards (main-installed-all for the Installed and side bar hover cells, main-updates, main-installed-details): no hover or README artboard exists. No standing finding.",
+   "captures": {
+    "main-installed-hover": {
+     "png": "captures/44263173962/main-installed-hover.dark-modern.1200.png",
+     "sha256": "d4113d447fa43b84cc30d1dae34fc2580d378059192850ccabdb9462dc7d06f6"
+    },
+    "main-updates-hover": {
+     "png": "captures/44263173962/main-updates-hover.dark-modern.1200.png",
+     "sha256": "7bd8392c243515ba395b44fe90725ebef7572882ab2652b5ff04bc90f3781af8"
+    },
+    "sidebar-hover": {
+     "png": "captures/44263173962/sidebar-hover.dark-modern.300.png",
+     "sha256": "73ccbbcc4010c90bb06d034e6c6442c2943b5babe54ffffe51a70f6c227b999c"
+    },
+    "main-details-readme": {
+     "png": "captures/44263173962/main-details-readme.dark-modern.1200.png",
+     "sha256": "03d410ec0d8c64273f99e8be60d95aff5027924f210a67fabb3c050a999bb5e5"
+    }
+   },
+   "panel": {
+    "states": 4,
+    "candidates": 4,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 3,
+    "singleJudge": 1,
+    "incomplete": 0
+   },
+   "singleJudge": [
+    {
+     "id": "main-installed-hover#D1",
+     "state": "main-installed-hover",
+     "finding": "[states] The search box placeholder reads \"Search or type @ to filter\", while the artboard still shows the older text \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture follows docs/design/design-system.md §overflow (main header row: the placeholder's copy since UX-P3.fix-15), so the artboard and the rule disagree here; the product is not at fault.",
+     "severity": "minor",
+     "box": [
+      16,
+      42,
+      1168,
+      26
+     ],
+     "rule": "spec-conflict",
+     "lenses": [
+      "states"
+     ],
+     "note": "informational: the round-3 artboard draws the placeholder copy that UX-P3.fix-15 replaced (DECISIONS 2026-11-16); the product follows design-system.md; not touched by this item"
+    }
+   ],
+   "findings": [],
+   "refuted": [
+    {
+     "id": "native-1",
+     "state": "main-installed-hover",
+     "rule": "DS-COLOR-1",
+     "finding": "The NETStandard.Library row's check box has a light border (rgb 126,126,126 sampled) while every other row's check box, the hovered Serilog row's included, uses the dim checkbox.border (rgb 60,60,60). Nothing visible explains it: the row has no selection or current band and no focus ring. One control drawn in a different colour role from identical siblings does not read as a native list.",
+     "reason": "The crop shows that the NETStandard.Library box border is light (126,126,126 against 60,60,60 on the other rows), but the row reads 'Added by the SDK' with an SDK badge, so this is the unselectable implicit row. Its check mark is drawn in disabledForeground on purpose (design-system.md check box row: disabled = disabledForeground; primitives.css .nuiget-row-check--off). The measurement confirms it: 'DS-STATE-7@main-installed-hover: 1 disabled, 1 unselectable ..., 0 without a reason (hard)'."
+    },
+    {
+     "id": "native-2",
+     "state": "main-installed-hover",
+     "rule": "judge-only",
+     "finding": "The search box placeholder reads \"Search or type @ to filter\", but the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The copy differs from the artboard element, and the spec declares no exception for it.",
+     "reason": "The crop shows the placeholder 'Search or type @ to filter', which is the copy that design-system.md's overflow row for the main header requires ('the search box's placeholder fits by its copy (\"Search or type @ to filter\", the side bar's) ... since UX-P3.fix-15'). The hard measurement 'DS-OVERFLOW-2@main-installed-hover/placeholder: placeholder \"Search or type @ to filter\" 164 of 1136 px' confirms it. The product is not at fault. The stale artboard is the spec-conflict that states-1 reports."
+    },
+    {
+     "id": "states-1",
+     "state": "main-updates-hover",
+     "rule": "judge-only",
+     "finding": "The search box placeholder reads \"Search or type @ to filter\" (x 24-186), where the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\" (x 24-429). The capture's prompt is a different, shorter text that no longer names the filter tokens. The box is outside the state's only mask (updates-list), so this is not live content.",
+     "reason": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard draws the longer filter-token text. docs/design/design-system.md line 436 declares this as the placeholder's copy since UX-P3.fix-15, and the hard DS-OVERFLOW-2 measurement reads it: placeholder \"Search or type @ to filter\" 164 of 1136 px (hard). The token list still reaches the user through the accessible label \"Search packages, or filter with @installed, @updates or @vulnerable\" (MainShell.tsx:243), so the artboard drawing is stale and the capture has no defect."
+    }
+   ]
+  }
+ ]
+}

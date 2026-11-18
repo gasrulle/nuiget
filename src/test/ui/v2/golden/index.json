@@ -223,9 +223,9 @@
   },
   "main-installed-hover.dark-modern.1200.png": {
     "status": "approved",
-    "run": "43790398405",
-    "sha256": "5e0e26ad0f66d01631072080215a6b159c0464d6e4ee6b27c939d275ba4e5152",
-    "sidecarSha256": "b5a5a713905cc2351922c2b94e743b5a2a01df5724d693bc708c92aa3004a3bc"
+    "run": "44263173962",
+    "sha256": "d4113d447fa43b84cc30d1dae34fc2580d378059192850ccabdb9462dc7d06f6",
+    "sidecarSha256": "a699a528831db41450a3acaab50358a4918ad5b31a11835bc5d651a1031f5e66"
   },
   "main-installed-loading.dark-modern.1200.png": {
     "status": "approved",
@@ -577,15 +577,15 @@
   },
   "sidebar-hover.dark-modern-classic.300.png": {
     "status": "approved",
-    "run": "43726017923",
-    "sha256": "272b0604d1eed151ee518f2102a7f0ba8e80058e3db73e10cc41c7d2bc016981",
-    "sidecarSha256": "e4cc0f513af85f349b05d1bc8f08897021189d947fef702196de838b9a8e4b36"
+    "run": "44263173962",
+    "sha256": "396f903df6e39bf15a11ea6c11363d59846a5492899606cd682c46bf5854c3df",
+    "sidecarSha256": "57c4124a2b95619b7589cf84aa2d7d3754e0df50590379c79c0af92e44c48905"
   },
   "sidebar-hover.dark-modern.300.png": {
     "status": "approved",
-    "run": "43726017923",
-    "sha256": "b247738122144522129b405aa29b2eb57b06449cfc5638b6b35f0a4e76f110fb",
-    "sidecarSha256": "3ceaa76598b90386301b77592f7009063d890e539520e80ddda6a1570e85e518"
+    "run": "44263173962",
+    "sha256": "73ccbbcc4010c90bb06d034e6c6442c2943b5babe54ffffe51a70f6c227b999c",
+    "sidecarSha256": "6e0c7ec48cb222df1897d04fef6ed4fb82875e86460642e976a90645b08aa80a"
   },
   "sidebar-installed-loading.dark-modern.300.png": {
     "status": "approved",
