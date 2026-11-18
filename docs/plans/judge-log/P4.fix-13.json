@@ -1,0 +1,42 @@
+{
+ "item": "P4.fix-13",
+ "runs": [
+  {
+   "runId": "44394529420",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "a7de9bf3 (proving push)",
+   "look": "modern",
+   "workflow": "wf_8b0b3319-f38",
+   "note": "The one new cell, main-installed-busy, judged in screen mode against main-installed-details.dark-modern.1200 as the page beneath (no artboard for the busy cell; design-advisor opening ruling of 2026-11-18, DO 10, the UX-P4.2a precedent). No standing finding; one candidate refuted.",
+   "captures": {
+    "main-installed-busy": {
+     "png": "captures/44394529420/main-installed-busy.dark-modern.1200.png",
+     "sha256": "cc83aad3f6c9f44ab273d54735729f23df396516fba2c3c3a4f1c8287e8004cd",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png (the page beneath; no artboard for the busy cell)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 1,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 1,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "singleJudge": [],
+   "findings": [],
+   "refuted": [
+    {
+     "id": "native-1",
+     "state": "main-installed-busy",
+     "finding": "[native] The search box placeholder reads \"Search or type @ to filter\", while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\".",
+     "severity": "minor",
+     "rule": "judge-only",
+     "disposition": "refuted-by-measurement",
+     "reason": "The placeholder copy is the ruled one: docs/design/design-system.md:436 and DECISIONS.md (2026-11-16); the artboard is the older side. DS-GRID-1, DS-INSET-1, DS-HEIGHT-7 and DS-RADIUS-1 are green on the box."
+    }
+   ]
+  }
+ ]
+}
