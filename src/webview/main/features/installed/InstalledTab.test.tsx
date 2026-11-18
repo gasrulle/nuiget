@@ -347,6 +347,23 @@ describe('main panel: Installed tab', () => {
         expect(transitiveRows()).toHaveLength(1);
     });
 
+    it('a single-project Restore (forceRestore) is said by no webview: its toast speaks (UX-P4.6, A10, design-advisor ruling of 2026-11-18)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, frameworks: [], dataSourceAvailable: false }, 1));
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        expect(host.requests('transitive/get')[1].payload).toEqual({ projectPath: A, forceRestore: true });
+        const restoreOutcome: BulkOutcome = { opId: 'restore1', status: 'completed', results: [], restores: [{ projectPath: A, ok: true }] };
+        await hostSays(() => host.event('ops/completed', restoreOutcome));
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, frameworks: [], dataSourceAvailable: true }, 2));
+        await act(async () => {
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        });
+        expect(said()).not.toContain('operations completed');
+        expect(said()).not.toContain('Restored');
+    });
+
     describe('the Delete key asks before it uninstalls (ADR-013 Decision 3, UX-P4.2a)', () => {
         const dialog = (): HTMLElement => screen.getByTestId('confirm-dialog');
         const config = (confirmUninstall: boolean) => ({ searchDebounceMode: 'quicksearch' as const, quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall, treeIndent: 8, look: 'classic' as const, density: 'default' as const, uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false });

@@ -6,7 +6,8 @@ import { describeOutcome } from './store/outcomes';
 
 /**
  * What both shells duplicate (CA-R3): the live region, the `webviewReady` mark, the host's `ui/focusSearch` and the
- * announcement of how every operation ended, on whichever surface it started.
+ * announcement of how an operation ended, by the surface that asked for it only (UX-P4.6, A10): the other surface and an
+ * operation the host started itself say nothing here (its toast speaks until UX-P4.7).
  */
 export function useShellChrome(): { announce: (message: string) => void; live: { message: string | null; repeat: number }; searchRef: React.RefObject<HTMLInputElement | null> } {
     const bus = useMessageBus();
@@ -26,13 +27,13 @@ export function useShellChrome(): { announce: (message: string) => void; live: {
     // The host asks for the search box when the view is shown again.
     useEffect(() => bus.onEvent('ui/focusSearch', () => searchRef.current?.focus()), [bus]);
 
-    const { last } = useOps();
-    const sequence = last?.sequence;
+    const { own } = useOps();
+    const sequence = own?.sequence;
     useEffect(() => {
-        if (last !== undefined) {
-            announce(describeOutcome(last.outcome));
+        if (own !== undefined) {
+            announce(describeOutcome(own.outcome));
         }
-        // One announcement per outcome: `sequence` goes up with each, `last` is what it belongs to.
+        // One announcement per outcome: `sequence` goes up with each, `own` is what it belongs to.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sequence, announce]);
 

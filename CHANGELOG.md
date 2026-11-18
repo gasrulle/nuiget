@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Screen readers announce when the main panel's package lists, details or README start loading**
+- **Screen readers hear how an install, update or uninstall ended once, in the view that started it**
 - **Loading indicators follow VS Code's timing**
 - **Breaking: Enter on a package in the main panel's Updates list shows its details; Ctrl+Enter (Cmd+Enter) updates it**
 - **Breaking: Enter on a sidebar package opens it in the main panel; Ctrl+Enter (Cmd+Enter) installs or updates it**

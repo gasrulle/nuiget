@@ -11,8 +11,13 @@ export type AnyOutcome = OperationOutcome | BulkOutcome;
 export interface OpsState {
     /** Operations that are queued or running, by operation id, with what was last said about each. */
     active: ReadonlyMap<string, OperationProgress>;
-    /** The last operation that ended, on either surface. `sequence` goes up with each, so the same outcome twice is two announcements. */
+    /** The last operation that ended, on either surface, from the event or the response. `sequence` goes up with each. */
     last: { outcome: AnyOutcome; sequence: number } | undefined;
+    /**
+     * The last outcome this surface asked for, from the response to its own request (UX-P4.6, A10): the one message only
+     * the asking surface gets. `sequence` goes up with each, so the same outcome twice is two announcements.
+     */
+    own: { outcome: AnyOutcome; sequence: number } | undefined;
     /** Ids of operations whose end was already recorded: an outcome arrives as an event and, where it was asked for, as a response. */
     ended: readonly string[];
 }
@@ -20,6 +25,8 @@ export interface OpsState {
 export type OpsAction =
     | { type: 'progress'; progress: OperationProgress }
     | { type: 'completed'; outcome: AnyOutcome }
+    /** The response to this surface's own request: its outcome, whether or not the event came first. */
+    | { type: 'answered'; outcome: AnyOutcome }
     /** This surface asked for an operation: it is in progress from the call on, under an id of this surface. */
     | { type: 'asked'; localId: string; progress: OperationProgress }
     /** The first chunk of the request named the host's operation id: the entry moves under it. */
@@ -27,7 +34,7 @@ export type OpsAction =
     /** The request settled, with an outcome or without: neither the local entry nor the operation stays in progress. */
     | { type: 'settled'; localId: string; opId: string | undefined };
 
-export const INITIAL_OPS: OpsState = { active: new Map(), last: undefined, ended: [] };
+export const INITIAL_OPS: OpsState = { active: new Map(), last: undefined, own: undefined, ended: [] };
 
 const IN_PROGRESS: ReadonlySet<OperationStatus> = new Set<OperationStatus>(['queued', 'running', 'restoring']);
 /** How many ended operation ids are remembered; an outcome is repeated within moments, not after dozens of others. */
@@ -99,6 +106,10 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
         }
         return { ...state, active };
     }
+    if (action.type === 'answered') {
+        // Never read against `ended`: the event of the same operation may have come first.
+        return { ...state, own: { outcome: action.outcome, sequence: (state.own?.sequence ?? 0) + 1 } };
+    }
     const { outcome } = action;
     if (state.ended.includes(outcome.opId)) {
         return state;
@@ -108,6 +119,7 @@ export function opsReducer(state: OpsState, action: OpsAction): OpsState {
     return {
         active,
         last: { outcome, sequence: (state.last?.sequence ?? 0) + 1 },
+        own: state.own,
         ended: [...state.ended, outcome.opId].slice(-REMEMBERED),
     };
 }
@@ -183,9 +195,10 @@ const OpsViewContext = createContext<OpsView | null>(null);
 const OpsActionsContext = createContext<OpsActions | null>(null);
 
 /**
- * The ops slice: which operations are in progress and how the last one ended, for both surfaces. Progress and
- * outcomes arrive as events whoever started the operation, so a row is busy on the surface that did not ask
- * as well. The surface that asked also gets the outcome as its response; it is counted once.
+ * The ops slice: which operations are in progress and how the last one ended (`last`, either surface) and how this
+ * surface's own last one ended (`own`, its response only). Progress and outcomes arrive as events whoever started the
+ * operation, so a row is busy on the surface that did not ask as well. The surface that asked also gets the outcome as
+ * its response; `last` counts it once, and `own` holds it.
  */
 export function OpsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
     const bus = useMessageBus();
@@ -221,6 +234,7 @@ export function OpsProvider({ children }: { children: React.ReactNode }): React.
             // The response is the one terminal message the protocol promises (ADR-007). The host announces the
             // same outcome as `ops/completed`; recorded from here as well, a row cannot stay busy for want of an event.
             dispatch({ type: 'completed', outcome: answer.result as AnyOutcome });
+            dispatch({ type: 'answered', outcome: answer.result as AnyOutcome });
             return answer.result;
         } finally {
             dispatch({ type: 'settled', localId, opId });

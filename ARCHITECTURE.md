@@ -610,8 +610,9 @@ links.
 - `SidebarView.tsx` is the shell (`nuiget-sidebar`): a search box (`sidebar-search-input`) that for now
   filters the installed packages by id, a progress bar while the list is revalidated, a banner for an
   unsupported project and one with "Retry" for an error, the Installed section and the one live region
-  (`status-live`). It announces a first load and, through `describeOutcome` (`outcomes.ts`), how every
-  operation ended, on whichever surface it started. The search box claims the focus when the sidebar's
+  (`status-live`). It announces a first load and, through `describeOutcome` (`outcomes.ts`), how an
+  operation it asked for ended: announced by the surface that asked (the ops slice's `own`, set from the response alone;
+  UX-P4.6), never from the `ops/completed` event, which both surfaces still receive. The search box claims the focus when the sidebar's
   document has the focus and nothing in it holds it, at mount and on every later `focus` of the document (SB14, UX-P3.8;
   every gain since UX-P4.fix-4, the document being retained for the session), except a gain that follows a `pointerdown`
   in the document, so a press on a blank spot leaves the box alone; a mount never takes the focus from an editor. The
@@ -717,7 +718,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   their project's name; Confirm sends `ops/bulkRemove` for one project or `ops/bulkRemoveAllProjects` with the
   project names, closes the dialog and empties the sent part of the set. The rows are busy from the request on
   (ops slice, N61), and leave only with the host's next list: nothing is removed by guessing, so a failed package
-  of a `partial` batch stays where it is. The shell announces every outcome once, from either surface.
+  of a `partial` batch stays where it is. The shell announces an outcome once, on the surface that asked for it (UX-P4.6); an operation the host started
+  itself (the row menu) or a single-project forced restore is spoken by its toast only.
 - **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
   vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
 - **Transitive.** A collapsed level-1 `transitive` group row after every other group; the list is prefetched after the

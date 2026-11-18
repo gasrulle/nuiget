@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
+import type React from 'react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,7 @@ import type { ViewStateStore } from '../shared/viewState';
 import { MainShell, type BrowseView, type DetailsView, type ListView } from './MainShell';
 import { splitBounds } from './useSplitBounds';
 import { InstalledTab } from './features/installed/InstalledTab';
+import { useOpsActions } from '../shared/store/ops';
 
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
@@ -455,15 +457,30 @@ describe('main panel shell', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('The projects could not be listed: no workspace');
     });
 
-    it('announces the outcome of an operation of either surface once', async () => {
-        const { host } = await mountReady();
+    it('announces the outcome of an operation this panel asked for once, and says nothing of one the sidebar asked for (UX-P4.6, A10)', async () => {
+        const host = createFakeHost();
+        let runHere: ReturnType<typeof useOpsActions>['run'] | undefined;
+        function Asker(): React.JSX.Element {
+            runHere = useOpsActions().run;
+            return <p>Installed list</p>;
+        }
+        render(<StoreProvider bus={host.bus}><MainShell installed={() => <Asker />} /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
         const outcome = { opId: 'op1', kind: 'remove' as const, status: 'completed' as const, projectPath: A, packageId: 'Serilog' };
-        // Started on the sidebar: the main panel hears of it as an event and says it.
+        // Started on the sidebar: the main panel hears of it as an event and says nothing.
         await hostSays(() => host.event('ops/completed', outcome));
-        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Serilog'));
-        // The same outcome again (event repeated) is not a second announcement; another operation is.
-        await hostSays(() => host.event('ops/completed', outcome));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        expect(screen.getByTestId('status-live')).not.toHaveTextContent('Uninstalled Serilog');
+        // Asked here: the event, then the response; said once.
+        let settled: Promise<unknown> = Promise.resolve();
+        act(() => {
+            settled = runHere!('ops/remove', { projectPath: A, packageId: 'Moq' }).catch(() => undefined);
+        });
+        const request = host.requests('ops/remove')[0];
         await hostSays(() => host.event('ops/completed', { ...outcome, opId: 'op2', packageId: 'Moq' }));
+        await hostSays(() => host.respond(request, { ...outcome, opId: 'op2', packageId: 'Moq' }));
+        await settled;
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Uninstalled Moq'));
     });
 

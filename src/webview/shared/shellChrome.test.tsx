@@ -5,10 +5,15 @@ import { describe, expect, it } from 'vitest';
 import type { OperationOutcome } from '../../protocol';
 import { createFakeHost, type FakeHost } from './bus/testSupport';
 import { useFirstUsefulRenderMark, useShellChrome } from './shellChrome';
+import { useOpsActions, type OpsActions } from './store/ops';
 import { StoreProvider } from './store/StoreProvider';
+
+/** The surface's `run`, kept by the test so it can start an operation as a feature does. */
+let runHere: OpsActions['run'];
 
 function Chrome({ shown = false }: { shown?: boolean }): React.JSX.Element {
     const { live, searchRef } = useShellChrome();
+    runHere = useOpsActions().run;
     useFirstUsefulRenderMark(shown);
     return <><input aria-label="Search" ref={searchRef} /><output data-testid="said" data-repeat={live.repeat}>{live.message}</output></>;
 }
@@ -38,15 +43,73 @@ describe('useShellChrome', () => {
         expect(screen.getByRole('textbox', { name: 'Search' })).toHaveFocus();
     });
 
-    it('announces how an operation ended, once per outcome', async () => {
-        const host = createFakeHost();
-        render(mount(host));
-        await act(async () => {
-            host.event('ops/completed', OUTCOME);
+    describe('announces an outcome on the surface that asked for it only (UX-P4.6, A10)', () => {
+        const hostSays = (say: () => void): Promise<void> => act(async () => {
+            say();
             await Promise.resolve();
         });
-        const said = screen.getByTestId('said');
-        expect(said.textContent).not.toBe('');
-        expect(said).toHaveAttribute('data-repeat', '1');
+        const said = (): HTMLElement => screen.getByTestId('said');
+        /** Starts an uninstall here as a feature does; the outcome is read through the request's answer. */
+        const askHere = (host: FakeHost) => {
+            let settled: Promise<string> = Promise.resolve('');
+            act(() => {
+                settled = runHere('ops/remove', { projectPath: OUTCOME.projectPath, packageId }).then(() => 'ok', (error: Error) => error.message);
+            });
+            return { settled, request: host.requests('ops/remove').at(-1)! };
+        };
+
+        it('announces how an operation asked here ended, once, when the event comes before the response', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            const { settled, request } = askHere(host);
+            await hostSays(() => host.chunk(request, { opId: 'op1', status: 'queued', kind: 'remove' }));
+            await hostSays(() => host.event('ops/completed', OUTCOME));
+            expect(said()).toHaveAttribute('data-repeat', '0');
+            await hostSays(() => host.respond(request, OUTCOME));
+            expect(await settled).toBe('ok');
+            expect(said().textContent).not.toBe('');
+            expect(said()).toHaveAttribute('data-repeat', '1');
+        });
+
+        it('announces how an operation asked here ended, once, when the response comes before the event', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            const { settled, request } = askHere(host);
+            await hostSays(() => host.respond(request, OUTCOME));
+            expect(await settled).toBe('ok');
+            await hostSays(() => host.event('ops/completed', OUTCOME));
+            expect(said().textContent).not.toBe('');
+            expect(said()).toHaveAttribute('data-repeat', '1');
+        });
+
+        it('says nothing of an operation the other surface asked for', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            await hostSays(() => host.event('ops/progress', { opId: 'op1', status: 'running', kind: 'remove', projectPaths: [OUTCOME.projectPath], packageIds: [packageId] }));
+            await hostSays(() => host.event('ops/completed', OUTCOME));
+            expect(said().textContent).toBe('');
+            expect(said()).toHaveAttribute('data-repeat', '0');
+        });
+
+        it('says nothing of an operation the host started itself (the row menu): its toast speaks', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            await hostSays(() => host.event('ops/progress', { opId: 'host1', status: 'queued', kind: 'remove', projectPaths: [OUTCOME.projectPath], packageIds: [packageId] }));
+            await hostSays(() => host.event('ops/completed', { ...OUTCOME, opId: 'host1' }));
+            expect(said().textContent).toBe('');
+            expect(said()).toHaveAttribute('data-repeat', '0');
+        });
+
+        it('announces the same outcome twice when it is asked for twice', async () => {
+            const host = createFakeHost();
+            render(mount(host));
+            const first = askHere(host);
+            await hostSays(() => host.respond(first.request, OUTCOME));
+            await first.settled;
+            const second = askHere(host);
+            await hostSays(() => host.respond(second.request, { ...OUTCOME, opId: 'op2' }));
+            await second.settled;
+            expect(said()).toHaveAttribute('data-repeat', '2');
+        });
     });
 });

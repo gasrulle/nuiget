@@ -2,9 +2,10 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type ProjectTransitiveChunk, type SessionSnapshot } from '../../../../protocol';
+import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledPackage, type InstalledResult, type ProjectTransitiveChunk, type SessionSnapshot } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, installFakeLayout } from '../../../shared/primitives/testSupport';
+import { describeOutcome } from '../../../shared/store/outcomes';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
@@ -171,6 +172,12 @@ describe('main panel: All Projects', () => {
         expect(screen.getByTestId('transitive-restore-banner').compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
         expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }]);
+
+        // The All Projects Restore is an operation this panel asked for: its outcome is said here, once (UX-P4.6, A10).
+        const restoreOutcome: BulkOutcome = { opId: 'restore1', status: 'completed', results: [], restores: [{ projectPath: B, ok: true }] };
+        await hostSays(() => host.event('ops/completed', restoreOutcome));
+        await hostSays(() => host.respond(host.requests('ops/restore')[0], restoreOutcome));
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent(describeOutcome(restoreOutcome)));
 
         // Closing keeps what was listed; a restore's invalidation asks again.
         await user.click(screen.getByTestId('section-header-transitive'));

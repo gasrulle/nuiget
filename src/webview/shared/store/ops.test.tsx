@@ -205,6 +205,21 @@ describe('ops slice', () => {
         })).toEqual({ kind: 'update', projectPaths: [B], packageIds: ['Moq'] });
     });
 
+    it('the own outcome is the response alone: an event before or after it changes it not, and an event alone sets none (UX-P4.6, A10)', () => {
+        const answered = opsReducer(INITIAL_OPS, { type: 'answered', outcome: removed('op1') });
+        expect(answered.own).toEqual({ outcome: removed('op1'), sequence: 1 });
+        // The event after the response is counted in `last` and keeps `own` as it was.
+        const after = opsReducer(answered, { type: 'completed', outcome: removed('op1') });
+        expect(after.own).toBe(answered.own);
+        expect(after.last?.sequence).toBe(1);
+        // The event first: `ended` swallows the response's `completed`, never its `answered`.
+        const eventFirst = opsReducer(opsReducer(INITIAL_OPS, { type: 'completed', outcome: removed('op2') }), { type: 'completed', outcome: removed('op2') });
+        expect(eventFirst.own).toBeUndefined();
+        expect(opsReducer(eventFirst, { type: 'answered', outcome: removed('op2') }).own).toEqual({ outcome: removed('op2'), sequence: 1 });
+        // The same outcome answered twice is two.
+        expect(opsReducer(answered, { type: 'answered', outcome: removed('op1') }).own?.sequence).toBe(2);
+    });
+
     it('a per-step report keeps every package of the operation busy', () => {
         const asked = opsReducer(INITIAL_OPS, { type: 'asked', localId: 'local:1', progress: progress('local:1', 'queued', { kind: 'update', projectPaths: [A], packageIds: ['Serilog', 'Moq', 'Newtonsoft.Json'] }) });
         const named = opsReducer(asked, { type: 'named', localId: 'local:1', opId: 'op1' });

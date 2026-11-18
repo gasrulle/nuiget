@@ -318,7 +318,7 @@ describe('sidebar: Installed section', () => {
         await waitFor(() => expect(said()).toBe('Uninstall of Serilog failed: The project is gone'));
     });
 
-    it('an operation started on the other surface shows on the row and is announced here', async () => {
+    it('an operation started on the other surface shows on the row and is not announced here (UX-P4.6, A10)', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
         await hostSays(() => host.event('ops/progress', running('op-main', 'serilog')));
         expect(option('Serilog')).toHaveAttribute('aria-busy', 'true');
@@ -328,7 +328,6 @@ describe('sidebar: Installed section', () => {
         expect(option('Serilog')).toHaveAccessibleDescription('Uninstalling');
         await hostSays(() => host.event('ops/completed', removed('op-main', 'Serilog')));
         expect(option('Serilog')).not.toHaveAttribute('aria-busy');
-        await waitFor(() => expect(said()).toBe('Uninstalled Serilog'));
 
         // Not every operation on a row is an uninstall.
         await hostSays(() => host.event('ops/progress', running('op-update', 'Moq', { kind: 'update' })));
@@ -344,19 +343,21 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.event('ops/progress', { opId: 'op-unnamed', status: 'running', projectPaths: [A], packageIds: ['Moq'] }));
         expect(option('Moq')).toHaveAccessibleDescription('In progress');
         await hostSays(() => host.event('ops/completed', removed('op-unnamed', 'Moq')));
-        // The same words for another operation are said again.
-        await hostSays(() => host.event('ops/completed', removed('op-main-2', 'Serilog')));
-        expect(said()).toBe('');
-        await waitFor(() => expect(said()).toBe('Uninstalled Serilog'));
+        // The surface that asked says how they ended; here nothing is said, also two frames later.
+        await act(async () => {
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        });
+        expect(said()).not.toMatch(/Uninstalled|Updated|Installed/);
     });
 
     it('revalidate without blanking: the rows stay, the list is busy and a progress bar shows until the new list is there', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
         // The Installed pane's bar; the Updates pane has its own while its check is unanswered (UX-P3.10).
         expect(screen.queryByRole('progressbar', { name: /installed packages/ })).toBeNull();
-        // Something else was said since the first load, so that a second "Loading" would show.
-        await hostSays(() => host.event('ops/completed', removed('op-main', 'xunit')));
-        await waitFor(() => expect(said()).toBe('Uninstalled xunit'));
+        // Something else was said since the first load, so that a second "Loading" would show: an uninstall asked here.
+        await userEvent.click(within(row('Moq')).getByTestId('row-action-uninstall'));
+        await hostSays(() => host.respond(removals(host)[0], removed('op-main', 'Moq')));
+        await waitFor(() => expect(said()).toBe('Uninstalled Moq'));
 
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
         expect(host.requests('installed/get')).toHaveLength(2);
@@ -370,7 +371,7 @@ describe('sidebar: Installed section', () => {
         await act(async () => {
             await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         });
-        expect(said()).toBe('Uninstalled xunit');
+        expect(said()).toBe('Uninstalled Moq');
 
         await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, [pkg('Serilog'), pkg('Moq'), pkg('xunit')]), 2));
         expect(names()).toEqual(['Moq', 'Serilog', 'xunit']);
