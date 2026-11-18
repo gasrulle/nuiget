@@ -176,6 +176,22 @@ export function busyPackages(state: OpsState): ReadonlySet<string> {
     return keys;
 }
 
+/**
+ * The projects a restore in progress (queued or running, started on either surface) is about, as their paths were sent.
+ * Keyed on the operation's kind: an edit's own restore step reports `restoring` too and is no restore (UX-P4.fix-10).
+ */
+export function restoringProjects(state: OpsState): ReadonlySet<string> {
+    const paths = new Set<string>();
+    for (const progress of state.active.values()) {
+        if (progress.kind === 'restore') {
+            for (const projectPath of progress.projectPaths ?? []) {
+                paths.add(projectPath);
+            }
+        }
+    }
+    return paths;
+}
+
 export interface OpsView extends OpsState {
     /** Whether an operation in progress, started on either surface, touches this package of this project. */
     isPackageBusy: (projectPath: string, packageId: string) => boolean;

@@ -53,6 +53,13 @@ const transitiveRows = (): HTMLElement[] => [...screen.getByTestId('installed-li
 const groupItem = (id: string): HTMLElement => screen.getByTestId(`group-row-${id}`).querySelector('[role="treeitem"]') as HTMLElement;
 const uninstallSelected = (): HTMLElement => screen.getByTestId('uninstall-selected-button');
 const said = (): string => screen.getByTestId('status-live').textContent ?? '';
+/** A restore's bulk outcome in the workflow's shape: one `results` and one `restores` entry per project (UX-P4.fix-10). */
+const restoreOf = (opId: string, status: BulkOutcome['status'], steps: Array<{ projectPath: string; ok: boolean; error?: string }>): BulkOutcome => ({
+    opId,
+    status,
+    results: steps.map(step => ({ opId, kind: 'restore', status: step.ok ? 'completed' : 'failed', projectPath: step.projectPath, restore: { ok: step.ok, error: step.error }, message: step.error })),
+    restores: steps.map(step => ({ projectPath: step.projectPath, ok: step.ok, error: step.error })),
+});
 
 describe('main panel: Installed tab', () => {
     let removeLayout: () => void;
@@ -321,7 +328,7 @@ describe('main panel: Installed tab', () => {
         }]);
     });
 
-    it('the Transitive group row asks on first expand, shows the restore banner above the tree when the assets file is missing, and Restore asks with forceRestore', async () => {
+    it('the Transitive group row asks on first expand, shows the restore banner above the tree when the assets file is missing, and Restore asks ops/restore for the project (UX-P4.fix-10)', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         // One tree: the Transitive group row follows the direct rows (P9.fix-2, D48).
@@ -335,8 +342,26 @@ describe('main panel: Installed tab', () => {
         const banner = screen.getByTestId('transitive-restore-banner');
         expect(screen.getByTestId('installed-list').contains(banner)).toBe(false);
         expect(banner.compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.queryByTestId('transitive-progress')).toBeNull();
         await user.click(within(banner).getByRole('button', { name: 'Restore' }));
-        expect(host.requests('transitive/get')[1].payload).toEqual({ projectPath: A, forceRestore: true });
+        // An operation of this panel's (the ops slice), never a transitive/get with forceRestore.
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [A] }]);
+        expect(host.requests('transitive/get')).toHaveLength(1);
+        // While it is queued or running the Transitive group says so: its bar and its spinner; the banner stays as it is.
+        expect(screen.getByTestId('transitive-progress')).toHaveAccessibleName('Restoring the project');
+        expect(screen.getByTestId('group-row-transitive').querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' })).toBeEnabled();
+        // A second press starts nothing and says why.
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        expect(host.requests('ops/restore')).toHaveLength(1);
+        await waitFor(() => expect(said()).toBe('A restore of this project is running.'));
+        // Settled: the host's invalidation of the project's transitive key lists again, plainly.
+        const outcome = restoreOf('restore1', 'completed', [{ projectPath: A, ok: true }]);
+        await hostSays(() => host.event('ops/completed', outcome));
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await hostSays(() => host.respond(host.requests('ops/restore')[0], outcome));
+        expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }, { projectPath: A }]);
+        expect(screen.getByTestId('transitive-progress')).toHaveAccessibleName('Loading transitive packages');
         const restored: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net10.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
         await hostSays(() => host.respond(host.requests('transitive/get')[1], restored, 2));
         expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
@@ -347,21 +372,41 @@ describe('main panel: Installed tab', () => {
         expect(transitiveRows()).toHaveLength(1);
     });
 
-    it('a single-project Restore (forceRestore) is said by no webview: its toast speaks (UX-P4.6, A10, design-advisor ruling of 2026-11-18)', async () => {
+    it('a single-project Restore is an operation this panel asked for: its outcome is said here, once (UX-P4.fix-10, A10)', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
         await user.click(screen.getByTestId('section-header-transitive'));
         await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, frameworks: [], dataSourceAvailable: false }, 1));
         await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
-        expect(host.requests('transitive/get')[1].payload).toEqual({ projectPath: A, forceRestore: true });
-        const restoreOutcome: BulkOutcome = { opId: 'restore1', status: 'completed', results: [], restores: [{ projectPath: A, ok: true }] };
-        await hostSays(() => host.event('ops/completed', restoreOutcome));
-        await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, frameworks: [], dataSourceAvailable: true }, 2));
+        expect(host.requests('transitive/get').every(request => !('forceRestore' in request.payload))).toBe(true);
+        const done = restoreOf('restore1', 'completed', [{ projectPath: A, ok: true }]);
+        // The event and the response of the same operation: one sentence.
+        await hostSays(() => host.event('ops/completed', done));
+        await hostSays(() => host.respond(host.requests('ops/restore')[0], done));
+        await waitFor(() => expect(said()).toBe('Restored App'));
+        const live = screen.getByTestId('status-live');
+        const sentences = live.childNodes.length;
         await act(async () => {
             await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         });
+        expect(said()).toBe('Restored App');
+        expect(live.childNodes.length).toBe(sentences);
         expect(said()).not.toContain('operations completed');
-        expect(said()).not.toContain('Restored');
+
+        // A failed restore: its reason is said; the warning banner stays, its Restore the retry; no error banner.
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        const failed = restoreOf('restore2', 'failed', [{ projectPath: A, ok: false, error: 'NU1301' }]);
+        await hostSays(() => host.event('ops/completed', failed));
+        await hostSays(() => host.respond(host.requests('ops/restore')[1], failed));
+        await waitFor(() => expect(said()).toBe('Restore of App failed: NU1301'));
+        expect(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' })).toBeInTheDocument();
+        expect(screen.queryByTestId('transitive-error')).toBeNull();
+        expect(screen.queryByTestId('transitive-progress')).toBeNull();
+
+        // A request that got no answer: the panel says the request failed.
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        await hostSays(() => host.fail(host.requests('ops/restore')[2], 'failed', 'The queue is closed'));
+        await waitFor(() => expect(said()).toBe('Restore failed: The queue is closed'));
     });
 
     describe('the Delete key asks before it uninstalls (ADR-013 Decision 3, UX-P4.2a)', () => {

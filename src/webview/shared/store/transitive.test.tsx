@@ -75,21 +75,18 @@ describe('transitive slice', () => {
         expect(host.cancelled()).toContain(first.id);
     });
 
-    it('restore asks transitive/get with forceRestore once and the rows stay until the answer', async () => {
+    it('the slice never asks with forceRestore: an invalidation of the project\'s transitive key lists again and the rows stay until the answer', async () => {
         const host = await mount();
         await hostSays(() => current.enable());
         await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive(A, [], { dataSourceAvailable: false, frameworks: [] }), 1));
-        await hostSays(() => current.restore());
-        expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }, { projectPath: A, forceRestore: true }]);
+        // A restore is the feature's ops/restore (UX-P4.fix-10); what reaches the slice is the host's invalidation after it.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        expect(host.requests('transitive/get').map(request => request.payload)).toEqual([{ projectPath: A }, { projectPath: A }]);
         expect(text()).toBe('true ready - true meta:0');
         await hostSays(() => host.respond(host.requests('transitive/get')[1], transitive(A, ['X']), 2));
+        expect(text()).toBe('true ready X false meta:0');
         await hostSays(() => current.refresh());
-        // Once: the next request is a plain listing again.
-        expect(host.requests('transitive/get')[2].payload).toEqual({ projectPath: A });
-        // Restore on a closed section opens it and asks with forceRestore.
-        await hostSays(() => host.event('session/changed', snapshot(2, B)));
-        await hostSays(() => current.restore());
-        expect(host.requests('transitive/get').at(-1)?.payload).toEqual({ projectPath: B, forceRestore: true });
+        expect(host.requests('transitive/get').every(request => !('forceRestore' in request.payload))).toBe(true);
     });
 
     it('transitive/metadata answering unsupported is no metadata, and the rows come from transitive/get alone', async () => {

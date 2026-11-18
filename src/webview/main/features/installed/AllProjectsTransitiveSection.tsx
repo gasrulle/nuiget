@@ -11,11 +11,12 @@ type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 /**
  * The transitive packages of every project in All Projects, aggregated under one group row (interaction model §3). It is
  * closed until opened; opening it asks the stream, which then stays asked while All Projects is committed (closing
- * keeps what was listed). Projects without a restored assets file are named in a banner with Restore, above the tree. A
+ * keeps what was listed). Projects without a restored assets file are named in a banner with Restore, above the tree; while a
+ * restore of one of them is queued or running (`restoring`) a bar says so (UX-P4.fix-10). A
  * row shows how many projects have it (the origins are its description through that badge) and opens a read-only details
  * view with one block per project.
  */
-export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boolean, restore: (projectPaths: string[]) => void): { items: TreeItem[]; message: React.ReactNode } {
+export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boolean, restore: (projectPaths: string[]) => void, restoring: boolean): { items: TreeItem[]; message: React.ReactNode } {
     const { transitive } = all;
     const items: TreeItem[] = [{ kind: 'group', id: 'transitive', level: 1, title: 'Transitive Packages', variant: 'group' }];
     if (!expanded) {
@@ -46,6 +47,7 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
         items,
         message: (
             <>
+                {restoring ? <ProgressBar label="Restoring projects" data-testid="transitive-progress" /> : null}
                 {unrestored.length > 0 ? (
                     <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: () => restore(unrestored.map(chunk => chunk.projectPath)) }}>
                         {`Not restored, so their transitive packages are not known: ${unrestored.map(chunk => chunk.projectName).join(', ')}.`}
@@ -63,6 +65,6 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
 }
 
 /** The content of the aggregate's group row. */
-export function allProjectsTransitiveGroupContent(item: GroupItem, placement: GroupPlacement, all: AllProjectsState): React.JSX.Element {
-    return <SectionHeader presentation="content" title={item.title} testKey={item.id} expanded={placement.expanded} variant="group" busy={placement.expanded && all.transitive.status === 'loading'} />;
+export function allProjectsTransitiveGroupContent(item: GroupItem, placement: GroupPlacement, all: AllProjectsState, restoring: boolean): React.JSX.Element {
+    return <SectionHeader presentation="content" title={item.title} testKey={item.id} expanded={placement.expanded} variant="group" busy={restoring || (placement.expanded && all.transitive.status === 'loading')} />;
 }

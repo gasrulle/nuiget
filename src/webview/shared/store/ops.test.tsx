@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { BulkOutcome, OperationOutcome, OperationProgress } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
-import { busyPackages, INITIAL_OPS, isBulkOutcome, OpsProvider, opsReducer, touchedBy, useOps, useOpsActions, type OpsState } from './ops';
+import { busyPackages, INITIAL_OPS, isBulkOutcome, OpsProvider, opsReducer, restoringProjects, touchedBy, useOps, useOpsActions, type OpsState } from './ops';
 
 const A = '/w/A/A.csproj';
 const B = '/w/B/B.csproj';
@@ -175,6 +175,35 @@ describe('ops slice', () => {
         // A report that trails the response does not bring it back.
         await hostSays(() => host.event('ops/progress', progress('op7', 'running', { kind: 'remove', projectPaths: [A], packageIds: ['Serilog'] })));
         expect(text('serilog-a')).toBe('false');
+    });
+
+    it('restoringProjects: a restore is in the set from the call, through queued and restoring, until it settles; an edit\'s restoring step is not (UX-P4.fix-10)', async () => {
+        const host = createFakeHost();
+        function Restoring() {
+            const ops = useOps();
+            const { run } = useOpsActions();
+            return (
+                <div>
+                    <output data-testid="restoring">{[...restoringProjects(ops)].join(',')}</output>
+                    <button type="button" onClick={() => { run('ops/restore', { projectPaths: [A] }).catch(() => undefined); }}>Restore</button>
+                </div>
+            );
+        }
+        render(<MessageBusProvider bus={host.bus}><OpsProvider><Restoring /></OpsProvider></MessageBusProvider>);
+        expect(text('restoring')).toBe('');
+        await hostSays(() => screen.getByRole('button', { name: 'Restore' }).click());
+        // From the call, before the host said anything (N61).
+        expect(text('restoring')).toBe(A);
+        const [request] = host.requests('ops/restore');
+        await hostSays(() => host.chunk(request, progress('op9', 'queued')));
+        expect(text('restoring')).toBe(A);
+        await hostSays(() => host.event('ops/progress', progress('op9', 'restoring', { kind: 'restore', projectPaths: [A], packageIds: [] })));
+        expect(text('restoring')).toBe(A);
+        await hostSays(() => host.respond(request, { opId: 'op9', status: 'completed', results: [{ opId: 'op9', kind: 'restore', status: 'completed', projectPath: A, restore: { ok: true } }], restores: [{ projectPath: A, ok: true }] }));
+        expect(text('restoring')).toBe('');
+        // An install's own restore step reports `restoring` too: no restore of the project.
+        const edit = opsReducer(INITIAL_OPS, { type: 'progress', progress: progress('op10', 'restoring', { kind: 'install', projectPaths: [B], packageIds: ['Serilog'] }) });
+        expect(restoringProjects(edit).size).toBe(0);
     });
 
     it('a request without an answer leaves nothing busy', async () => {

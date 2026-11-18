@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
 import { whyNotRemovable } from '../../../shared/installed/rules';
@@ -7,7 +7,7 @@ import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
-import { useOps, useOpsActions } from '../../../shared/store/ops';
+import { restoringProjects, useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
@@ -46,7 +46,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const transitive = useTransitive();
     const all = useAllProjects();
     const { projects } = useProjects();
-    const { isPackageBusy } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { select } = useDetailsActions();
     // The current row, as its id in the tree.
@@ -186,9 +187,24 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? section.projectPath).slice(PROJECT_GROUP.length);
 
     const transitiveExpanded = transitiveOpen && (allMode ? all.transitive.enabled : transitive.enabled);
+    // A restore queued or running, from the ops slice (UX-P4.fix-10): the Transitive bar and spinner say it, a second press starts nothing.
+    const restoringPaths = useMemo(() => restoringProjects(ops), [ops]);
+    const singleRestoring = !allMode && transitive.projectPath !== null && restoringPaths.has(transitive.projectPath);
+    const allRestoring = allMode && [...all.transitive.chunks.values()].some(chunk => !chunk.dataSourceAvailable && restoringPaths.has(chunk.projectPath));
+    const restoreProjects = useCallback((projectPaths: string[]): void => {
+        const fresh = projectPaths.filter(projectPath => !restoringPaths.has(projectPath));
+        if (fresh.length === 0) {
+            announce(projectPaths.length === 1 && !allMode ? 'A restore of this project is running.' : 'A restore of these projects is running.');
+            return;
+        }
+        // The outcome is announced from the ops slice; here only a request that got no answer.
+        run('ops/restore', { projectPaths: fresh }).catch((error: unknown) => announce(`Restore failed: ${error instanceof Error ? error.message : String(error)}`));
+    }, [restoringPaths, allMode, run, announce]);
     const transitivePart = useMemo(
-        () => (allMode ? allProjectsTransitiveTree(all, transitiveExpanded, projectPaths => { run('ops/restore', { projectPaths }).catch(() => undefined); }) : transitiveTree(transitive, transitiveExpanded, collapsed)),
-        [allMode, all, transitive, transitiveExpanded, collapsed, run],
+        () => (allMode
+            ? allProjectsTransitiveTree(all, transitiveExpanded, restoreProjects, allRestoring)
+            : transitiveTree(transitive, transitiveExpanded, collapsed, projectPath => restoreProjects([projectPath]), singleRestoring)),
+        [allMode, all, transitive, transitiveExpanded, collapsed, restoreProjects, allRestoring, singleRestoring],
     );
 
     const items = useMemo((): TreeItem[] => {
@@ -326,7 +342,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                 return null;
             }
             if (item.id === 'transitive' || item.id.startsWith('transitive-')) {
-                return allMode ? allProjectsTransitiveGroupContent(item, placement, all) : transitiveGroupContent(item, placement, transitive);
+                return allMode ? allProjectsTransitiveGroupContent(item, placement, all, allRestoring) : transitiveGroupContent(item, placement, transitive, singleRestoring);
             }
             const { section } = item;
             const result = section?.result;
@@ -344,7 +360,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                 />
             );
         },
-    }), [allMode, all, collapsed, enableAllTransitive, enableTransitive, transitive, transitiveExpanded]);
+    }), [allMode, all, allRestoring, collapsed, enableAllTransitive, enableTransitive, singleRestoring, transitive, transitiveExpanded]);
 
     let body: React.ReactNode;
     if (sections.length === 0) {

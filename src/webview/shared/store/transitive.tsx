@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, resourceKeys, type PackageMetadataLite, type ProtocolRequestError, type TransitiveResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
@@ -20,8 +20,6 @@ export interface TransitiveState {
     revalidating: boolean;
     /** The section was opened: from now on the list of this project is asked for and kept current. */
     enable: () => void;
-    /** Restore the project, then list again: the next request asks with `forceRestore`. */
-    restore: () => void;
     refresh: () => void;
 }
 
@@ -54,7 +52,7 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
     useEffect(() => {
         setEnabledFor(previous => (previous === projectPath ? previous : null));
     }, [projectPath]);
-    // The prefetch: once the project's installed list is ready, never for All Projects and never with a restore.
+    // The prefetch: once the project's installed list is ready, never for All Projects.
     const installedReady = installed.status === 'ready' && installed.projectPath === projectPath;
     useEffect(() => {
         if (!prefetch || projectPath === null || enabled || !installedReady) {
@@ -63,15 +61,10 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
         const timer = setTimeout(() => setEnabledFor(projectPath), TRANSITIVE_PREFETCH_MS);
         return () => clearTimeout(timer);
     }, [prefetch, projectPath, enabled, installedReady]);
-    // Set by `restore` for exactly the next request.
-    const forceRestore = useRef(false);
     const [metadata, setMetadata] = useState<{ result: TransitiveResult; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
 
-    const requester = useCallback((signal: AbortSignal) => {
-        const force = forceRestore.current;
-        forceRestore.current = false;
-        return bus.request('transitive/get', force ? { projectPath: projectPath as string, forceRestore: true } : { projectPath: projectPath as string }, { signal });
-    }, [bus, projectPath]);
+    // A restore is an operation of the feature's (`ops/restore`); its invalidation of the key lists again (UX-P4.fix-10).
+    const requester = useCallback((signal: AbortSignal) => bus.request('transitive/get', { projectPath: projectPath as string }, { signal }), [bus, projectPath]);
 
     const resource = useResource<TransitiveResult>(enabled ? resourceKeys.transitive(projectPath) : null, requester);
     const { refresh } = resource;
@@ -100,14 +93,6 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
     }, [bus, result]);
 
     const enable = useCallback((): void => setEnabledFor(projectPath), [projectPath]);
-    const restore = useCallback((): void => {
-        forceRestore.current = true;
-        if (enabled) {
-            refresh();
-        } else {
-            setEnabledFor(projectPath);
-        }
-    }, [enabled, projectPath, refresh]);
 
     const state = useMemo<TransitiveState>(() => ({
         projectPath,
@@ -118,9 +103,8 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
         error: resource.error,
         revalidating: resource.revalidating,
         enable,
-        restore,
         refresh,
-    }), [projectPath, enabled, resource.status, result, metadata, resource.error, resource.revalidating, enable, restore, refresh]);
+    }), [projectPath, enabled, resource.status, result, metadata, resource.error, resource.revalidating, enable, refresh]);
 
     return <TransitiveContext.Provider value={state}>{children}</TransitiveContext.Provider>;
 }

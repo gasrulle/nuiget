@@ -299,7 +299,7 @@ project has several and one block per project in All Projects; no version select
 | `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
 | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' 2 px progress bar (over the list area's top edge: alone on a first search, over the rows while it asks again), empty state ("No results for "x"."; never when a source could not be searched, which `browse-unavailable-banner` says) and inline error with Retry (UX-P3.2) |
 | `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching..." row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
-| `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading and revalidating, above the tree), empty state ("No transitive dependencies.") and inline error |
+| `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading, revalidating and while a restore of the project is queued or running, above the tree; UX-P4.fix-10), empty state ("No transitive dependencies.") and inline error |
 
 State markers (§4) and layer roots:
 

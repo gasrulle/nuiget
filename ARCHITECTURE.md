@@ -136,7 +136,7 @@ the output channel. `registerQueueStatus` keeps the queue's status bar item: wha
 ("Installing Serilog", "Updating packages", "Restoring projects"), and how many wait (", 2 queued"); a row or button whose
 operation waits behind a running one reads "Queued" (`busyText`). A bulk operation, the one whose progress reports carry `total`, opens one progress notification at its
 first such report (`N of M: <detail>`, `Restoring N of M: …`) that closes with its outcome; a single operation and a
-rejected ticket open none. A one-project `ops/restore` (the transitive banner's forced restore) reports `total: 1`, so it
+rejected ticket open none. A one-project `ops/restore` (the transitive banner's Restore, UX-P4.fix-10) reports `total: 1`, so it
 opens a "Restoring projects" notification and ends with `Restored 1 project.`
 
 ### Reading through the Catalog
@@ -514,8 +514,9 @@ starts; the other slices ask when they have something to ask for.
 - `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
   the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects; never in the sidebar, whose
   entry passes `prefetch={false}` to `StoreProvider`, P9.fix-1, N87) or at once when the section is opened
-  first (`enable()`); another project starts again. `restore()` asks the next `transitive/get` with
-  `forceRestore`, once. The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
+  first (`enable()`); another project starts again. The slice never sends `forceRestore` (it stays in the protocol until
+  UX-P4.fix-11): the banner's Restore is the feature's `ops/restore` through the ops slice, and the host's invalidation of
+  `transitive:<path>` after it lists again (UX-P4.fix-10). The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
   answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
 - `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per
   project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
@@ -726,7 +727,10 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   project names, closes the dialog and empties the sent part of the set. The rows are busy from the request on
   (ops slice, N61), and leave only with the host's next list: nothing is removed by guessing, so a failed package
   of a `partial` batch stays where it is. The shell announces an outcome once, on the surface that asked for it (UX-P4.6); a single success the host started
-  itself (the row menu) is said in the status bar (UX-P4.7), a single-project forced restore by its summary toast.
+  itself (the row menu) is said in the status bar (UX-P4.7). The transitive banner's Restore is an `ops/restore` the main panel
+  asked for (UX-P4.fix-10): it says the outcome in the words of a single operation ("Restored App", "Restored 2 projects"),
+  and while `restoringProjects` (the ops slice) holds the project the Transitive group shows its bar and spinner; the
+  summary toast stays.
 - **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
   vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
 - **Transitive.** A collapsed level-1 `transitive` group row after every other group; the list is prefetched after the

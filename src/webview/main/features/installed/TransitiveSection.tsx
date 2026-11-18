@@ -19,9 +19,10 @@ const ERRORS: Record<string, string> = {
  * shortly after the installed list. The collapsed group row reads `Transitive Packages (N)` with the target framework; a
  * project with several frameworks has a group row per framework inside. Rows show the icon, authors and Verified mark of
  * the lite metadata and no description (D14) and open a read-only details view with what requires them. When the project
- * has not been restored, a banner above the tree offers Restore.
+ * has not been restored, a banner above the tree offers Restore, which runs `restore` (the feature's `ops/restore`); while a restore
+ * of the project is queued or running (`restoring`) the bar says so (UX-P4.fix-10).
  */
-export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>): { items: TreeItem[]; message: React.ReactNode } {
+export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>, restore: (projectPath: string) => void, restoring: boolean): { items: TreeItem[]; message: React.ReactNode } {
     if (state.projectPath === null) {
         return { items: [], message: null };
     }
@@ -62,7 +63,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
             : <Skeleton density="comfortable" />;
     } else if (!result.dataSourceAvailable) {
         message = (
-            <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: state.restore }}>
+            <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: () => restore(projectPath) }}>
                 The project has not been restored, so its transitive packages are not known.
             </Banner>
         );
@@ -71,12 +72,12 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
     } else if (total === 0) {
         message = <EmptyState message="No transitive dependencies." data-testid="transitive-empty" />;
     }
-    const loading = (result === undefined && !state.error) || state.revalidating;
-    return { items, message: loading ? <><ProgressBar label="Loading transitive packages" data-testid="transitive-progress" />{message}</> : message };
+    const loading = restoring || (result === undefined && !state.error) || state.revalidating;
+    return { items, message: loading ? <><ProgressBar label={restoring ? 'Restoring the project' : 'Loading transitive packages'} data-testid="transitive-progress" />{message}</> : message };
 }
 
 /** The content of a transitive group row: the framework as a badge where the row stands for one. */
-export function transitiveGroupContent(item: GroupItem, placement: GroupPlacement, state: TransitiveState): React.JSX.Element {
+export function transitiveGroupContent(item: GroupItem, placement: GroupPlacement, state: TransitiveState, restoring: boolean): React.JSX.Element {
     return (
         <SectionHeader
             presentation="content"
@@ -85,7 +86,7 @@ export function transitiveGroupContent(item: GroupItem, placement: GroupPlacemen
             expanded={placement.expanded}
             variant={item.level === 1 ? 'group' : 'level'}
             count={item.count}
-            busy={state.status === 'loading' || state.revalidating}
+            busy={restoring || state.status === 'loading' || state.revalidating}
             badges={item.tfm === undefined ? undefined : <Badge label={item.tfm} title={`Target framework ${item.tfm}`} />}
         />
     );

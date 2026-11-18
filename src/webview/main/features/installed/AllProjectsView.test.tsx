@@ -170,19 +170,49 @@ describe('main panel: All Projects', () => {
         expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
         expect(screen.getByTestId('installed-list').contains(screen.getByTestId('transitive-restore-banner'))).toBe(false);
         expect(screen.getByTestId('transitive-restore-banner').compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.queryByTestId('transitive-progress')).toBeNull();
         await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
         expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }]);
+        // While it is queued or running the aggregate says so: its bar, above the banner, which stays as it is (UX-P4.fix-10).
+        expect(screen.getByTestId('transitive-progress')).toHaveAccessibleName('Restoring projects');
+        // A second press starts nothing and says why.
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        expect(host.requests('ops/restore')).toHaveLength(1);
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('A restore of these projects is running.'));
 
-        // The All Projects Restore is an operation this panel asked for: its outcome is said here, once (UX-P4.6, A10).
-        const restoreOutcome: BulkOutcome = { opId: 'restore1', status: 'completed', results: [], restores: [{ projectPath: B, ok: true }] };
+        // The All Projects Restore is an operation this panel asked for: its outcome is said here, once (UX-P4.6, A10), in the
+        // words of a single operation (UX-P4.fix-10).
+        const restoreOutcome: BulkOutcome = { opId: 'restore1', status: 'completed', results: [{ opId: 'restore1', kind: 'restore', status: 'completed', projectPath: B, restore: { ok: true } }], restores: [{ projectPath: B, ok: true }] };
         await hostSays(() => host.event('ops/completed', restoreOutcome));
         await hostSays(() => host.respond(host.requests('ops/restore')[0], restoreOutcome));
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent(describeOutcome(restoreOutcome)));
+        expect(screen.getByTestId('status-live')).toHaveTextContent('Restored Lib');
+        expect(screen.queryByTestId('transitive-progress')).toBeNull();
 
         // Closing keeps what was listed; a restore's invalidation asks again.
         await user.click(screen.getByTestId('section-header-transitive'));
         await hostSays(() => host.invalidate([[resourceKeys.transitive(B), 2]]));
         expect(host.requests('allProjects/transitive')).toHaveLength(2);
+    });
+
+    it('All Projects Restore asks only for the projects no restore already holds, and says nothing while it starts one (UX-P4.fix-10)', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll(PROJECTS.slice(0, 2));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const stream = host.requests('allProjects/transitive')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', [], false) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], false) }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        const before = screen.getByTestId('status-live').textContent;
+        // A restore of Lib another surface started is queued: the aggregate shows its bar, and Restore asks for App alone.
+        await hostSays(() => host.event('ops/progress', { opId: 'elsewhere', status: 'queued', kind: 'restore', projectPaths: [B], packageIds: [] }));
+        expect(screen.getByTestId('transitive-progress')).toHaveAccessibleName('Restoring projects');
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [A] }]);
+        await act(async () => {
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        });
+        expect(screen.getByTestId('status-live').textContent).toBe(before);
     });
 
     it('an sdk-too-old project lists its packages read-only under the Unsupported banner and takes no bulk selection', async () => {

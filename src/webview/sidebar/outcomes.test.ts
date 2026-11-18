@@ -50,4 +50,24 @@ describe('describeOutcome', () => {
         expect(describeOutcome(bulk({ status: 'failed', results: [single({ status: 'failed' })] }))).toBe('0 of 1 operations completed');
         expect(describeOutcome(bulk({ status: 'rejected', results: [], message: 'Five operations are waiting' }))).toBe('The operation was not started: Five operations are waiting');
     });
+
+    it('a restore\'s bulk outcome names the project or counts the projects (UX-P4.fix-10)', () => {
+        const restore = (status: BulkOutcome['status'], steps: Array<{ projectPath: string; ok: boolean; error?: string; skipped?: boolean }>, withResults = true): BulkOutcome => ({
+            opId: 'r', status,
+            results: withResults ? steps.map(step => single({ opId: 'r', kind: 'restore', packageId: undefined, projectPath: step.projectPath, status: step.ok ? 'completed' : 'failed', restore: { ok: step.ok, error: step.error }, message: step.error })) : [],
+            restores: steps.map(step => ({ projectPath: step.projectPath, ok: step.ok, error: step.error, skipped: step.skipped })),
+        });
+        const app = '/w/App/App.csproj';
+        const lib = '/w/Lib/Lib.csproj';
+        expect(describeOutcome(restore('completed', [{ projectPath: app, ok: true }]))).toBe('Restored App');
+        expect(describeOutcome(restore('completed', [{ projectPath: app, ok: true }, { projectPath: lib, ok: true }]))).toBe('Restored 2 projects');
+        expect(describeOutcome(restore('cancelled', [{ projectPath: app, ok: false, skipped: true, error: 'Cancelled' }], false))).toBe('Restore of App was cancelled');
+        expect(describeOutcome(restore('cancelled', [{ projectPath: app, ok: true }, { projectPath: lib, ok: false, skipped: true }]))).toBe('Restore of 2 projects was cancelled');
+        expect(describeOutcome(restore('failed', [{ projectPath: app, ok: false, error: 'NU1301' }]))).toBe('Restore of App failed: NU1301');
+        expect(describeOutcome(restore('failed', [{ projectPath: app, ok: false }]))).toBe('Restore of App failed');
+        expect(describeOutcome(restore('partial', [{ projectPath: app, ok: true }, { projectPath: lib, ok: false, error: 'NU1301' }]))).toBe('Restored 1 of 2 projects');
+        expect(describeOutcome(restore('failed', [{ projectPath: app, ok: false }, { projectPath: lib, ok: false }]))).toBe('Restored 0 of 2 projects');
+        // A bulk edit, with the restores after its edits, keeps the count.
+        expect(describeOutcome({ opId: 'b', status: 'completed', results: [single({ opId: 'a' })], restores: [{ projectPath: app, ok: true }] })).toBe('1 of 1 operations completed');
+    });
 });
