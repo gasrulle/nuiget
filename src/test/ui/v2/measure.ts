@@ -394,6 +394,11 @@ export interface RuleDefinition {
      * `pendingStates` (design-advisor ruling of 2026-10-24, UX-P0.14, V50). A width matches within 1 px.
      */
     pendingWidths?: Readonly<Record<number, string>>;
+    /**
+     * Themes a `hard` scope does not hold in yet, with the item that makes it hold: the theme axis of `pendingStates`
+     * (design-advisor follow-up 1 of 2026-11-18, UX-P4.fix-13: DS-STATE-6's spinner colour in the two 2026 themes).
+     */
+    pendingThemes?: Readonly<Record<string, string>>;
     /** SPEC: the ids a later item owns, printed and left out of the verdict (UX-P2.8a). */
     pendingIds?: Readonly<Record<string, string>>;
     /**
@@ -734,7 +739,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
-    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': { pending: 'P4.fix-13' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
+    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'], pendingThemes: { 'dark-2026': 'P4.fix-15', 'light-2026': 'P4.fix-15' } }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
@@ -4597,6 +4602,11 @@ function pendingWidth(definition: RuleDefinition, width: number): string | undef
     return listed?.[1];
 }
 
+/** The item a `hard` scope waits for in a capture's theme (`pendingThemes`), or undefined. */
+function pendingTheme(definition: RuleDefinition, theme: string | undefined): string | undefined {
+    return theme === undefined ? undefined : definition.pendingThemes?.[theme];
+}
+
 /** WebDriver returns the collector's `undefined` as `null`; the rules read absent as `undefined`. */
 function withoutNulls<T>(value: T): T {
     if (value === null) {
@@ -4632,7 +4642,7 @@ export function measureLines(state: string, collected: Layout, look: 'modern' | 
                 continue;
             }
             // A hard scope that a state does not hold in yet prints as pending on the item named for that state.
-            const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width ?? layout.width);
+            const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width ?? layout.width) ?? pendingTheme(definition, theme);
             const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
             // A scope with a status and no helper is never silent: it prints, and a hard one fails.
             const result = evaluate(definition, scope, state, layout, look, workbench, chromeReference, spec, laneWorkbench, lane) ?? { value: `${NOT_MEASURABLE} (no helper)`, pass: false };
@@ -4659,7 +4669,7 @@ export function pixelRuleLines(state: string, width: number, theme: string, lane
         if (declared === undefined || definition.scopeStates?.[group]?.includes(state) === false || definition.scopeExceptStates?.[group]?.includes(state) === true) {
             continue;
         }
-        const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width);
+        const later = definition.pendingStates?.[state] ?? pendingWidth(definition, width) ?? pendingTheme(definition, theme);
         const status: RuleStatus = declared === 'hard' && later !== undefined ? { pending: later } : declared;
         const result = results[definition.id] ?? { value: `${NOT_MEASURABLE} (no pixels)`, pass: false };
         lines.push({ name: `${definition.id}@${state}`, value: result.value, status, pass: result.pass });

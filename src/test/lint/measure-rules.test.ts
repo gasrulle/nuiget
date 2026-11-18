@@ -1776,6 +1776,36 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         }
     });
 
+    it('leaves a hard scope pending in a listed theme and asserts it in every other (pendingThemes, UX-P4.fix-13)', () => {
+        const icon = layout().endOfP0.iconColours.icon;
+        const busy = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling' };
+        const withBusy = (colour: string) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, busyRows: [{ ...busy, colour }] } } as Layout['endOfP0'] });
+        const line = (built: Layout, theme: string) => measureLines('main-installed-busy', built, 'modern', {}, undefined, 1200, undefined, theme).find(entry => entry.name === 'DS-STATE-6@main-installed-busy');
+        const off = withBusy('rgb(191, 191, 191)');
+        // An off colour in a listed theme prints as pending on the fix row and is never asserted.
+        expect(line(off, 'dark-2026')).toMatchObject({ status: { pending: 'P4.fix-15' }, pass: false, value: expect.stringContaining('; off: colour rgb(191, 191, 191) (expected icon.foreground)') });
+        expect(line(off, 'light-2026')?.status).toEqual({ pending: 'P4.fix-15' });
+        // The same facts fail hard in a theme the rule does not list.
+        expect(line(off, 'dark-modern')).toMatchObject({ status: 'hard', pass: false });
+        // A green line in a listed theme still prints pending: only the fix row removes the entry.
+        expect(line(withBusy(icon), 'dark-2026')).toMatchObject({ status: { pending: 'P4.fix-15' }, pass: true });
+        expect(line(withBusy(icon), 'dark-modern')).toMatchObject({ status: 'hard', pass: true });
+        // No theme given reads as no listed theme.
+        expect(measureLines('main-installed-busy', withBusy(icon), 'modern').find(entry => entry.name === 'DS-STATE-6@main-installed-busy')?.status).toBe('hard');
+        expect(RULES.filter(entry => entry.pendingThemes !== undefined).map(entry => entry.id)).toEqual(['DS-STATE-6']);
+        // A pixel rule reads the same axis; a synthetic one keeps that branch tested.
+        const synthetic = rule('X-PENDING-THEME-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingThemes: { 'dark-2026': 'P9.9' } });
+        const rules = RULES as RuleDefinition[];
+        rules.push(synthetic);
+        try {
+            const pixelLine = (theme: string) => pixelRuleLines('main-installed-single', 1200, theme, 'ui', { 'X-PENDING-THEME-PIXELS': { value: 'read', pass: false } }).find(entry => entry.name === 'X-PENDING-THEME-PIXELS@main-installed-single');
+            expect(pixelLine('dark-2026')).toEqual({ name: 'X-PENDING-THEME-PIXELS@main-installed-single', value: 'read', status: { pending: 'P9.9' }, pass: false });
+            expect(pixelLine('light-2026')?.status).toBe('hard');
+        } finally {
+            rules.splice(rules.length - 1, 1);
+        }
+    });
+
     it('DS-SCROLL-2 asks the token shadow of a list scrolled from its top and none at its top, in its three states only', () => {
         const scroller = (scrollTop: number, shadow: string) => ({ label: '[installed-list]', left: 0, top: 0, width: 300, height: 200, right: 300, size: 8, thumb: 50, backdrop: 'rgb(30, 30, 30)', scrollTop, shadow });
         const bars = (...scrollers: Array<ReturnType<typeof scroller>>) => layout({ scrollbar: { rootColor: 'auto', slider: '#79797966', scrollers, shadowColour: 'rgb(0, 0, 0)' } });
