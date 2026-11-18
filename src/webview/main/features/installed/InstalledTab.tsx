@@ -19,7 +19,7 @@ import { parseRowId, rowId, type Section, type TreeItem } from './installedTree'
 import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
 import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
 import { failure } from '../../../shared/updates/sentence';
-import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../firstLoad';
+import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();

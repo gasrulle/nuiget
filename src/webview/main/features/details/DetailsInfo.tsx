@@ -6,7 +6,7 @@ import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
-import { LOADING_DETAILS, useFirstLoadAnnouncement } from '../firstLoad';
+import { LOADING_DETAILS, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
 
 const formatSize = (bytes: number): string => {
     if (bytes >= 1024 * 1024) {

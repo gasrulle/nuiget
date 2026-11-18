@@ -145,13 +145,6 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
         return () => clearTimeout(debounce.current);
     }, [browseText, runSearch, clearSearch]);
 
-    const loading = installed.status === 'loading';
-    useEffect(() => {
-        if (loading) {
-            announce('Loading installed packages');
-        }
-    }, [loading, installed.projectPath, announce]);
-
     const unsupported = installed.result?.unsupported;
     // The sash stands between the two sections while both are shown and open.
     const bothOpen = mode === 'default' && layout.installedExpanded && layout.updatesExpanded;

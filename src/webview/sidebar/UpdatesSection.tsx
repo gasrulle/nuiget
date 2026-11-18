@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useId, useMemo, useState } from 'react';
 import type React from 'react';
-import type { InstalledResult, PackageUpdate, ProjectUpdatesChunk } from '../../protocol';
+import { ALL_PROJECTS, type InstalledResult, type PackageUpdate, type ProjectUpdatesChunk } from '../../protocol';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
+import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../shared/firstLoad';
 import { updateCandidates } from '../shared/installed/rules';
 import { ArrowUpIcon, Banner, cssVars, EmptyState, IconButton, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -199,7 +200,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
     const updates = useUpdates();
     const installed = useInstalled();
     const all = useAllProjects();
-    const { session } = useSession();
+    const { session, committed } = useSession();
     const [own, setOwn] = useState(true);
     const expanded = controlled ?? own;
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -303,6 +304,12 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
     const candidates = groups.flatMap(group => group.updates);
     // The pane loads or revalidates: its 2 px bar over the list's top edge, as the Installed pane's (DS-STATE-2, UX-P3.10).
     const loadingFirst = all.active ? all.updates.status === 'loading' : updates.status === 'loading';
+    // The pane says its own first load, once per key, collapsed too; a filter mode that hides it unmounts it (UX-P4.fix-9).
+    // All Projects keys on the committed prerelease choice, never a pending one (as the main panel's Updates tab).
+    const firstLoadKey = all.active
+        ? `${ALL_PROJECTS}|${committed?.includePrerelease === true}`
+        : projectPath === null ? null : `${projectPath}|${updates.includePrerelease}`;
+    useFirstLoadAnnouncement(announce, LOADING_UPDATES, firstLoadKey, loadingFirst);
     const confirm = (): void => {
         setConfirming(false);
         const failed = (error: unknown): void => announce(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -340,7 +347,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
             />
             {expanded ? (
                 <div className="nuiget-sidebar-section-content" id={contentId}>
-                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? 'Loading updates' : 'Refreshing updates'} data-testid="sidebar-updates-progress" /></div> : null}
+                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? LOADING_UPDATES : 'Refreshing updates'} data-testid="sidebar-updates-progress" /></div> : null}
                     {content}
                 </div>
             ) : null}

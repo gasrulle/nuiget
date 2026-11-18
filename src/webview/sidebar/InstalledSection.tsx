@@ -1,8 +1,9 @@
 import { Fragment, useId, useMemo, useState } from 'react';
 import type React from 'react';
-import type { InstalledPackage, InstalledResult, ProjectInstalledChunk } from '../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type ProjectInstalledChunk } from '../../protocol';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../shared/allProjects/folderGroups';
 import { directCount } from '../shared/counts';
+import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../shared/firstLoad';
 import { failure, sentence } from '../shared/updates/sentence';
 import { Badge, Banner, cssVars, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, type ListboxGroups } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
@@ -223,6 +224,8 @@ export function InstalledSection({ filter, announce, ask, focusSearch, expanded:
     // The pane loads or revalidates: its 2 px bar over the list's top edge (DS-STATE-2, UX-P3.8); the header's spinner is the first
     // load's only, never a revalidation's (UX-P3.10 push E, design-advisor follow-up 1).
     const loadingFirst = all.active ? all.status === 'loading' : installed.status === 'loading';
+    // The pane says its own first load, once per key, collapsed too; a filter mode that hides it unmounts it (UX-P4.fix-9).
+    useFirstLoadAnnouncement(announce, LOADING_INSTALLED, all.active ? ALL_PROJECTS : installed.projectPath, loadingFirst);
     const busy = loadingFirst || (all.active ? all.revalidating : installed.revalidating);
     return (
         <section className={share !== undefined ? 'nuiget-sidebar-section nuiget-sidebar-section--shared' : 'nuiget-sidebar-section'} style={share !== undefined ? cssVars({ '--nuiget-sidebar-share': String(share) }) : undefined}>
@@ -242,7 +245,7 @@ export function InstalledSection({ filter, announce, ask, focusSearch, expanded:
             />
             {expanded ? (
                 <div className="nuiget-sidebar-section-content" id={contentId}>
-                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? 'Loading installed packages' : 'Refreshing installed packages'} data-testid="sidebar-installed-progress" /></div> : null}
+                    {busy ? <div className="nuiget-sidebar-progress"><ProgressBar label={loadingFirst ? LOADING_INSTALLED : 'Refreshing installed packages'} data-testid="sidebar-installed-progress" /></div> : null}
                     {content}
                 </div>
             ) : null}

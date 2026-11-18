@@ -4,7 +4,7 @@ import { useMessageBus } from '../../../shared/bus/useMessageBus';
 import { Banner, EmptyState, ProgressBar, Skeleton } from '../../../shared/primitives';
 import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
-import { LOADING_README, useFirstLoadAnnouncement } from '../firstLoad';
+import { LOADING_README, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
 import { addCopyButtons, clearCopied, COPIED_MS, copyButtonOf, copyCodeOf, markCopied, markLinkItems, renderMarkdownToHtml, rewriteImages } from './markdown';
 
 /**

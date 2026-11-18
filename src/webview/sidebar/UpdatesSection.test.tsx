@@ -2,12 +2,34 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { StrictMode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../shared/primitives/testSupport';
 import { StoreProvider } from '../shared/store/StoreProvider';
 import { SidebarView } from './SidebarView';
+
+/** What the view says, recorded on its way to the live region (UX-P4.fix-9): the region keeps only the last sentence. */
+const heard = vi.hoisted(() => [] as string[]);
+vi.mock('../shared/shellChrome', async importOriginal => {
+    const actual = await importOriginal<typeof import('../shared/shellChrome')>();
+    const { useCallback } = await import('react');
+    return {
+        ...actual,
+        useShellChrome: (): ReturnType<typeof actual.useShellChrome> => {
+            const chrome = actual.useShellChrome();
+            const { announce } = chrome;
+            const recorded = useCallback((message: string): void => {
+                heard.push(message);
+                announce(message);
+            }, [announce]);
+            return { ...chrome, announce: recorded };
+        },
+    };
+});
+/** The Updates pane's first-load sentences among what was said. */
+const heardUpdates = (): string[] => heard.filter(message => message === 'Loading updates');
 
 const A = '/w/App/App.csproj';
 const FEED = 'https://feed.example/v3/index.json';
@@ -46,6 +68,7 @@ describe('sidebar: Updates section', () => {
 
     beforeEach(() => {
         removeLayout = installFakeLayout({ viewport: 240, row: 22 });
+        heard.length = 0;
     });
 
     afterEach(() => {
@@ -149,6 +172,65 @@ describe('sidebar: Updates section', () => {
         expect(updateOption('Serilog')).toBeInTheDocument();
         // A revalidation is the bar alone: no spinner in the header.
         expect(screen.getByTestId('section-header-updates').querySelector('.nuiget-spinner')).toBeNull();
+    });
+
+    it('says its first load once, not on a revalidation, not for updates the store holds, and again for another project or prerelease choice (UX-P4.fix-9)', async () => {
+        const user = userEvent.setup();
+        const B = '/w/Lib/Lib.csproj';
+        const host = createFakeHost();
+        render(<StrictMode><StoreProvider bus={host.bus}><SidebarView /></StoreProvider></StrictMode>);
+        await hostSays(() => host.respond(host.requests('session/get').at(-1)!, snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list').at(-1)!, { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+        await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: PACKAGES }, 1));
+        // Once under StrictMode, whose effects run twice; the region holds it.
+        expect(heardUpdates()).toEqual(['Loading updates']);
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading updates'));
+        await hostSays(() => host.respond(host.requests('updates/get').at(-1)!, { projectPath: A, updates: UPDATES }, 1));
+        // A revalidation keeps the rows under the bar and says nothing.
+        await hostSays(() => host.invalidate([[resourceKeys.updates(A, false), 2]]));
+        expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Refreshing updates');
+        await hostSays(() => host.respond(host.requests('updates/get').at(-1)!, { projectPath: A, updates: UPDATES }, 2));
+        // The pane mounts again over updates the store holds: no first load, nothing said.
+        const search = screen.getByTestId('sidebar-search-input');
+        await user.type(search, '@installed');
+        expect(screen.queryByTestId('section-header-updates')).toBeNull();
+        await user.clear(search);
+        expect(within(updatesList()).getAllByRole('option')).toHaveLength(2);
+        expect(heardUpdates()).toEqual(['Loading updates']);
+        // Another project is another key.
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: B }));
+        expect(heardUpdates()).toEqual(['Loading updates', 'Loading updates']);
+        await hostSays(() => host.respond(host.requests('updates/get').at(-1)!, { projectPath: B, updates: [] }, 1));
+        // So is another prerelease choice for the same project.
+        await hostSays(() => host.event('session/changed', { ...snapshot(3), selectedProject: B, includePrerelease: true }));
+        expect(host.requests('updates/get').at(-1)!.payload).toEqual({ projectPath: B, includePrerelease: true });
+        expect(heardUpdates()).toEqual(['Loading updates', 'Loading updates', 'Loading updates']);
+    });
+
+    it('a collapsed pane says its first load: its header\'s spinner shows it (UX-P4.fix-9)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith({ updates: UPDATES });
+        await user.click(header());
+        expect(header()).toHaveAttribute('aria-expanded', 'false');
+        heard.length = 0;
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: '/w/Lib/Lib.csproj' }));
+        expect(header().querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(heardUpdates()).toEqual(['Loading updates']);
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading updates'));
+    });
+
+    it('a pane that mounts again while its first load still runs says it again (UX-P4.fix-9)', async () => {
+        const user = userEvent.setup();
+        await mountWith();
+        expect(heardUpdates()).toEqual(['Loading updates']);
+        const search = screen.getByTestId('sidebar-search-input');
+        await user.type(search, '@installed');
+        expect(screen.queryByTestId('section-header-updates')).toBeNull();
+        // The check is still unanswered when the pane is back: a new pane, the same load, said once more.
+        await user.clear(search);
+        expect(screen.getByTestId('sidebar-updates-progress')).toHaveAccessibleName('Loading updates');
+        expect(heardUpdates()).toEqual(['Loading updates', 'Loading updates']);
     });
 
     it('a failed check with nothing listed is its error banner with Retry alone, never "No updates available" (UX-P3.10)', async () => {

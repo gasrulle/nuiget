@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Screen readers announce when the main panel's package lists, details or README start loading**
+- **Screen readers hear when the side bar's update check starts**
 - **Screen readers hear how an install, update or uninstall ended once, in the view that started it**
 - **A successful install, update or uninstall no longer raises a notification; a package waiting behind another operation reads Queued, and the status bar names what runs**
 - **A hovered package row keeps its version and authors readable in every theme**

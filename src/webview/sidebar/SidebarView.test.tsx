@@ -12,6 +12,25 @@ import { UNRESOLVED_HINT, whyNotUpdatable } from '../shared/installed/rules';
 import { shownVersion, whyNotRemovable } from './InstalledSection';
 import { SidebarView } from './SidebarView';
 
+/** What the view says, recorded on its way to the live region (UX-P4.fix-9): the region keeps only the last sentence. */
+const heard = vi.hoisted(() => [] as string[]);
+vi.mock('../shared/shellChrome', async importOriginal => {
+    const actual = await importOriginal<typeof import('../shared/shellChrome')>();
+    const { useCallback } = await import('react');
+    return {
+        ...actual,
+        useShellChrome: (): ReturnType<typeof actual.useShellChrome> => {
+            const chrome = actual.useShellChrome();
+            const { announce } = chrome;
+            const recorded = useCallback((message: string): void => {
+                heard.push(message);
+                announce(message);
+            }, [announce]);
+            return { ...chrome, announce: recorded };
+        },
+    };
+});
+
 const A = '/w/App/App.csproj';
 const B = '/w/Lib/Lib.csproj';
 const snapshot = (rev: number, selectedProject: string): SessionSnapshot => ({ rev, selectedProject, selectedSource: 'all', includePrerelease: false, restoreEnabled: true, origin: 'host' });
@@ -51,6 +70,10 @@ const said = (): string => screen.getByTestId('status-live').textContent ?? '';
 const removals = (host: FakeHost) => host.requests('ops/remove');
 const sectionSpinner = (): Element | null => screen.getByTestId('section-header-installed').querySelector('.nuiget-spinner');
 
+beforeEach(() => {
+    heard.length = 0;
+});
+
 describe('sidebar: Installed section', () => {
     it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
         const host = createFakeHost();
@@ -82,7 +105,9 @@ describe('sidebar: Installed section', () => {
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
         expect(host.requests('installed/get').map(request => request.payload)).toEqual([{ projectPath: A }]);
         expect(skeletonRows()).toHaveLength(3);
-        await waitFor(() => expect(said()).toBe('Loading installed packages'));
+        // Each pane says its own first load, Installed then Updates in document order; the region keeps the last (UX-P4.fix-9).
+        expect(heard).toEqual(['Loading installed packages', 'Loading updates']);
+        await waitFor(() => expect(said()).toBe('Loading updates'));
         // The section says that it is busy, to the eye; the words are the live region's.
         expect(sectionSpinner()).not.toBeNull();
 
@@ -390,6 +415,53 @@ describe('sidebar: Installed section', () => {
         expect(list()).not.toHaveAttribute('aria-busy');
         // The Installed pane's bar; the Updates pane has its own while its check is unanswered (UX-P3.10).
         expect(screen.queryByRole('progressbar', { name: /installed packages/ })).toBeNull();
+    });
+
+    it('under @installed the Installed pane says its first load once; under @updates the region never holds the Installed sentence (UX-P4.fix-9)', async () => {
+        const user = userEvent.setup();
+        const C = '/w/Tool/Tool.csproj';
+        const host = await mountWith([pkg('Serilog')]);
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [] }, 1));
+        const search = screen.getByTestId('sidebar-search-input');
+        await user.type(search, '@installed');
+        heard.length = 0;
+        // The Updates pane is not mounted: only the Installed pane says its first load, once.
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        await waitFor(() => expect(said()).toBe('Loading installed packages'));
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(B, [pkg('xunit')]), 1));
+        expect(names()).toEqual(['xunit']);
+        expect(heard).toEqual(['Loading installed packages']);
+
+        await user.clear(search);
+        await user.type(search, '@updates');
+        heard.length = 0;
+        // The Installed pane is not mounted: its load says nothing, so the region holds the Updates pane's sentence.
+        await hostSays(() => host.event('session/changed', snapshot(3, C)));
+        expect(host.requests('installed/get').at(-1)!.payload).toEqual({ projectPath: C });
+        await waitFor(() => expect(said()).toBe('Loading updates'));
+        expect(heard).toEqual(['Loading updates']);
+    });
+
+    it('All Projects: each pane says its first load once, and a revalidation says nothing (UX-P4.fix-9)', async () => {
+        const host = await mountWith([pkg('Serilog')]);
+        heard.length = 0;
+        await hostSays(() => host.event('session/changed', snapshot(2, ALL_PROJECTS)));
+        await waitFor(() => expect(said()).toBe('Loading updates'));
+        expect(heard).toEqual(['Loading installed packages', 'Loading updates']);
+        const projects = [{ name: 'App', path: A }];
+        const stream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [] }));
+        const updates = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(updates, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(updates, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [] } }));
+        await hostSays(() => host.respond(updates, { projectPaths: [A] }));
+        expect(screen.getByTestId('section-header-installed')).toHaveAccessibleName('Installed 1');
+        // An invalidation of an installed key asks both streams again: a revalidation, not a first load.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        expect(host.requests('allProjects/installed').length).toBeGreaterThan(1);
+        expect(heard).toEqual(['Loading installed packages', 'Loading updates']);
     });
 
     it('another project: its packages replace the list after skeleton rows, never mixed', async () => {

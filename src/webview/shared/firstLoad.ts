@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 
-// The words of a main-panel first load: the name of its progress bar and the sentence of the live region, one constant
-// for both (a11y-first-load-announced, UX-P4.6). Browse announces its own (UX-P5.9).
+// The words of a first load in either webview: the name of its progress bar and the sentence of the live region, one
+// constant for both (a11y-first-load-announced; the main panel UX-P4.6, the sidebar's panes UX-P4.fix-9). Browse
+// announces its own (UX-P5.9).
 export const LOADING_INSTALLED = 'Loading installed packages';
 export const LOADING_UPDATES = 'Loading updates';
 export const LOADING_DETAILS = 'Loading details';
