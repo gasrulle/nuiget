@@ -654,9 +654,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.fontExact, exceptStates: SIDEBAR_BROWSE_NO_LIST_STATES }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
     // UX-P3.3a (design trigger 6): a details label carries no colon and is one noun.
-    // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1d): `dialog-list`, no list item of an open dialog writes a
-    // package and its versions as a label and a value (`Id: old → new`).
-    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard', 'dialog-list': { pending: 'P4.fix-5' } }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_HEADER_STATES, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
+    // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1d, DO 5): `dialog-list`, no list item of an open dialog writes
+    // a package and its versions as a label and a value (`Id: old → new`); hard since the item's closing (run 44278515805).
+    rule('DS-COPY-2', { helper: 6, scopes: { details: 'hard', 'dialog-list': 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_HEADER_STATES, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
     // UX-P2.7 (design trigger 6).
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),

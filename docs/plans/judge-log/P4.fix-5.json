@@ -1,0 +1,50 @@
+{
+ "item": "P4.fix-5",
+ "runs": [
+  {
+   "runId": "44278515805",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "f127d04b (proving push, fix-forward)",
+   "look": "modern",
+   "workflow": "wf_b957d553-47b",
+   "note": "The one cell the item touched, judged against main-installed-all.dark-modern.1200 as the row reference (P4.fix-3's precedent; no dialog artboard). P4.fix-3's sidebar-update-all-dialog#D1 (the colon) does not recur. No standing finding.",
+   "captures": {
+    "sidebar-update-all-dialog": {
+     "png": "captures/44278515805/sidebar-update-all-dialog.dark-modern.300.png",
+     "sha256": "f607897536d9f7b03edf3859ce43faea8e4cdae6f4b4bea4002f75a2421f62c8",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 1,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 1,
+    "incomplete": 0
+   },
+   "singleJudge": [
+    {
+     "id": "sidebar-update-all-dialog#D1",
+     "state": "sidebar-update-all-dialog",
+     "finding": "[states] In the dialog's package list, long package ids wrap in the middle of a word ('...AI.Abstracti|ons', '...Configuratio|n.EnvironmentVariables', '...Dependenc|yInjection...', and the same in the Logging and Options items), so ids look misspelt. The arrow also lands at the end of a line on some items and at the start on others ('8.0.0 →' / '11.0.0' against '8.0.1' / '→ 11.0.0'). A dialog item should read like a row's `<id> <old> → <new>`, with breaks at the id's dots and the arrow kept with the new version.",
+     "severity": "major",
+     "box": [
+      46,
+      228,
+      224,
+      288
+     ],
+     "rule": "judge-only",
+     "lenses": [
+      "states"
+     ],
+     "note": "informational (one lens): long package ids break mid-word and the arrow lands on either line in the 300 px side bar dialog; the wrapping is the list's (the same items wrapped with the colon form), not this item's copy change; reported to the planning session as a proposed row"
+    }
+   ],
+   "findings": [],
+   "refuted": []
+  }
+ ]
+}

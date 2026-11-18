@@ -192,8 +192,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.3a: the README tab shows no facts by design, the only state DS-ALIGN-1 has no subject in.
         // UX-P3.10 push C: the details cells with no facts block, by fact.
         expect(RULES.find(rule => rule.id === 'DS-ALIGN-1')?.exceptStates).toEqual(['main-details-readme', 'main-details-empty', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error']);
-        // UX-P4.fix-5: a dialog list's items, pending until the item's closing flips it.
-        expect(scopes('DS-COPY-2')).toEqual({ details: 'hard', 'dialog-list': { pending: 'P4.fix-5' } });
+        // UX-P4.fix-5: a dialog list's items, hard since the item's closing.
+        expect(scopes('DS-COPY-2')).toEqual({ details: 'hard', 'dialog-list': 'hard' });
         // UX-P3.3a: the details pane's weights and headings, hard with the facts.
         expect(scopes('DS-TYPE-3')).toEqual(Object.fromEntries(['main-installed', 'main-updates', 'browse', 'details', 'dialogs', 'sources', 'sidebar'].map(group => [group, 'hard'])));
         expect((scopes('DS-TYPE-9') as Record<string, unknown>).details).toBe('hard');

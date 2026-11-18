@@ -649,9 +649,9 @@
   },
   "sidebar-update-all-dialog.dark-modern.300.png": {
     "status": "approved",
-    "run": "44116707127",
-    "sha256": "82a1688899c680f817231a41df21739e6a2425acf3107d0641a29b98d5ed66a7",
-    "sidecarSha256": "e3e9a2e88bcdd32921c8d1bc5ed0b0942216f235476839eb834827f9e0b3c1bc"
+    "run": "44278515805",
+    "sha256": "f607897536d9f7b03edf3859ce43faea8e4cdae6f4b4bea4002f75a2421f62c8",
+    "sidecarSha256": "b44855e806cb718937ad61588b175be4d647beb2a22981dac7dcb809a5cd36f0"
   },
   "sidebar-updates-empty.dark-modern.300.png": {
     "status": "approved",
