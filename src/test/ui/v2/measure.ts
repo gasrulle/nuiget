@@ -101,7 +101,7 @@ export const SPLIT_STATUS: RuleStatus = 'hard';
  * DS-STATE-3's `block` clause: every shown empty state's computed padding-top and padding-bottom, 8, or 20 in the details pane
  * (DECISIONS 2026-11-18 "A list's empty state keeps the 8 px block inset"; UX-P4.fix-12).
  */
-export const EMPTY_BLOCK_STATUS: RuleStatus = { pending: 'P4.fix-12' };
+export const EMPTY_BLOCK_STATUS: RuleStatus = 'hard';
 
 /** DS-OVERFLOW-2's `placeholder` clause on the main search box (the sidebar's copy fits from 400; UX-P3.fix-15). Hard since that item's closing (proving run 43776489839). */
 export const MAIN_PLACEHOLDER_STATUS: RuleStatus = 'hard';
