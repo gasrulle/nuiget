@@ -819,8 +819,8 @@ export function motionOnLines(state: string, facts: MotionOnFacts, status: RuleS
 
 // ---- UX-P4.7: a single success raises no notification (DS-STATE-5) ----------------------------------------------------
 
-/** DS-STATE-5's `[feedback]` line: pending until UX-P4.7's closing commit reads it at 0 (design-advisor ruling of 2026-11-18, DO 10). */
-export const FEEDBACK_STATUS: RuleStatus = { pending: 'P4.7' };
+/** DS-STATE-5's `[feedback]` line: hard since UX-P4.7's closing, its reading run 44319150988 at 0 on both suites (DO 10). */
+export const FEEDBACK_STATUS: RuleStatus = 'hard';
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const quoted = (texts: readonly string[]): string => (texts.length === 0 ? '' : `: ${texts.map(text => `"${text}"`).join(' | ')}`);

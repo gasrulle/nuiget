@@ -434,9 +434,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
     });
 
     it('reads DS-STATE-5 after a single operation: no information notification naming its package, the live region said, every text read and cleared listed (UX-P4.7)', () => {
-        expect(FEEDBACK_STATUS).toEqual({ pending: 'P4.7' });
+        expect(FEEDBACK_STATUS).toBe('hard');
         const install = { done: 'Installed' as const, packageId: 'NUnit' };
-        expect(feedbackLines('main-search', install, { info: [], all: [] }, ['nUIget: Uninstalled 2 packages.'], 'Installed NUnit 5.0.0')).toEqual({
+        expect(feedbackLines('main-search', install, { info: [], all: [] }, ['nUIget: Uninstalled 2 packages.'], 'Installed NUnit 5.0.0', { pending: 'P4.7' })).toEqual({
             lines: ['[feedback] DS-STATE-5@main-search: information notifications 0; read 0; cleared 1 before: "nUIget: Uninstalled 2 packages."; status-live "Installed NUnit 5.0.0" (pending P4.7)'],
             failures: [],
         });
