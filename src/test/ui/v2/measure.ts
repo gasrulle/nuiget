@@ -2367,7 +2367,8 @@ const endOfP0 = {
     factRows,
     fonts: { root: rootFont, others: [...otherFonts] },
     textStyles,
-    readmeHeadings: shown('.nuiget-readme h1, .nuiget-readme h2, .nuiget-readme h3, .nuiget-readme h4, .nuiget-readme h5, .nuiget-readme h6').map(el => px(getComputedStyle(el).fontSize)),
+    // UX-P4.6: a README heading is marked with its source level; its tag follows the pane's outline.
+    readmeHeadings: shown('.nuiget-readme [data-level]').map(el => px(getComputedStyle(el).fontSize)),
     verifiedMarks: shown('[data-codicon="verified-filled"]').map(el => { const box = rectOf(el); return { w: round(box.width), h: round(box.height), colour: getComputedStyle(el).color }; }),
     verifiedForeground: rootVars.getPropertyValue('--vscode-extensionIcon-verifiedForeground').trim(),
     dataLook: document.documentElement.dataset.look,

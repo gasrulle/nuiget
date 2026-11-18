@@ -361,26 +361,26 @@ a:focus {
 }
 
 /* Typography of a README: headings on the type ramp at 600 (DS-TYPE-2, UX-P3.4); inline code, tables, quotes, lists and rules on tokens.
-   The renderer moves a README's headings two levels down (h1 → h3, UX-P4.6, A17); the sizes stay as they were. */
-.nuiget-readme h3,
-.nuiget-readme h4,
-.nuiget-readme h5,
-.nuiget-readme h6 {
+   The renderer makes a README's top heading the h3 under the pane's h2 and marks each heading with its source level
+   (`data-level`); the sizes follow the author's level, not the tag (UX-P4.6, A17). */
+.nuiget-readme [data-level] {
     margin: var(--nuiget-space-6) 0 var(--nuiget-space-5);
     font-weight: 600;
     line-height: 1.25;
 }
 
-.nuiget-readme h3 {
+.nuiget-readme [data-level="1"] {
     font-size: var(--nuiget-font-size-xl);
 }
 
-.nuiget-readme h4 {
+.nuiget-readme [data-level="2"] {
     font-size: var(--nuiget-font-size-lg);
 }
 
-.nuiget-readme h5,
-.nuiget-readme h6 {
+.nuiget-readme [data-level="3"],
+.nuiget-readme [data-level="4"],
+.nuiget-readme [data-level="5"],
+.nuiget-readme [data-level="6"] {
     font-size: var(--nuiget-font-size-md);
 }
 

@@ -82,21 +82,42 @@ export function upgradeHttpToHttps(text: string): string {
 }
 
 /**
- * A README's headings two levels down, capped at h6, so its h1 sits under the details pane's h2 (UX-P4.6, A17). Run on the
- * sanitized HTML, so a raw `<h1>` in the README moves too; a tag in a code block is escaped there and never matches.
+ * A README's headings under the details pane's h2: its top heading becomes the h3 and every other one keeps its distance,
+ * capped at h6; each carries its source level in `data-level`, which the README's type is keyed on (UX-P4.6, A17;
+ * design-advisor ruling of 2026-11-18). Run on the sanitized HTML, so raw HTML headings move too; the sanitizer drops a
+ * README's own `data-level`, and the shift writes it.
  */
 export function shiftHeadings(html: string): string {
-    return html.replace(/<(\/?)h([1-6])(?=[\s>])/gi, (_match, close: string, level: string) => `<${close}h${Math.min(6, Number(level) + 2)}`);
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const headings = [...template.content.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')];
+    if (headings.length === 0) {
+        return html;
+    }
+    const levelOf = (heading: Element): number => Number(heading.tagName.slice(1));
+    const shift = 3 - Math.min(...headings.map(levelOf));
+    for (const heading of headings) {
+        const level = levelOf(heading);
+        const moved = document.createElement(`h${Math.min(6, level + shift)}`);
+        for (const attribute of [...heading.attributes]) {
+            moved.setAttribute(attribute.name, attribute.value);
+        }
+        moved.setAttribute('data-level', String(level));
+        moved.append(...heading.childNodes);
+        heading.replaceWith(moved);
+    }
+    return template.innerHTML;
 }
 
-/** The README as sanitized HTML: no script, style, form element or `style` attribute survives; headings start at h3. */
+/** The README as sanitized HTML: no script, style, form element or `style` attribute survives; its top heading is an h3. */
 export function renderMarkdownToHtml(text: string): string {
     const html = markdownRenderer().parse(upgradeHttpToHttps(text), { async: false });
     return shiftHeadings(DOMPurify.sanitize(html, {
         ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
         FORBID_TAGS: ['style', 'form', 'input', 'textarea', 'select', 'button'],
         // `srcset` would load images past `rewriteImages`, which the CSP refuses.
-        FORBID_ATTR: ['style', 'srcset'],
+        // `data-level` is the heading shift's own marker: a README cannot set it (UX-P4.6).
+        FORBID_ATTR: ['style', 'srcset', 'data-level'],
     }));
 }
 

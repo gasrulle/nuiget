@@ -54,16 +54,37 @@ describe('renderMarkdownToHtml', () => {
         expect(result).toContain('Hello');
     });
 
-    // UX-P4.6 (A17; design-advisor ruling of 2026-11-18, DO 6 and DO 8): headings move two levels down, capped at h6, raw HTML
-    // headings too; a heading tag inside code stays text.
-    it('moves README headings two levels down, capped at h6, raw HTML headings included', () => {
-        const html = renderMarkdownToHtml('# One\n\n## Two\n\n#### Four\n\n###### Six\n\n<h1 id="raw">Raw</h1>\n\n`<h1>code</h1>`');
-        const doc = new DOMParser().parseFromString(`<div data-testid="readme-content">${html}</div>`, 'text/html');
-        const content = doc.querySelector('[data-testid="readme-content"]')!;
-        expect([...content.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(heading => `${heading.tagName.toLowerCase()} ${heading.textContent}`))
-            .toEqual(['h3 One', 'h4 Two', 'h6 Four', 'h6 Six', 'h3 Raw']);
-        expect(content.querySelector('h1, h2')).toBeNull();
-        expect(content.querySelector('code')?.textContent).toBe('<h1>code</h1>');
+    // UX-P4.6 (A17; design-advisor rulings of 2026-11-18): the README's top heading is the h3 under the pane's h2, the others
+    // keep their distance, capped at h6; each heading carries its source level, which a README cannot set itself.
+    describe('README headings under the details pane', () => {
+        const headings = (markdown: string): string[] => {
+            const doc = new DOMParser().parseFromString(`<div data-testid="readme-content">${renderMarkdownToHtml(markdown)}</div>`, 'text/html');
+            const content = doc.querySelector('[data-testid="readme-content"]')!;
+            expect(content.querySelector('h1, h2')).toBeNull();
+            return [...content.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(heading => `${heading.tagName.toLowerCase()} ${heading.getAttribute('data-level')} ${heading.textContent}`);
+        };
+
+        it('a #-led README starts at h3 and keeps its distances, its level-6 heading at h6', () => {
+            expect(headings('# A\n\n## B\n\n###### F')).toEqual(['h3 1 A', 'h4 2 B', 'h6 6 F']);
+        });
+
+        it('a ##-led README starts at h3 too', () => {
+            expect(headings('## A\n\n### B')).toEqual(['h3 2 A', 'h4 3 B']);
+        });
+
+        it('a raw <h1> beside ## headings is the h3', () => {
+            expect(headings('<h1>Raw</h1>\n\n## Two')).toEqual(['h3 1 Raw', 'h4 2 Two']);
+        });
+
+        it('a README without headings is unchanged, and a heading tag in code stays text', () => {
+            expect(renderMarkdownToHtml('Plain text')).toContain('<p>Plain text</p>');
+            expect(headings('`<h1>code</h1>`')).toEqual([]);
+        });
+
+        it('a README that writes the marker itself does not keep its own value', () => {
+            expect(headings('<h2 data-level="1">Forged</h2>')).toEqual(['h3 2 Forged']);
+            expect(renderMarkdownToHtml('<p data-level="1">Body</p>')).not.toContain('data-level');
+        });
     });
 
     it('renders paragraphs', () => {

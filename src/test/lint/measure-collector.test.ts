@@ -786,7 +786,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
     it('collects the size, the weight and the header flag of the visible text, the README and hidden text left out, and the look (UX-P1.1)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="type-facts">main { font-size: 13px; font-weight: 400; } .nuiget-section-title { font-size: 11px; font-weight: 700; } .nuiget-row-name { font-weight: 600; } .nuiget-readme, .nuiget-readme * { font-size: 21px; font-weight: 700; }</style>');
         const panel = document.querySelector('[data-testid="package-details-panel"]') as HTMLElement;
-        panel.insertAdjacentHTML('beforeend', '<div class="nuiget-readme" data-rect="620,300,880,340"><h1 data-rect="620,300,880,340" data-text="620,300,880,340">A README title</h1></div>');
+        panel.insertAdjacentHTML('beforeend', '<div class="nuiget-readme" data-rect="620,300,880,340"><h3 data-level="1" data-rect="620,300,880,340" data-text="620,300,880,340">A README title</h3></div>');
         document.documentElement.dataset.look = 'modern';
         document.documentElement.style.setProperty('--vscode-extensionIcon-verifiedForeground', '#4daafc');
         document.head.insertAdjacentHTML('beforeend', '<style id="verified-facts">.verified { color: rgb(77, 170, 252); }</style>');
