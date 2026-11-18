@@ -56,7 +56,7 @@ describe('2.0 sidebar parity', () => {
             const dialog = await findByTestId('confirm-dialog', 10_000);
             // Which updates join depends on what earlier files left (an update of Newtonsoft.Json runs before this file):
             // every line is one package with the version it goes from and to.
-            expect(await dialog.getAttribute('textContent')).to.match(/^Update \d+ packages?\?(?:[\w.]+: \S+ → \S+)+/);
+            expect(await dialog.getAttribute('textContent')).to.match(/^Update \d+ packages?\?(?:[\w.]+ \S+ → \S+)+/);
             await screenshot('sidebar-update-all-dialog');
         } finally {
             // A dialog left open covers the sidebar for every later test.
