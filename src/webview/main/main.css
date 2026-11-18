@@ -360,9 +360,8 @@ a:focus {
     border-radius: var(--nuiget-radius-xs);
 }
 
-/* Typography of a README: headings on the type ramp at 600 (DS-TYPE-2, UX-P3.4); inline code, tables, quotes, lists and rules on tokens. */
-.nuiget-readme h1,
-.nuiget-readme h2,
+/* Typography of a README: headings on the type ramp at 600 (DS-TYPE-2, UX-P3.4); inline code, tables, quotes, lists and rules on tokens.
+   The renderer moves a README's headings two levels down (h1 → h3, UX-P4.6, A17); the sizes stay as they were. */
 .nuiget-readme h3,
 .nuiget-readme h4,
 .nuiget-readme h5,
@@ -372,16 +371,14 @@ a:focus {
     line-height: 1.25;
 }
 
-.nuiget-readme h1 {
+.nuiget-readme h3 {
     font-size: var(--nuiget-font-size-xl);
 }
 
-.nuiget-readme h2 {
+.nuiget-readme h4 {
     font-size: var(--nuiget-font-size-lg);
 }
 
-.nuiget-readme h3,
-.nuiget-readme h4,
 .nuiget-readme h5,
 .nuiget-readme h6 {
     font-size: var(--nuiget-font-size-md);

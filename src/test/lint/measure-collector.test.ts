@@ -765,15 +765,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(more.fonts.others).toEqual(['serif']);
             expect(more.descriptionForeground).toBe('#9d9d9d');
             expect(more.metaText).toEqual([
-                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: false, selected: true },
-                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: true, selected: true },
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: false, selected: true, hovered: false },
+                { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', fontWeight: '400', authors: true, selected: true, hovered: false },
             ]);
             // UX-P3.fix-17: a compact row's version collapsed to zero width (present, displayed, 22 high) is recorded; one with display:
             // none or visibility: hidden is not, and the visible version of the row above is metadata, not a collapsed version.
             document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,330,300,352"><div class="nuiget-row-option" role="option" data-rect="0,330,300,352"><span class="nuiget-row-name" data-rect="20,333,296,349" data-text="20,333,296,349">Newtonsoft.Json.Schema.Extensions</span><span class="nuiget-row-version" data-rect="296,330,296,352">13.0.1</span></div></div>'
                 + '<div class="nuiget-row nuiget-row--compact" data-rect="0,352,300,374"><div class="nuiget-row-option" role="option" data-rect="0,352,300,374"><span class="nuiget-row-name" data-rect="20,355,296,371" data-text="20,355,296,371">Newtonsoft.Json.Bson.Extensions</span><span class="nuiget-row-version" style="display: none" data-rect="296,352,296,374">1.0.2</span></div></div>'
                 + '<div class="nuiget-row nuiget-row--compact" data-rect="0,374,300,396"><div class="nuiget-row-option" role="option" data-rect="0,374,300,396"><span class="nuiget-row-name" data-rect="20,377,296,393" data-text="20,377,296,393">Newtonsoft.Json.Linq.Extensions</span><span class="nuiget-row-version" style="visibility: hidden" data-rect="296,374,296,396">2.0.0</span></div></div>');
-            expect(collect().endOfP0.collapsedVersions).toEqual([{ fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false }]);
+            expect(collect().endOfP0.collapsedVersions).toEqual([{ fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false, hovered: false }]);
             // Without a menu the hidden tab control is out of reach.
             tabBar.querySelector('[aria-haspopup]')?.remove();
             expect(collect().endOfP0.controlsOut.find(entry => entry.container === 'tabs')).toMatchObject({ out: 1, hidden: 1, menu: false, total: 1 });

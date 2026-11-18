@@ -143,7 +143,7 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
             )}
         >
             <ul className="nuiget-multi-install" aria-label="Projects" aria-busy={busy}>
-                {projects.map(project => {
+                {projects.map((project, index) => {
                     const current = installedIn(project.path);
                     const centralBlock = central.get(project.path);
                     const blocked = current === version || unsupported(project.path) || centralBlock !== undefined || !listed(project.path);
@@ -160,11 +160,14 @@ export function MultiInstallDialog({ open, packageId, version, onClose, onInstal
                     } else if (current !== undefined) {
                         note = current === version ? 'This version is installed' : `Installed: ${current}`;
                     }
+                    // The note is the check box's description, by an id of the row's index: a path holds spaces, which split an IDREF
+                    // list (UX-P4.6, A20; design-advisor ruling of 2026-11-18, DO 5).
+                    const noteId = `${baseId}-note-${index}`;
                     return (
                         <li key={project.path} className={blocked ? 'nuiget-multi-install-row nuiget-multi-install-row--blocked' : 'nuiget-multi-install-row'}>
-                            <Checkbox id={id} checked={picked.has(project.path)} disabled={blocked} onChange={() => toggle(project.path)} />
+                            <Checkbox id={id} checked={picked.has(project.path)} disabled={blocked} aria-describedby={note ? noteId : undefined} onChange={() => toggle(project.path)} />
                             <label htmlFor={id} title={project.path}>{project.name}</label>
-                            {note ? <span className="nuiget-multi-install-note">{note}</span> : null}
+                            {note ? <span id={noteId} className="nuiget-multi-install-note">{note}</span> : null}
                         </li>
                     );
                 })}

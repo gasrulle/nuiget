@@ -1020,7 +1020,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The authors are the Extensions publisher's 11/600 (UX-P2.8a).
         const authors = (fontWeight: string) => [...meta(11), { kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false, fontWeight, authors: true }];
         expect(value('main-installed-single', facts({ metaText: authors('600'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
-            .toMatchObject({ pass: true, value: 'meta 11 ×2 (target 11); 0 meta off descriptionForeground; authors 600 (target 600)' });
+            .toMatchObject({ pass: true, value: 'meta 11 ×2 (target 11); 0 meta off descriptionForeground; hovered 0 in list.hoverForeground, 0 off; authors 600 (target 600)' });
         expect(value('main-installed-single', facts({ metaText: authors('400'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: false });
         // The computed 11.05 of the run is within the rule's own 0.1.
         expect(value('main-installed-single', facts({ metaText: meta(11.05), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single')).toMatchObject({ pass: true, status: 'hard' });
@@ -1028,8 +1028,17 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: false, status: 'hard' });
         expect(value('main-installed-unsupported', facts({ copyEnds: [{ kind: 'banner', text: 'Unsupported project: requires .NET SDK 10 or newer' }] }), 'DS-COPY-3@main-installed-unsupported'))
             .toMatchObject({ pass: false, status: 'hard' });
+        // UX-P4.6 (design-advisor follow-up ruling of 2026-11-18): a hovered row's metadata is list.hoverForeground, asserted;
+        // a hovered text in descriptionForeground fails; a hovered and selected one is not read for colour.
+        const hoverText = (colour: string, selected = false) => ({ kind: 'meta' as const, fontSize: 11, colour, selected, hovered: true });
+        expect(value('main-installed-hover', facts({ metaText: [...meta(11), hoverText('rgb(204, 204, 204)')], descriptionForeground: '#9d9d9d', listHoverForeground: 'rgb(204, 204, 204)' }), 'DS-TYPE-6@main-installed-hover'))
+            .toMatchObject({ pass: true, value: expect.stringContaining('hovered 1 in list.hoverForeground, 0 off') });
+        expect(value('main-installed-hover', facts({ metaText: [...meta(11), hoverText('rgb(157, 157, 157)')], descriptionForeground: '#9d9d9d', listHoverForeground: 'rgb(204, 204, 204)' }), 'DS-TYPE-6@main-installed-hover'))
+            .toMatchObject({ pass: false, value: expect.stringContaining('hovered 1 in list.hoverForeground, 1 off') });
+        expect(value('main-installed-hover', facts({ metaText: [...meta(11), hoverText('rgb(255, 255, 255)', true)], descriptionForeground: '#9d9d9d', listHoverForeground: 'rgb(204, 204, 204)' }), 'DS-TYPE-6@main-installed-hover'))
+            .toMatchObject({ pass: true, value: expect.stringContaining('hovered 0 in list.hoverForeground, 0 off') });
         expect(value('main-installed-single', facts({ metaText: meta(11, 'rgb(204, 204, 204)'), descriptionForeground: '#9d9d9d' }), 'DS-TYPE-6@main-installed-single'))
-            .toMatchObject({ pass: false, value: 'meta 11 (target 11); 1 meta off descriptionForeground' });
+            .toMatchObject({ pass: false, value: 'meta 11 (target 11); 1 meta off descriptionForeground; hovered 0 in list.hoverForeground, 0 off' });
         expect(value('main-installed-hover', facts({ rows: [row({ actions: 4 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: false });
         expect(value('main-installed-hover', facts({ rows: [row({ actions: 3 })] }), 'DS-ROW-4@main-installed-hover')).toMatchObject({ pass: true });
         expect(value('main-installed-empty', facts({ copyEnds: [{ kind: 'empty', text: 'No packages installed' }] }), 'DS-COPY-3@main-installed-empty')).toMatchObject({ pass: false, value: 'no full stop: empty "No packages installed"' });
@@ -1674,7 +1683,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         const read = (overrides: Record<string, unknown>, state = 'sidebar-browse-revalidating', line = name) => lineOf(state, facts(overrides), line);
         // (a) every compact row's version collapsed at 11 in descriptionForeground: the declared reading passes.
         expect(read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(20) })).toMatchObject({
-            pass: true, status: 'hard', value: 'no metadata shown: version collapsed in 20 of 20 compact rows (DS-ROW-5); computed 11 ×20 (target 11); 0 off descriptionForeground',
+            pass: true, status: 'hard', value: 'no metadata shown: version collapsed in 20 of 20 compact rows (DS-ROW-5); computed 11 ×20 (target 11); 0 off descriptionForeground; hovered 0 in list.hoverForeground, 0 off',
         });
         // (b) a row whose version is not collapsed and draws no metadata either: red.
         const partial = read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(19) });
@@ -1684,10 +1693,10 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         expect(read({ rows: compactRows(20), metaText: [], collapsedVersions: collapsed(20, 12) })?.pass).toBe(false);
         const offColour = read({ rows: compactRows(2), metaText: [], collapsedVersions: [...collapsed(1), ...collapsed(1, 11, 'rgb(204, 204, 204)')] });
         expect(offColour?.pass).toBe(false);
-        expect(offColour?.value.endsWith('1 off descriptionForeground')).toBe(true);
+        expect(offColour?.value.endsWith('1 off descriptionForeground; hovered 0 in list.hoverForeground, 0 off')).toBe(true);
         // A selected row's collapsed version takes the selection's colour and is exempt from the colour check, as metadata is.
         expect(read({ rows: compactRows(2), metaText: [], collapsedVersions: [...collapsed(1), { fontSize: 11, colour: 'rgb(255, 255, 255)', selected: true }] }))
-            .toMatchObject({ pass: true, value: 'no metadata shown: version collapsed in 2 of 2 compact rows (DS-ROW-5); computed 11 ×2 (target 11); 0 off descriptionForeground' });
+            .toMatchObject({ pass: true, value: 'no metadata shown: version collapsed in 2 of 2 compact rows (DS-ROW-5); computed 11 ×2 (target 11); 0 off descriptionForeground; hovered 0 in list.hoverForeground, 0 off' });
         // (e) no collapsed version recorded (absent, null over WebDriver, empty): still not measurable, never a pass.
         for (const collapsedVersions of [undefined, null, []]) {
             expect(read({ rows: compactRows(20), metaText: [], collapsedVersions })).toMatchObject({ pass: false, value: 'not measurable (no row metadata)' });
@@ -1697,7 +1706,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
             .toMatchObject({ pass: false, value: 'not measurable (no row metadata)' });
         // (g) a cell that draws metadata keeps its ordinary line, whatever collapsed beside it.
         expect(read({ rows: compactRows(20), metaText: [{ kind: 'meta', fontSize: 11, colour: 'rgb(157, 157, 157)', selected: false }], collapsedVersions: collapsed(19) }))
-            .toMatchObject({ pass: true, value: 'meta 11 (target 11); 0 meta off descriptionForeground' });
+            .toMatchObject({ pass: true, value: 'meta 11 (target 11); 0 meta off descriptionForeground; hovered 0 in list.hoverForeground, 0 off' });
     });
 
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {

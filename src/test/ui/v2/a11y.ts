@@ -907,10 +907,7 @@ export interface ContrastPending {
  * The red lines of today's tree, run 40152178889's and no others (design-advisor ruling of 2026-10-25, UX-P0.25; Appendix B:
  * README → P3.4 (A8, and the README's link list under 2.5.8, DECISIONS; removed by UX-P3.4), hover → P4.6 (A14)).
  */
-export const CONTRAST_PENDING: readonly ContrastPending[] = [
-    { where: 'hover-main', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
-    { where: 'hover-sidebar', theme: 'dark-2026', rule: 'color-contrast', item: 'P4.6' },
-];
+export const CONTRAST_PENDING: readonly ContrastPending[] = [];
 
 const pendingContrast = (where: string, theme: string, rule: ContrastPending['rule'], registry: readonly ContrastPending[]): ContrastPending | undefined =>
     registry.find(entry => entry.where === where && entry.theme === theme && entry.rule === rule);

@@ -100,9 +100,10 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...text('fg-muted', 'bg', 'bg-sidebar', 'widget-bg'),
     { fg: 'fg', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
     { fg: 'fg-muted', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
-    { fg: 'version-new', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
-    { fg: 'fg-muted', bg: 'list-hover-bg', over: 'bg-sidebar', kind: 'text' },
-    { fg: 'version-new', bg: 'list-hover-bg', over: 'bg-sidebar', kind: 'text' },
+    // UX-P4.6 (A14; design-advisor ruling of 2026-11-18, DO 3): a hovered row's text, secondary text included, is
+    // list.hoverForeground; the new-version and the side bar's muted text are no longer painted on the hover band.
+    { fg: 'list-hover-fg', bg: 'list-hover-bg', over: 'bg', kind: 'text' },
+    { fg: 'list-hover-fg', bg: 'list-hover-bg', over: 'bg-sidebar', kind: 'text' },
     ...text('link', 'bg', 'bg-sidebar'),
     ...text('version-new', 'bg', 'bg-sidebar'),
     ...text('list-active-fg', 'list-active-bg'),
@@ -158,8 +159,6 @@ const cells = (pairs: readonly string[], themes: readonly string[], item: string
  * UX-P0.25; Appendix B: A8 → P3.4, A14 → P4.6; the high-contrast records' empty selection tokens → P1.1, T-21).
  */
 export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
-    ...cells(['version-new/list-hover-bg over bg', 'version-new/list-hover-bg over bg-sidebar'], ['light-2026', 'light-modern'], 'P4.6'),
-    ...cells(['fg-muted/list-hover-bg over bg-sidebar'], ['dark-2026'], 'P4.6'),
 ];
 
 /** Whether the pair is exempt in this theme. */

@@ -396,11 +396,9 @@ describe('the accessibility harness (UX-P0.23)', () => {
             }
         }
     });
-    it('holds the contrast moments and the resolve pass hard since UX-P0.25\'s run was ruled on, with run 40152178889\'s red lines on their owners (UX-P0.25)', () => {
+    it('holds the contrast moments and the resolve pass hard, with no red line pending since UX-P4.6 fixed the hover moments (UX-P0.25, UX-P4.6)', () => {
         expect(CONTRAST_STATUS).toBe('hard');
-        expect(CONTRAST_PENDING.map(entry => `${entry.where}@${entry.theme} ${entry.rule} ${entry.item}`)).toEqual([
-            'hover-main@dark-2026 color-contrast P4.6', 'hover-sidebar@dark-2026 color-contrast P4.6',
-        ]);
+        expect(CONTRAST_PENDING).toEqual([]);
         expect(MOMENTS).toEqual(['hover-main', 'readme', 'dialog', 'popup', 'hover-sidebar']);
     });
 

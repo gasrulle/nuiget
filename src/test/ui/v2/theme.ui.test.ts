@@ -439,6 +439,28 @@ describe('2.0 theme pass', () => {
         expect(resting.sides.every(side => side.endsWith('rgba(0, 0, 0, 0)')), `${where}: a resting tab draws no line: ${resting.sides.join('; ')}`).to.equal(true);
     }
 
+    /**
+     * UX-P4.6 (A19; design-advisor ruling of 2026-11-18, DO 4): in a high-contrast theme a selected compact row of the side bar
+     * is marked by a 1 px dotted contrastActiveBorder outline (VS Code leaves the selection background unset there). Printed as
+     * `[probe] hc sidebar row`, then asserted, with the pointer parked on the search box.
+     */
+    async function expectSelectedSidebarRow(where: string): Promise<void> {
+        await driverOf().actions().move({ origin: await findByTestId('sidebar-search-input', 10_000) }).perform();
+        const reading = await driverOf().executeScript<{ contrast: string; outline: string; id: string } | null>(`
+            const option = document.querySelector('[data-testid="sidebar-installed-list"] .nuiget-row-option[aria-selected="true"]');
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--vscode-contrastActiveBorder)';
+            document.body.appendChild(probe);
+            const contrast = getComputedStyle(probe).color;
+            probe.remove();
+            if (!option) return null;
+            const style = getComputedStyle(option);
+            return { contrast, id: option.closest('[data-testid]') ? option.closest('[data-testid]').getAttribute('data-testid') : '', outline: style.outlineWidth + ' ' + style.outlineStyle + ' ' + style.outlineColor };`);
+        console.warn(`[probe] hc sidebar row ${where}: ${reading === null ? 'no selected compact row' : `${reading.outline} (contrastActiveBorder ${reading.contrast})`}`);
+        expect(reading, `${where}: a selected compact row in the side bar`).to.not.equal(null);
+        expect(reading?.outline, `${where}: the selected compact row's outline`).to.equal(`1px dotted ${reading?.contrast}`);
+    }
+
     for (const theme of THEMES) {
         it(`${nameOf(theme)}: no contrast or target-size violation in the main panel and the sidebar`, async function () {
             this.timeout(300_000);
@@ -466,6 +488,9 @@ describe('2.0 theme pass', () => {
             await waitForBodyClass(theme);
             await selectFirstRow('[data-testid="sidebar-installed-list"] .nuiget-row-option', 'rows in the sidebar');
             await sidebarMoment(theme, contrastFailures);
+            if (theme.bodyClass.startsWith('vscode-high-contrast')) {
+                await expectSelectedSidebarRow(nameOf(theme));
+            }
             const sidebar = await runAxe();
             await leaveWebview();
             if (CONTRAST_STATUS === 'hard') {

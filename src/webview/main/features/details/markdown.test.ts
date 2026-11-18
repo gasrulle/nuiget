@@ -49,8 +49,21 @@ describe('upgradeHttpToHttps', () => {
 describe('renderMarkdownToHtml', () => {
     it('renders basic markdown to HTML', () => {
         const result = renderMarkdownToHtml('# Hello');
-        expect(result).toContain('<h1');
+        // UX-P4.6 (A17): a README's headings sit two levels down, under the details pane's h2.
+        expect(result).toContain('<h3');
         expect(result).toContain('Hello');
+    });
+
+    // UX-P4.6 (A17; design-advisor ruling of 2026-11-18, DO 6 and DO 8): headings move two levels down, capped at h6, raw HTML
+    // headings too; a heading tag inside code stays text.
+    it('moves README headings two levels down, capped at h6, raw HTML headings included', () => {
+        const html = renderMarkdownToHtml('# One\n\n## Two\n\n#### Four\n\n###### Six\n\n<h1 id="raw">Raw</h1>\n\n`<h1>code</h1>`');
+        const doc = new DOMParser().parseFromString(`<div data-testid="readme-content">${html}</div>`, 'text/html');
+        const content = doc.querySelector('[data-testid="readme-content"]')!;
+        expect([...content.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(heading => `${heading.tagName.toLowerCase()} ${heading.textContent}`))
+            .toEqual(['h3 One', 'h4 Two', 'h6 Four', 'h6 Six', 'h3 Raw']);
+        expect(content.querySelector('h1, h2')).toBeNull();
+        expect(content.querySelector('code')?.textContent).toBe('<h1>code</h1>');
     });
 
     it('renders paragraphs', () => {

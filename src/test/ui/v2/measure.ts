@@ -1187,15 +1187,18 @@ export interface EndOfP0 {
     rootLineHeight: number | undefined;
     /** The computed line-height of each compact row. */
     compactLineHeights: number[];
-    metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean; fontWeight?: string; authors?: boolean }>;
+    /** `hovered`: the text's row is under the pointer (UX-P4.6: its secondary text is list.hoverForeground). */
+    metaText: Array<{ kind: 'meta' | 'description'; fontSize: number; colour: string; selected: boolean; hovered?: boolean; fontWeight?: string; authors?: boolean }>;
     /**
      * The versions of shown compact rows that DS-ROW-5's yield order collapsed to zero width (present, displayed, zero wide,
      * nonzero high): DS-TYPE-6 reads them by computed style when a cell draws no metadata (UX-P3.fix-17). Optional: older layouts.
      */
-    collapsedVersions?: Array<{ fontSize: number; colour: string; selected: boolean }>;
+    collapsedVersions?: Array<{ fontSize: number; colour: string; selected: boolean; hovered?: boolean }>;
     /** DS-STATE-7: the rows whose check mark is muted, and what says why. */
     unselectable: Array<{ label: string; status: string; transitive: boolean }>;
     descriptionForeground: string;
+    /** `list.hoverForeground` as the workbench resolves it (unset: the inherited foreground), the colour of a hovered row's text (UX-P4.6). */
+    listHoverForeground?: string;
     copyEnds: Array<{ kind: 'empty' | 'banner' | 'leaf'; text: string }>;
     /** DS-COPY-2: the trimmed text of every visible label of the details pane (property terms and the header's labels), UX-P3.3a. */
     detailsLabels: string[];
@@ -2144,7 +2147,7 @@ const lookTokens = Object.fromEntries(${JSON.stringify(LOOK_TOKENS)}.map(name =>
 const rootLine = px(getComputedStyle(root).lineHeight);
 const metaText = shown('.nuiget-row-version, .nuiget-row-authors, .nuiget-row-meta, .nuiget-row-description').map(el => {
     const style = getComputedStyle(el);
-    return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, fontWeight: style.fontWeight, authors: el.classList.contains('nuiget-row-authors'), selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) };
+    return { kind: el.classList.contains('nuiget-row-description') ? 'description' : 'meta', fontSize: px(style.fontSize), colour: style.color, fontWeight: style.fontWeight, authors: el.classList.contains('nuiget-row-authors'), selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')), hovered: Boolean(el.closest('.nuiget-row') && el.closest('.nuiget-row').matches(':hover')) };
 });
 // UX-P3.fix-17: a compact row's version collapsed behind the name (DS-ROW-5) is in the DOM at zero width; visible() drops it.
 const collapsedVersions = shown('.nuiget-row--compact:not([data-row-kind="group"]):not([data-row-kind="message"])').flatMap(row => {
@@ -2153,7 +2156,7 @@ const collapsedVersions = shown('.nuiget-row--compact:not([data-row-kind="group"
     const style = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || rect.width !== 0 || !(rect.height > 0)) return [];
-    return [{ fontSize: px(style.fontSize), colour: style.color, selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')) }];
+    return [{ fontSize: px(style.fontSize), colour: style.color, selected: Boolean(el.closest('[aria-selected="true"], [aria-current="true"]')), hovered: row.matches(':hover') }];
 });
 const copyEnds = [
     ...shown('.nuiget-empty-text').map(el => ({ kind: 'empty', text: el.textContent.trim() })),
@@ -2374,6 +2377,7 @@ const endOfP0 = {
     metaText,
     collapsedVersions,
     descriptionForeground: rootVars.getPropertyValue('--vscode-descriptionForeground').trim(),
+    listHoverForeground: resolveKey('--vscode-list-hoverForeground', 'color'),
     copyEnds,
     detailsLabels,
     stateCells,
@@ -3567,21 +3571,21 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                     return notMeasurable('no row metadata');
                 }
                 const compactRows = facts.rows.filter(row => row.compact).length;
-                const off = collapsed.filter(text => !text.selected && !sameColour(text.colour, facts.descriptionForeground)).length;
+                const colours = metaColours(collapsed, facts, 'off');
                 return {
-                    value: `no metadata shown: version collapsed in ${collapsed.length} of ${compactRows} compact rows (DS-ROW-5); computed ${tally(collapsed.map(text => text.fontSize))} (target ${END_OF_P0.metaFont}); ${off} off descriptionForeground`,
-                    pass: collapsed.length === compactRows && collapsed.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && off === 0,
+                    value: `no metadata shown: version collapsed in ${collapsed.length} of ${compactRows} compact rows (DS-ROW-5); computed ${tally(collapsed.map(text => text.fontSize))} (target ${END_OF_P0.metaFont}); ${colours.text}`,
+                    pass: collapsed.length === compactRows && collapsed.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && colours.pass,
                 };
             }
             const meta = facts.metaText.filter(text => text.kind === 'meta');
             const description = facts.metaText.filter(text => text.kind === 'description');
-            const offColour = meta.filter(text => !text.selected && !sameColour(text.colour, facts.descriptionForeground)).length;
+            const colours = metaColours(meta, facts);
             const sizes = (texts: typeof meta) => tally(texts.map(text => text.fontSize));
             const authors = meta.filter(text => text.authors === true);
             const authorsClause = authors.length === 0 ? '' : `; authors ${tally(authors.map(text => text.fontWeight ?? ''))} (target 600)`;
             return {
-                value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${offColour} meta off descriptionForeground${authorsClause}`,
-                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= tolerance) && offColour === 0 && authors.every(text => text.fontWeight === '600'),
+                value: `meta ${sizes(meta)} (target ${END_OF_P0.metaFont})${description.length > 0 ? `; description ${sizes(description)} (target ${END_OF_P0.descriptionFont})` : ''}; ${colours.text}${authorsClause}`,
+                pass: meta.every(text => Math.abs(text.fontSize - END_OF_P0.metaFont) <= tolerance) && description.every(text => Math.abs(text.fontSize - END_OF_P0.descriptionFont) <= tolerance) && colours.pass && authors.every(text => text.fontWeight === '600'),
             };
         }
         case 'DS-ROW-4': {
@@ -3608,6 +3612,18 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         default:
             return undefined;
     }
+}
+
+/**
+ * DS-TYPE-6's colour clause (UX-P4.6, design-advisor follow-up ruling of 2026-11-18): a selected text is not read for colour,
+ * a hovered one must be list.hoverForeground, every other one descriptionForeground.
+ */
+function metaColours(texts: ReadonlyArray<{ colour: string; selected: boolean; hovered?: boolean }>, facts: EndOfP0, noun = 'meta off'): { text: string; pass: boolean } {
+    const resting = texts.filter(text => !text.selected && text.hovered !== true);
+    const hovered = texts.filter(text => !text.selected && text.hovered === true);
+    const off = resting.filter(text => !sameColour(text.colour, facts.descriptionForeground)).length;
+    const hoverOff = hovered.filter(text => !sameColour(text.colour, facts.listHoverForeground ?? '')).length;
+    return { text: `${off} ${noun} descriptionForeground; hovered ${hovered.length} in list.hoverForeground, ${hoverOff} off`, pass: off === 0 && hoverOff === 0 };
 }
 
 /** UX-P1.1: the font ramp, the two weights and the look table. */

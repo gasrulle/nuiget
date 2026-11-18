@@ -96,6 +96,9 @@ describe('main panel: Install in All Projects', () => {
         expect(within(dialog).getByRole('checkbox', { name: 'Lib' }).closest('li')).toHaveClass('nuiget-multi-install-row--blocked');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' }).closest('li')).not.toHaveClass('nuiget-multi-install-row--blocked');
         expect(within(dialog).getByRole('checkbox', { name: 'Web' })).toBeEnabled();
+        // UX-P4.6 (A20): a blocked project's reason is its check box's description; a row without a note has none.
+        expect(within(dialog).getByRole('checkbox', { name: 'Lib' })).toHaveAccessibleDescription('Centrally managed: install it from the project to see the preview');
+        expect(within(dialog).getByRole('checkbox', { name: 'Web' })).not.toHaveAttribute('aria-describedby');
         await user.click(within(dialog).getByRole('checkbox', { name: 'Web' }));
         await user.click(within(dialog).getByRole('button', { name: 'Install in 2 Projects' }));
         expectFocusAfterClose('multi-install-two-projects');

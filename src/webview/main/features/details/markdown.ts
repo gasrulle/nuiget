@@ -81,15 +81,23 @@ export function upgradeHttpToHttps(text: string): string {
     return text.replace(new RegExp(`http://(?:www\\.)?(${HTTPS_HOSTS})`, 'gi'), 'https://$1');
 }
 
-/** The README as sanitized HTML: no script, style, form element or `style` attribute survives. */
+/**
+ * A README's headings two levels down, capped at h6, so its h1 sits under the details pane's h2 (UX-P4.6, A17). Run on the
+ * sanitized HTML, so a raw `<h1>` in the README moves too; a tag in a code block is escaped there and never matches.
+ */
+export function shiftHeadings(html: string): string {
+    return html.replace(/<(\/?)h([1-6])(?=[\s>])/gi, (_match, close: string, level: string) => `<${close}h${Math.min(6, Number(level) + 2)}`);
+}
+
+/** The README as sanitized HTML: no script, style, form element or `style` attribute survives; headings start at h3. */
 export function renderMarkdownToHtml(text: string): string {
     const html = markdownRenderer().parse(upgradeHttpToHttps(text), { async: false });
-    return DOMPurify.sanitize(html, {
+    return shiftHeadings(DOMPurify.sanitize(html, {
         ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
         FORBID_TAGS: ['style', 'form', 'input', 'textarea', 'select', 'button'],
         // `srcset` would load images past `rewriteImages`, which the CSP refuses.
         FORBID_ATTR: ['style', 'srcset'],
-    });
+    }));
 }
 
 const languageOf = (code: Element): string => {

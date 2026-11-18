@@ -245,7 +245,8 @@
     padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-row-indent)) var(--nuiget-message-inset, var(--nuiget-inset));
     outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
     outline-offset: calc(var(--nuiget-line-width) * -1);
-    color: var(--nuiget-color-fg-muted);
+    /* On a hovered row's band the carrier gives list.hoverForeground (UX-P4.6, A14). */
+    color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
     overflow-wrap: anywhere;
     cursor: default;
 }
@@ -269,6 +270,10 @@
 
 .nuiget-row:hover {
     --nuiget-row-band-bg: var(--nuiget-color-list-hover-bg);
+    /* A hovered row's text takes list.hoverForeground, secondary text included: the muted and new-version colours fall
+       below 4.5:1 on the hover band (Design System §4; UX-P4.6, A14). */
+    --nuiget-row-fg: var(--nuiget-color-list-hover-fg);
+    --nuiget-row-fg-secondary: var(--nuiget-color-list-hover-fg);
     --nuiget-row-outline-style: dashed;
     --nuiget-row-outline-color: var(--nuiget-color-contrast-active-border);
     --nuiget-row-actions-visibility: visible;
@@ -869,7 +874,8 @@
 }
 
 .nuiget-section-count-text {
-    color: var(--nuiget-color-fg-muted);
+    /* In a hovered group row the carrier gives list.hoverForeground; a pane header sets none (UX-P4.6, A14). */
+    color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
     font-size: var(--nuiget-font-size-sm);
     font-weight: var(--nuiget-font-weight-regular);
     white-space: nowrap;
