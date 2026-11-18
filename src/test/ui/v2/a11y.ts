@@ -847,7 +847,7 @@ export function feedbackLines(suite: string, operation: { done: 'Installed' | 'U
 /**
  * The held loading cells and the sentence each one's live region holds after its shot (design-advisor ruling of
  * 2026-11-18, DO 11): the four main-panel first loads are asserted, Browse's waits for UX-P5.9, the sidebar's Installed and
- * Updates panes say their own first load from UX-P4.fix-9 (its opening ruling, DO 10), and the sidebar's Browse cell is
+ * Updates panes say their own first load, asserted since UX-P4.fix-9 (its opening ruling, DO 10-12; run 44350651585), and the sidebar's Browse cell is
  * printed with no status, read for the record only.
  */
 export const LIVE_EXPECTED: Readonly<Record<string, { text: string; status: RuleStatus | 'printed' }>> = {
@@ -856,8 +856,8 @@ export const LIVE_EXPECTED: Readonly<Record<string, { text: string; status: Rule
     'main-details-loading': { text: 'Loading details', status: 'hard' },
     'main-readme-loading': { text: 'Loading the README', status: 'hard' },
     'main-browse-loading': { text: 'Searching', status: { pending: 'P5.9' } },
-    'sidebar-installed-loading': { text: 'Loading installed packages', status: { pending: 'P4.fix-9' } },
-    'sidebar-updates-loading': { text: 'Loading updates', status: { pending: 'P4.fix-9' } },
+    'sidebar-installed-loading': { text: 'Loading installed packages', status: 'hard' },
+    'sidebar-updates-loading': { text: 'Loading updates', status: 'hard' },
     'sidebar-browse-loading': { text: 'Searching', status: 'printed' },
 };
 
