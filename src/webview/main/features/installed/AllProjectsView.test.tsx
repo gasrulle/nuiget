@@ -9,6 +9,7 @@ import { describeOutcome } from '../../../shared/store/outcomes';
 import { StoreProvider } from '../../../shared/store/StoreProvider';
 import { MainShell } from '../../MainShell';
 import { DetailsPane } from '../details/DetailsPane';
+import { LOADING_INSTALLED } from '../../../shared/firstLoad';
 import { aggregateTransitive, describeOrigins } from './transitiveAggregate';
 import { InstalledTab } from './InstalledTab';
 
@@ -203,6 +204,8 @@ describe('main panel: All Projects', () => {
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', [], false) }));
         await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], false) }));
         await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        // The first load's sentence fills the region a frame after it is said (LiveStatus): let it land before the reading.
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent(LOADING_INSTALLED));
         const before = screen.getByTestId('status-live').textContent;
         // A restore of Lib another surface started is queued: the aggregate shows its bar, and Restore asks for App alone.
         await hostSays(() => host.event('ops/progress', { opId: 'elsewhere', status: 'queued', kind: 'restore', projectPaths: [B], packageIds: [] }));
