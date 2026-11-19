@@ -107,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Long package names in confirmation lists no longer break mid-word**
 - **Keyboard focus stays in the package list when a restore finishes**
 - **A restore that fails for some projects reports each failure once**
+- **The notification for a failed restore of one project names the project and the reason**
 
 ## [2.0.0] - 2026-10-17
 

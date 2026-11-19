@@ -263,6 +263,15 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
                 warn(`The operation was not started: ${bare(outcome.message ?? 'the queue is full')}.`);
             } else if (outcome.status === 'completed') {
                 inform(`${bulkSentence(kind, packageId, total, total)}.`);
+            } else if (total === 1 && done === 0 && outcome.results[0].kind === 'restore') {
+                // One project's failed restore reads as the panel says it, never "0 of 1" (UX-P4.fix-20); an empty reason is absent.
+                const first = outcome.results[0];
+                const reason = [outcome.restores[0]?.error, first.message, outcome.message].find(text => text !== undefined && bare(text) !== '');
+                if (reason === undefined) {
+                    warn(`${attempt(first)} failed.`);
+                } else {
+                    warn(`${attempt(first)} failed: ${bare(reason)}.`);
+                }
             } else {
                 const edits = failedEdits > 0 ? `; ${failedEdits} failed` : '';
                 // A restore's results are its projects' restores: counted once, by the results (UX-P4.fix-16).

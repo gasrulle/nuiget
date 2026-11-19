@@ -197,24 +197,34 @@ describe('operation feedback', () => {
         expect(information.mock.calls).toEqual([['nUIget: Restored 1 project.']]);
     });
 
-    it('a restore that fails for some or all projects counts each failure once (UX-P4.fix-16)', () => {
+    it('a restore that fails for some or all of several projects counts each failure once; a one-project failure reads as the panel does (UX-P4.fix-16, UX-P4.fix-20)', () => {
         const { completed, output } = setup();
-        // The workflow's shape: one `results` and one `restores` entry per project.
-        const restore = (opId: string, status: 'partial' | 'failed', steps: Array<{ projectPath: string; ok: boolean }>) => bulk({
+        // The workflow's shape: one `results` and one `restores` entry per project, the step's error in both.
+        const restore = (opId: string, status: 'partial' | 'failed', steps: Array<{ projectPath: string; ok: boolean; error?: string }>, changes: Partial<BulkOutcome> = {}) => bulk({
             opId,
             status,
-            results: steps.map(step => single({ opId, kind: 'restore', packageId: undefined, version: undefined, projectPath: step.projectPath, status: step.ok ? 'completed' : 'failed' })),
-            restores: steps.map(step => ({ projectPath: step.projectPath, ok: step.ok, error: step.ok ? undefined : 'NU1101' })),
+            results: steps.map(step => single({ opId, kind: 'restore', packageId: undefined, version: undefined, projectPath: step.projectPath, status: step.ok ? 'completed' : 'failed', message: step.ok ? undefined : step.error })),
+            restores: steps.map(step => ({ projectPath: step.projectPath, ok: step.ok, error: step.ok ? undefined : step.error })),
+            ...changes,
         });
-        completed.fire(restore('restore-a', 'partial', [{ projectPath: APP, ok: true }, { projectPath: LIB, ok: false }]));
-        completed.fire(restore('restore-b', 'failed', [{ projectPath: APP, ok: false }, { projectPath: LIB, ok: false }]));
-        completed.fire(restore('restore-c', 'failed', [{ projectPath: APP, ok: false }]));
+        completed.fire(restore('restore-a', 'partial', [{ projectPath: APP, ok: true }, { projectPath: LIB, ok: false, error: 'NU1101' }]));
+        completed.fire(restore('restore-b', 'failed', [{ projectPath: APP, ok: false, error: 'NU1101' }, { projectPath: LIB, ok: false, error: 'NU1101' }]));
+        completed.fire(restore('restore-c', 'failed', [{ projectPath: APP, ok: false, error: 'NU1101' }]));
+        completed.fire(restore('restore-d', 'failed', [{ projectPath: APP, ok: false, error: 'The project file is locked.' }]));
+        completed.fire(restore('restore-e', 'failed', [{ projectPath: APP, ok: false }]));
+        completed.fire(restore('restore-f', 'failed', [{ projectPath: APP, ok: false, error: '' }]));
+        completed.fire(restore('restore-g', 'failed', [{ projectPath: APP, ok: false }], { restores: [], message: 'exit code 1' }));
         expect(warning.mock.calls.map(call => call[0])).toEqual([
             'nUIget: Restored 1 of 2 projects; 1 failed.',
             'nUIget: Restored 0 of 2 projects; 2 failed.',
-            'nUIget: Restored 0 of 1 projects; 1 failed.',
+            'nUIget: Restore of App failed: NU1101.',
+            'nUIget: Restore of App failed: The project file is locked.',
+            'nUIget: Restore of App failed.',
+            'nUIget: Restore of App failed.',
+            'nUIget: Restore of App failed: exit code 1.',
         ]);
-        expect(output.show).toHaveBeenCalledTimes(2);
+        expect(warning.mock.calls.map(call => call.slice(1))).toEqual(Array.from({ length: 7 }, () => ['Show Output']));
+        expect(output.show).toHaveBeenCalledTimes(6);
     });
 
     it('the status bar names what runs and how many wait (UX-P4.7)', () => {
