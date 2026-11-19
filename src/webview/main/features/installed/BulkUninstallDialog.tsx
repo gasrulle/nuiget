@@ -28,7 +28,7 @@ export function BulkUninstallDialog({ open, removals, onConfirm, onCancel }: Bul
             confirmLabel="Uninstall"
             onConfirm={onConfirm}
             onCancel={onCancel}
-            groups={removals.map(removal => ({ label: `From ${removal.projectName}:`, items: removal.packages }))}
+            groups={removals.map(removal => ({ label: `From ${removal.projectName}:`, items: removal.packages.map(id => ({ id })) }))}
         />
     );
 }

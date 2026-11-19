@@ -9,7 +9,7 @@ export { Banner, type BannerProps, type BannerSeverity } from './Banner';
 export { Button, type ButtonProps } from './Button';
 export { Checkbox, type CheckboxProps } from './Checkbox';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
-export { DialogGroups, type DialogGroup, type DialogGroupsProps } from './DialogGroups';
+export { DialogGroups, type DialogGroup, type DialogGroupsProps, type DialogPackageItem } from './DialogGroups';
 export { cssVars, type NuigetVar } from './cssVars';
 export { Dialog, type DialogProps } from './Dialog';
 export { EmptyState, type EmptyStateProps } from './EmptyState';

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -71,7 +71,8 @@ describe('ConfirmDialog', () => {
         expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['Serilog', 'Polly', 'xunit']);
         expect(dialog.querySelectorAll('.nuiget-dialog-group > .nuiget-dialog-lead + .nuiget-dialog-list')).toHaveLength(2);
         // A group without a lead is its list alone.
-        render(<ConfirmDialog open title="Update 1 package?" confirmLabel="Update" onConfirm={() => undefined} onCancel={() => undefined} groups={[{ items: ['Serilog 3.0.0 → 3.1.0'] }]} />);
+        render(<ConfirmDialog open title="Update 1 package?" confirmLabel="Update" onConfirm={() => undefined} onCancel={() => undefined} groups={[{ items: [{ id: 'Serilog', versions: { from: '3.0.0', to: '3.1.0' } }] }]} />);
+        expect(within(screen.getAllByRole('alertdialog')[1]).getByRole('listitem').textContent).toBe('Serilog 3.0.0 → 3.1.0');
         expect(screen.getAllByRole('alertdialog')[1].querySelector('.nuiget-dialog-lead')).toBeNull();
     });
 

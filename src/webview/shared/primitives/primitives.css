@@ -1415,6 +1415,12 @@
     padding-inline-start: var(--nuiget-space-6);
 }
 
+/* A package item's old version and "→ <new>": each one box, so a line breaks between them; the body's overflow-wrap still breaks a part wider than the line (DS-OVERFLOW-7, UX-P4.fix-14). */
+.nuiget-dialog-item-part {
+    display: inline-block;
+    max-width: 100%;
+}
+
 .nuiget-dialog-footer {
     display: flex;
     flex-wrap: wrap;

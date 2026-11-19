@@ -439,7 +439,7 @@ its heading): focus moves into it, Tab and Shift+Tab wrap inside it, focus that 
 Escape closes it, and focus returns to the element that had it; when that element is gone or disabled, `restoreFocus` (`layers.ts`) gives it, after the closing update's DOM changes, to a layer still open, else the nearest list's active row from the opener upward, else the first enabled control of the opener's toolbar, else the first control of the page, never `<body>` (UX-P4.4, A6). A list's empty slot is a `group` named as the list. `ConfirmDialog` is the `alertdialog` of
 interaction model §5 (bulk update, bulk uninstall, remove source) with the test ids `confirm-dialog`,
 `confirm-dialog-confirm` and `confirm-dialog-cancel`; it opens on Cancel, and renders its lists through
-`DialogGroups` (`groups`: a lead and its items), which `CentralUpdateDialog` composes too. Dialogs are portalled
+`DialogGroups` (`groups`: a lead and its items; an item is text, such as a project name, or a package item, `DialogPackageItem`: an id with, for a change, the versions it goes from and to, which `DialogGroups` writes `<id> <old> → <new>`, wrapping after the id's dots and keeping each version part whole, DS-OVERFLOW-7, UX-P4.fix-14), which `CentralUpdateDialog` composes too. Dialogs are portalled
 to the body, so no `overflow: hidden` parent clips them (finding U9), and register on one stack
 (`primitives/layers.ts`): only the topmost layer answers Escape, traps focus or closes on an outside press,
 and an Escape it handles does not reach the page. A confirmation opened from a dialog (Remove source over

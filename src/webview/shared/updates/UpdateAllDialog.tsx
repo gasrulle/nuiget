@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { PackageUpdate } from '../../../protocol';
-import { ConfirmDialog } from '../primitives';
+import { ConfirmDialog, type DialogPackageItem } from '../primitives';
 
 export interface UpdateAllDialogProps {
     open: boolean;
@@ -12,11 +12,11 @@ export interface UpdateAllDialogProps {
 }
 
 /**
- * The confirmation of a bulk update (interaction model §5): every package with the version it goes from and to, written as a
- * row writes them, `<id> <old> → <new>` with no colon (DS-COPY-2, UX-P4.fix-5).
+ * The confirmation of a bulk update (interaction model §5): every package with the version it goes from and to, as package items
+ * that `DialogGroups` writes `<id> <old> → <new>`, as a row writes them (DS-COPY-2, UX-P4.fix-5, UX-P4.fix-14).
  */
 export function UpdateAllDialog({ open, updates, groups, onConfirm, onCancel }: UpdateAllDialogProps): React.JSX.Element | null {
-    const line = (update: PackageUpdate): string => `${update.id} ${update.installedVersion} → ${update.latestVersion}`;
+    const packageOf = (update: PackageUpdate): DialogPackageItem => ({ id: update.id, versions: { from: update.installedVersion, to: update.latestVersion } });
     return (
         <ConfirmDialog
             open={open}
@@ -25,8 +25,8 @@ export function UpdateAllDialog({ open, updates, groups, onConfirm, onCancel }: 
             onConfirm={onConfirm}
             onCancel={onCancel}
             groups={groups === undefined
-                ? [{ items: updates.map(line) }]
-                : groups.map(group => ({ label: `In ${group.projectName}:`, items: group.updates.map(line) }))}
+                ? [{ items: updates.map(packageOf) }]
+                : groups.map(group => ({ label: `In ${group.projectName}:`, items: group.updates.map(packageOf) }))}
         />
     );
 }

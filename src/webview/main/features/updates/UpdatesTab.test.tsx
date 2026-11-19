@@ -161,7 +161,8 @@ describe('main panel: Updates tab', () => {
         expect(screen.getByTestId('update-all-button')).not.toHaveAttribute('title');
         await user.click(screen.getByTestId('update-all-button'));
         const dialog = screen.getByRole('alertdialog', { name: 'Update 2 packages?' });
-        expect(within(dialog).getByText('Serilog 3.0.0 → 3.1.0')).toBeInTheDocument();
+        // A package item spans its parts, so the list items are read by their text (UX-P4.fix-14).
+        expect(within(dialog).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Moq 4.20.0 → 4.20.72', 'Serilog 3.0.0 → 3.1.0']);
         expect(within(dialog).queryByText(/Newtonsoft/)).toBeNull();
         expect(axeRuleOutcome(await axe(document.body), 'aria-dialog-name')).toBe('passes');
         await user.click(screen.getByTestId('confirm-dialog-confirm'));
