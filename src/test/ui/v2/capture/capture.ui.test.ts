@@ -746,6 +746,20 @@ const REACH: Record<string, Reach> = {
             await until('document.querySelector(\'[data-testid="updates-list"] .nuiget-row-option:hover\') !== null', 'an update row under the pointer', 10_000);
         },
     },
+    'main-updates-update-all-dialog': {
+        // The main panel's Update All confirmation (UX-P4.fix-19): a known count and nothing selected ("Update Selected" is a
+        // leftover selection, not reachable), then every update listed and the focus on Cancel; cancelled, never confirmed.
+        reach: async () => {
+            await gatewayUpdates();
+            const label = 'document.querySelector(\'[data-testid="update-all-button"]\')';
+            await until(`${label} !== null && !${label}.disabled && /^Update All \\(\\d+\\)$/.test(${label}.textContent.trim())`, 'Update All with a known count and no selection', 120_000);
+            const count = Number(/\d+/.exec(await script<string>(`return ${label}.textContent.trim();`))?.[0]);
+            await (await findByTestId('update-all-button', 10_000)).click();
+            await findByTestId('confirm-dialog', 10_000);
+            await until(`document.querySelectorAll('[data-testid="confirm-dialog"] .nuiget-dialog-list li').length === ${count} && document.activeElement === document.querySelector('[data-testid="confirm-dialog-cancel"]')`, `${count} listed updates and the focus on Cancel`, 10_000);
+        },
+        leave: cancelDialog,
+    },
     'main-updates-all': {
         reach: async () => {
             await chooseFixtureProject(ALL_PROJECTS);

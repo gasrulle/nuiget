@@ -76,7 +76,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
-        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
+        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
@@ -264,6 +264,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(groups['main-installed-hover-current']).toBe('details');
         expect(groups['main-installed-bulk-dialog']).toBe('dialogs');
         expect(groups['sidebar-update-all-dialog']).toBe('dialogs');
+        expect(groups['main-updates-update-all-dialog']).toBe('dialogs');
         // A dialog state is named `-dialog` (`stateGroup`, `scripts/check-rule-coverage.mjs`): every `DIALOG_STATES` entry is one (UX-P4.2a follow-up 2).
         expect(DIALOG_STATES.filter(state => stateGroup(state) !== 'dialogs')).toEqual([]);
         expect(groups['sidebar-sections']).toBe('sidebar');
@@ -1947,9 +1948,9 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         expect(lineOf('sidebar-uninstall-dialog', withCells({}), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'body', lineHeight: '18.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
-        // Only the twelve cells with a dialog open read it.
+        // Only the thirteen cells with a dialog open read it (the main Update All confirmation since UX-P4.fix-19).
         expect(lineOf('main-installed-single', withCells({ dialogText: normal }), 'DS-TYPE-4@main-installed-single/dialog-text')).toBeUndefined();
-        expect(DIALOG_TEXT_STATES).toHaveLength(12);
+        expect(DIALOG_TEXT_STATES).toHaveLength(13);
         expect(elementGroups('dialogs')).toContain('dialog-text');
         expect(elementGroups('sources')).toContain('dialog-text');
     });

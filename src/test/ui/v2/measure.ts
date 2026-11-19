@@ -459,9 +459,9 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 ];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
-export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'];
+export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
 /** The dialog cells that render a list (`.nuiget-dialog-list`), whose items DS-COPY-2 `dialog-list` reads (UX-P4.fix-5). */
-export const DIALOG_LIST_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog'];
+export const DIALOG_LIST_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-updates-update-all-dialog'];
 /** The cells with a dialog open whose text line heights DS-TYPE-4 `dialog-text` reads: the dialog states and the sources dialog's cells (UX-P4.fix-3). */
 export const DIALOG_TEXT_STATES: readonly string[] = [...DIALOG_STATES, 'main-sources', 'main-sources-add', 'main-sources-add-invalid', 'main-sources-revalidating', 'main-sources-empty', 'main-sources-error'];
 /** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
