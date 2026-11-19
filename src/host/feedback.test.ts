@@ -197,6 +197,26 @@ describe('operation feedback', () => {
         expect(information.mock.calls).toEqual([['nUIget: Restored 1 project.']]);
     });
 
+    it('a restore that fails for some or all projects counts each failure once (UX-P4.fix-16)', () => {
+        const { completed, output } = setup();
+        // The workflow's shape: one `results` and one `restores` entry per project.
+        const restore = (opId: string, status: 'partial' | 'failed', steps: Array<{ projectPath: string; ok: boolean }>) => bulk({
+            opId,
+            status,
+            results: steps.map(step => single({ opId, kind: 'restore', packageId: undefined, version: undefined, projectPath: step.projectPath, status: step.ok ? 'completed' : 'failed' })),
+            restores: steps.map(step => ({ projectPath: step.projectPath, ok: step.ok, error: step.ok ? undefined : 'NU1101' })),
+        });
+        completed.fire(restore('restore-a', 'partial', [{ projectPath: APP, ok: true }, { projectPath: LIB, ok: false }]));
+        completed.fire(restore('restore-b', 'failed', [{ projectPath: APP, ok: false }, { projectPath: LIB, ok: false }]));
+        completed.fire(restore('restore-c', 'failed', [{ projectPath: APP, ok: false }]));
+        expect(warning.mock.calls.map(call => call[0])).toEqual([
+            'nUIget: Restored 1 of 2 projects; 1 failed.',
+            'nUIget: Restored 0 of 2 projects; 2 failed.',
+            'nUIget: Restored 0 of 1 projects; 1 failed.',
+        ]);
+        expect(output.show).toHaveBeenCalledTimes(2);
+    });
+
     it('the status bar names what runs and how many wait (UX-P4.7)', () => {
         const report = (changes: Partial<OperationProgress>): OperationProgress => ({ opId: 'op', status: 'running', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'], ...changes });
         expect(queueStatusText({ active: 0, pending: 0 }, undefined)).toBeUndefined();

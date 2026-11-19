@@ -265,7 +265,8 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
                 inform(`${bulkSentence(kind, packageId, total, total)}.`);
             } else {
                 const edits = failedEdits > 0 ? `; ${failedEdits} failed` : '';
-                const restores = failedRestores > 0 ? `; ${plural(failedRestores, 'restore')} failed` : '';
+                // A restore's results are its projects' restores: counted once, by the results (UX-P4.fix-16).
+                const restores = failedRestores > 0 && kind !== 'restore' ? `; ${plural(failedRestores, 'restore')} failed` : '';
                 warn(`${bulkSentence(kind, packageId, done, total)}${edits}${restores}.`);
             }
             return;

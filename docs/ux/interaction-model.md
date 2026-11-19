@@ -191,7 +191,10 @@ UX-P4.4). A dialog the host opens with nothing focused takes the control that op
 dialog's gear). When the main panel narrows below 391 px while focus is inside the details pane, the pane is hidden and focus
 moves to the active row of the visible list (the tab's list, or the Browse results), or, when that list has no row, to the
 first control of the page, never to the page itself; the move happens only while the panel's document has the focus,
-otherwise on its next focus gain (UX-P4.fix-6).
+otherwise on its next focus gain (UX-P4.fix-6). When the transitive Restore banner leaves (its projects restored) with the
+focus on its button, focus moves to the Transitive group row, or, when that row is not rendered, to the list's active row,
+then by the dialogs' order, never to the page itself; only for focus that was in the banner, only while the document has the
+focus, otherwise on its next focus gain, and not when the focus has moved elsewhere first (UX-P4.fix-16).
 
 Main panel Ctrl+Enter (D16). In the Browse list Ctrl+Enter (Cmd+Enter on macOS) installs the row's version, the
 newest the search found under the prerelease setting, into the selected project with the row's source, and makes the

@@ -196,6 +196,36 @@ describe('main panel: All Projects', () => {
         expect(host.requests('allProjects/transitive')).toHaveLength(2);
     });
 
+    it('All Projects: Restore keeps the focus while a project is still not restored, and when the banner leaves the focus lands on the Transitive group row (UX-P4.fix-16, A6)', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll(PROJECTS.slice(0, 2));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const answer = async (index: number, restoredA: boolean, restoredB: boolean): Promise<void> => {
+            const stream = host.requests('allProjects/transitive')[index];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', [], restoredA) }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], restoredB) }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        };
+        await answer(0, false, false);
+        const button = within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' });
+        button.focus();
+        await user.keyboard('{Enter}');
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [A, B] }]);
+        expect(document.activeElement).toBe(button);
+        // App restored, Lib not yet: the banner stays, the same button keeps the focus.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await answer(1, true, false);
+        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
+        expect(document.activeElement).toBe(button);
+        // Lib restored: the banner leaves and the focus lands on the Transitive group row, the list's tab stop.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(B), 3]]));
+        await answer(2, true, true);
+        expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
+        const transitiveRow = screen.getByTestId('group-row-transitive').querySelector('[role="treeitem"]');
+        expect(document.activeElement).toBe(transitiveRow);
+        expect(screen.getByTestId('installed-list').querySelector('[tabindex="0"]')).toBe(transitiveRow);
+    });
+
     it('All Projects Restore asks only for the projects no restore already holds, and says nothing while it starts one (UX-P4.fix-10)', async () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));

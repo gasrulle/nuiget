@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledPackage, type InstalledResult, type OperationOutcome, type SessionSnapshot, type TransitiveResult } from '../../../../protocol';
 import { createFakeHost, type FakeHost } from '../../../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../../../shared/primitives/testSupport';
@@ -370,6 +370,80 @@ describe('main panel: Installed tab', () => {
         // The metadata request of the rows is answered `unsupported` until the feeds exist: still the rows.
         await hostSays(() => host.fail(host.requests('transitive/metadata')[0], 'unsupported', 'not yet available'));
         expect(transitiveRows()).toHaveLength(1);
+    });
+
+    it('Restore pressed from the keyboard keeps the focus on the same Restore button while the restore runs (UX-P4.fix-16, A6)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, frameworks: [], dataSourceAvailable: false } satisfies TransitiveResult, 1));
+        const button = within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' });
+        button.focus();
+        await user.keyboard('{Enter}');
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [A] }]);
+        expect(screen.getByTestId('transitive-progress')).toHaveAccessibleName('Restoring the project');
+        // The banner is the same element while the bar shows: its button keeps the focus.
+        expect(document.activeElement).toBe(button);
+        expect(button.isConnected).toBe(true);
+    });
+
+    /** Gateway's Transitive expanded on a missing assets file, Restore pressed from the keyboard; answers the restore. */
+    const restoreFromKeyboard = async (user: ReturnType<typeof userEvent.setup>, host: FakeHost): Promise<HTMLElement> => {
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, frameworks: [], dataSourceAvailable: false } satisfies TransitiveResult, 1));
+        const button = within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' });
+        button.focus();
+        await user.keyboard('{Enter}');
+        expect(document.activeElement).toBe(button);
+        const outcome = restoreOf('restore1', 'completed', [{ projectPath: A, ok: true }]);
+        await hostSays(() => host.event('ops/completed', outcome));
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await hostSays(() => host.respond(host.requests('ops/restore')[0], outcome));
+        return button;
+    };
+    const restoredTransitive: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net10.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
+
+    it('when the restore banner leaves with the focus on Restore, the focus lands on the Transitive group row, which becomes the tab stop (UX-P4.fix-16, A6)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const button = await restoreFromKeyboard(user, host);
+        // While the list asks again the banner stays, and so does the focus: never <body>.
+        expect(document.activeElement).toBe(button);
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], restoredTransitive, 2));
+        expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
+        expect(document.activeElement).not.toBe(document.body);
+        expect(document.activeElement).toBe(groupItem('transitive'));
+        expectFocusOnListTabStop('installed-list');
+    });
+
+    it('the restore banner leaving with the focus elsewhere moves nothing (UX-P4.fix-16)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await restoreFromKeyboard(user, host);
+        act(() => optionOf('Serilog').focus());
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], restoredTransitive, 2));
+        expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
+        expect(optionOf('Serilog')).toHaveFocus();
+    });
+
+    it('the restore banner leaving while the document has no focus moves the focus on the window\'s next focus (UX-P4.fix-16)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const button = await restoreFromKeyboard(user, host);
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+        try {
+            // The focus leaves the webview with the button: the record stays, and the banner goes while the document has no focus.
+            act(() => button.blur());
+            await hostSays(() => host.respond(host.requests('transitive/get')[1], restoredTransitive, 2));
+            expect(screen.queryByTestId('transitive-restore-banner')).toBeNull();
+            expect(document.activeElement).toBe(document.body);
+            hasFocus.mockReturnValue(true);
+            act(() => { window.dispatchEvent(new FocusEvent('focus')); });
+            expect(document.activeElement).toBe(groupItem('transitive'));
+            expectFocusOnListTabStop('installed-list');
+        } finally {
+            hasFocus.mockRestore();
+        }
     });
 
     it('a single-project Restore is an operation this panel asked for: its outcome is said here, once (UX-P4.fix-10, A10)', async () => {

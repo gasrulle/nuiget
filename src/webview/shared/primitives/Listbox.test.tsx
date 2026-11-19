@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import type React from 'react';
@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Badge } from './Badge';
 import { IconButton } from './IconButton';
 import { TrashIcon } from './icons';
-import { focusList, Listbox, TYPEAHEAD_RESET_MS } from './Listbox';
+import { focusList, focusListRow, Listbox, TYPEAHEAD_RESET_MS } from './Listbox';
 import { Row } from './Row';
 import { axeRuleOutcome, installFakeLayout, installStylesheet, recordRowMenus } from './testSupport';
 
@@ -433,6 +433,27 @@ describe('Listbox group rows (UX-P2.1a, UX-P2.1c)', () => {
         expect(marked[0].getAttribute('style')).toContain('--nuiget-virtual-offset: 24px');
         expect(within(treeitem('Group')).getByTestId('group-content-Group')).toHaveTextContent('Group 1 false 1');
         expect(within(list).getAllByRole('treeitem').map(item => item.closest('[data-index]')?.getAttribute('data-index'))).toEqual(['0', '1', '2']);
+    });
+
+    it('focusListRow focuses the named row and makes it the tab stop, and answers false for a row that is not in the document (UX-P4.fix-16)', async () => {
+        const user = userEvent.setup();
+        render(<><input data-testid="box" /><Grouped items={[{ id: 'Alpha', version: '1.0.0' }, { id: 'Group', version: '' }, { id: 'Beta', version: '2.0.0' }]} /></>);
+        const list = screen.getByTestId('grouped-list');
+        expect(list.querySelector('[tabindex="0"]')).toBe(row('Alpha'));
+        await user.click(screen.getByTestId('box'));
+        // A group row (its wrapper carries the test id, its treeitem the focus) and a package row.
+        let moved = false;
+        act(() => { moved = focusListRow('grouped-list', 'group-row-group'); });
+        expect(moved).toBe(true);
+        expect(treeitem('Group')).toHaveFocus();
+        expect(list.querySelector('[tabindex="0"]')).toBe(treeitem('Group'));
+        act(() => { moved = focusListRow('grouped-list', 'package-row-beta'); });
+        expect(moved).toBe(true);
+        expect(row('Beta')).toHaveFocus();
+        await user.click(screen.getByTestId('box'));
+        expect(focusListRow('grouped-list', 'group-row-missing')).toBe(false);
+        expect(focusListRow('no-such-list', 'group-row-group')).toBe(false);
+        expect(screen.getByTestId('box')).toHaveFocus();
     });
 
     it('ArrowDown, ArrowUp, Home and End stop on group rows', async () => {

@@ -20,6 +20,7 @@ import { transitiveGroupContent, transitiveRow, transitiveTree } from './Transit
 import { allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
 import { failure } from '../../../shared/updates/sentence';
 import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
+import { useRestoreBannerFocus } from './useRestoreBannerFocus';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
@@ -47,6 +48,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const all = useAllProjects();
     const { projects } = useProjects();
     const ops = useOps();
+    // The restore banner leaving with the focus on it hands the focus to the Transitive group row (UX-P4.fix-16, A6).
+    useRestoreBannerFocus('installed-list');
     const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { select } = useDetailsActions();

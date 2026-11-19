@@ -73,7 +73,9 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         message = <EmptyState message="No transitive dependencies." data-testid="transitive-empty" />;
     }
     const loading = restoring || (result === undefined && !state.error) || state.revalidating;
-    return { items, message: loading ? <><ProgressBar label={restoring ? 'Restoring the project' : 'Loading transitive packages'} data-testid="transitive-progress" />{message}</> : message };
+    // One element shape whatever the state: a bar that comes and goes beside the message never recreates it, so a focused
+    // Restore keeps the focus while the restore runs (UX-P4.fix-16, A6).
+    return { items, message: <>{loading ? <ProgressBar label={restoring ? 'Restoring the project' : 'Loading transitive packages'} data-testid="transitive-progress" /> : null}{message}</> };
 }
 
 /** The content of a transitive group row: the framework as a badge where the row stands for one. */

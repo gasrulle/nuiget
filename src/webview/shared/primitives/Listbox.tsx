@@ -158,6 +158,22 @@ export function focusList(testId: string): boolean {
     return true;
 }
 
+/**
+ * Moves focus to the row with `rowTestId` in the list with `listTestId`, which makes it the active row and tab stop (the list's
+ * `onFocus`): where a banner that spoke for a group leaves with the focus in it (UX-P4.fix-16). `false`, and nothing moves, when
+ * the list or the row is not in the document (a virtualized row outside the window is not).
+ */
+export function focusListRow(listTestId: string, rowTestId: string): boolean {
+    const wrapper = document.querySelector(`[data-testid="${listTestId}"]`)?.querySelector<HTMLElement>(`[data-testid="${rowTestId}"]`);
+    const row = wrapper?.matches('[tabindex]') ? wrapper : wrapper?.querySelector<HTMLElement>('[tabindex]');
+    if (row === null || row === undefined) {
+        return false;
+    }
+    row.focus({ preventScroll: true });
+    row.scrollIntoView?.({ block: 'nearest' });
+    return true;
+}
+
 /** A list is named by its own label or by an element on the page, such as the title of its section. */
 export type ListboxProps<T extends { id: string }> = ListboxBaseProps<T> & ({ label: string; labelledBy?: undefined } | { labelledBy: string; label?: undefined });
 

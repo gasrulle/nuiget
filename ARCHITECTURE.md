@@ -742,7 +742,9 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   `AllProjectsTransitiveSection.tsx` build these rows and their messages for `InstalledTab`; the aggregation is in
   `transitiveAggregate.ts`. Comfortable rows with the icon, authors and Verified mark of the lite metadata, no description
   and a muted check mark (a transitive row is current, never selected); a row opens `TransitiveDetails`. A Restore banner
-  (`transitive-restore-banner`) above the tree when the assets file is missing; the group's 2 px progress bar, empty state
+  (`transitive-restore-banner`) above the tree when the assets file is missing, in one element shape with the bar beside it so a
+  focused Restore keeps the focus while the restore runs; when the banner leaves with the focus on it, `useRestoreBannerFocus`
+  hands the focus to the Transitive group row (`focusListRow`, UX-P4.fix-16); the group's 2 px progress bar, empty state
   and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the aggregate is asked on
   expand, its rows carry an `N projects` badge whose title names each project's roots.
 
