@@ -8,7 +8,7 @@ differ, the Modern UI value comes first (it is the compiled default from 1.139) 
 | Item | Value |
 |---|---|
 | Status | Proposed by the UX initiative, 2026-10-23. The plan's items implement it; this file is the reference they cite. |
-| Rules | 87: the 72 `DS-*` rules of the research (ids kept) and 15 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72), `DS-TYPE-10` (2026-11-13, H27), `DS-ROW-7` (2026-11-13, judge P3.8 `sidebar-browse-hover#D1`), `DS-ALIGN-2` (2026-11-16, UX-P3.12)) |
+| Rules | 88: the 72 `DS-*` rules of the research (ids kept) and 16 added (`DS-TYPE-8`, `DS-TYPE-9`, `DS-RADIUS-1`, `DS-RADIUS-2`, `DS-DIVIDER-5`, `DS-DIVIDER-6`, `DS-SCROLL-1`, `DS-SCROLL-2`, `DS-LOOK-1`, `DS-HC-1`, `DS-ALIGN-1`, `DS-OVERFLOW-6` (2026-10-24, V72), `DS-TYPE-10` (2026-11-13, H27), `DS-ROW-7` (2026-11-13, judge P3.8 `sidebar-browse-hover#D1`), `DS-ALIGN-2` (2026-11-16, UX-P3.12), `DS-OVERFLOW-7` (2026-11-19, judge P4.fix-5 `sidebar-update-all-dialog#D1`)) |
 | Tokens | 179 `--nuiget-*` custom properties (`tokens.json`, `src/webview/shared/tokens.css`), 30 of them switched by the look |
 | Exemplar | The workbench: Extensions view (rows, pane headers, search), Explorer (tree rows, pane-header actions), Settings editor (controls, scope tabs), quick input (popup), Extensions editor (details header, navbar) |
 | Floor | VS Code `^1.90.0` (Chromium 122, Node 20.9; owner round 2, D54); every rule renders correctly there through token fallbacks (1.90 exports none of the size tokens) |
@@ -138,6 +138,7 @@ One rule per line. Status is `measurable` (a script decides) or `judge-only`. To
 | DS-OVERFLOW-4 | The sidebar view title shows at most four navigation actions; the rest go to the `...` menu. | Visible `view/title` navigation items of `nuiget.sidebarView` ≤ 4: the manifest lint counts the navigation positions (a switch pair once), and the capture suite counts the side bar's visible title actions in the top document, `...` left out (UX-P3.7b). | 0 | measurable | — | M = C 4: Explorer pane-header actions (`explorer.json pane_headers` action items with w > 0); nUIget today 6 (`C: with-main-installed-single.json sidebar_title`) |
 | DS-OVERFLOW-5 | Split bounds are pixels: the list pane never goes below its toolbar's min-content width and the details pane never below its header's; below the sum of both minimums the details pane is not shown (§8's main split, UX-P3.fix-15). | `layout/set` clamps `splitPosition` so both panes keep their min-content widths; below 391 px of panel a size query on the split hides the details pane and the sash and the list is as wide as the split (`splitClause`, the `split` scope). | 1 | measurable | V50 | M = C: part minimums are pixels (`editor.ts:29`, `sidebarPart.ts:48`, TS-read) |
 | DS-OVERFLOW-6 | The webview document never scrolls: lists and panes scroll, the root does not, at every width and in every state (a layer's scrim covers the viewport without extending it). | `documentElement.scrollHeight ≤ clientHeight` and `scrollWidth ≤ clientWidth` in every named state; the line names the deepest element outside the viewport that no scroller contains. | 0 | measurable | V72 | M = C: the Extensions view scrolls its list (`.monaco-list`), never the view pane (TS/CSS-read; the probe has no field) |
+| DS-OVERFLOW-7 | A dialog list item wraps at its spaces and after the dots of its package id. An id segment, a version and `→ <new>` each stay on one line. Only a part wider than the item's line breaks inside itself. | `[measure] DS-OVERFLOW-7@<state>/dialog-list` in the dialog list states (UX-P4.fix-14): each list item of the topmost dialog is read by text range, its words split at whitespace and its first word after each dot, and a piece on more than one line, or a `→` not on the line of the word after it, is off unless that part (or `→ <next>`) is wider than the item's content box, when it counts as forced; no item is not measurable. | 0 | measurable | judge P4.fix-5 `sidebar-update-all-dialog#D1` | M = C: no workbench exemplar wraps a package list; DS-COPY-2's row form (`<id> <old> → <new>`) |
 
 ### STATE
 
@@ -444,6 +445,7 @@ Every container that holds a row of controls, its minimum width and its behaviou
 | Details/README tabs | 220 (`--nuiget-details-pane-min`) | as the tab strip | as the tab strip |
 | Details facts (DS-ALIGN-1) | details-pane minimum | the value column wraps under the label | ragged (V59) |
 | Dialog footer | `min(32em, 100%)` | wraps, primary button last | wraps |
+| Dialog list item | `min(32em, 100%)` | wraps at spaces and after the id's dots; a version and `→ <new>` stay whole; a part wider than the line breaks anywhere | since UX-P4.fix-14 |
 | Quick-search popup row | search-box width | name ellipsis; version and chevron stay | holds |
 
 ## 9. States per screen (DS-STATE-1)
