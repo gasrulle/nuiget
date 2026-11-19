@@ -491,6 +491,12 @@
     "sha256": "e92af770d3560fd3b1aa4ac91ac0107140a112fd2844f128ce37bc74d480c7b1",
     "sidecarSha256": "8542c64af1cf209806c9c487c6a2921a2bba94337583478fad71906ff0529477"
   },
+  "main-updates-update-all-dialog.dark-modern.1200.png": {
+    "status": "baseline",
+    "run": "44622304312",
+    "sha256": "44549ae9f39ec920038a94a4d26943472bc92aaf2badbcd91e5c7877bcf1f7ef",
+    "sidecarSha256": "8cc4638e5a11e2b0cbec1d951bc82102834ef36a7755ab4f536484cb543a1280"
+  },
   "main-updates.dark-modern.1200.png": {
     "status": "approved",
     "run": "43776489839",

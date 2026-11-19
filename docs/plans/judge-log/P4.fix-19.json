@@ -1,0 +1,62 @@
+{
+  "item": "P4.fix-19",
+  "runs": [
+    {
+      "runId": "44622304312",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "88f97fcb (proving push; cae8b333 the suite)",
+      "look": "modern",
+      "workflow": "wf_df1db620-def",
+      "note": "The one new cell, main-updates-update-all-dialog, judged in screen mode against main-updates.dark-modern.1200 as the page beneath (no artboard for the dialog cell; design-advisor opening ruling of 2026-11-19, DO 11, DECISIONS 2026-11-19). One standing finding (major, not blocking), accepted-as-design under the design-advisor follow-up 1 of 2026-11-19; one candidate refuted.",
+      "captures": {
+        "main-updates-update-all-dialog": {
+          "png": "captures/44622304312/main-updates-update-all-dialog.dark-modern.1200.png",
+          "sha256": "44549ae9f39ec920038a94a4d26943472bc92aaf2badbcd91e5c7877bcf1f7ef",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png (the page beneath; no artboard for the dialog cell)"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 3,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-updates-update-all-dialog#D1",
+          "state": "main-updates-update-all-dialog",
+          "finding": "[native] The ARIA snapshot marks Cancel as focused when the confirmation opens, but Cancel shows no ring. It only has its 1 px button.border, and no focusBorder pixel appears at the +2 offset around it. A native workbench dialog draws a 1 px focusBorder ring on its focused button, and DS-FOCUS-3 says the main panel draws rings after a click in both looks, so nothing shows where keyboard focus is. | [states] Keyboard focus sits on the dialog's Cancel button (the aria snapshot marks it [focused]), but the capture draws no 1 px focusBorder ring at offset +2 around it. A text button in the main panel should show its focus ring after a click as well as after a key, so nothing on the screen shows where focus is.",
+          "severity": "major",
+          "box": [
+            677,
+            570,
+            65,
+            32
+          ],
+          "rule": "DS-FOCUS-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "ruling": "design-advisor, 2026-11-19, UX-P4.fix-19 follow-up 1: DECISIONS 2026-11-07 (Dialogs and layers, UX-P3.5; a pointer-opened dialog under Modern UI shows no ring on Cancel, the DS-FOCUS-3 premise); precedent docs/plans/judge-log/P3.5.json main-installed-bulk-dialog#D2"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-2",
+          "state": "main-updates-update-all-dialog",
+          "finding": "The main search box placeholder reads \"Search or type @ to filter\", but the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The placeholder copy no longer matches the artboard element.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The capture's placeholder reads \"Search or type @ to filter\". The artboard's longer copy is stale: design-system.md row 437 names \"Search or type @ to filter\" as the main search box's placeholder since UX-P3.fix-15, so the capture follows the ruled copy, and the box's rect (16,42,1168,26) matches the spec."
+        }
+      ]
+    }
+  ]
+}
