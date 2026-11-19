@@ -132,10 +132,10 @@
     "sidecarSha256": "b9000e28b7baabab7474ad4cc6d9309225076f4bbe613c1a85d87a9784bf8e1b"
   },
   "main-installed-busy.dark-modern.1200.png": {
-    "status": "baseline",
-    "run": "44394529420",
-    "sha256": "cc83aad3f6c9f44ab273d54735729f23df396516fba2c3c3a4f1c8287e8004cd",
-    "sidecarSha256": "7f795966a2afd1bd846be2d3a1d91eebb98ecb213d6dc44c6b79e296317bea75"
+    "status": "approved",
+    "run": "44428362148",
+    "sha256": "bc15346097e3a2b8385ef1053439cb0f04349c7c7066f6564704711b4dbb95fa",
+    "sidecarSha256": "1cfc12a863338f164a29bbc3f6668c5561ac8675ca081e8f00ac778fe1fc80ed"
   },
   "main-installed-cpm.dark-modern.1200.png": {
     "status": "approved",

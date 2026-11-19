@@ -1,0 +1,32 @@
+{
+ "item": "P4.fix-15",
+ "runs": [
+  {
+   "runId": "44428362148",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "c5e9e052 (proving push)",
+   "look": "modern",
+   "workflow": "wf_02408490-332",
+   "note": "The one moved cell, main-installed-busy (the spinner's box is the action's 22 px, glyph end 10 → 9), judged in screen mode against main-installed-details.dark-modern.1200 as the page beneath, as UX-P4.fix-13 did (design-advisor GOLDEN ruling of 2026-11-19, DO 4). The three judges answered findings [] each (journal); no candidate, so no refuter ran.",
+   "captures": {
+    "main-installed-busy": {
+     "png": "captures/44428362148/main-installed-busy.dark-modern.1200.png",
+     "sha256": "bc15346097e3a2b8385ef1053439cb0f04349c7c7066f6564704711b4dbb95fa",
+     "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png (the page beneath; no artboard for the busy cell)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 0,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "singleJudge": [],
+   "findings": [],
+   "refuted": []
+  }
+ ]
+}
