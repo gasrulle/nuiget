@@ -1,0 +1,32 @@
+{
+ "item": "P4.fix-14",
+ "runs": [
+  {
+   "runId": "44449385049",
+   "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+   "tree": "9868b3d3 (proving push)",
+   "look": "modern",
+   "workflow": "wf_7ea7f75b-1bf",
+   "note": "The one moved cell, sidebar-update-all-dialog (its list items now wrap after the id's dots with each version part whole), judged in screen mode against main-installed-all.dark-modern.1200 as the row reference, as UX-P4.fix-5 did (no dialog artboard). The three judges answered findings [] each (journal); no candidate, so no refuter ran. A first launch with artboardPng null was refused by the workflow (screen mode needs an artboard) before any agent ran.",
+   "captures": {
+    "sidebar-update-all-dialog": {
+     "png": "captures/44449385049/sidebar-update-all-dialog.dark-modern.300.png",
+     "sha256": "90ccf686e951a113b20c4d109c70599aaadb546cfe25d46f03d05ff93bba73c4",
+     "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (the row reference; no dialog artboard)"
+    }
+   },
+   "panel": {
+    "states": 1,
+    "candidates": 0,
+    "standing": 0,
+    "blocking": 0,
+    "refuted": 0,
+    "singleJudge": 0,
+    "incomplete": 0
+   },
+   "singleJudge": [],
+   "findings": [],
+   "refuted": []
+  }
+ ]
+}

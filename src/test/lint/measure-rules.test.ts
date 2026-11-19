@@ -1892,7 +1892,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         const whole = item('Microsoft.Extensions.AI.Abstractions 9.0.0 → 9.1.0', 2, [piece('Microsoft.'), piece('Extensions.'), piece('AI.'), piece('Abstractions'), piece('9.0.0'), piece('→', 1, 15), piece('9.1.0')], [{ sameLine: true, width: 55 }]);
         const short = item('Dapper 2.1.35 → 2.1.89', 1, [piece('Dapper'), piece('2.1.35'), piece('→', 1, 15), piece('2.1.89')], [{ sameLine: true, width: 55 }]);
         const line = (items: unknown[], state = 'sidebar-update-all-dialog', rule = name) => lineOf(state, withCells({ dialogListLines: items }), rule);
-        expect(line([whole, short])).toMatchObject({ pass: true, status: { pending: 'P4.fix-14' }, value: 'list items 2, wrapped 1: ok' });
+        expect(line([whole, short])).toMatchObject({ pass: true, status: 'hard', value: 'list items 2, wrapped 1: ok' });
         // An id segment on two lines, narrower than the item: off.
         const split = item('Microsoft.Extensions.AI.Abstractions 9.0.0 → 9.1.0', 2, [piece('Microsoft.'), piece('Extensions.'), piece('AI.'), piece('Abstractions', 2, 90), piece('9.0.0'), piece('→', 1, 15), piece('9.1.0')], [{ sameLine: true, width: 55 }]);
         expect(line([short, split])).toMatchObject({ pass: false, value: 'list items 2, wrapped 1; off 1: "Microsoft.Extensions.AI.Abstractions 9.0.0 → 9.1.0"' });

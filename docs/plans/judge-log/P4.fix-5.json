@@ -40,7 +40,9 @@
      "lenses": [
       "states"
      ],
-     "note": "informational (one lens): long package ids break mid-word and the arrow lands on either line in the 300 px side bar dialog; the wrapping is the list's (the same items wrapped with the colon form), not this item's copy change; reported to the planning session as a proposed row"
+     "note": "informational (one lens): long package ids break mid-word and the arrow lands on either line in the 300 px side bar dialog; the wrapping is the list's (the same items wrapped with the colon form), not this item's copy change; reported to the planning session as a proposed row",
+     "disposition": "fixed",
+     "reason": "UX-P4.fix-14 (a296a1a7 rule DS-OVERFLOW-7, 50e6c826 reading push, 9868b3d3 the fix, and its closing commit): a package item wraps after its id's dots with each version part whole; DS-OVERFLOW-7@sidebar-update-all-dialog/dialog-list read off 6 on run 44445946322 and ok on run 44449385049, hard since UX-P4.fix-14 (docs/plans/judge-log/P4.fix-14.json)"
     }
    ],
    "findings": [],

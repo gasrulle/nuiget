@@ -647,7 +647,7 @@ export const RULES: readonly RuleDefinition[] = [
     // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170; hard since UX-P3.11 push B.
     rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections', ...MAIN_PLACEHOLDER_STATES] } }),
     // A dialog list item wraps at spaces and after its id's dots (UX-P4.fix-14, design-advisor opening ruling of 2026-11-19, DO 2a).
-    rule('DS-OVERFLOW-7', { helper: 6, scopes: { 'dialog-list': { pending: 'P4.fix-14' } }, tolerance: TOLERANCES.containment, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
+    rule('DS-OVERFLOW-7', { helper: 6, scopes: { 'dialog-list': 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
