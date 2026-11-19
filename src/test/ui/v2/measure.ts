@@ -646,6 +646,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.11 (design-advisor opening ruling DO 7): `placeholder`, the side bar search box's placeholder fits its text room at
     // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170; hard since UX-P3.11 push B.
     rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections', ...MAIN_PLACEHOLDER_STATES] } }),
+    // A dialog list item wraps at spaces and after its id's dots (UX-P4.fix-14, design-advisor opening ruling of 2026-11-19, DO 2a).
+    rule('DS-OVERFLOW-7', { helper: 6, scopes: { 'dialog-list': { pending: 'P4.fix-14' } }, tolerance: TOLERANCES.containment, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
@@ -1301,6 +1303,8 @@ export interface StateCells {
     dialogText?: Array<{ part: 'title' | 'description' | 'body' | 'option'; lineHeight: string }>;
     /** The trimmed text of each visible list item of the topmost dialog, never its lead (UX-P4.fix-5). */
     dialogListItems?: string[];
+    /** Each visible list item of the topmost dialog, read by text range (UX-P4.fix-14, DS-OVERFLOW-7): its text, its content width, its lines, its pieces (lines and width) and its arrows (on the next word's line, and the pair's width). */
+    dialogListLines?: Array<{ text: string; width: number; lines: number; pieces: Array<{ text: string; lines: number; width: number }>; arrows: Array<{ sameLine: boolean; width: number }> }>;
     /** Each visible disabled or aria-disabled element that is not a text or icon button: its computed colour and opacity. */
     disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
     /**
@@ -2280,6 +2284,43 @@ const stateCells = {
                 dialogText: dialog ? [['title', '.nuiget-dialog-title'], ['description', '.nuiget-dialog-description'], ['body', '.nuiget-dialog-body'], ['option', '.nuiget-dialog-option']].flatMap(([part, selector]) => [...dialog.querySelectorAll(selector)].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => ({ part, lineHeight: getComputedStyle(el).lineHeight }))) : undefined,
                 // UX-P4.fix-5 (DO 1e): the topmost dialog's list items, never a lead or a covered dialog's.
                 dialogListItems: dialog ? [...dialog.querySelectorAll('.nuiget-dialog-list > li')].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => el.textContent.trim()) : undefined,
+                // UX-P4.fix-14 (DO 2b): each list item's pieces by text range, whatever its markup: the words at whitespace, the first
+                // word split after each dot; per piece its lines (distinct rounded tops) and summed width; per arrow whether it shares
+                // the next word's line; the item's content-box width.
+                dialogListLines: dialog ? [...dialog.querySelectorAll('.nuiget-dialog-list > li')].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => {
+                    const nodes = [];
+                    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+                    let total = 0;
+                    for (let node = walker.nextNode(); node; node = walker.nextNode()) { nodes.push({ node, start: total }); total += node.data.length; }
+                    const text = nodes.map(entry => entry.node.data).join('');
+                    const at = offset => { const found = nodes.filter(entry => entry.start <= offset).pop() || nodes[0]; return [found.node, Math.min(offset - found.start, found.node.data.length)]; };
+                    const measure = (start, end) => {
+                        const range = document.createRange();
+                        range.setStart(...at(start));
+                        range.setEnd(...at(end));
+                        const rects = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0);
+                        return { tops: [...new Set(rects.map(rect => Math.round(rect.top)))], width: round(rects.reduce((sum, rect) => sum + rect.width, 0)) };
+                    };
+                    const words = [...text.matchAll(/\\S+/g)].map(match => ({ word: match[0], start: match.index, end: match.index + match[0].length }));
+                    const pieces = words.flatMap((word, index) => {
+                        if (index > 0) return [{ text: word.word, start: word.start, end: word.end }];
+                        const parts = word.word.match(/[^.]*\\.|[^.]+$/g) || [word.word];
+                        let start = word.start;
+                        return parts.map(part => { const piece = { text: part, start, end: start + part.length }; start += part.length; return piece; });
+                    }).map(piece => { const read = measure(piece.start, piece.end); return { text: piece.text, lines: read.tops.length, width: read.width, tops: read.tops }; });
+                    const arrows = words.flatMap((word, index) => {
+                        const next = words[index + 1];
+                        if (word.word !== '→' || next === undefined) return [];
+                        const own = measure(word.start, word.end);
+                        const after = measure(next.start, next.end);
+                        return [{ sameLine: own.tops.length > 0 && after.tops.length > 0 && own.tops[own.tops.length - 1] === after.tops[0], width: round(own.width + after.width) }];
+                    });
+                    const style = getComputedStyle(el);
+                    // The item's lines are its pieces' lines: a range over the whole item would also return the boxes of the
+                    // elements it contains (an inline-block part's line box sits half a leading above its text).
+                    const lines = new Set(pieces.flatMap(piece => piece.tops)).size;
+                    return { text: text.trim(), width: round(rectOf(el).width - px(style.paddingLeft) - px(style.paddingRight)), lines, pieces: pieces.map(({ tops, ...piece }) => piece), arrows };
+                }) : undefined,
                 messageLeaves: shown('.nuiget-row-message--compact').map(el => {
                     const range = document.createRange();
                     range.selectNodeContents(el);
@@ -4321,7 +4362,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || (definition.id === 'DS-COPY-2' && scope === 'dialog-list');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list');
     if (!own) {
         return undefined;
     }
@@ -4376,7 +4417,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         return dialogTextClause(cells.dialogText, tolerance);
     }
     if (scope === 'dialog-list') {
-        return dialogListClause(cells.dialogListItems);
+        return definition.id === 'DS-OVERFLOW-7' ? dialogListWrapClause(cells.dialogListLines) : dialogListClause(cells.dialogListItems);
     }
     const leaves = cells.messageLeaves ?? [];
     if (leaves.length === 0) {
@@ -4405,6 +4446,30 @@ function dialogListClause(items: StateCells['dialogListItems']): { value: string
     return off.length === 0
         ? { value: `list items ${items.length}: ok`, pass: true }
         : { value: `list items ${items.length}; off ${off.length}: "${off[0]}"`, pass: false };
+}
+
+/**
+ * DS-OVERFLOW-7 `dialog-list` (UX-P4.fix-14, design-advisor opening ruling of 2026-11-19, DO 2c-d): a piece (an id segment up to
+ * its dot, a version, any other word) on more than one line is off unless wider than the item's content box (forced); a `→` not
+ * on the line of the word after it is off unless the pair is wider (forced). Counts are printed, never pinned (live content).
+ */
+export function dialogListWrapClause(items: StateCells['dialogListLines']): { value: string; pass: boolean } {
+    if (items === undefined || items.length === 0) {
+        return { value: `${NOT_MEASURABLE} (no dialog list item)`, pass: false };
+    }
+    let forced = 0;
+    const off = items.filter(item => {
+        const pieceOff = item.pieces.filter(piece => piece.lines > 1);
+        const arrowOff = item.arrows.filter(arrow => !arrow.sameLine);
+        const bad = [...pieceOff.filter(piece => piece.width <= item.width), ...arrowOff.filter(arrow => arrow.width <= item.width)];
+        forced += pieceOff.length + arrowOff.length - bad.length;
+        return bad.length > 0;
+    });
+    const wrapped = items.filter(item => item.lines > 1).length;
+    const head = `list items ${items.length}, wrapped ${wrapped}`;
+    return off.length === 0
+        ? { value: `${head}: ok${forced > 0 ? `; forced ${forced}` : ''}`, pass: true }
+        : { value: `${head}; off ${off.length}: "${off[0].text}"`, pass: false };
 }
 
 /** UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 2c): a dialog title's line box is 18 × 1.4, its text containers' 13 × 1.4. */

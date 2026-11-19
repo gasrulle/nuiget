@@ -88,6 +88,13 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             this.node = node;
         };
         Range.prototype.getClientRects = function (this: Range & { node?: Node }) {
+            if (this.node === undefined) {
+                // A range set by setStart/setEnd (UX-P4.fix-14): its text's rects from the list item's `data-pieces` map.
+                const item = this.startContainer.parentElement?.closest('li');
+                const pieces = item?.dataset.pieces === undefined ? {} : JSON.parse(item.dataset.pieces) as Record<string, string>;
+                const found = pieces[this.toString()];
+                return (found === undefined ? [] : found.split('|').map(entry => rect(entry))) as unknown as DOMRectList;
+            }
             const text = this.node?.parentElement?.dataset.text;
             return (text === undefined ? [] : [rect(text)]) as unknown as DOMRectList;
         };
@@ -675,6 +682,29 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             '</div></div></div></div>',
         ].join(''));
         expect(collect().endOfP0.stateCells.dialogListItems).toEqual(['Dapper 2.1.35 → 2.1.89']);
+    });
+
+    it('reads a dialog list item\'s lines by text range, whatever its markup: its pieces, its arrows and its content width (DS-OVERFLOW-7, UX-P4.fix-14)', () => {
+        // "Abstractions" on two lines and the arrow apart from its version: the facts the clause judges. The item's lines are its
+        // pieces' (three tops), never a whole-item range's, which would also hold the parts' boxes.
+        const pieces = {
+            'Microsoft.Extensions.AI.Abstractions 9.0.0 → 9.1.0': '220,250,440,268',
+            'Microsoft.': '220,260,290,278', 'Extensions.': '290,260,360,278', 'AI.': '360,260,380,278', 'Abstractions': '380,260,440,278|220,278,250,296',
+            '9.0.0': '255,278,300,296', '→': '305,278,320,296', '9.1.0': '220,296,260,314',
+        };
+        document.body.insertAdjacentHTML('beforeend', [
+            '<div class="nuiget-dialog-layer" data-rect="0,0,900,700"><div class="nuiget-dialog" data-rect="200,220,460,500"><div class="nuiget-dialog-body" data-rect="210,230,450,480">',
+            `<ul class="nuiget-dialog-list" data-rect="220,260,440,320"><li data-rect="220,260,440,314" data-pieces='${JSON.stringify(pieces)}'>Microsoft.<wbr>Extensions.<wbr>AI.<wbr>Abstractions <span class="nuiget-dialog-item-part">9.0.0</span> <span class="nuiget-dialog-item-part">→ 9.1.0</span></li></ul>`,
+            '</div></div></div>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.dialogListLines).toEqual([{
+            text: 'Microsoft.Extensions.AI.Abstractions 9.0.0 → 9.1.0', width: 220, lines: 3,
+            pieces: [
+                { text: 'Microsoft.', lines: 1, width: 70 }, { text: 'Extensions.', lines: 1, width: 70 }, { text: 'AI.', lines: 1, width: 20 },
+                { text: 'Abstractions', lines: 2, width: 90 }, { text: '9.0.0', lines: 1, width: 45 }, { text: '→', lines: 1, width: 15 }, { text: '9.1.0', lines: 1, width: 40 },
+            ],
+            arrows: [{ sameLine: false, width: 55 }],
+        }]);
     });
 
     it('reads the busy rows: the option\'s aria-busy, the spinner glyph\'s box and colour, the action slot\'s end, the buttons left in it and the status (DS-STATE-6, UX-P4.fix-13)', () => {
