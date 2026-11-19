@@ -769,6 +769,25 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         }
     });
 
+    it('reads each section header chevron\'s computed colour, expanded or collapsed, and no other chevron (DS-ICON-2, UX-P4.fix-18)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="header-chevrons">.nuiget-section-chevron { color: rgb(140, 140, 140); } .nuiget-section-chevron--expanded { color: rgb(96, 96, 96); }</style>');
+        const list = document.querySelector('.nuiget-list') as HTMLElement;
+        list.insertAdjacentHTML('afterbegin', [
+            '<div id="pane" class="nuiget-section-header" data-variant="pane" data-testid="section-box-installed" data-rect="0,100,300,122"><span class="nuiget-section-toggle" data-testid="section-header-installed" data-rect="0,100,300,122"><svg class="nuiget-section-chevron nuiget-section-chevron--expanded" data-codicon="chevron-right" data-rect="4,103,20,119"></svg></span></div>',
+            '<div id="level" class="nuiget-section-header" data-variant="level" data-testid="section-box-framework" data-rect="0,130,300,152"><span class="nuiget-section-toggle" data-testid="section-header-framework" data-rect="0,130,300,152"><svg class="nuiget-section-chevron" data-codicon="chevron-right" data-rect="12,133,28,149"></svg></span></div>',
+            '<div id="stray" data-rect="0,160,300,182"><svg class="nuiget-section-chevron" data-codicon="chevron-right" data-rect="4,163,20,179"></svg></div>',
+        ].join(''));
+        try {
+            const cells = collect().endOfP0.stateCells;
+            expect(cells.headerChevronColours).toEqual(['rgb(96, 96, 96)', 'rgb(140, 140, 140)']);
+        } finally {
+            document.getElementById('pane')?.remove();
+            document.getElementById('level')?.remove();
+            document.getElementById('stray')?.remove();
+            document.getElementById('header-chevrons')?.remove();
+        }
+    });
+
     it('collects the Installed cells: markers, bar, skeleton, empty state, banner, leaf and colour roles (UX-P2.8b)', () => {
         document.head.insertAdjacentHTML('beforeend', '<style id="state-cells">.nuiget-empty { text-align: start; padding-left: 20px; padding-right: 20px; padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;

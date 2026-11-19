@@ -1293,6 +1293,8 @@ export interface StateCells {
     headerSpinners?: number;
     /** The computed colour of each pane-header spinner glyph (DS-ICON-2's header clause, UX-P4.fix-15). */
     headerSpinnerColours?: string[];
+    /** The computed colour of each section header's chevron, every variant, expanded or collapsed (DS-ICON-2's header clause, UX-P4.fix-18). */
+    headerChevronColours?: string[];
     /** The search box's placeholder: its text, its width in the box's computed font, and the box's text room (UX-P3.11); the main box too since UX-P3.fix-15 (`main`), and whether the box is empty. */
     placeholderFit?: { text: string; width: number; room: number; main?: boolean; empty?: boolean };
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
@@ -2246,6 +2248,7 @@ const stateCells = {
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
                 headerSpinnerColours: shown('[data-testid^="section-header-"] .nuiget-spinner svg').map(svg => getComputedStyle(svg).color),
+                headerChevronColours: shown('[data-testid^="section-header-"] .nuiget-section-chevron').map(el => getComputedStyle(el).color),
                 busyRows: shown('.nuiget-row--busy').map(row => {
                     const rowRect = rectOf(row);
                     const slot = row.querySelector('.nuiget-row-actions');
@@ -3280,21 +3283,28 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const spinnerOff = spinners.filter(colour => colour !== facts.iconColours.icon);
             const spinnerText = spinners.length === 0 ? '' : `header spinner ${spinners.length} icon.foreground`;
             const spinnerOffText = spinnerOff.map(colour => `header spinner ${colour} (expected icon.foreground)`);
+            // A section header's chevron is the header's twisty, in icon.foreground in every variant (UX-P4.fix-18).
+            const chevrons = facts.stateCells.headerChevronColours ?? [];
+            const chevronOff = chevrons.filter(colour => colour !== facts.iconColours.icon);
+            const chevronText = chevrons.length === 0 ? '' : `header chevron ${chevrons.length} icon.foreground`;
+            const headerText = [spinnerText, chevronText].filter(text => text !== '').join('; ');
+            const headerOffText = [...spinnerOffText, ...chevronOff.map(colour => `header chevron ${colour} (expected icon.foreground)`)];
+            const headerPass = spinnerOff.length === 0 && chevronOff.length === 0;
             if (buttons.length === 0) {
-                if (spinners.length === 0) {
+                if (headerText === '') {
                     return notMeasurable('no icon button');
                 }
-                return { value: `${spinnerText}${spinnerOff.length === 0 ? '' : `; off: ${spinnerOffText.join(', ')}`}`, pass: spinnerOff.length === 0 };
+                return { value: `${headerText}${headerOffText.length === 0 ? '' : `; off: ${headerOffText.join(', ')}`}`, pass: headerPass };
             }
             // The severity role: no named state shows the sources health button until P3.10's error cells.
             const roleOf = (button: (typeof buttons)[number]) => actionIconRole(button, facts.iconColours);
             const glyphs = buttons.flatMap(button => (button.glyph === undefined ? [] : [`${button.glyph.w}×${button.glyph.h}`]));
             const off = buttons.filter(button => button.colour !== roleOf(button).colour);
             const glyphsPass = buttons.every(button => button.glyph !== undefined && near(button.glyph.w, 16, tolerance) && near(button.glyph.h, 16, tolerance));
-            const offText = [...off.map(button => `${button.label} ${button.colour} (expected ${roleOf(button).label})`), ...spinnerOffText];
+            const offText = [...off.map(button => `${button.label} ${button.colour} (expected ${roleOf(button).label})`), ...headerOffText];
             return {
-                value: `glyph ${tally(glyphs)} (target 16×16); ${tally(buttons.map(button => roleOf(button).label))}${spinnerText === '' ? '' : `; ${spinnerText}`}${offText.length === 0 ? '' : `; off: ${offText.join(', ')}`}`,
-                pass: glyphsPass && off.length === 0 && spinnerOff.length === 0,
+                value: `glyph ${tally(glyphs)} (target 16×16); ${tally(buttons.map(button => roleOf(button).label))}${headerText === '' ? '' : `; ${headerText}`}${offText.length === 0 ? '' : `; off: ${offText.join(', ')}`}`,
+                pass: glyphsPass && off.length === 0 && headerPass,
             };
         }
         case 'DS-COLOR-4': {

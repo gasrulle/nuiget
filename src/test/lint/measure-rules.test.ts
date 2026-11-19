@@ -1515,6 +1515,15 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(icon2(withSpinners([iconColour]))).toMatchObject({ pass: true, value: 'header spinner 1 icon.foreground' });
         expect(icon2(withSpinners(['rgb(191, 191, 191)']))).toMatchObject({ pass: false, value: 'header spinner 1 icon.foreground; off: header spinner rgb(191, 191, 191) (expected icon.foreground)' });
         expect(icon2(withSpinners([]))).toMatchObject({ pass: false, value: 'not measurable (no icon button)' });
+        // A section header's chevron is the header's twisty, in icon.foreground in every variant (UX-P4.fix-18), after the spinner part.
+        const withHeaderGlyphs = (spinnerColours: string[], chevronColours: string[], ...buttons: Array<Partial<Heights['iconButtons'][number]>>) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, headerSpinnerColours: spinnerColours, headerChevronColours: chevronColours } } as Layout['endOfP0'] }, { iconButtons: buttons.map(iconButton) });
+        expect(icon2(withHeaderGlyphs([], [iconColour, iconColour], {}))).toMatchObject({ pass: true, value: 'glyph 16×16 (target 16×16); colour icon.foreground; header chevron 2 icon.foreground' });
+        expect(icon2(withHeaderGlyphs([iconColour], [iconColour], {}))).toMatchObject({ pass: true, value: 'glyph 16×16 (target 16×16); colour icon.foreground; header spinner 1 icon.foreground; header chevron 1 icon.foreground' });
+        expect(icon2(withHeaderGlyphs([], [iconColour, 'rgb(191, 191, 191)'], {}))).toMatchObject({ pass: false, value: 'glyph 16×16 (target 16×16); colour icon.foreground; header chevron 2 icon.foreground; off: header chevron rgb(191, 191, 191) (expected icon.foreground)' });
+        // A state with chevrons alone is measured, not "not measurable".
+        expect(icon2(withHeaderGlyphs([], [iconColour]))).toMatchObject({ pass: true, value: 'header chevron 1 icon.foreground' });
+        expect(icon2(withHeaderGlyphs([], ['rgb(191, 191, 191)']))).toMatchObject({ pass: false, value: 'header chevron 1 icon.foreground; off: header chevron rgb(191, 191, 191) (expected icon.foreground)' });
+        expect(icon2(withHeaderGlyphs(['rgb(191, 191, 191)'], ['rgb(191, 191, 191)']))).toMatchObject({ pass: false, value: 'header spinner 1 icon.foreground; header chevron 1 icon.foreground; off: header spinner rgb(191, 191, 191) (expected icon.foreground), header chevron rgb(191, 191, 191) (expected icon.foreground)' });
 
         const selected = { id: 'installed-tab', selected: true, colour: 'rgb(231, 231, 231)', lineWidth: 1, lineColour: 'rgb(0, 120, 212)' };
         const other = { id: 'updates-tab', selected: false, colour: 'rgb(157, 157, 157)', lineWidth: 1, lineColour: 'rgba(0, 0, 0, 0)' };
