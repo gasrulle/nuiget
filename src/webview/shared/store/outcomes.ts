@@ -37,14 +37,18 @@ function describeRestore(outcome: BulkOutcome): string {
 
 /**
  * An edit bulk (install, update or uninstall) of several results, in the toast's words (`src/host/feedback.ts`,
- * `bulkSentence`): the package and its projects counted for an install, the packages counted otherwise, "n of m" when not
- * every one was done, and the restores that failed after the edits (design-advisor ruling of UX-P4.fix-17).
+ * `bulkSentence`): the package and its projects counted for an install, the packages counted otherwise ("in" or "from" N
+ * projects when they span more than one, UX-P4.fix-21), "n of m" when not every one was done, and the restores that failed
+ * after the edits (design-advisor ruling of UX-P4.fix-17).
  */
 function describeBulkEdits(outcome: BulkOutcome): string {
     const total = outcome.results.length;
     const done = outcome.results.filter(result => result.status === 'completed').length;
     const { kind, packageId } = outcome.results[0];
-    const what = (count: number | string): string => (kind === 'install' ? `${packageId ?? ''} in ${count} projects` : `${count} packages`);
+    // An update or uninstall across projects names how many, as the toast does; the count stays the edits (UX-P4.fix-21).
+    const projects = new Set(outcome.results.map(result => result.projectPath)).size;
+    const where = projects > 1 && kind === 'update' ? ` in ${projects} projects` : projects > 1 && kind === 'remove' ? ` from ${projects} projects` : '';
+    const what = (count: number | string): string => (kind === 'install' ? `${packageId ?? ''} in ${count} projects` : `${count} packages${where}`);
     if (outcome.status === 'completed') {
         return `${DONE[kind]} ${what(total)}`;
     }

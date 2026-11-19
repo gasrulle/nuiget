@@ -227,6 +227,47 @@ describe('operation feedback', () => {
         expect(output.show).toHaveBeenCalledTimes(6);
     });
 
+    it('a bulk outcome without results says the operation failed and names no kind (UX-P4.fix-21)', () => {
+        const { completed, output } = setup();
+        completed.fire(bulk({ opId: 'empty-1', status: 'failed', message: 'The queue is closed.' }));
+        completed.fire(bulk({ opId: 'empty-2', status: 'failed', message: '' }));
+        completed.fire(bulk({ opId: 'empty-3', status: 'failed' }));
+        completed.fire(bulk({ opId: 'empty-4', status: 'completed' }));
+        completed.fire(bulk({ opId: 'empty-5', status: 'cancelled', message: 'Cancelled' }));
+        completed.fire(bulk({ opId: 'empty-6', status: 'rejected', message: 'Five operations are waiting' }));
+        expect(warning.mock.calls.map(call => call[0])).toEqual([
+            'nUIget: The operation failed: The queue is closed.',
+            'nUIget: The operation failed.',
+            'nUIget: The operation failed.',
+            'nUIget: The operation was not started: Five operations are waiting.',
+        ]);
+        expect(information).not.toHaveBeenCalled();
+        expect(output.show).toHaveBeenCalledTimes(3);
+        expect([...warning.mock.calls, ...information.mock.calls].some(call => /Restored 0/.test(String(call[0])))).toBe(false);
+    });
+
+    it('an update or uninstall across projects names its projects (UX-P4.fix-21)', () => {
+        const { completed } = setup();
+        const edit = (kind: OperationOutcome['kind'], packageId: string, projectPath: string, status: OperationOutcome['status'] = 'completed') => single({ kind, packageId, projectPath, status });
+        completed.fire(bulk({ opId: 'across-1', results: [edit('update', 'Serilog', APP), edit('update', 'Moq', APP), edit('update', 'Serilog', LIB)] }));
+        completed.fire(bulk({ opId: 'across-2', results: [edit('remove', 'Serilog', APP), edit('remove', 'Moq', APP), edit('remove', 'Serilog', LIB)] }));
+        completed.fire(bulk({ opId: 'across-3', status: 'partial', results: [edit('update', 'Serilog', APP), edit('update', 'Moq', APP, 'failed'), edit('update', 'Serilog', LIB)], restores: [{ projectPath: APP, ok: false, error: 'NU1101' }, { projectPath: LIB, ok: true }] }));
+        completed.fire(bulk({ opId: 'across-4', status: 'failed', results: [edit('remove', 'Serilog', APP, 'failed'), edit('remove', 'Serilog', LIB, 'failed')] }));
+        // One project keeps its count alone; an install already counts its projects.
+        completed.fire(bulk({ opId: 'one-project', results: [edit('update', 'Serilog', APP), edit('update', 'Moq', APP)] }));
+        completed.fire(bulk({ opId: 'install', results: [edit('install', 'Serilog', APP), edit('install', 'Serilog', LIB)] }));
+        expect(information.mock.calls.map(call => call[0])).toEqual([
+            'nUIget: Updated 3 packages in 2 projects.',
+            'nUIget: Uninstalled 3 packages from 2 projects.',
+            'nUIget: Updated 2 packages.',
+            'nUIget: Installed Serilog in 2 projects.',
+        ]);
+        expect(warning.mock.calls.map(call => call[0])).toEqual([
+            'nUIget: Updated 2 of 3 packages in 2 projects; 1 failed; 1 restore failed.',
+            'nUIget: Uninstalled 0 of 2 packages from 2 projects; 2 failed.',
+        ]);
+    });
+
     it('the status bar names what runs and how many wait (UX-P4.7)', () => {
         const report = (changes: Partial<OperationProgress>): OperationProgress => ({ opId: 'op', status: 'running', kind: 'install', projectPaths: [APP], packageIds: ['Serilog'], ...changes });
         expect(queueStatusText({ active: 0, pending: 0 }, undefined)).toBeUndefined();

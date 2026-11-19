@@ -85,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Under All Projects, the sidebar's Installed list is one tree of folders and projects that fold with the arrow keys**
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 - **In a narrow editor the package details give way to the list**
+- **Updating or uninstalling across several projects says how many projects were changed**
 
 ### Fixed
 - **Keyboard focus is no longer lost when the panel narrows and hides the package details**
@@ -108,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Keyboard focus stays in the package list when a restore finishes**
 - **A restore that fails for some projects reports each failure once**
 - **The notification for a failed restore of one project names the project and the reason**
+- **An operation that fails before it starts no longer reports a restore of 0 projects**
 
 ## [2.0.0] - 2026-10-17
 

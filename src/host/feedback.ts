@@ -84,15 +84,24 @@ function attempt(outcome: OperationOutcome): string {
     }
 }
 
-/** What a bulk operation did with how many of its items, by its kind. */
-function bulkSentence(kind: OperationKind, packageId: string | undefined, done: number, total: number): string {
+/**
+ * What a bulk operation did with how many of its items, by its kind. An update or uninstall whose edits span more than one
+ * project names how many (UX-P4.fix-21): the count stays the edits, the number its confirmation asked about.
+ */
+function bulkSentence(kind: OperationKind, packageId: string | undefined, done: number, total: number, projects: number): string {
     const count = done === total ? `${total}` : `${done} of ${total}`;
     switch (kind) {
         case 'install':
             return `Installed ${packageId ?? ''} in ${count} ${total === 1 && done === total ? 'project' : 'projects'}`;
         case 'update':
+            if (projects > 1) {
+                return `Updated ${count} packages in ${projects} projects`;
+            }
             return `Updated ${count} ${total === 1 && done === total ? 'package' : 'packages'}`;
         case 'remove':
+            if (projects > 1) {
+                return `Uninstalled ${count} packages from ${projects} projects`;
+            }
             return `Uninstalled ${count} ${total === 1 && done === total ? 'package' : 'packages'}`;
         default:
             return `Restored ${count} ${total === 1 && done === total ? 'project' : 'projects'}`;
@@ -253,19 +262,34 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
             deps.output.show(true);
         }
         if ('results' in outcome) {
+            if (outcome.status === 'rejected') {
+                warn(`The operation was not started: ${bare(outcome.message ?? 'the queue is full')}.`);
+                return;
+            }
+            const [first] = outcome.results;
+            if (first === undefined) {
+                // No result, no kind to name: as the live region says it (UX-P4.fix-21); a completed one did nothing and says nothing.
+                if (outcome.status !== 'completed') {
+                    const reason = outcome.message;
+                    if (reason === undefined || bare(reason) === '') {
+                        warn('The operation failed.');
+                    } else {
+                        warn(`The operation failed: ${bare(reason)}.`);
+                    }
+                }
+                return;
+            }
             const total = outcome.results.length;
             const done = outcome.results.filter(result => result.status === 'completed').length;
             const failedEdits = total - done;
             const failedRestores = outcome.restores.filter(restore => !restore.ok && !restore.skipped).length;
-            const kind = outcome.results[0]?.kind ?? 'restore';
-            const packageId = outcome.results[0]?.packageId;
-            if (outcome.status === 'rejected') {
-                warn(`The operation was not started: ${bare(outcome.message ?? 'the queue is full')}.`);
-            } else if (outcome.status === 'completed') {
-                inform(`${bulkSentence(kind, packageId, total, total)}.`);
-            } else if (total === 1 && done === 0 && outcome.results[0].kind === 'restore') {
+            const { kind, packageId } = first;
+            // The scope the user confirmed: every result's project, as sent (the live region counts the same way).
+            const projects = new Set(outcome.results.map(result => result.projectPath)).size;
+            if (outcome.status === 'completed') {
+                inform(`${bulkSentence(kind, packageId, total, total, projects)}.`);
+            } else if (total === 1 && done === 0 && kind === 'restore') {
                 // One project's failed restore reads as the panel says it, never "0 of 1" (UX-P4.fix-20); an empty reason is absent.
-                const first = outcome.results[0];
                 const reason = [outcome.restores[0]?.error, first.message, outcome.message].find(text => text !== undefined && bare(text) !== '');
                 if (reason === undefined) {
                     warn(`${attempt(first)} failed.`);
@@ -276,7 +300,7 @@ export function registerOperationFeedback(deps: OperationFeedbackDeps): vscode.D
                 const edits = failedEdits > 0 ? `; ${failedEdits} failed` : '';
                 // A restore's results are its projects' restores: counted once, by the results (UX-P4.fix-16).
                 const restores = failedRestores > 0 && kind !== 'restore' ? `; ${plural(failedRestores, 'restore')} failed` : '';
-                warn(`${bulkSentence(kind, packageId, done, total)}${edits}${restores}.`);
+                warn(`${bulkSentence(kind, packageId, done, total, projects)}${edits}${restores}.`);
             }
             return;
         }
