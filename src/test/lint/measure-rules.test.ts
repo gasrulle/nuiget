@@ -1235,24 +1235,34 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     });
 
 
-    it('reads a busy row: aria-busy on the option, a 16 px spinner in the action slot in icon.foreground, no action left and its "-ing" word or Queued (DS-STATE-6, UX-P4.fix-13)', () => {
-        const icon = 'rgb(204, 204, 204)';
-        const busy = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling' };
-        expect(busyRowsVerdict([busy], icon, 1)).toEqual({ value: 'busy rows 1: package-row-fluentvalidation aria-busy; spinner 16×16 in the action slot (end 6, centre Δy 0; glyph end 10), colour icon.foreground; actions 0; status "Uninstalling"', pass: true });
-        expect(busyRowsVerdict([{ ...busy, status: 'Queued' }], icon, 1).pass).toBe(true);
-        // One red case per clause; `glyph end` is printed, never asserted.
-        expect(busyRowsVerdict([{ ...busy, glyphEnd: 30 }], icon, 1).pass).toBe(true);
-        const off = (changes: Partial<typeof busy>) => busyRowsVerdict([{ ...busy, ...changes }], icon, 1);
+    it('reads a busy row: aria-busy, a 16 px spinner in the action\'s place and colour role, no action left and its "-ing" word or Queued (DS-STATE-6, UX-P4.fix-13, UX-P4.fix-15)', () => {
+        const colours = layout().endOfP0.iconColours;
+        const icon = colours.icon;
+        const busy: NonNullable<Layout['endOfP0']['stateCells']['busyRows']>[number] = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Uninstalling' };
+        expect(busyRowsVerdict([busy], colours, 1)).toEqual({ value: 'busy rows 1: package-row-fluentvalidation aria-busy; spinner 16×16 in the action slot (end 6, centre Δy 0; glyph end 9), colour icon.foreground; actions 0; status "Uninstalling"', pass: true });
+        expect(busyRowsVerdict([{ ...busy, status: 'Queued' }], colours, 1).pass).toBe(true);
+        // One red case per clause; the glyph stands 3 inside the slot's end, where the action's glyph stood (UX-P4.fix-15).
+        expect(busyRowsVerdict([{ ...busy, glyphEnd: 30 }], colours, 1)).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph inset 24 (target 3)') });
+        expect(busyRowsVerdict([{ ...busy, glyphEnd: 10 }], colours, 1)).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph inset 4 (target 3)') });
+        // Ends rounded to 0.1 subtract to exactly 3 (9.3 − 6.3).
+        expect(busyRowsVerdict([{ ...busy, slotEnd: 6.3, glyphEnd: 9.3 }], colours, 1).pass).toBe(true);
+        // The colour is the role of the action the spinner replaced: the selection's icon colour on the current row of a focused list.
+        const current = { ...busy, band: 'current', listFocused: true } as const;
+        expect(busyRowsVerdict([{ ...current, colour: colours.active }], colours, 1)).toMatchObject({ pass: true, value: expect.stringContaining('colour list.activeSelectionIconForeground; actions 0') });
+        expect(busyRowsVerdict([current], colours, 1)).toMatchObject({ pass: false, value: expect.stringContaining(`; off: colour ${icon} (expected list.activeSelectionIconForeground)`) });
+        expect(busyRowsVerdict([{ ...busy, band: 'current', listFocused: false }], colours, 1).pass).toBe(true);
+        const off = (changes: Partial<typeof busy>) => busyRowsVerdict([{ ...busy, ...changes }], colours, 1);
         expect(off({ ariaBusy: false })).toMatchObject({ pass: false, value: expect.stringContaining('; off: no aria-busy') });
         expect(off({ glyph: { w: 14, h: 14 } })).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph 14×14') });
         expect(off({ glyph: undefined })).toMatchObject({ pass: false, value: expect.stringContaining('; off: no spinner glyph') });
         expect(off({ slotEnd: 8 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: slot end 8 (target 6)') });
-        expect(off({ slotEnd: 7 }).pass).toBe(true);
+        // The slot's end within 1 of 6, the glyph still 3 inside it.
+        expect(off({ slotEnd: 7, glyphEnd: 10 }).pass).toBe(true);
         expect(off({ centreDy: 2 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: centre Δy 2') });
         expect(off({ colour: 'rgb(1, 2, 3)' })).toMatchObject({ pass: false, value: expect.stringContaining('; off: colour rgb(1, 2, 3) (expected icon.foreground)') });
         expect(off({ actions: 1 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: 1 action beside the spinner') });
         expect(off({ status: 'In progress' })).toMatchObject({ pass: false, value: expect.stringContaining('; off: status "In progress"') });
-        expect(busyRowsVerdict([], icon, 1)).toEqual({ value: 'not measurable (no busy row)', pass: false });
+        expect(busyRowsVerdict([], colours, 1)).toEqual({ value: 'not measurable (no busy row)', pass: false });
     });
 
     it('reads every empty state\'s block inset: 8/8 in a list, the sidebar and a dialog, 20/20 in the details pane (DS-STATE-3, UX-P4.fix-12)', () => {
@@ -1497,6 +1507,14 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(icon2(icons({ severity: true, colour: 'rgb(204, 167, 0)' }))).toMatchObject({ pass: true, value: expect.stringContaining('severity problemsWarningIcon.foreground') });
         expect(icon2(icons({ severity: true }))).toMatchObject({ pass: false });
         expect(icon2(layout())).toMatchObject({ pass: false, value: 'not measurable (no icon button)' });
+        // A pane header's spinner glyph is a header glyph in icon.foreground (UX-P4.fix-15), read with or without icon buttons.
+        const withSpinners = (colours: string[], ...buttons: Array<Partial<Heights['iconButtons'][number]>>) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, headerSpinnerColours: colours } } as Layout['endOfP0'] }, { iconButtons: buttons.map(iconButton) });
+        const iconColour = layout().endOfP0.iconColours.icon;
+        expect(icon2(withSpinners([iconColour], {}))).toMatchObject({ pass: true, value: 'glyph 16×16 (target 16×16); colour icon.foreground; header spinner 1 icon.foreground' });
+        expect(icon2(withSpinners([iconColour, 'rgb(191, 191, 191)'], {}))).toMatchObject({ pass: false, value: 'glyph 16×16 (target 16×16); colour icon.foreground; header spinner 2 icon.foreground; off: header spinner rgb(191, 191, 191) (expected icon.foreground)' });
+        expect(icon2(withSpinners([iconColour]))).toMatchObject({ pass: true, value: 'header spinner 1 icon.foreground' });
+        expect(icon2(withSpinners(['rgb(191, 191, 191)']))).toMatchObject({ pass: false, value: 'header spinner 1 icon.foreground; off: header spinner rgb(191, 191, 191) (expected icon.foreground)' });
+        expect(icon2(withSpinners([]))).toMatchObject({ pass: false, value: 'not measurable (no icon button)' });
 
         const selected = { id: 'installed-tab', selected: true, colour: 'rgb(231, 231, 231)', lineWidth: 1, lineColour: 'rgb(0, 120, 212)' };
         const other = { id: 'updates-tab', selected: false, colour: 'rgb(157, 157, 157)', lineWidth: 1, lineColour: 'rgba(0, 0, 0, 0)' };
@@ -1776,33 +1794,32 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
         }
     });
 
-    it('leaves a hard scope pending in a listed theme and asserts it in every other (pendingThemes, UX-P4.fix-13)', () => {
-        const icon = layout().endOfP0.iconColours.icon;
-        const busy = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling' };
-        const withBusy = (colour: string) => layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, busyRows: [{ ...busy, colour }] } } as Layout['endOfP0'] });
-        const line = (built: Layout, theme: string) => measureLines('main-installed-busy', built, 'modern', {}, undefined, 1200, undefined, theme).find(entry => entry.name === 'DS-STATE-6@main-installed-busy');
-        const off = withBusy('rgb(191, 191, 191)');
-        // An off colour in a listed theme prints as pending on the fix row and is never asserted.
-        expect(line(off, 'dark-2026')).toMatchObject({ status: { pending: 'P4.fix-15' }, pass: false, value: expect.stringContaining('; off: colour rgb(191, 191, 191) (expected icon.foreground)') });
-        expect(line(off, 'light-2026')?.status).toEqual({ pending: 'P4.fix-15' });
-        // The same facts fail hard in a theme the rule does not list.
-        expect(line(off, 'dark-modern')).toMatchObject({ status: 'hard', pass: false });
-        // A green line in a listed theme still prints pending: only the fix row removes the entry.
-        expect(line(withBusy(icon), 'dark-2026')).toMatchObject({ status: { pending: 'P4.fix-15' }, pass: true });
-        expect(line(withBusy(icon), 'dark-modern')).toMatchObject({ status: 'hard', pass: true });
-        // No theme given reads as no listed theme.
-        expect(measureLines('main-installed-busy', withBusy(icon), 'modern').find(entry => entry.name === 'DS-STATE-6@main-installed-busy')?.status).toBe('hard');
-        expect(RULES.filter(entry => entry.pendingThemes !== undefined).map(entry => entry.id)).toEqual(['DS-STATE-6']);
-        // A pixel rule reads the same axis; a synthetic one keeps that branch tested.
-        const synthetic = rule('X-PENDING-THEME-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingThemes: { 'dark-2026': 'P9.9' } });
+    it('prints a hard scope as pending on the item a theme names in pendingThemes, for a layout rule and a pixel rule (UX-P4.fix-13; synthetic since UX-P4.fix-15)', () => {
+        // No product rule uses pendingThemes since UX-P4.fix-15; the mechanism stays, so synthetic rules keep both readers tested.
+        const synthetic: RuleDefinition[] = [
+            rule('X-PENDING-THEME-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingThemes: { 'dark-2026': 'P9.9' } }),
+            rule('X-PENDING-THEME-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingThemes: { 'dark-2026': 'P9.9' } }),
+        ];
+        expect(RULES.filter(entry => entry.pendingThemes !== undefined)).toEqual([]);
         const rules = RULES as RuleDefinition[];
-        rules.push(synthetic);
+        rules.push(...synthetic);
         try {
+            const layoutLine = (theme?: string) => measureLines('main-installed-single', layout(), 'modern', {}, undefined, 1200, undefined, theme).find(entry => entry.name === 'X-PENDING-THEME-LAYOUT@main-installed-single');
+            // The line is still evaluated under a pending theme: it prints its value and verdict (a synthetic id has no helper).
+            expect(layoutLine('dark-2026')).toEqual({ name: 'X-PENDING-THEME-LAYOUT@main-installed-single', value: 'not measurable (no helper)', status: { pending: 'P9.9' }, pass: false });
+            expect(layoutLine('light-2026')?.status).toBe('hard');
+            expect(layoutLine()?.status).toBe('hard');
             const pixelLine = (theme: string) => pixelRuleLines('main-installed-single', 1200, theme, 'ui', { 'X-PENDING-THEME-PIXELS': { value: 'read', pass: false } }).find(entry => entry.name === 'X-PENDING-THEME-PIXELS@main-installed-single');
             expect(pixelLine('dark-2026')).toEqual({ name: 'X-PENDING-THEME-PIXELS@main-installed-single', value: 'read', status: { pending: 'P9.9' }, pass: false });
             expect(pixelLine('light-2026')?.status).toBe('hard');
         } finally {
-            rules.splice(rules.length - 1, 1);
+            rules.splice(rules.length - synthetic.length, synthetic.length);
+        }
+        // DS-STATE-6 is hard in the two 2026 themes: an off colour fails there.
+        const busy = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: 'rgb(191, 191, 191)', slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Uninstalling' };
+        const off = layout({ endOfP0: { ...layout().endOfP0, stateCells: { ...layout().endOfP0.stateCells, busyRows: [busy] } } as Layout['endOfP0'] });
+        for (const theme of ['dark-2026', 'light-2026']) {
+            expect(measureLines('main-installed-busy', off, 'modern', {}, undefined, 1200, undefined, theme).find(entry => entry.name === 'DS-STATE-6@main-installed-busy')).toMatchObject({ status: 'hard', pass: false, value: expect.stringContaining('; off: colour rgb(191, 191, 191) (expected icon.foreground)') });
         }
     });
 

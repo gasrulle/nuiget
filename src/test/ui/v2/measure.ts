@@ -739,7 +739,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
-    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'], pendingThemes: { 'dark-2026': 'P4.fix-15', 'light-2026': 'P4.fix-15' } }),
+    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
@@ -1289,6 +1289,8 @@ export interface StateCells {
     skeletonBars?: number[];
     /** The spinners in the pane headers (`section-header-*`): a first load's cue, never a revalidation's (UX-P3.10 push E). */
     headerSpinners?: number;
+    /** The computed colour of each pane-header spinner glyph (DS-ICON-2's header clause, UX-P4.fix-15). */
+    headerSpinnerColours?: string[];
     /** The search box's placeholder: its text, its width in the box's computed font, and the box's text room (UX-P3.11); the main box too since UX-P3.fix-15 (`main`), and whether the box is empty. */
     placeholderFit?: { text: string; width: number; room: number; main?: boolean; empty?: boolean };
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
@@ -1304,9 +1306,10 @@ export interface StateCells {
     /**
      * Each shown busy row (`.nuiget-row--busy`, UX-P4.fix-13, DS-STATE-6): its option's `aria-busy`, the spinner glyph's box and
      * computed colour, the action slot's end and the glyph's end from the row wrapper's right edge, the glyph's centre against
-     * the wrapper's, the buttons left in the slot and the status text.
+     * the wrapper's, the buttons left in the slot and the status text; the slot's band and list state, read as `iconButtons`
+     * reads them, for the colour role of the action the spinner replaced (UX-P4.fix-15).
      */
-    busyRows?: Array<{ testId: string; ariaBusy: boolean; glyph?: { w: number; h: number }; colour?: string; slotEnd?: number; glyphEnd?: number; centreDy?: number; actions: number; status: string }>;
+    busyRows?: Array<{ testId: string; ariaBusy: boolean; glyph?: { w: number; h: number }; colour?: string; slotEnd?: number; glyphEnd?: number; centreDy?: number; actions: number; status: string; band?: 'current' | 'selected'; listFocused?: boolean; multi?: boolean }>;
     clauseError?: string;
 }
 
@@ -2238,6 +2241,7 @@ const stateCells = {
                 paneBox: progressEl ? boxOf(cellArea || paneOf(progressEl)) : undefined,
                 skeletonBars: shown('.nuiget-skeleton-row--compact').map(el => round(rectOf(el).left + px(getComputedStyle(el, '::after').left) - rectOf(paneOf(el)).left)),
                 headerSpinners: shown('[data-testid^="section-header-"] .nuiget-spinner').length,
+                headerSpinnerColours: shown('[data-testid^="section-header-"] .nuiget-spinner svg').map(svg => getComputedStyle(svg).color),
                 busyRows: shown('.nuiget-row--busy').map(row => {
                     const rowRect = rectOf(row);
                     const slot = row.querySelector('.nuiget-row-actions');
@@ -2253,6 +2257,9 @@ const stateCells = {
                         centreDy: glyphRect ? round((glyphRect.top + glyphRect.height / 2) - (rowRect.top + rowRect.height / 2)) : undefined,
                         actions: slot ? slot.querySelectorAll('button').length : 0,
                         status: (row.querySelector('.nuiget-row-status')?.textContent || '').trim(),
+                        band: slot && slot.closest('.nuiget-row-actions--current') ? 'current' : slot && slot.closest('.nuiget-row-actions--selected') ? 'selected' : undefined,
+                        listFocused: Boolean(slot && slot.closest('.nuiget-listbox:focus-within')),
+                        multi: Boolean(slot && slot.closest('.nuiget-listbox[aria-multiselectable="true"]')),
                     };
                 }),
                 placeholderFit: (() => {
@@ -3227,29 +3234,26 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         }
         case 'DS-ICON-2': {
             const buttons = layout.heights.iconButtons;
+            // A pane header's spinner glyph is a header glyph in icon.foreground (UX-P4.fix-15).
+            const spinners = facts.stateCells.headerSpinnerColours ?? [];
+            const spinnerOff = spinners.filter(colour => colour !== facts.iconColours.icon);
+            const spinnerText = spinners.length === 0 ? '' : `header spinner ${spinners.length} icon.foreground`;
+            const spinnerOffText = spinnerOff.map(colour => `header spinner ${colour} (expected icon.foreground)`);
             if (buttons.length === 0) {
-                return notMeasurable('no icon button');
+                if (spinners.length === 0) {
+                    return notMeasurable('no icon button');
+                }
+                return { value: `${spinnerText}${spinnerOff.length === 0 ? '' : `; off: ${spinnerOffText.join(', ')}`}`, pass: spinnerOff.length === 0 };
             }
             // The severity role: no named state shows the sources health button until P3.10's error cells.
-            const { icon, active, disabled, warning } = facts.iconColours;
-            const roleOf = (button: (typeof buttons)[number]): [string, string] => {
-                if (button.disabled) {
-                    return ['disabled disabledForeground', disabled];
-                }
-                if (button.severity) {
-                    return ['severity problemsWarningIcon.foreground', warning];
-                }
-                if (button.listFocused && (button.band === 'current' || (button.band === 'selected' && !button.multi))) {
-                    return ['current row list.activeSelectionIconForeground', active];
-                }
-                return ['colour icon.foreground', icon];
-            };
+            const roleOf = (button: (typeof buttons)[number]) => actionIconRole(button, facts.iconColours);
             const glyphs = buttons.flatMap(button => (button.glyph === undefined ? [] : [`${button.glyph.w}×${button.glyph.h}`]));
-            const off = buttons.filter(button => button.colour !== roleOf(button)[1]);
+            const off = buttons.filter(button => button.colour !== roleOf(button).colour);
             const glyphsPass = buttons.every(button => button.glyph !== undefined && near(button.glyph.w, 16, tolerance) && near(button.glyph.h, 16, tolerance));
+            const offText = [...off.map(button => `${button.label} ${button.colour} (expected ${roleOf(button).label})`), ...spinnerOffText];
             return {
-                value: `glyph ${tally(glyphs)} (target 16×16); ${tally(buttons.map(button => roleOf(button)[0]))}${off.length === 0 ? '' : `; off: ${off.map(button => `${button.label} ${button.colour} (expected ${roleOf(button)[0]})`).join(', ')}`}`,
-                pass: glyphsPass && off.length === 0,
+                value: `glyph ${tally(glyphs)} (target 16×16); ${tally(buttons.map(button => roleOf(button).label))}${spinnerText === '' ? '' : `; ${spinnerText}`}${offText.length === 0 ? '' : `; off: ${offText.join(', ')}`}`,
+                pass: glyphsPass && off.length === 0 && spinnerOff.length === 0,
             };
         }
         case 'DS-COLOR-4': {
@@ -3890,7 +3894,7 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
         case 'DS-COLOR-1':
             return evaluateStateCell(definition, state, facts);
         case 'DS-STATE-6':
-            return busyRowsVerdict(facts.stateCells.busyRows ?? [], facts.iconColours.icon, definition.tolerance);
+            return busyRowsVerdict(facts.stateCells.busyRows ?? [], facts.iconColours, definition.tolerance);
         case 'DS-STATE-7': {
             if (facts.fonts.root === '') {
                 return notMeasurable('no page');
@@ -3934,11 +3938,30 @@ function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } |
 const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued'];
 
 /**
- * DS-STATE-6 (UX-P4.fix-13): every busy row has `aria-busy` on its option, a 16 × 16 spinner glyph in its action slot whose end
- * stands 6 inside the band (DS-INSET-3 a) and whose centre is the band's, the glyph in `icon.foreground` (DS-ICON-2), no button
- * left in the slot, and its "-ing" word or Queued. `glyph end` is printed, never asserted.
+ * The colour role of an action glyph (DS-ICON-2): disabled, the severity button, the current row of a focused list (or its
+ * one selected row), else `icon.foreground`. `label` is DS-ICON-2's printed text, `role` the bare key. One function for the
+ * icon buttons and for the spinner that stands in for one (DS-STATE-6, UX-P4.fix-15).
  */
-export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, iconColour: string, tolerance: number): { value: string; pass: boolean } {
+export function actionIconRole(entry: { disabled?: boolean; severity?: boolean; band?: 'current' | 'selected'; listFocused?: boolean; multi?: boolean }, colours: { icon: string; active: string; disabled: string; warning: string }): { label: string; role: string; colour: string } {
+    if (entry.disabled) {
+        return { label: 'disabled disabledForeground', role: 'disabledForeground', colour: colours.disabled };
+    }
+    if (entry.severity) {
+        return { label: 'severity problemsWarningIcon.foreground', role: 'problemsWarningIcon.foreground', colour: colours.warning };
+    }
+    if (entry.listFocused && (entry.band === 'current' || (entry.band === 'selected' && !entry.multi))) {
+        return { label: 'current row list.activeSelectionIconForeground', role: 'list.activeSelectionIconForeground', colour: colours.active };
+    }
+    return { label: 'colour icon.foreground', role: 'icon.foreground', colour: colours.icon };
+}
+
+/**
+ * DS-STATE-6 (UX-P4.fix-13, UX-P4.fix-15): every busy row has `aria-busy` on its option, a 16 × 16 spinner glyph in its action
+ * slot whose end stands 6 inside the band (DS-INSET-3 a), whose glyph stands 3 inside the slot's end where the action's glyph
+ * stood, and whose centre is the band's; the glyph in the colour role of the action it replaced (DS-ICON-2); no button left in
+ * the slot, and its "-ing" word or Queued.
+ */
+export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, colours: { icon: string; active: string; disabled: string; warning: string }, tolerance: number): { value: string; pass: boolean } {
     if (rows.length === 0) {
         return { value: `${NOT_MEASURABLE} (no busy row)`, pass: false };
     }
@@ -3958,8 +3981,16 @@ export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, iconC
         if (row.centreDy !== undefined && Math.abs(row.centreDy) > tolerance) {
             off.push(`centre Δy ${row.centreDy}`);
         }
-        if (row.colour !== undefined && row.colour !== iconColour) {
-            off.push(`colour ${row.colour} (expected icon.foreground)`);
+        if (row.slotEnd !== undefined && row.glyphEnd !== undefined) {
+            // Both ends are rounded to 0.1; their difference is rounded again so 9.3 − 6.3 reads 3 (no tolerance).
+            const inset = Math.round((row.glyphEnd - row.slotEnd) * 10) / 10;
+            if (inset !== 3) {
+                off.push(`glyph inset ${inset} (target 3)`);
+            }
+        }
+        const role = actionIconRole(row, colours);
+        if (row.colour !== undefined && row.colour !== role.colour) {
+            off.push(`colour ${row.colour} (expected ${role.role})`);
         }
         if (row.actions > 0) {
             off.push(`${row.actions} action${row.actions === 1 ? '' : 's'} beside the spinner`);
@@ -3968,7 +3999,7 @@ export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, iconC
             off.push(`status "${row.status}"`);
         }
         const glyph = row.glyph === undefined ? 'no spinner' : `spinner ${row.glyph.w}×${row.glyph.h}`;
-        const text = `${row.testId}${row.ariaBusy ? ' aria-busy' : ''}; ${glyph} in the action slot (end ${row.slotEnd ?? 'none'}, centre Δy ${row.centreDy ?? 'none'}; glyph end ${row.glyphEnd ?? 'none'}), colour ${row.colour === iconColour ? 'icon.foreground' : (row.colour ?? 'none')}; actions ${row.actions}; status "${row.status}"`;
+        const text = `${row.testId}${row.ariaBusy ? ' aria-busy' : ''}; ${glyph} in the action slot (end ${row.slotEnd ?? 'none'}, centre Δy ${row.centreDy ?? 'none'}; glyph end ${row.glyphEnd ?? 'none'}), colour ${row.colour === role.colour ? role.role : (row.colour ?? 'none')}; actions ${row.actions}; status "${row.status}"`;
         return { text: off.length === 0 ? text : `${text}; off: ${off.join(', ')}`, pass: off.length === 0 };
     });
     return { value: `busy rows ${rows.length}: ${parts.map(part => part.text).join(' | ')}`, pass: parts.every(part => part.pass) };

@@ -621,7 +621,7 @@
 
 /* ── IconButton ── */
 
-/* Three carriers: --nuiget-icon-button-size (a pane header), -color (a selected row, disabled) and -bg (hover, pressed). DS-HEIGHT-8, DS-ICON-2, DS-COLOR-3, DS-COLOR-6. */
+/* Three carriers: --nuiget-icon-button-size (a pane header), -color (a selected row, disabled) and -bg (hover, pressed); the spinner reads the first two. DS-HEIGHT-8, DS-ICON-2, DS-COLOR-3, DS-COLOR-6. */
 .nuiget-icon-button {
     position: relative;
     display: inline-flex;
@@ -721,12 +721,14 @@
 
 /* ── Spinner ── */
 
+/* The spinner stands in for the action: its box and colour are the icon button's (DS-STATE-6, DS-ICON-2, UX-P4.fix-15). */
 .nuiget-spinner {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--nuiget-target-min);
-    min-height: var(--nuiget-target-min);
+    min-width: var(--nuiget-icon-button-size, var(--nuiget-action-size));
+    min-height: var(--nuiget-icon-button-size, var(--nuiget-action-size));
+    color: var(--nuiget-icon-button-color, var(--nuiget-color-icon));
 }
 
 /* One turn in the workbench's timing, 1.5 s in 30 steps (codicon-spin), or no time at all under reduced motion (DS-MOTION-1, UX-P4.5). */

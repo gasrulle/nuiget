@@ -678,26 +678,64 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
     });
 
     it('reads the busy rows: the option\'s aria-busy, the spinner glyph\'s box and colour, the action slot\'s end, the buttons left in it and the status (DS-STATE-6, UX-P4.fix-13)', () => {
-        document.head.insertAdjacentHTML('beforeend', '<style id="busy-rows">.nuiget-spinner svg { color: rgb(204, 204, 204); }</style>');
+        document.head.insertAdjacentHTML('beforeend', '<style id="busy-rows">.nuiget-spinner svg { color: rgb(204, 204, 204); } .nuiget-row-actions--current .nuiget-spinner svg { color: rgb(255, 255, 255); }</style>');
         const list = document.querySelector('.nuiget-list') as HTMLElement;
         list.insertAdjacentHTML('afterbegin', [
             '<div id="busy" class="nuiget-row nuiget-row--comfortable nuiget-row--busy" data-testid="package-row-fluentvalidation" data-rect="0,100,408,172">',
             '<div class="nuiget-row-option" role="option" aria-busy="true" data-rect="0,100,408,172"><span class="nuiget-row-status" data-rect="100,140,190,156">Uninstalling</span></div>',
             '<div class="nuiget-row-actions" aria-hidden="true" data-rect="378,124,402,148"><span class="nuiget-spinner" data-rect="378,124,402,148"><svg data-codicon="loading" data-rect="382,128,398,144"></svg></span></div>',
             '</div>',
+            // A busy current row: its slot's band, read as the icon buttons' is, for the colour role (UX-P4.fix-15).
+            '<div id="busy-current" class="nuiget-row nuiget-row--comfortable nuiget-row--busy" data-testid="package-row-serilog" data-rect="0,300,408,372">',
+            '<div class="nuiget-row-option" role="option" aria-busy="true" data-rect="0,300,408,372"><span class="nuiget-row-status" data-rect="100,340,190,356">Updating</span></div>',
+            '<div class="nuiget-row-actions nuiget-row-actions--current" aria-hidden="true" data-rect="380,325,402,347"><span class="nuiget-spinner" data-rect="380,325,402,347"><svg data-codicon="loading" data-rect="383,328,399,344"></svg></span></div>',
+            '</div>',
+            // A busy selected row in a focused multi-selectable list: the three facts DS-ICON-2's role reads.
+            '<div id="busy-multi" class="nuiget-listbox" aria-multiselectable="true" data-rect="0,400,408,472">',
+            '<div class="nuiget-row nuiget-row--comfortable nuiget-row--busy" data-testid="package-row-newtonsoft.json" data-rect="0,400,408,472">',
+            '<div id="busy-multi-option" class="nuiget-row-option" role="option" tabindex="0" aria-busy="true" data-rect="0,400,408,472"><span class="nuiget-row-status" data-rect="100,440,190,456">Queued</span></div>',
+            '<div class="nuiget-row-actions nuiget-row-actions--selected" aria-hidden="true" data-rect="380,425,402,447"><span class="nuiget-spinner" data-rect="380,425,402,447"><svg data-codicon="loading" data-rect="383,428,399,444"></svg></span></div>',
+            '</div></div>',
             '<div id="idle" class="nuiget-row nuiget-row--comfortable" data-testid="package-row-dapper" data-rect="0,176,408,248"><div class="nuiget-row-option" role="option" data-rect="0,176,408,248"></div>',
             '<div class="nuiget-row-actions" data-rect="380,201,402,223"><button data-testid="row-action-uninstall" data-rect="380,201,402,223"></button></div></div>',
         ].join(''));
         try {
+            (document.getElementById('busy-multi-option') as HTMLElement).focus();
             // One entry per busy row; the idle row yields none.
             expect(collect().endOfP0.stateCells.busyRows).toEqual([{
                 testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: 'rgb(204, 204, 204)',
-                slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling',
+                slotEnd: 6, glyphEnd: 10, centreDy: 0, actions: 0, status: 'Uninstalling', band: undefined, listFocused: false, multi: false,
+            }, {
+                testId: 'package-row-serilog', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: 'rgb(255, 255, 255)',
+                slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Updating', band: 'current', listFocused: false, multi: false,
+            }, {
+                testId: 'package-row-newtonsoft.json', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: 'rgb(204, 204, 204)',
+                slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Queued', band: 'selected', listFocused: true, multi: true,
             }]);
         } finally {
             document.getElementById('busy')?.remove();
+            document.getElementById('busy-current')?.remove();
+            document.getElementById('busy-multi')?.remove();
             document.getElementById('idle')?.remove();
             document.getElementById('busy-rows')?.remove();
+        }
+    });
+
+    it('reads each pane-header spinner glyph\'s computed colour, and none from a row\'s spinner (DS-ICON-2, UX-P4.fix-15)', () => {
+        document.head.insertAdjacentHTML('beforeend', '<style id="header-spinners">.nuiget-spinner svg { color: rgb(140, 140, 140); }</style>');
+        const list = document.querySelector('.nuiget-list') as HTMLElement;
+        list.insertAdjacentHTML('afterbegin', [
+            '<div id="header" class="nuiget-section-header" data-testid="section-box-installed" data-rect="0,100,300,122"><span class="nuiget-section-toggle" data-testid="section-header-installed" data-rect="0,100,300,122"><span class="nuiget-spinner" data-rect="80,103,96,119"><svg data-codicon="loading" data-rect="80,103,96,119"></svg></span></span></div>',
+            '<div id="row" class="nuiget-row nuiget-row--busy" data-rect="0,130,300,152"><div class="nuiget-row-actions" data-rect="270,130,292,152"><span class="nuiget-spinner" data-rect="270,130,292,152"><svg data-codicon="loading" data-rect="273,133,289,149"></svg></span></div></div>',
+        ].join(''));
+        try {
+            const cells = collect().endOfP0.stateCells;
+            expect(cells.headerSpinners).toBe(1);
+            expect(cells.headerSpinnerColours).toEqual(['rgb(140, 140, 140)']);
+        } finally {
+            document.getElementById('header')?.remove();
+            document.getElementById('row')?.remove();
+            document.getElementById('header-spinners')?.remove();
         }
     });
 
