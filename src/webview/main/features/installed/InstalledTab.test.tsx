@@ -293,7 +293,7 @@ describe('main panel: Installed tab', () => {
         const removed = (packageId: string, status: OperationOutcome['status']): OperationOutcome => ({ opId: `op-${packageId}`, kind: 'remove', status, projectPath: A, packageId, message: status === 'failed' ? 'Moq could not be removed' : undefined });
         const partial: BulkOutcome = { opId: 'op2', status: 'partial', results: [removed('Serilog', 'completed'), removed('Moq', 'failed')], restores: [{ projectPath: A, ok: true }] };
         await hostSays(() => host.respond(host.requests('ops/bulkRemove')[0], partial));
-        await waitFor(() => expect(said()).toBe('1 of 2 operations completed'));
+        await waitFor(() => expect(said()).toBe('Uninstalled 1 of 2 packages'));
         // Rows leave only with the host's next list: then Moq is still there.
         expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
         await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));

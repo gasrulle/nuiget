@@ -39,16 +39,45 @@ describe('describeOutcome', () => {
         expect(describeOutcome(single({ status: 'partial' }))).toBe('Uninstalled Serilog, but the restore failed');
     });
 
-    it('counts the operations of a bulk outcome', () => {
+    it('a bulk outcome names its kind and its package or count, in the toast\'s words (UX-P4.fix-17)', () => {
         const bulk = (changes: Partial<BulkOutcome>): BulkOutcome => ({
             opId: 'bulk', status: 'completed', restores: [],
             results: [single({ opId: 'a' }), single({ opId: 'b', packageId: 'Moq' })],
             ...changes,
         });
-        expect(describeOutcome(bulk({}))).toBe('2 of 2 operations completed');
-        expect(describeOutcome(bulk({ status: 'partial', results: [single({}), single({ status: 'failed' })], message: 'Moq: NU1101' }))).toBe('1 of 2 operations completed: Moq: NU1101');
-        expect(describeOutcome(bulk({ status: 'failed', results: [single({ status: 'failed' })] }))).toBe('0 of 1 operations completed');
+        const two = (kind: OperationOutcome['kind'], second: Partial<OperationOutcome> = {}): OperationOutcome[] => [
+            single({ opId: 'a', kind }),
+            single({ opId: 'b', kind, packageId: kind === 'install' ? 'Serilog' : 'Moq', projectPath: '/w/Lib/Lib.csproj', ...second }),
+        ];
+        // Completed, of two: install names the package and counts its projects; update and uninstall count the packages.
+        expect(describeOutcome(bulk({ results: two('install') }))).toBe('Installed Serilog in 2 projects');
+        expect(describeOutcome(bulk({ results: two('update') }))).toBe('Updated 2 packages');
+        expect(describeOutcome(bulk({}))).toBe('Uninstalled 2 packages');
+        // Not every one done: "n of m"; the restores that failed after the edits are named (the toast's fixtures).
+        expect(describeOutcome(bulk({ status: 'partial', results: two('update', { status: 'failed' }), restores: [{ projectPath: '/w/App/App.csproj', ok: false, error: 'NU1101' }] }))).toBe('Updated 1 of 2 packages; 1 restore failed');
+        expect(describeOutcome(bulk({ status: 'partial', results: two('update'), restores: [{ projectPath: '/w/App/App.csproj', ok: false }, { projectPath: '/w/Lib/Lib.csproj', ok: true, skipped: true }] }))).toBe('Updated 2 packages; 1 restore failed');
+        expect(describeOutcome(bulk({ status: 'partial', results: two('install', { status: 'failed' }) }))).toBe('Installed Serilog in 1 of 2 projects');
+        expect(describeOutcome(bulk({ status: 'failed', results: two('remove', { status: 'failed' }).map(result => ({ ...result, status: 'failed' as const })) }))).toBe('Uninstalled 0 of 2 packages');
+        expect(describeOutcome(bulk({ status: 'partial', results: two('update', { status: 'failed' }), restores: [{ projectPath: '/w/App/App.csproj', ok: false }, { projectPath: '/w/Lib/Lib.csproj', ok: false }] }))).toBe('Updated 1 of 2 packages; 2 restores failed');
+        // Cancelled, of two.
+        expect(describeOutcome(bulk({ status: 'cancelled', results: two('install') }))).toBe('Install of Serilog in 2 projects was cancelled');
+        expect(describeOutcome(bulk({ status: 'cancelled', results: two('update') }))).toBe('Update of 2 packages was cancelled');
+        expect(describeOutcome(bulk({ status: 'cancelled' }))).toBe('Uninstall of 2 packages was cancelled');
+        // No result: no kind to name.
+        expect(describeOutcome(bulk({ status: 'cancelled', results: [], message: 'cancelled' }))).toBe('The operation was cancelled');
+        expect(describeOutcome(bulk({ status: 'failed', results: [], message: 'The queue is closed' }))).toBe('The operation failed: The queue is closed');
+        expect(describeOutcome(bulk({ status: 'completed', results: [] }))).toBe('No operation ran');
         expect(describeOutcome(bulk({ status: 'rejected', results: [], message: 'Five operations are waiting' }))).toBe('The operation was not started: Five operations are waiting');
+    });
+
+    it('a bulk of one reads in the single operation\'s words (UX-P4.fix-17)', () => {
+        const one = (changes: Partial<BulkOutcome>, result: Partial<OperationOutcome>): BulkOutcome => ({ opId: 'bulk', status: 'completed', restores: [], results: [single({ kind: 'update', version: '4.0.0', ...result })], ...changes });
+        expect(describeOutcome(one({}, {}))).toBe('Updated Serilog 4.0.0');
+        expect(describeOutcome(one({}, { kind: 'install', version: '3.1.0' }))).toBe('Installed Serilog 3.1.0');
+        expect(describeOutcome(one({}, { kind: 'remove' }))).toBe('Uninstalled Serilog');
+        expect(describeOutcome(one({ status: 'failed' }, { status: 'failed', message: 'NU1101' }))).toBe('Update of Serilog 4.0.0 failed: NU1101');
+        expect(describeOutcome(one({ status: 'partial', restores: [{ projectPath: '/w/App/App.csproj', ok: false, error: 'NU1301' }] }, {}))).toBe('Updated Serilog 4.0.0, but the restore failed: NU1301');
+        expect(describeOutcome(one({ status: 'cancelled' }, { status: 'cancelled' }))).toBe('Update of Serilog 4.0.0 was cancelled');
     });
 
     it('a restore\'s bulk outcome names the project or counts the projects (UX-P4.fix-10)', () => {
@@ -67,7 +96,8 @@ describe('describeOutcome', () => {
         expect(describeOutcome(restore('failed', [{ projectPath: app, ok: false }]))).toBe('Restore of App failed');
         expect(describeOutcome(restore('partial', [{ projectPath: app, ok: true }, { projectPath: lib, ok: false, error: 'NU1301' }]))).toBe('Restored 1 of 2 projects');
         expect(describeOutcome(restore('failed', [{ projectPath: app, ok: false }, { projectPath: lib, ok: false }]))).toBe('Restored 0 of 2 projects');
-        // A bulk edit, with the restores after its edits, keeps the count.
-        expect(describeOutcome({ opId: 'b', status: 'completed', results: [single({ opId: 'a' })], restores: [{ projectPath: app, ok: true }] })).toBe('1 of 1 operations completed');
+        // A bulk edit of one reads as a single operation (UX-P4.fix-17).
+        expect(describeOutcome({ opId: 'b', status: 'completed', results: [single({ opId: 'a' })], restores: [{ projectPath: app, ok: true }] })).toBe('Uninstalled Serilog');
+        expect(describeOutcome({ opId: 'b', status: 'partial', results: [single({ opId: 'a' })], restores: [{ projectPath: app, ok: false, error: 'NU1301' }] })).toBe('Uninstalled Serilog, but the restore failed: NU1301');
     });
 });

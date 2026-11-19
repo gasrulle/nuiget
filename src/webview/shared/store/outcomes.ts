@@ -36,24 +36,59 @@ function describeRestore(outcome: BulkOutcome): string {
 }
 
 /**
+ * An edit bulk (install, update or uninstall) of several results, in the toast's words (`src/host/feedback.ts`,
+ * `bulkSentence`): the package and its projects counted for an install, the packages counted otherwise, "n of m" when not
+ * every one was done, and the restores that failed after the edits (design-advisor ruling of UX-P4.fix-17).
+ */
+function describeBulkEdits(outcome: BulkOutcome): string {
+    const total = outcome.results.length;
+    const done = outcome.results.filter(result => result.status === 'completed').length;
+    const { kind, packageId } = outcome.results[0];
+    const what = (count: number | string): string => (kind === 'install' ? `${packageId ?? ''} in ${count} projects` : `${count} packages`);
+    if (outcome.status === 'completed') {
+        return `${DONE[kind]} ${what(total)}`;
+    }
+    if (outcome.status === 'cancelled') {
+        return `${NOUN[kind]} of ${what(total)} was cancelled`;
+    }
+    const failedRestores = outcome.restores.filter(restore => !restore.ok && !restore.skipped).length;
+    const restores = failedRestores === 0 ? '' : `; ${failedRestores} ${failedRestores === 1 ? 'restore' : 'restores'} failed`;
+    return `${DONE[kind]} ${what(done === total ? total : `${done} of ${total}`)}${restores}`;
+}
+
+/**
  * Lifted from `src/webview/sidebar/outcomes.ts` (P5.4), which re-exports it: both surfaces announce outcomes in the
- * same words. A restore's bulk outcome reads in the words of a single operation (UX-P4.fix-10).
+ * same words. A restore's bulk outcome reads in the words of a single operation (UX-P4.fix-10); an edit bulk of one reads
+ * as its single operation, and of several names its kind and its package or count in the toast's words (UX-P4.fix-17).
  *
  * One sentence for the live region about how an operation ended, on whichever surface it started. The words
  * are those of the interface (Install, Update, Uninstall, Restore), not of the protocol (`remove`).
  */
 export function describeOutcome(outcome: AnyOutcome): string {
     if ('results' in outcome) {
-        const done = outcome.results.filter(result => result.status === 'completed').length;
-        const total = outcome.results.length;
         if (outcome.status === 'rejected') {
             return `The operation was not started${because(outcome.message)}`;
         }
         if (outcome.restores.length > 0 && outcome.results.every(result => result.kind === 'restore')) {
             return describeRestore(outcome);
         }
-        return outcome.status === 'completed' ? `${total} of ${total} operations completed` : `${done} of ${total} operations completed${because(outcome.message)}`;
+        if (outcome.results.length === 0) {
+            if (outcome.status === 'cancelled') {
+                return 'The operation was cancelled';
+            }
+            return outcome.status === 'failed' ? `The operation failed${because(outcome.message)}` : 'No operation ran';
+        }
+        if (outcome.results.length === 1) {
+            const failedRestore = outcome.restores.find(restore => !restore.ok && !restore.skipped);
+            return describeSingle({ ...outcome.results[0], status: outcome.status, restore: failedRestore ?? outcome.results[0].restore });
+        }
+        return describeBulkEdits(outcome);
     }
+    return describeSingle(outcome);
+}
+
+/** A single operation's sentence: the package (or project) and how it ended. */
+function describeSingle(outcome: OperationOutcome): string {
     const what = subject(outcome);
     // A central change also restored the other projects that use the central entry (ADR-004 tier 3).
     const others = outcome.affectedProjects?.length ?? 0;

@@ -122,7 +122,7 @@ describe('useShellChrome', () => {
                 results: [{ ...OUTCOME, opId: 'host5', kind: 'install' }, { ...OUTCOME, opId: 'host5', kind: 'install', projectPath: '/w/Lib/Lib.csproj' }],
             };
             await hostSays(() => host.event('ops/completed', { ...bulk, origin: 'main' }));
-            expect(said().textContent).toBe('2 of 2 operations completed');
+            expect(said().textContent).toBe('Installed Serilog in 2 projects');
         });
 
         it('announces the same outcome twice when it is asked for twice', async () => {
