@@ -243,6 +243,9 @@ export const STATES: readonly NamedState[] = [
         'Gateway committed, its answers then held in the webview document and Utility chosen: the first list loading under the 2 px bar with three skeleton rows (marker installed-progress); released after the capture.', []), diffTolerance: 0 },
     { ...ready('main-installed-revalidating', 'main', [primary('main')],
         'Gateway listed, its answers then held and Refresh pressed: the rows stay under the 2 px bar and the list is aria-busy; released after the capture.', [LIVE_ICONS]), diffTolerance: 0 },
+    // UX-P4.fix-23 (architecture-advisor and design-advisor rulings of 2026-11-20): the first provisional list of each surface.
+    { ...ready('main-installed-provisional', 'main', [primary('main')],
+        'Gateway refreshed and settled, then Utility chosen with its answer held and its provisional chunk let through: the first list from the project files under the 2 px bar, aria-busy, with the Provisional badge (markers installed-progress, installed-provisional); its one pattern-version row shows no authors until the answer (ADR-009 d.1); released after the capture.', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-installed-empty', 'main', [primary('main')],
         'The Empty project: the welcome-style "No packages installed." (marker installed-empty).'), diffTolerance: 0 },
     { ...ready('main-installed-error', 'main', [primary('main')],
@@ -296,6 +299,8 @@ export const STATES: readonly NamedState[] = [
         '"Newtonsoft.Json" searched in the sidebar box with its held answer rewritten to the form the host gives when a source could not be checked: the banner over the rows of the ones that answered.', [LIVE_SIDEBAR_RESULTS, LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-installed-revalidating', 'sidebar', [primary('sidebar')],
         '"@installed" typed, Gateway listed, then its next answer held while the main panel\'s Refresh asks again: the rows under the pane\'s 2 px bar, the list aria-busy; released after the capture.', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('sidebar-installed-provisional', 'sidebar', [primary('sidebar')],
+        '"@installed" typed, Gateway refreshed from the main panel and settled, then Utility chosen with the sidebar\'s answer held and its provisional chunk let through: the pane\'s first list from the project files under its 2 px bar, aria-busy, the header spinner, its count and the Provisional badge (markers sidebar-installed-progress, sidebar-installed-provisional); released after the capture.', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-all-projects-tools', 'sidebar', [primary('sidebar')],
         'All Projects with "@installed" typed, the tree pinned at the Tools folder: the Empty and Unsupported message leaves rendered (a new cell beside sidebar-all-projects, whose golden stays).', [LIVE_SIDEBAR_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-updates-loading', 'sidebar', [primary('sidebar')],

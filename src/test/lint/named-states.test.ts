@@ -75,6 +75,12 @@ describe('the named states (UX-P0.8)', () => {
         expect(suite.includes('acquireVsCodeApi')).toBe(false);
     });
 
+    it('lets a stream through only in the two Provisional cells: the answer-only hold of installed/get is called twice and nowhere else (UX-P4.fix-23)', () => {
+        const suite = read('src/test/ui/v2/capture/capture.ui.test.ts');
+        expect(suite.split("holdRequest('installed/get', 'answer')").length - 1).toBe(2);
+        expect(suite.split(", 'answer')").length - 1).toBe(2);
+    });
+
     it('captures the Tier A defaults, the theme subset, the classic pass and the widths of the plan', () => {
         const files = new Set(expectedFiles());
         for (const file of [
@@ -132,8 +138,8 @@ describe('the named states (UX-P0.8)', () => {
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
-            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported; UX-P4.2a: main-installed-uninstall-dialog; UX-P4.2b: sidebar-uninstall-dialog; UX-P4.fix-13: main-installed-busy; UX-P4.fix-19: main-updates-update-all-dialog.
-            const expected = theme.includes('high-contrast') ? 253 : 262;
+            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported; UX-P4.2a: main-installed-uninstall-dialog; UX-P4.2b: sidebar-uninstall-dialog; UX-P4.fix-13: main-installed-busy; UX-P4.fix-19: main-updates-update-all-dialog; UX-P4.fix-23: main-installed-provisional and sidebar-installed-provisional.
+            const expected = theme.includes('high-contrast') ? 259 : 268;
             expect(files, theme).toHaveLength(expected);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
@@ -152,9 +158,9 @@ describe('the named states (UX-P0.8)', () => {
 
     it('captures every Tier A theme and width once on the floor, in the classic look', () => {
         const files = laneFiles('floor');
-        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported, and UX-P4.2a's main-installed-uninstall-dialog, and UX-P4.2b's sidebar-uninstall-dialog, and UX-P4.fix-13's main-installed-busy, and UX-P4.fix-19's main-updates-update-all-dialog.
-        expect(files).toHaveLength(107);
-        expect(new Set(files).size).toBe(107);
+        // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported, and UX-P4.2a's main-installed-uninstall-dialog, and UX-P4.2b's sidebar-uninstall-dialog, and UX-P4.fix-13's main-installed-busy, and UX-P4.fix-19's main-updates-update-all-dialog, and UX-P4.fix-23's main-installed-provisional and sidebar-installed-provisional.
+        expect(files).toHaveLength(109);
+        expect(new Set(files).size).toBe(109);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

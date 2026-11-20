@@ -127,7 +127,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-busy', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
+const HELD_STATES = ['main-installed-busy', 'main-installed-loading', 'main-installed-revalidating', 'main-installed-provisional', 'sidebar-installed-provisional', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error', 'main-details-error', 'main-readme-error'];
 
@@ -136,12 +136,14 @@ const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-u
  * before it is dispatched: the outer frame hands the host's messages to the content frame through its `postMessage`, so a
  * wrapper there sees them first. A `message` listener cannot: on `window` listeners run in registration order whatever their
  * capture flag, so the bus's comes first (run on 2e5c48c; UX-P2.8b architecture follow-up). The stream is held too, or the
- * provisional chunk paints rows. A failure (`failHeld`) or a rewrite (`rewriteHeld`) then applies to every later answer of
+ * provisional chunk paints rows, unless the hold is the answer-only form of the two Provisional cells (`'answer'`, `installed/get`
+ * only, UX-P4.fix-23): its chunks reach the bus and their request ids are kept in `passed`, its answers are held. A failure (`failHeld`) or a rewrite (`rewriteHeld`) then applies to every later answer of
  * the type until the state's `leave`.
  */
 const HOLD_SOURCE = `
 const real = window.postMessage;
-const hold = { real, type: arguments[0], held: [], failure: null, failed: 0, rewrite: null, rewritten: 0 };
+const hold = { real, type: arguments[0], held: [], failure: null, failed: 0, rewrite: null, rewritten: 0, pass: arguments[1] === 'answer', passed: [] };
+if (hold.pass && hold.type !== 'installed/get') throw new Error('[hold] the answer-only form is bound to installed/get, not ' + hold.type);
 window.__nuigetHold = hold;
 // Each rewrite is an answer the host itself gives for its type, bound to that type (UX-P3.1b, UX-P3.2 architecture rulings):
 // an update check with no source answered or no update (Catalog.updates); a search one source could not answer, the rows of
@@ -175,6 +177,7 @@ hold.apply = data => {
 };
 window.postMessage = function (data, ...rest) {
     if (!data || data.type !== hold.type || (data.kind !== 'stream' && data.kind !== 'response')) return real.call(window, data, ...rest);
+    if (hold.pass && data.kind === 'stream') { hold.passed.push(data.id); return real.call(window, data, ...rest); }
     if (hold.failure === null && hold.rewrite === null) { hold.held.push(data); return undefined; }
     hold.apply(data);
     return undefined;
@@ -184,21 +187,22 @@ type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autoc
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
 type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty';
 
-async function holdRequest(type: HeldType): Promise<void> {
-    await script<void>(HOLD_SOURCE, type);
+/** Holds `type`'s envelopes; `'answer'` lets the provisional chunks of `installed/get` through and holds its answers (UX-P4.fix-23). */
+async function holdRequest(type: HeldType, hold: 'all' | 'answer' = 'all'): Promise<void> {
+    await script<void>(HOLD_SOURCE, type, hold);
 }
 
 /** Ends the hold, handing the bus what was held in order, and prints what it held. */
 async function releaseHeld(state: string): Promise<void> {
-    const counts = await script<{ stream: number; response: number; type: string }>(`
+    const counts = await script<{ stream: number; response: number; type: string; passed: number | null }>(`
 const hold = window.__nuigetHold;
-if (!hold) return { stream: 0, response: 0, type: 'none' };
+if (!hold) return { stream: 0, response: 0, type: 'none', passed: null };
 window.postMessage = hold.real;
-const counts = { stream: hold.held.filter(d => d.kind === 'stream').length, response: hold.held.filter(d => d.kind === 'response').length, type: hold.type };
+const counts = { stream: hold.held.filter(d => d.kind === 'stream').length, response: hold.held.filter(d => d.kind === 'response').length, type: hold.type, passed: hold.pass ? hold.passed.length : null };
 for (const d of hold.held) window.postMessage(d, '*');
 delete window.__nuigetHold;
 return counts;`);
-    console.warn(`[hold] ${state}: ${counts.stream + counts.response} held (stream ${counts.stream}, response ${counts.response}, ${counts.type})`);
+    console.warn(`[hold] ${state}: ${counts.stream + counts.response} held (stream ${counts.stream}, response ${counts.response}, ${counts.type}${counts.passed === null ? '' : `; passed ${counts.passed}`})`);
 }
 
 /**
@@ -209,6 +213,7 @@ return counts;`);
 async function failHeld(state: string, message: string): Promise<void> {
     const failed = await script<{ count: number; type: string }>(`
 const hold = window.__nuigetHold;
+if (hold.pass) throw new Error('[hold] the answer-only form takes no failure');
 hold.failure = arguments[0];
 for (const d of hold.held) hold.apply(d);
 hold.held = [];
@@ -224,6 +229,7 @@ return { count: hold.failed, type: hold.type };`, message);
 async function rewriteHeld(state: string, mode: RewriteMode): Promise<void> {
     const rewritten = await script<{ count: number; type: string }>(`
 const hold = window.__nuigetHold;
+if (hold.pass) throw new Error('[hold] the answer-only form takes no rewrite');
 const bound = hold.literals[arguments[0]];
 if (bound === undefined || bound.type !== hold.type) throw new Error('[hold] ' + arguments[1] + ': mode ' + arguments[0] + ' on type ' + hold.type);
 hold.rewrite = arguments[0];
@@ -470,6 +476,8 @@ interface Reach {
      * constants (`UNSETTLED`) are not initialised when this table is.
      */
     settled?: () => string;
+    /** A page script naming what does not hold yet, printed when `settled` times out (UX-P4.fix-23); else the list's leaf facts. */
+    settledFacts?: () => string;
     /** Leaves the state after the capture (closes a dialog, clears a search); nothing is confirmed. */
     leave?: () => Promise<void>;
 }
@@ -503,6 +511,49 @@ const cancelDialog = async (): Promise<void> => {
     await waitForTestIdGone('confirm-dialog', 10_000);
 };
 
+/** Utility's own packages: a row of one of them is a row of the project the Provisional cells choose (as perf.ts's UTILITY_ROW). */
+const UTILITY_IDS = ['system.commandline', 'spectre.console', 'csvhelper', 'yamldotnet', 'nodatime'];
+/** The answer-only hold passed a chunk of the request whose answer it holds (UX-P4.fix-23, architecture-advisor ruling). */
+const CHUNK_PASSED = 'window.__nuigetHold !== undefined && window.__nuigetHold.held.some(d => d.kind === "response" && window.__nuigetHold.passed.includes(d.id))';
+/**
+ * The main panel's first provisional list (UX-P4.fix-23, design-advisor ruling DO 2): the first load's bar, the list busy, a row of
+ * Utility, the Provisional badge, no skeleton, the authors of every comfortable row whose version is concrete (a pattern version
+ * has none to ask metadata for until the answer: ADR-009 d.1, design-advisor follow-up 1), the Updates tab's count, the Transitive
+ * group row at rest, and the answer still held.
+ */
+const MAIN_PROVISIONAL_CLAUSES: ReadonlyArray<readonly [string, string]> = [
+    ['bar', 'document.querySelector(\'[data-testid="installed-progress"]\')?.getAttribute("aria-label") === "Loading installed packages"'],
+    ['list busy', 'document.querySelector(\'[data-testid="installed-list"]\')?.getAttribute("aria-busy") === "true"'],
+    ['utility row', installedRowOf(UTILITY_IDS)],
+    ['badge', 'document.querySelector(\'[data-testid="installed-provisional"]\') !== null'],
+    ['no skeleton', 'document.querySelectorAll(".nuiget-skeleton-row").length === 0'],
+    ['authors', '(() => { const rows = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row--comfortable:not([data-row-kind])\')].filter(row => /^[0-9]+(\\.[0-9]+)*([-+][0-9A-Za-z.+-]+)?$/.test((row.querySelector(".nuiget-row-version")?.textContent ?? "").trim())); return rows.length > 0 && rows.every(row => row.querySelector(".nuiget-row-authors") !== null); })()'],
+    ['updates count', '/[0-9]/.test(document.querySelector(\'[data-testid="updates-tab"]\')?.textContent ?? "")'],
+    ['transitive at rest', 'document.querySelector(\'[data-testid="group-row-transitive"] .nuiget-spinner\') === null'],
+    ['chunk passed, answer held', CHUNK_PASSED],
+];
+/**
+ * The side bar's first provisional list (design-advisor ruling DO 3): the pane's first-load bar, the list busy, a row of Utility,
+ * the Provisional badge, the header spinner and its count, no skeleton, and the answer still held.
+ */
+const SIDEBAR_PROVISIONAL_CLAUSES: ReadonlyArray<readonly [string, string]> = [
+    ['bar', 'document.querySelector(\'[data-testid="sidebar-installed-progress"]\')?.getAttribute("aria-label") === "Loading installed packages"'],
+    ['list busy', 'document.querySelector(\'[data-testid="sidebar-installed-list"]\')?.getAttribute("aria-busy") === "true"'],
+    ['utility row', `[...document.querySelectorAll('[data-testid="sidebar-installed-list"] [data-testid^="package-row-"]')].some(row => ${JSON.stringify(UTILITY_IDS)}.includes(row.dataset.testid.slice('package-row-'.length)))`],
+    ['badge', 'document.querySelector(\'[data-testid="sidebar-installed-provisional"]\') !== null'],
+    ['header spinner', 'document.querySelector(\'[data-testid="section-header-installed"] .nuiget-spinner\') !== null'],
+    ['header count', '/^[0-9]+$/.test(document.querySelector(\'[data-testid="section-box-installed"] .nuiget-badge--count\')?.textContent ?? "")'],
+    ['no skeleton', 'document.querySelectorAll(".nuiget-sidebar .nuiget-skeleton-row").length === 0'],
+    ['chunk passed, answer held', CHUNK_PASSED],
+];
+
+/** All clauses at once, as one predicate. */
+const allOf = (clauses: ReadonlyArray<readonly [string, string]>): string => clauses.map(([, clause]) => `(${clause})`).join(' && ');
+/** A page script naming the clauses that do not hold, for the `[reach]` line of a timed-out wait. */
+const failingOf = (clauses: ReadonlyArray<readonly [string, string]>): string => `return [${clauses.map(([name, clause]) => `(${clause}) ? null : ${JSON.stringify(name)}`).join(', ')}].filter(name => name !== null).join(', ') || 'none';`;
+const MAIN_PROVISIONAL = allOf(MAIN_PROVISIONAL_CLAUSES);
+const SIDEBAR_PROVISIONAL = allOf(SIDEBAR_PROVISIONAL_CLAUSES);
+
 /** The states whose subject is the pointer: the shot leaves it where it is. */
 const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'main-installed-toolbar-hover', 'main-installed-refresh-hover', 'main-updates-hover', 'main-browse-hover', 'sidebar-hover', 'sidebar-browse-hover'];
 
@@ -525,6 +576,25 @@ const REACH: Record<string, Reach> = {
             await until('document.querySelector(\'[data-testid="installed-progress"]\') !== null && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") === "true" && document.querySelector(\'[data-testid="installed-list"] .nuiget-row-option\') !== null && !document.querySelector(\'[data-testid="refresh-button"]\').disabled', 'the rows under the bar, the list busy');
         },
         leave: () => releaseHeld('main-installed-revalidating'),
+    },
+    'main-installed-provisional': {
+        reach: async () => {
+            // A fresh computation of Utility (UX-P4.fix-23, architecture-advisor ruling DO 2): Refresh on Gateway, proven and
+            // settled, then the answer-only hold and the project change, whose provisional chunk shows as the first list.
+            await gatewayInstalled();
+            await holdRequest('installed/get');
+            await clickVisible('refresh-button');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'Gateway\'s refreshed answer');
+            await releaseHeld('main-installed-provisional (refresh)');
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
+            await holdRequest('installed/get', 'answer');
+            await chooseFixtureProject('Utility.csproj');
+            await until(CHUNK_PASSED, 'Utility\'s chunk passed and its answer held', 120_000);
+            await settleOrReport('main-installed-provisional', `return ${MAIN_PROVISIONAL};`, failingOf(MAIN_PROVISIONAL_CLAUSES));
+        },
+        settled: () => `return ${MAIN_PROVISIONAL};`,
+        settledFacts: () => failingOf(MAIN_PROVISIONAL_CLAUSES),
+        leave: () => releaseHeld('main-installed-provisional'),
     },
     'main-installed-empty': {
         reach: async () => {
@@ -1408,6 +1478,39 @@ const REACH: Record<string, Reach> = {
             await enterSidebarWebview();
             await releaseHeld('sidebar-installed-revalidating');
             await leaveSidebarSearch();
+        },
+    },
+    'sidebar-installed-provisional': {
+        reach: async () => {
+            // The Installed pane alone; a fresh computation of Utility (architecture-advisor ruling DO 3): the main panel's Refresh on
+            // Gateway, proven in the side bar and settled, then the answer-only hold and the project change.
+            await sidebarSections();
+            await typeHeld(await findByTestId('sidebar-search-input', 30_000), '@installed ', 'sidebar-installed-provisional');
+            await findByTestId('package-row-serilog', 60_000);
+            await holdRequest('installed/get');
+            await leaveWebview();
+            await enterMainWebview();
+            await clickVisible('refresh-button');
+            await leaveWebview();
+            await enterSidebarWebview();
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'Gateway\'s refreshed Installed answer', 60_000);
+            await releaseHeld('sidebar-installed-provisional (refresh)');
+            await until('document.querySelector(\'[data-testid="sidebar-installed-list"]\')?.getAttribute("aria-busy") !== "true" && document.querySelector(\'[data-testid="sidebar-installed-progress"]\') === null', 'the pane settled after the refresh', 60_000);
+            await holdRequest('installed/get', 'answer');
+            await sidebarChooses('Utility.csproj');
+            await until(CHUNK_PASSED, 'Utility\'s chunk passed and its answer held', 120_000);
+            await settleOrReport('sidebar-installed-provisional', `return ${SIDEBAR_PROVISIONAL};`, failingOf(SIDEBAR_PROVISIONAL_CLAUSES));
+            await parkSidebarPointer();
+        },
+        settled: () => `return ${SIDEBAR_PROVISIONAL};`,
+        settledFacts: () => failingOf(SIDEBAR_PROVISIONAL_CLAUSES),
+        leave: async () => {
+            await enterSidebarWebview();
+            await releaseHeld('sidebar-installed-provisional');
+            await leaveSidebarSearch();
+            await leaveWebview();
+            await enterMainWebview();
+            await chooseFixtureProject('Gateway.csproj');
         },
     },
     'sidebar-all-projects-tools': {
@@ -2581,7 +2684,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
     // A state that declares its settled truths has them re-checked here, before the collector reads (UX-P3.1b).
     const settled = REACH[state.name]?.settled;
     if (settled !== undefined) {
-        await settleOrReport(state.name, settled());
+        await settleOrReport(state.name, settled(), REACH[state.name]?.settledFacts?.());
     }
     const layout = { ...await script<Layout>(COLLECT_LAYOUT, state.surface === 'main' ? 'nuiget-app' : 'nuiget-sidebar', RAMP, TOLERANCES.gapMembership, TOLERANCES.containment, cellList(state.name)), viewTitleActions };
     const key = `${state.surface} ${capture.theme} ${capture.width} ${capture.look}`;

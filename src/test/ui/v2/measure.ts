@@ -451,7 +451,7 @@ export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
 export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
     'main-details-empty', 'main-details-error', 'main-details-loading', 'main-details-readme', 'main-details-readonly', 'main-details-unsupported',
     'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-empty', 'main-installed-error', 'main-installed-focus',
-    'main-installed-hover', 'main-installed-hover-current', 'main-installed-loading', 'main-installed-refresh-hover', 'main-installed-revalidating',
+    'main-installed-hover', 'main-installed-hover-current', 'main-installed-loading', 'main-installed-provisional', 'main-installed-refresh-hover', 'main-installed-revalidating',
     'main-installed-single', 'main-installed-toolbar-hover', 'main-installed-unfocused', 'main-installed-unresolved', 'main-installed-unsupported',
     'main-readme-error', 'main-readme-loading', 'main-transitive-details', 'main-transitive-expanded', 'main-updates', 'main-updates-all',
     'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-hover', 'main-updates-loading', 'main-updates-revalidating',
@@ -525,6 +525,8 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-sources-error': ['source-settings-error'],
     'main-installed-loading': ['installed-progress'],
     'main-installed-revalidating': ['installed-progress'],
+    // UX-P4.fix-23 (design-advisor ruling DO 6b): the first provisional list, its bar and its badge.
+    'main-installed-provisional': ['installed-progress', 'installed-provisional'],
     'main-installed-empty': ['installed-empty'],
     'main-installed-error': ['installed-error'],
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
@@ -558,6 +560,7 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'sidebar-updates-nomatch': ['sidebar-updates-empty'],
     'sidebar-browse-unavailable': ['sidebar-browse-unavailable'],
     'sidebar-installed-revalidating': ['sidebar-installed-progress'],
+    'sidebar-installed-provisional': ['sidebar-installed-progress', 'sidebar-installed-provisional'],
     'sidebar-all-projects-tools': ['sidebar-installed-empty-empty.csproj', 'sidebar-installed-unsupported-unsupported.csproj'],
     // UX-P3.10 push B (opening ruling DO 6-7, 10).
     'sidebar-updates-loading': ['sidebar-updates-progress'],
@@ -631,7 +634,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
     rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
-    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...inGroups('hard', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...inGroups('hard', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating|provisional/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
     rule('PF-3a', { helper: 5, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-single'], widths: [1200] }),
@@ -738,12 +741,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
     rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
-    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|provisional/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
     rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error'] } }),
-    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
+    rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|provisional|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
     rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
     // UX-P3.9 (DO 1d): a scroll shadow under the header over a scrolled list, in the states that scroll one.
@@ -4095,8 +4098,10 @@ function evaluateStateCell(definition: RuleDefinition, state: string, facts: End
             if (loading && barAlone) {
                 return { value: `bar ${above ? 'at list top' : 'below the list top'}; skeleton rows ${cells.skeletonRows}, rows ${cells.rows}; rows-first pending P5.9a`, pass: above && cells.skeletonRows === 0 && cells.rows === 0 };
             }
-            const content = loading ? cells.skeletonRows === 3 && cells.rows === 0 : cells.rows >= 1 && cells.listBusy;
-            return { value: `bar ${above ? 'at list top' : 'below the list top'}; ${loading ? `skeleton ${cells.skeletonRows}, rows ${cells.rows}` : `rows ${cells.rows}${cells.listBusy ? '; aria-busy' : ''}`}`, pass: above && content };
+            // A first provisional list (UX-P4.fix-23): its rows under the first load's bar, busy, and never the skeleton.
+            const provisional = state.endsWith('-provisional');
+            const content = loading ? cells.skeletonRows === 3 && cells.rows === 0 : cells.rows >= 1 && cells.listBusy && (!provisional || cells.skeletonRows === 0);
+            return { value: `bar ${above ? 'at list top' : 'below the list top'}; ${loading ? `skeleton ${cells.skeletonRows}, rows ${cells.rows}` : `rows ${cells.rows}${cells.listBusy ? '; aria-busy' : ''}${provisional ? `; skeleton ${cells.skeletonRows}` : ''}`}`, pass: above && content };
         }
         case 'DS-STATE-3': {
             if (cells.empties.length === 0) {
@@ -4509,15 +4514,17 @@ function dialogTextClause(parts: StateCells['dialogText'], tolerance: number): {
 
 /**
  * UX-P3.10 push E (design-advisor follow-up 1): a pane header's spinner is a first load's cue; in a revalidating side bar cell the
- * pane's 2 px bar stands alone. Printed in every side bar cell, asserted 0 where the state revalidates.
+ * pane's 2 px bar stands alone. Printed in every side bar cell, asserted 0 where the state revalidates; a first provisional list is
+ * still the first load, so its cell asserts 1 (UX-P4.fix-23, design-advisor ruling DO 6d).
  */
 function headerSpinner(layout: Layout, state: string): { text: string; pass: boolean } {
     const count = layout.endOfP0.stateCells.headerSpinners;
     const revalidating = /revalidating/.test(state);
+    const provisional = state.endsWith('-provisional');
     if (count === undefined) {
-        return { text: 'header spinner not measurable', pass: !revalidating };
+        return { text: 'header spinner not measurable', pass: !revalidating && !provisional };
     }
-    return { text: `header spinner ${count}`, pass: !revalidating || count === 0 };
+    return { text: `header spinner ${count}`, pass: provisional ? count === 1 : !revalidating || count === 0 };
 }
 
 /**

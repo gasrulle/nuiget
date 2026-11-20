@@ -376,7 +376,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
             lines: ['[motion] DS-MOTION-1@:root: not measurable (prefers-reduced-motion matches) (hard)'],
             failures: ['DS-MOTION-1 not measurable: prefers-reduced-motion matches'],
         });
-        expect(MOTION_STATES).toHaveLength(16);
+        expect(MOTION_STATES).toHaveLength(18);
     });
 
     it('reads DS-MOTION-1 on five elements with motion on, each loop running, never as 0 when absent (UX-P4.fix-8)', () => {

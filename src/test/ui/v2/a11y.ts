@@ -629,7 +629,7 @@ export const MOTION_STATES: readonly string[] = [
     'main-sources-revalidating', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating',
     'main-browse-loading', 'main-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading',
     'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-readme-loading',
-    'main-installed-busy',
+    'main-installed-busy', 'main-installed-provisional', 'sidebar-installed-provisional',
 ];
 
 /** Four duration tokens in milliseconds, `null` when unset or not a time (UX-P4.5: parsed, never compared as strings). */
@@ -861,6 +861,10 @@ export const LIVE_EXPECTED: Readonly<Record<string, { text: string; status: Rule
     'sidebar-installed-loading': { text: 'Loading installed packages', status: 'hard' },
     'sidebar-updates-loading': { text: 'Loading updates', status: 'hard' },
     'sidebar-browse-loading': { text: 'Searching', status: 'printed' },
+    // UX-P4.fix-23 (design-advisor ruling DO 8): a first provisional list says the first load once, at its start; read on the
+    // proving push, flipped in the closing commit.
+    'main-installed-provisional': { text: 'Loading installed packages', status: { pending: 'P4.fix-23' } },
+    'sidebar-installed-provisional': { text: 'Loading installed packages', status: { pending: 'P4.fix-23' } },
 };
 
 /** Runs in the webview: the text of the surface's one live region, `null` when it has none. */
