@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A restore that fails for some projects reports each failure once**
 - **The notification for a failed restore of one project names the project and the reason**
 - **An operation that fails before it starts no longer reports a restore of 0 projects**
+- **Installed packages no longer vanish and return after a save or an operation**
 
 ## [2.0.0] - 2026-10-17
 

@@ -634,6 +634,53 @@ describe('two-surface harness', () => {
         expect(h.services.queue.isBusy).toBe(false);
     });
 
+    it('X7: a save while the list is authoritative streams the provisional list to both surfaces, and each keeps the evaluated list until the answer', async () => {
+        h = await createHarness({ tree: { 'A/A.csproj': projectXml(['Serilog', '3.0.0'], ['Moq', '4.20.0']) }, selectedProject: 'A/A.csproj', evaluate: true });
+        const A = h.path('A/A.csproj');
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        await h.expectState({ selectedProject: A, projects: [A], installed: ['Serilog@3.0.0', 'Moq@4.20.0'] });
+        for (const webview of [sidebar, main]) {
+            expect(webview.installed?.fidelity, `${webview.surface}: before the save`).toBe('authoritative');
+        }
+        const marks = new Map([sidebar, main].map(webview => [webview, webview.received.length]));
+
+        // A save: Serilog moves to 3.1.0 and Moq leaves the file; the evaluation of the new revision is held.
+        const evaluation = h.dotnet.hold(dotnetCalls.msbuild(A));
+        h.files.writeProject(A, projectXml(['Serilog', '3.1.0']));
+        await h.advance(WATCHER_DEBOUNCE_MS);
+        await h.settle(() => expect(evaluation.seen).toBe(1));
+        // Both surfaces asked on the same invalidation, before the provisional existed: each request carries it once.
+        await h.settle(() => {
+            for (const webview of [sidebar, main]) {
+                expect(webview.chunksFor<'installed/get'>(webview.latestId('installed') as string), `${webview.surface}: chunks of its latest request`).toHaveLength(1);
+            }
+        });
+        for (const webview of [sidebar, main]) {
+            const chunks = webview.chunksFor<'installed/get'>(webview.latestId('installed') as string);
+            expect(chunks, `${webview.surface}: its chunk`).toEqual([{ kind: 'provisional', result: expect.objectContaining({ projectPath: A, fidelity: 'provisional' }) }]);
+            expect(packagesOf(chunks[0].result), `${webview.surface}: the provisional rows`).toEqual(['Serilog@3.1.0']);
+        }
+        for (const webview of [sidebar, main]) {
+            expect(packagesOf(webview.installed), `${webview.surface}: the list shown while the evaluation runs`).toEqual(['Serilog@3.0.0', 'Moq@4.20.0']);
+            expect(webview.installed?.fidelity).toBe('authoritative');
+            expect(webview.pending(), `${webview.surface}: its request is unanswered`).toContain(webview.latestId('installed'));
+        }
+
+        evaluation.release();
+        await h.expectState({ selectedProject: A, projects: [A], installed: ['Serilog@3.1.0'] });
+        expect(h.dotnet.count(dotnetCalls.msbuild(A))).toBe(2);
+        for (const webview of [sidebar, main]) {
+            expect(webview.installed?.fidelity, `${webview.surface}: after the answer`).toBe('authoritative');
+            const since = webview.received.slice(marks.get(webview));
+            const events = since.filter(message => message.kind === 'event' && message.type === 'resources/invalidated').map(message => (message as unknown as { payload: { keys: Array<{ key: string; generation: number }> } }).payload);
+            const listed = events.flatMap(event => event.keys).filter(entry => entry.key === resourceKeys.installed(A)).at(-1)?.generation;
+            const applied = webview.received[webview.installedHistory.at(-1)!.receivedAt] as ResponseEnvelope<'installed/get'> & { ok: true };
+            expect(applied.generation, `${webview.surface}: generation of the list that is shown`).toBe(listed);
+            expectOneResponsePerRequest(webview);
+        }
+    });
+
     it('N73: an installed computation that read the project file before a write-back is not shown as current', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
