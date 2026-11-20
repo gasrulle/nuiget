@@ -67,6 +67,12 @@ describe('busyText (UX-P3.12b)', () => {
         expect(busyText(new Map([['a', progress({})]]), '/w/App.csproj', 'serilog')).toBe('Updating');
         expect(busyText(new Map([['a', progress({ kind: 'remove' })]]), '/w/App.csproj', 'SERILOG')).toBe('Uninstalling');
     });
+    it('names an install and a restore by their own words, the two DS-STATE-6\'s measurement cell leaves to these tests (UX-P4.fix-22)', () => {
+        expect(busyText(new Map([['a', progress({ kind: 'install' })]]), '/w/App.csproj', 'Serilog')).toBe('Installing');
+        expect(busyText(new Map([['a', progress({ kind: 'restore' })]]), '/w/App.csproj', 'Serilog')).toBe('Restoring');
+        // A restore step of an install keeps the install's word: the kind names the operation, the status only its step.
+        expect(busyText(new Map([['a', progress({ kind: 'install', status: 'restoring' })]]), '/w/App.csproj', 'Serilog')).toBe('Installing');
+    });
     it('says it is in progress for another project, another package or an operation without a kind yet', () => {
         expect(busyText(new Map([['a', progress({})]]), '/w/Other.csproj', 'Serilog')).toBe('In progress');
         expect(busyText(new Map([['a', progress({})]]), '/w/App.csproj', 'Moq')).toBe('In progress');
