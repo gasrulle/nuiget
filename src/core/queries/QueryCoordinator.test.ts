@@ -230,6 +230,24 @@ describe('DefaultQueryCoordinator', () => {
         expect(calls.map(call => call.ctx.generation)).toEqual([1, 2, 3]);
     });
 
+    it('a key that was never queried is not listed (X31, UX-P4.8c)', async () => {
+        const coordinator = new DefaultQueryCoordinator();
+        const events: InvalidationEvent[] = [];
+        coordinator.onDidInvalidate(event => events.push(event));
+        const { calls, compute } = recorder();
+        coordinator.query(KEY, compute);
+        for (const call of calls) {
+            call.result.resolve('value');
+        }
+        await flushMicrotasks();
+
+        coordinator.invalidate({ kind: 'project', projectPaths: [P1, P2] }, 'operation');
+        await flushMicrotasks();
+        // P2's installed list was never asked for, and neither was P1's update check: only P1's installed list is listed.
+        expect(events).toHaveLength(1);
+        expect(events[0].keys.map(entry => entry.key)).toEqual([KEY]);
+    });
+
     it('invalidate coalesces into one event', async () => {
         const coordinator = new DefaultQueryCoordinator();
         const events: InvalidationEvent[] = [];

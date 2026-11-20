@@ -230,7 +230,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
         const projectGroups = projectGroupIds(chunks);
         groups = chunks
             .filter(chunk => chunk.error === undefined)
-            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(visibleUpdates(chunk.updates, filter), installedOf(chunk.projectPath), id => isPackageBusy(chunk.projectPath, id)) }))
+            .map(chunk => ({ projectPath: chunk.projectPath, projectName: chunk.projectName, updates: updateCandidates(visibleUpdates(chunk.updates, filter), installedOf(chunk.projectPath), id => isPackageBusy(chunk.projectPath, id, true)) }))
             .filter(group => group.updates.length > 0);
         if (stream.status === 'ready' && !stream.sourcesUnavailable && chunks.every(chunk => chunk.error === undefined)) {
             count = chunks.reduce((sum, chunk) => sum + chunk.updates.length, 0);
@@ -263,7 +263,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
             count = rows.length;
             shown = shownOf(rows);
         }
-        const single = updateCandidates(visibleUpdates(rows, filter, updates.status === 'loading'), installed.result, id => isPackageBusy(projectPath, id));
+        const single = updateCandidates(visibleUpdates(rows, filter, updates.status === 'loading'), installed.result, id => isPackageBusy(projectPath, id, true));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
         // A check that could not be made, or failed, with nothing to list: its banner is the one message (UX-P3.10 follow-up 1, F1).
         const unsupported = installed.result?.unsupported;

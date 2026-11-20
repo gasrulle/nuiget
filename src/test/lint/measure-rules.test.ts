@@ -1242,6 +1242,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const busy: NonNullable<Layout['endOfP0']['stateCells']['busyRows']>[number] = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: icon, slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Uninstalling' };
         expect(busyRowsVerdict([busy], colours, 1)).toEqual({ value: 'busy rows 1: package-row-fluentvalidation aria-busy; spinner 16×16 in the action slot (end 6, centre Δy 0; glyph end 9), colour icon.foreground; actions 0; status "Uninstalling"', pass: true });
         expect(busyRowsVerdict([{ ...busy, status: 'Queued' }], colours, 1).pass).toBe(true);
+        expect(busyRowsVerdict([{ ...busy, status: 'Finishing' }], colours, 1).pass).toBe(true);
         // One red case per clause; the glyph stands 3 inside the slot's end, where the action's glyph stood (UX-P4.fix-15).
         expect(busyRowsVerdict([{ ...busy, glyphEnd: 30 }], colours, 1)).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph inset 24 (target 3)') });
         expect(busyRowsVerdict([{ ...busy, glyphEnd: 10 }], colours, 1)).toMatchObject({ pass: false, value: expect.stringContaining('; off: glyph inset 4 (target 3)') });

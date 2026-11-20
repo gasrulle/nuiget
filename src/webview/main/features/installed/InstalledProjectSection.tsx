@@ -44,7 +44,8 @@ export interface InstalledRowProps {
  * description (D14); a package that cannot be uninstalled (SDK, props) keeps a muted check mark and its badge says why.
  */
 export function InstalledRow({ placement, projectPath, entry, result, metadata, onUninstall }: InstalledRowProps): React.JSX.Element {
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const busy = isPackageBusy(projectPath, entry.id);
     const readOnly = whyNotRemovable(entry, result) !== undefined;
     const unresolved = entry.declaration === 'unresolved';
@@ -73,7 +74,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
             icon={src === undefined ? undefined : <img src={src} alt="" />}
             busy={busy}
             selectable={!readOnly}
-            status={busy ? busyText(active, projectPath, entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
+            status={busy ? busyText(ops, projectPath, entry.id) : unresolved ? 'Its reference could not be resolved.' : readOnlyReason(entry, result)}
             badges={<>
                 {entry.isImplicit ? <Badge label="SDK" title="Added by the .NET SDK; cannot be uninstalled" /> : null}
                 {entry.declaration === 'props' ? <Badge label="Props" title="Declared in an imported props file; cannot be uninstalled from the project" /> : null}

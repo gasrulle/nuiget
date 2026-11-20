@@ -64,7 +64,8 @@ const rowsIn = (section: Section, needle: string): PackageUpdate[] => filterById
 export function AllProjectsUpdates({ filter, announce, central, uninstall, focusSearch }: ListView): React.JSX.Element {
     const all = useAllProjects();
     const { updates } = all;
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { select } = useDetailsActions();
     const [current, setCurrent] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
     const needle = filter.trim().toLowerCase();
     const filtering = needle !== '';
     const rowsOf = (section: Section): PackageUpdate[] => rowsIn(section, needle);
-    const candidatesOf = (section: Section): PackageUpdate[] => updateCandidates(rowsOf(section), section.installed, id => isPackageBusy(section.projectPath, id));
+    const candidatesOf = (section: Section): PackageUpdate[] => updateCandidates(rowsOf(section), section.installed, id => isPackageBusy(section.projectPath, id, true));
 
     // The bulk set: a subset of the rows a bulk update may take, keyed as the rows are; a new listing clears it (UX-P2.1c).
     const candidateKey = sections.flatMap(section => candidatesOf(section).map(update => rowId(section.projectPath, update.id))).join('\0');
@@ -201,7 +202,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
     }), [collapsed, updates.sourcesUnavailable, loading, needle, filtering]);
 
     const updateOne = (section: Section, update: PackageUpdate): void => {
-        if (isPackageBusy(section.projectPath, update.id)) {
+        if (isPackageBusy(section.projectPath, update.id, true)) {
             return;
         }
         if (section.installed?.unsupported) {
@@ -225,7 +226,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
 
     // The Delete key asks first, naming the row's project (ADR-013 Decision 3, UX-P4.2a).
     const askUninstall = (section: Section, update: PackageUpdate): void => {
-        if (isPackageBusy(section.projectPath, update.id)) {
+        if (isPackageBusy(section.projectPath, update.id, true)) {
             return;
         }
         const obstacle = whyNotDeletable(update.id, entryIn(section.installed, update.id), section.installed);
@@ -362,7 +363,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
                             return null;
                         }
                         const { section, update } = item;
-                        const busy = isPackageBusy(section.projectPath, update.id);
+                        const busy = isPackageBusy(section.projectPath, update.id, true);
                         const src = packageIconSrc(update.iconUrl ?? updates.icons.get(update.id.toLowerCase()));
                         return (
                             <Row
@@ -378,7 +379,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
                                 busy={busy}
                                 // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
                                 selectable={section.installed?.unsupported === undefined}
-                                status={busy ? busyText(active, section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
+                                status={busy ? busyText(ops, section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
                                 badges={isCentralIn(section.installed, update.id) ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                                 actions={section.installed?.unsupported ? undefined : (
                                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(section, update)}><ArrowUpIcon /></IconButton>

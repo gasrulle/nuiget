@@ -1,9 +1,10 @@
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { BulkOutcome, OperationOutcome, OperationProgress } from '../../../protocol';
+import { ALL_PROJECTS, resourceKeys, type BulkOutcome, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../../protocol';
+import { busyText } from '../installed/rules';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
-import { MessageBusProvider } from '../bus/useMessageBus';
-import { busyPackages, INITIAL_OPS, isBulkOutcome, OpsProvider, opsReducer, restoringProjects, touchedBy, useOps, useOpsActions, type OpsState } from './ops';
+import { busyPackages, INITIAL_OPS, isBulkOutcome, opsReducer, restoringProjects, touchedBy, useOps, useOpsActions, type OpsState } from './ops';
+import { StoreProvider } from './StoreProvider';
 
 const A = '/w/A/A.csproj';
 const B = '/w/B/B.csproj';
@@ -38,7 +39,7 @@ function mount(): FakeHost {
     const host = createFakeHost();
     renders = 0;
     lastRun = undefined;
-    render(<MessageBusProvider bus={host.bus}><OpsProvider><Surface /><Uninstall /></OpsProvider></MessageBusProvider>);
+    render(<StoreProvider bus={host.bus} prefetch={false}><Surface /><Uninstall /></StoreProvider>);
     return host;
 }
 
@@ -189,7 +190,7 @@ describe('ops slice', () => {
                 </div>
             );
         }
-        render(<MessageBusProvider bus={host.bus}><OpsProvider><Restoring /></OpsProvider></MessageBusProvider>);
+        render(<StoreProvider bus={host.bus} prefetch={false}><Restoring /></StoreProvider>);
         expect(text('restoring')).toBe('');
         await hostSays(() => screen.getByRole('button', { name: 'Restore' }).click());
         // From the call, before the host said anything (N61).
@@ -263,7 +264,7 @@ describe('ops slice', () => {
             const { own } = useOps();
             return <output data-testid="own">{own === undefined ? 'none' : `${own.sequence} ${own.outcome.opId}`}</output>;
         }
-        render(<MessageBusProvider bus={host.bus}><OpsProvider surface="sidebar"><Own /></OpsProvider></MessageBusProvider>);
+        render(<StoreProvider bus={host.bus} prefetch={false} surface="sidebar"><Own /></StoreProvider>);
         await hostSays(() => host.event('ops/completed', { ...removed('menu1'), origin: 'main' }));
         await hostSays(() => host.event('ops/completed', removed('menu2')));
         expect(text('own')).toBe('none');
@@ -347,5 +348,185 @@ describe('ops reducer', () => {
         state = opsReducer(state, { type: 'progress', progress: progress('op2', 'running', { projectPaths: [A] }) });
         state = opsReducer(state, { type: 'progress', progress: progress('op3', 'running', { packageIds: ['Moq'] }) });
         expect([...busyPackages(state)].sort()).toEqual([`${A}|serilog`, `${B}|serilog`]);
+    });
+});
+
+describe('settling (X31, UX-P4.8c)', () => {
+    const snap = (selectedProject: string, includePrerelease = false): SessionSnapshot => ({ rev: 1, selectedProject, selectedSource: 'all', includePrerelease, restoreEnabled: true, origin: 'host' });
+    const listOf = (projectPath: string): InstalledResult => ({ projectPath, fidelity: 'authoritative', isCpm: false, packages: [] });
+    const updated = (opId: string, projectPath = A, packageId = 'Serilog', more: Partial<OperationOutcome> = {}): OperationOutcome => ({ opId, kind: 'update', status: 'completed', projectPath, packageId, edit: { ok: true }, ...more });
+
+    function Settle() {
+        const ops = useOps();
+        const { run } = useOpsActions();
+        return (
+            <div>
+                <output data-testid="installed-a">{String(ops.isPackageBusy(A, 'Serilog'))}</output>
+                <output data-testid="updates-a">{String(ops.isPackageBusy(A, 'Serilog', true))}</output>
+                <output data-testid="installed-b">{String(ops.isPackageBusy(B, 'Serilog'))}</output>
+                <output data-testid="moq-a">{String(ops.isPackageBusy(A, 'Moq'))}</output>
+                <output data-testid="word-a">{busyText(ops, A, 'Serilog')}</output>
+                <output data-testid="word-moq">{busyText(ops, A, 'Moq')}</output>
+                <output data-testid="is-busy">{String(ops.isBusy)}</output>
+                <output data-testid="restoring">{[...restoringProjects(ops)].join(',')}</output>
+                <output data-testid="settling">{ops.settling.size}</output>
+                <button type="button" onClick={() => { lastRun = run('ops/update', { projectPath: A, packageId: 'Serilog', version: '4.0.0' }).then(outcome => outcome, (error: unknown) => error); }}>Update</button>
+            </div>
+        );
+    }
+
+    /** The store with `path` selected and its first lists answered: the installed list and the update check, or the two fan-outs. */
+    async function selected(path = A): Promise<FakeHost> {
+        const host = createFakeHost();
+        render(<StoreProvider bus={host.bus} prefetch={false}><Settle /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snap(path)));
+        if (path === ALL_PROJECTS) {
+            await hostSays(() => host.respond(host.requests('allProjects/installed')[0], { projectPaths: [A, B], errored: [] }));
+            await hostSays(() => host.respond(host.requests('allProjects/updates')[0], { projectPaths: [A, B] }));
+        } else {
+            await hostSays(() => host.respond(host.requests('installed/get')[0], listOf(path), 1));
+            await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: path, updates: [] }, 1));
+        }
+        expect(text('settling')).toBe('0');
+        return host;
+    }
+    const listedA = (host: FakeHost): Promise<void> => hostSays(() => host.invalidate([[resourceKeys.installed(A), 2], [resourceKeys.updates(A, false), 2]]));
+
+    it('a completed edit keeps its package busy until its list settles (X31)', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        expect([text('installed-a'), text('updates-a'), text('word-a')]).toEqual(['true', 'true', 'Finishing']);
+        await listedA(host);
+        expect([text('installed-a'), text('updates-a'), text('word-a')]).toEqual(['true', 'true', 'Finishing']);
+        await hostSays(() => host.respond(host.requests('installed/get')[1], listOf(A), 2));
+        await hostSays(() => host.respond(host.requests('updates/get')[1], { projectPath: A, updates: [] }, 2));
+        expect([text('installed-a'), text('updates-a'), text('settling')]).toEqual(['false', 'false', '0']);
+    });
+
+    it('an Installed row ends at the installed answer while the update row of the same package still waits', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await listedA(host);
+        await hostSays(() => host.respond(host.requests('installed/get')[1], listOf(A), 2));
+        expect([text('installed-a'), text('updates-a'), text('word-a')]).toEqual(['false', 'true', 'Finishing']);
+        await hostSays(() => host.respond(host.requests('updates/get')[1], { projectPath: A, updates: [] }, 2));
+        expect([text('updates-a'), text('settling')]).toEqual(['false', '0']);
+    });
+
+    it('a failed, cancelled or rejected outcome arms nothing', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1', A, 'Serilog', { status: 'failed', edit: { ok: false, error: 'boom' } })));
+        await hostSays(() => host.event('ops/completed', updated('op2', A, 'Serilog', { status: 'cancelled', edit: undefined })));
+        await hostSays(() => host.event('ops/completed', updated('op3', A, 'Serilog', { status: 'rejected', edit: undefined, message: 'Queue full' })));
+        expect([text('installed-a'), text('updates-a'), text('settling')]).toEqual(['false', 'false', '0']);
+    });
+
+    it('a terminal ops/progress arms nothing', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/progress', progress('op1', 'running', { kind: 'update', projectPaths: [A], packageIds: ['Serilog'] })));
+        expect(text('word-a')).toBe('Updating');
+        await hostSays(() => host.event('ops/progress', progress('op1', 'completed', { kind: 'update', projectPaths: [A], packageIds: ['Serilog'] })));
+        expect([text('installed-a'), text('settling')]).toEqual(['false', '0']);
+    });
+
+    it('a bulk outcome arms its ok edits only', async () => {
+        const host = await selected();
+        const outcome: BulkOutcome = { opId: 'bulk1', status: 'partial', results: [updated('bulk1-1'), updated('bulk1-2', A, 'Moq', { status: 'failed', edit: { ok: false } })], restores: [] };
+        await hostSays(() => host.event('ops/completed', outcome));
+        expect([text('installed-a'), text('moq-a'), text('settling')]).toEqual(['true', 'false', '1']);
+    });
+
+    it('an outcome first recorded from the response arms nothing', async () => {
+        const host = await selected();
+        await hostSays(() => screen.getByRole('button', { name: 'Update' }).click());
+        expect(text('installed-a')).toBe('true');
+        const [request] = host.requests('ops/update');
+        await hostSays(() => host.respond(request, updated('op1')));
+        await lastRun;
+        // The event that follows the response is the same operation's: the ended guard keeps it from arming.
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        expect([text('installed-a'), text('updates-a'), text('settling')]).toEqual(['false', 'false', '0']);
+    });
+
+    it('a listing that does not name the key drops it', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await hostSays(() => host.invalidate([[resourceKeys.installed(B), 2]]));
+        expect([text('installed-a'), text('updates-a'), text('settling')]).toEqual(['false', 'false', '0']);
+    });
+
+    it('the listing keeps an entry only for the selected project\'s own keys; another project\'s or the other prerelease flag\'s key drops it', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await hostSays(() => host.event('ops/completed', updated('op2', B)));
+        expect(text('installed-b')).toBe('true');
+        await hostSays(() => host.invalidate([[resourceKeys.installed(B), 2], [resourceKeys.updates(A, true), 2]]));
+        expect([text('installed-a'), text('updates-a'), text('installed-b'), text('settling')]).toEqual(['false', 'false', 'false', '0']);
+    });
+
+    it('a project change drops it', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await listedA(host);
+        await hostSays(() => host.event('session/changed', { ...snap(B), rev: 2 }));
+        expect([text('installed-a'), text('updates-a'), text('settling')]).toEqual(['false', 'false', '0']);
+    });
+
+    it('a list error ends it', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await listedA(host);
+        await hostSays(() => host.fail(host.requests('installed/get')[1], 'failed'));
+        expect([text('installed-a'), text('updates-a')]).toEqual(['false', 'true']);
+        await hostSays(() => host.fail(host.requests('updates/get')[1], 'failed'));
+        expect([text('updates-a'), text('settling')]).toEqual(['false', '0']);
+    });
+
+    it('a settling package makes no other row Queued and leaves isBusy false', async () => {
+        const host = await selected();
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        expect([text('is-busy'), text('restoring')]).toEqual(['false', '']);
+        await hostSays(() => host.event('ops/progress', progress('op2', 'queued', { kind: 'remove', projectPaths: [A], packageIds: ['Moq'] })));
+        expect([text('word-moq'), text('word-a')]).toEqual(['Uninstalling', 'Finishing']);
+    });
+
+    it('under All Projects a row settles at the fan-out\'s next answer, not in the commit that follows the listing', async () => {
+        const host = await selected(ALL_PROJECTS);
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await hostSays(() => host.invalidate([[resourceKeys.projects(), 2]]));
+        await hostSays(() => undefined);
+        expect([text('installed-a'), text('updates-a')]).toEqual(['true', 'true']);
+        await hostSays(() => host.respond(host.requests('allProjects/installed')[1], { projectPaths: [A, B], errored: [] }));
+        expect([text('installed-a'), text('updates-a')]).toEqual(['false', 'true']);
+        await hostSays(() => host.respond(host.requests('allProjects/updates')[1], { projectPaths: [A, B] }));
+        expect([text('updates-a'), text('settling')]).toEqual(['false', '0']);
+    });
+
+    it('a listing that names projects keeps every project\'s entry under All Projects', async () => {
+        const host = await selected(ALL_PROJECTS);
+        await hostSays(() => host.event('ops/completed', updated('op1')));
+        await hostSays(() => host.event('ops/completed', updated('op2', B)));
+        await hostSays(() => host.invalidate([[resourceKeys.projects(), 2]]));
+        expect([text('installed-a'), text('installed-b'), text('settling')]).toEqual(['true', 'true', '2']);
+    });
+});
+
+describe('settling reducer (X31, UX-P4.8c)', () => {
+    const armed = opsReducer(INITIAL_OPS, { type: 'completed', event: true, outcome: { opId: 'op1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', edit: { ok: true } } });
+
+    it('a list that settles before the listing ends nothing', () => {
+        expect(armed.settling.size).toBe(1);
+        expect(opsReducer(armed, { type: 'listSettled', list: 'installed' })).toBe(armed);
+        expect(opsReducer(armed, { type: 'listSettled', list: 'updates' })).toBe(armed);
+    });
+
+    it('listed, listSettled and unselected return the same state when nothing changes', () => {
+        expect(opsReducer(INITIAL_OPS, { type: 'listed', projectPath: A, installed: true, updates: true })).toBe(INITIAL_OPS);
+        expect(opsReducer(INITIAL_OPS, { type: 'listSettled', list: 'installed' })).toBe(INITIAL_OPS);
+        expect(opsReducer(INITIAL_OPS, { type: 'unselected' })).toBe(INITIAL_OPS);
+        const listed = opsReducer(armed, { type: 'listed', projectPath: A, installed: true, updates: false });
+        expect(listed.settling.get(`${A}|serilog`)?.lists).toEqual({ installed: true, updates: false });
+        // An entry already listed is not touched by a later listing.
+        expect(opsReducer(listed, { type: 'listed', projectPath: A, installed: false, updates: true })).toBe(listed);
     });
 });

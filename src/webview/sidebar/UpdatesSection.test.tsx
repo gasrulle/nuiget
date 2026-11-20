@@ -110,6 +110,48 @@ describe('sidebar: Updates section', () => {
         expect(updateOption('Newtonsoft.Json')).toHaveAttribute('aria-selected', 'false');
     });
 
+    it('an update row reads Finishing until the update check answers, not the installed list (X31, UX-P4.8c)', async () => {
+        const host = await mountWith({ updates: UPDATES });
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', version: '3.1.0', edit: { ok: true } }));
+        expect(updateOption('Serilog')).toHaveAttribute('aria-busy', 'true');
+        expect(updateOption('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        expect(within(within(updatesList()).getByTestId('package-row-serilog')).queryByTestId('row-action-update')).toBeNull();
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2], [resourceKeys.updates(A, false), 2]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], { projectPath: A, fidelity: 'authoritative', isCpm: true, packages: PACKAGES }, 2));
+        expect(updateOption('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        await hostSays(() => host.respond(host.requests('updates/get')[1], { projectPath: A, updates: UPDATES }, 2));
+        expect(updateOption('Serilog')).not.toHaveAttribute('aria-busy');
+    });
+
+    it('All Projects: an update row reads Finishing until the update stream answers, not the installed fan-out (X31, UX-P4.8c)', async () => {
+        const host = await mountWith();
+        const B = '/w2/Lib/Lib.csproj';
+        const projects = [{ name: 'App', path: A, workspaceFolder: 'w1' }, { name: 'Lib', path: B, workspaceFolder: 'w2' }];
+        const moq = { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', updates: [update('Moq', '4.20.0', '4.20.72')] };
+        await hostSays(() => host.event('session/changed', { ...snapshot(2), selectedProject: ALL_PROJECTS }));
+        const installedStream = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w2', result: { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', '4.20.0')] } } }));
+        await hostSays(() => host.respond(installedStream, { projectPaths: [B], errored: [] }));
+        const stream = host.requests('allProjects/updates')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: moq }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+        const option = (): HTMLElement => within(within(updatesList()).getByTestId('package-row-moq')).getByRole('treeitem');
+
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: B, packageId: 'Moq', version: '4.20.72', edit: { ok: true } }));
+        expect(option()).toHaveAttribute('aria-busy', 'true');
+        expect(option()).toHaveAccessibleDescription(/Finishing/);
+        await hostSays(() => host.invalidate([[resourceKeys.projects(), 2]]));
+        await hostSays(() => undefined);
+        await hostSays(() => host.respond(host.requests('allProjects/installed')[1], { projectPaths: [B], errored: [] }));
+        expect(option()).toHaveAccessibleDescription(/Finishing/);
+        const again = host.requests('allProjects/updates')[1];
+        await hostSays(() => host.chunk(again, { kind: 'start', projects }));
+        await hostSays(() => host.chunk(again, { kind: 'project', chunk: moq }));
+        await hostSays(() => host.respond(again, { projectPaths: [A, B] }));
+        expect(option()).not.toHaveAttribute('aria-busy');
+    });
+
     it('asks the updates of the selected project and lists them with their versions, counted on the header', async () => {
         const host = await mountWith();
         expect(host.requests('updates/get').map(request => request.payload)).toEqual([{ projectPath: A, includePrerelease: false }]);

@@ -24,7 +24,8 @@ export type AskUninstall = (request: UninstallRequest) => void;
  * no button and Delete says why; a centrally managed one uninstalls from this project and keeps its central entry.
  */
 export function usePackageRows(announce: (message: string) => void, ask: AskUninstall) {
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
 
@@ -78,7 +79,7 @@ export function usePackageRows(announce: (message: string) => void, ask: AskUnin
                 version={shownVersion(entry)}
                 versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                 busy={busy}
-                status={busy ? busyText(active, projectPath, entry.id) : unresolved ? 'Unresolved' : undefined}
+                status={busy ? busyText(ops, projectPath, entry.id) : unresolved ? 'Unresolved' : undefined}
                 badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
                 actions={whyNotRemovable(entry, result) === undefined
                     ? <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => uninstall(projectPath, result, entry)}><TrashIcon /></IconButton>
@@ -88,6 +89,6 @@ export function usePackageRows(announce: (message: string) => void, ask: AskUnin
     };
 
     // The Browse row reads its operation's status through the hook (BrowseResults.tsx).
-    return { uninstall, askUninstall, viewDetails, renderPackageRow, busyStatus: (projectPath: string, packageId: string): string => busyText(active, projectPath, packageId) };
+    return { uninstall, askUninstall, viewDetails, renderPackageRow, busyStatus: (projectPath: string, packageId: string): string => busyText(ops, projectPath, packageId) };
 }
 

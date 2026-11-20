@@ -57,7 +57,8 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
     const [picking, setPicking] = useState(false);
     const { projects } = useProjects();
     const { sources } = useSources();
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const [tab, setTab] = useState<DetailsTab>('details');
     const { asking } = install;
@@ -133,8 +134,8 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
     const noteShown = primaryWhy !== undefined && primaryWhy !== 'This version is installed';
     const busyWhy = busy ? 'An operation on this package is running.' : undefined;
     // The button of the action in progress reads its -ing word, or Queued (DS-STATE-6, UX-P4.7); the other keeps its label.
-    const busyWord = busy && target !== null ? busyText(active, target, selection.packageId) : undefined;
-    const removing = busy && target !== null && busyEntry(active, target, selection.packageId)?.kind === 'remove';
+    const busyWord = busy && target !== null ? busyText(ops, target, selection.packageId) : undefined;
+    const removing = busy && target !== null && busyEntry(ops, target, selection.packageId)?.kind === 'remove';
 
     const fail = (what: string) => (error: unknown): void => announce(`${what} of ${selection.packageId} failed: ${error instanceof Error ? error.message : String(error)}`);
     const changeVersion = (): void => {

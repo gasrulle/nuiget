@@ -1,4 +1,5 @@
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk } from '../../../protocol';
+import { busyKey, type OpsState } from '../store/ops';
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
@@ -15,19 +16,30 @@ export const IN_PROGRESS: Record<OperationKind, string> = { install: 'Installing
  * progress. It reads "Queued" while that operation is `queued` and another one runs or restores (UX-P4.7, X77; design-advisor
  * follow-up ruling of 2026-11-18): the queue runs one operation at a time and both surfaces hear every report, so on an idle
  * queue a row never reads Queued, and while another operation runs it reads Queued from the call. A queue that ever runs more
- * than one operation at a time re-rules this text and the status bar's.
+ * than one operation at a time re-rules this text and the status bar's. A package whose successful edit waits for its list
+ * reads "Finishing" unless an operation is active on it (X31, UX-P4.8c); a settling package makes no other row Queued.
  */
-export function busyText(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): string {
-    const progress = busyEntry(active, projectPath, packageId);
+export function busyText(ops: Pick<OpsState, 'active' | 'settling'>, projectPath: string, packageId: string): string {
+    const progress = activeEntry(ops.active, projectPath, packageId);
+    if (progress === undefined && ops.settling.has(busyKey(projectPath, packageId))) {
+        return 'Finishing';
+    }
     if (progress?.kind === undefined) {
         return 'In progress';
     }
-    const waits = progress.status === 'queued' && [...active.values()].some(other => other.opId !== progress.opId && (other.status === 'running' || other.status === 'restoring'));
+    const waits = progress.status === 'queued' && [...ops.active.values()].some(other => other.opId !== progress.opId && (other.status === 'running' || other.status === 'restoring'));
     return waits ? 'Queued' : IN_PROGRESS[progress.kind];
 }
 
-/** The operation `busyText` reads for that project and package: the first one with a kind (UX-P4.7: its button and its word agree). */
-export function busyEntry(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): OperationProgress | undefined {
+/**
+ * What `busyText` reads for that project and package: the first active operation with a kind (UX-P4.7: its button and its
+ * word agree), else the package's settling entry, which keeps the kind of the edit that left it busy (X31, UX-P4.8c).
+ */
+export function busyEntry(ops: Pick<OpsState, 'active' | 'settling'>, projectPath: string, packageId: string): { kind?: OperationKind } | undefined {
+    return activeEntry(ops.active, projectPath, packageId) ?? ops.settling.get(busyKey(projectPath, packageId));
+}
+
+function activeEntry(active: ReadonlyMap<string, OperationProgress>, projectPath: string, packageId: string): OperationProgress | undefined {
     const id = packageId.toLowerCase();
     return [...active.values()].find(progress => progress.kind !== undefined && progress.projectPaths?.includes(projectPath) && progress.packageIds?.some(other => other.toLowerCase() === id));
 }

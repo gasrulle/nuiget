@@ -254,6 +254,24 @@ describe('main panel: details', () => {
         expect(primary()).not.toHaveAttribute('aria-describedby');
     });
 
+    it('the button that ran reads Finishing; both stay disabled (X31, UX-P4.8c)', async () => {
+        const host = await mountReady();
+        await selectInstalled(host);
+        expect(screen.getByTestId('uninstall-button')).toBeEnabled();
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', version: '3.1.0', edit: { ok: true } }));
+        expect(primary()).toHaveTextContent('Finishing');
+        expect(screen.getByTestId('uninstall-button')).toHaveTextContent('Uninstall');
+        for (const button of [screen.getByTestId('uninstall-button'), primary()]) {
+            expect(button).toBeDisabled();
+            expect(button).toHaveAttribute('title', 'An operation on this package is running.');
+        }
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        expect(primary()).toBeDisabled();
+        await hostSays(() => host.respond(host.requests('installed/get')[1], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog', '3.1.0')] }, 2));
+        expect(primary()).not.toHaveTextContent('Finishing');
+        expect(screen.getByTestId('uninstall-button')).toBeEnabled();
+    });
+
     it('a centrally managed package uninstalls from its project without a dialog', async () => {
         const user = userEvent.setup();
         const host = await mountReady([pkg('Newtonsoft.Json', '13.0.1', { declaration: 'central' })], true);

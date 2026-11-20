@@ -3985,8 +3985,8 @@ function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } |
     return !layout.flatList && top > 0 ? { value: `no group header in the window (scrollTop ${top})`, pass: true } : undefined;
 }
 
-/** The words a busy row's status may read (DS-STATE-6, UX-P4.7). */
-const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued'];
+/** The words a busy row's status may read (DS-STATE-6, UX-P4.7; Finishing while a successful edit waits for its list, X31, UX-P4.8c). */
+const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued', 'Finishing'];
 
 /**
  * The colour role of an action glyph (DS-ICON-2): disabled, the severity button, the current row of a focused list (or its

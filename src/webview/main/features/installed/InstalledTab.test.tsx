@@ -921,6 +921,22 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
         expect(optionOf('Moq')).toHaveAccessibleDescription(/Queued/);
     });
+    it('the row reads Finishing with its spinner until the list answers; its action is not offered (X31, UX-P4.8c)', async () => {
+        const host = await mountWith();
+        const row = (): HTMLElement => screen.getByTestId('package-row-serilog');
+        expect(within(row()).getByTestId('row-action-uninstall')).toBeInTheDocument();
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', edit: { ok: true } }));
+        expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        expect(row().querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(within(row()).queryByTestId('row-action-uninstall')).toBeNull();
+        // The listing names the list: the row waits for its answer, not for the listing.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, THREE), 2));
+        expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
+        expect(within(row()).getByTestId('row-action-uninstall')).toBeInTheDocument();
+    });
 
     describe('a first load is said in the live region (a11y-first-load-announced, UX-P4.6)', () => {
         /** The panel with the Installed tab's own announcements recorded, passed on to the panel's live region. */

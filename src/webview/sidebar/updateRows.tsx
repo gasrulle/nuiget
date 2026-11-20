@@ -24,13 +24,14 @@ const entryOf = (installed: InstalledResult | undefined, id: string) => installe
  * alone, without a preview (N74); an unsupported project is read-only.
  */
 export function useUpdateRows(announce: (message: string) => void, ask: AskUninstall) {
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
 
     // The Delete key on an update row: busy does nothing, what cannot be uninstalled says why, else the view's confirmation (UX-P4.2b).
     const askUninstall = (projectPath: string, projectName: string, installed: InstalledResult | undefined, update: PackageUpdate): void => {
-        if (isPackageBusy(projectPath, update.id)) {
+        if (isPackageBusy(projectPath, update.id, true)) {
             return;
         }
         const obstacle = whyNotDeletable(update.id, entryOf(installed, update.id), installed);
@@ -42,7 +43,7 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
     };
 
     const updateOne = (projectPath: string, installed: InstalledResult | undefined, update: PackageUpdate): void => {
-        if (isPackageBusy(projectPath, update.id)) {
+        if (isPackageBusy(projectPath, update.id, true)) {
             return;
         }
         if (installed?.unsupported) {
@@ -66,7 +67,7 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
     };
 
     const renderUpdateRow = (projectPath: string, installed: InstalledResult | undefined, update: PackageUpdate, placement: RowPlacement): React.JSX.Element => {
-        const busy = isPackageBusy(projectPath, update.id);
+        const busy = isPackageBusy(projectPath, update.id, true);
         const entry = entryOf(installed, update.id);
         const central = entry?.declaration === 'central' || entry?.declaration === 'central-override';
         return (
@@ -78,7 +79,7 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
                 version={update.installedVersion}
                 nextVersion={update.latestVersion}
                 busy={busy}
-                status={busy ? busyText(active, projectPath, update.id) : undefined}
+                status={busy ? busyText(ops, projectPath, update.id) : undefined}
                 badges={central ? <Badge label="CPM" title={entry?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
                 actions={installed?.unsupported ? undefined : (
                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(projectPath, installed, update)}><ArrowUpIcon /></IconButton>

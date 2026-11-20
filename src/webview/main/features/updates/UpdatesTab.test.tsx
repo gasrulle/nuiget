@@ -171,6 +171,24 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('ops/update').map(sent => sent.payload.packageId)).toEqual(['Serilog', 'Moq']);
     });
 
+    it('the row reads Finishing with its spinner until the list answers; its action is not offered (X31, UX-P4.8c)', async () => {
+        const host = await mountWith();
+        const row = (): HTMLElement => screen.getByTestId('package-row-serilog');
+        expect(within(row()).getByTestId('row-action-update')).toBeInTheDocument();
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', version: '3.1.0', edit: { ok: true } }));
+        expect(optionOf('Serilog')).toHaveAttribute('aria-busy', 'true');
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        expect(row().querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(within(row()).queryByTestId('row-action-update')).toBeNull();
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2], [resourceKeys.updates(A, false), 2]]));
+        // The update row waits for the update check, not for the installed list.
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed([pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' }), pkg('Newtonsoft.Json', { version: '13.0.1', declaration: 'central' })]), 2));
+        expect(optionOf('Serilog')).toHaveAccessibleDescription(/Finishing/);
+        await hostSays(() => host.respond(host.requests('updates/get')[1], { projectPath: A, updates: UPDATES }, 2));
+        expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
+        expect(within(row()).getByTestId('row-action-update')).toBeInTheDocument();
+    });
+
     it('Update all confirms the packages and their versions, and leaves the centrally managed ones out', async () => {
         const user = userEvent.setup();
         const host = await mountWith();
@@ -490,6 +508,24 @@ describe('main panel: Updates tab', () => {
 
         /** A project's group row, the treeitem inside its `group-row-project-<name>` wrapper (UX-P3.1b). */
         const groupOf = (name: string): HTMLElement => within(screen.getByTestId(`group-row-project-${name}`)).getByRole('treeitem');
+
+        it('All Projects: an update row reads Finishing until the update stream answers, not the installed fan-out (X31, UX-P4.8c)', async () => {
+            const host = await mountAll();
+            await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: B, packageId: 'Moq', version: '4.20.72', edit: { ok: true } }));
+            expect(optionOf('Moq')).toHaveAttribute('aria-busy', 'true');
+            expect(optionOf('Moq')).toHaveAccessibleDescription(/Finishing/);
+            expect(optionOf('Serilog')).not.toHaveAttribute('aria-busy');
+            await hostSays(() => host.invalidate([[resourceKeys.projects(), 2]]));
+            await hostSays(() => undefined);
+            await hostSays(() => host.respond(host.requests('allProjects/installed')[1], { projectPaths: [A, B], errored: [] }));
+            expect(optionOf('Moq')).toHaveAccessibleDescription(/Finishing/);
+            const stream = host.requests('allProjects/updates')[1];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0')] } }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', updates: [update('Moq', '4.20.0', '4.20.72')] } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B] }));
+            expect(optionOf('Moq')).not.toHaveAttribute('aria-busy');
+        });
 
         it('All Projects: one tree with a group row per project, selections across them become ops/bulkUpdateAllProjects with the project names (UX-P3.1b)', async () => {
             const user = userEvent.setup();

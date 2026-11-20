@@ -410,6 +410,21 @@ describe('sidebar: Installed section', () => {
         expect(option('Moq')).toHaveAccessibleDescription('Updating');
     });
 
+    it('the row reads Finishing with its spinner until the list answers; its action is not offered (X31, UX-P4.8c)', async () => {
+        const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
+        expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toBeInTheDocument();
+        await hostSays(() => host.event('ops/completed', removed('op-1', 'Serilog', { kind: 'update', edit: { ok: true } })));
+        expect(option('Serilog')).toHaveAttribute('aria-busy', 'true');
+        expect(option('Serilog')).toHaveAccessibleDescription('Finishing');
+        expect(row('Serilog').querySelector('.nuiget-spinner')).not.toBeNull();
+        expect(within(row('Serilog')).queryByTestId('row-action-uninstall')).toBeNull();
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        expect(option('Serilog')).toHaveAccessibleDescription('Finishing');
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, [pkg('Serilog'), pkg('Moq')]), 2));
+        expect(option('Serilog')).not.toHaveAttribute('aria-busy');
+        expect(within(row('Serilog')).getByTestId('row-action-uninstall')).toBeInTheDocument();
+    });
+
     it('an operation started on the other surface shows on the row and is not announced here (UX-P4.6, A10)', async () => {
         const host = await mountWith([pkg('Serilog'), pkg('Moq')]);
         await hostSays(() => host.event('ops/progress', running('op-main', 'serilog')));

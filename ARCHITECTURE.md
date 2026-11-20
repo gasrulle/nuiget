@@ -593,6 +593,14 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   surfaces, whoever started the operation. `run` resolves with the outcome; the surface that asked receives it
   as response and as event, and it counts once (by `opId`). `own`, what the live region says, is set from that response, or
   from an `ops/completed` event whose `origin` is the surface its store provider (`StoreProvider` or `SidebarStoreProvider`) was given (its row menu ran it; UX-P4.fix-11).
+  After a successful edit the package stays busy while its list catches up (`settling`, X31, UX-P4.8b, UX-P4.8c). An
+  `ops/completed` event arms one entry per ok edit; the `resources/invalidated` event that follows it in the same host turn
+  keeps the entry for each list of this surface whose current key it names (`installed:<p>`, `updates:<p>|flag`; under All
+  Projects, `projects`) and drops it otherwise; the entry ends when that list's request settles, answer or error, and a
+  change of selection drops every entry. `isPackageBusy` follows the installed list, and with its third argument the
+  updates list. A settling entry is no operation: `active`, `isBusy`, `restoringProjects` and the Queued rule never see
+  it, and `busyText` reads "Finishing" for it unless an operation is active on the same package. An outcome first
+  recorded from the response arms nothing.
 
 Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
 what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.

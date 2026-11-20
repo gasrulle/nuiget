@@ -52,7 +52,8 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
     const { projects } = useProjects();
     const updates = useUpdates();
     const installed = useInstalled();
-    const { isPackageBusy, active } = useOps();
+    const ops = useOps();
+    const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const [currentId, setCurrentId] = useState<string | null>(null);
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -90,7 +91,7 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
         const entry = entryOf(id);
         return entry === undefined || installed.result === undefined ? undefined : whyNotUpdatable(entry, installed.result);
     };
-    const isBusy = (id: string): boolean => projectPath !== null && isPackageBusy(projectPath, id);
+    const isBusy = (id: string): boolean => projectPath !== null && isPackageBusy(projectPath, id, true);
     // An unsupported project (an SDK below 10 included) is read-only: its updates are shown, never applied (D13).
     const unsupported = installed.result?.unsupported;
 
@@ -315,7 +316,7 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
                             busy={busy}
                             // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
                             selectable={!unsupported}
-                            status={busy ? busyText(active, projectPath ?? '', update.id) : unsupported ? 'Read-only' : undefined}
+                            status={busy ? busyText(ops, projectPath ?? '', update.id) : unsupported ? 'Read-only' : undefined}
                             badges={<>
                                 {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
                             </>}

@@ -847,6 +847,38 @@ describe('two-surface harness', () => {
         });
     });
 
+    it('an ok edit is announced before its invalidation is listed, in one event that names the project\'s installed and updates keys; a failed edit lists nothing (X31)', async () => {
+        const feed = createFakeFeed();
+        feed.publish('Serilog', ['3.0.0', '3.1.0']);
+        h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj', feed });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const main = await h.resolve('main');
+        await h.resolve('sidebar');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        await h.checkUpdates('main').response;
+        await h.settle();
+
+        // The order a surface reads (UX-P4.8c): the outcome, then the operation's listing, which names both lists of the project.
+        const mark = main.received.length;
+        resultOf(await h.operate('sidebar', 'ops/update', { projectPath: A, packageId: 'Serilog', version: '3.1.0' }).response);
+        await h.settle(() => expect(main.received.slice(mark).some(message => message.kind === 'event' && message.type === 'resources/invalidated')).toBe(true));
+        const after = main.received.slice(mark).filter(message => message.kind === 'event' && (message.type === 'ops/completed' || message.type === 'resources/invalidated'));
+        expect(after.map(message => message.kind === 'event' ? message.type : '').slice(0, 2)).toEqual(['ops/completed', 'resources/invalidated']);
+        const listed = (after[1] as { payload: { keys: Array<{ key: string }> } }).payload.keys.map(entry => entry.key);
+        expect(listed).toEqual(expect.arrayContaining([resourceKeys.installed(A), resourceKeys.updates(A, false)]));
+        await h.settle();
+
+        // A failed edit announces its outcome and lists nothing.
+        const failing = h.dotnet.fail(dotnetCalls.packageRemove('Serilog'));
+        const failedMark = main.received.length;
+        const failed = resultOf(await h.operate('sidebar', 'ops/remove', { projectPath: A, packageId: 'Serilog' }).response);
+        failing();
+        expect(failed).toMatchObject({ status: 'failed', edit: { ok: false } });
+        await h.settle(() => expect(main.events('ops/completed')).toContainEqual(expect.objectContaining({ opId: failed.opId })));
+        await h.settle();
+        expect(main.received.slice(failedMark).filter(message => message.kind === 'event' && message.type === 'resources/invalidated')).toEqual([]);
+    });
+
     it('updates converge across surfaces', async () => {
         const feed = createFakeFeed();
         feed.publish('Serilog', ['3.0.0', '3.1.0']);

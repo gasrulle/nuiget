@@ -59,6 +59,26 @@ describe('main panel: All Projects', () => {
 
     const treeitem = (testId: string): Element | null | undefined => screen.queryByTestId(testId)?.querySelector('[role="treeitem"]');
 
+    it('a row settles at the fan-out\'s next answer (X31, UX-P4.8c)', async () => {
+        const host = await mountAll();
+        const rows = (): HTMLElement[] => within(screen.getByTestId('installed-list')).getAllByTestId('package-row-serilog');
+        await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: A, packageId: 'Serilog', version: '1.1.0', edit: { ok: true } }));
+        expect(within(rows()[0]).getByRole('treeitem')).toHaveAttribute('aria-busy', 'true');
+        expect(within(rows()[0]).getByRole('treeitem')).toHaveAccessibleDescription(/Finishing/);
+        expect(within(rows()[1]).getByRole('treeitem')).not.toHaveAttribute('aria-busy');
+        // The fan-out asks again one commit after the listing; the row waits for that request's answer.
+        await hostSays(() => host.invalidate([[resourceKeys.projects(), 2]]));
+        await hostSays(() => undefined);
+        expect(within(rows()[0]).getByRole('treeitem')).toHaveAccessibleDescription(/Finishing/);
+        const stream = host.requests('allProjects/installed')[1];
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: PROJECTS }));
+        for (const project of PROJECTS) {
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: project.path, projectName: project.name, workspaceFolder: project.workspaceFolder, result: installed(project.path, [pkg('Serilog', project.path === A ? '1.1.0' : '1.0.0')]) } }));
+        }
+        await hostSays(() => host.respond(stream, { projectPaths: PROJECTS.map(project => project.path), errored: [] }));
+        expect(within(rows()[0]).getByRole('treeitem')).not.toHaveAttribute('aria-busy');
+    });
+
     const groupRows = (): string[] => [...screen.getByTestId('installed-list').querySelectorAll<HTMLElement>('[data-row-kind="group"]')].map(row => (row.dataset.testid ?? '').replace('group-row-', ''));
 
     it('several workspace folders: a level-1 group row per folder, the project group rows at level 2 and their packages at level 3', async () => {
