@@ -1,14 +1,17 @@
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { busyText, filterById, isCentral, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../shared/installed/rules';
+import { busyText, isCentral, updateRowContext, updatesInOrder, whyNotDeletable, whyNotUpdatable } from '../shared/installed/rules';
 import { ArrowUpIcon, Badge, IconButton, openRowMenu, Row, type RowPlacement } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
 import type { AskUninstall } from './packageRows';
 import { useRowRequests } from './rowRequests';
 
-/** The updates of a list shown under the `@updates` text, sorted by id as the main panel's lists are (MU9, P9.10). */
-export function visibleUpdates(updates: readonly PackageUpdate[], filter: string): PackageUpdate[] {
-    return filterById(updates, filter);
+/**
+ * The updates of a list shown under the `@updates` text, sorted by id as the main panel's lists are (MU9, P9.10); a single
+ * project's first check keeps its rows in arrival order while it streams (X76, UX-P4.8b).
+ */
+export function visibleUpdates(updates: readonly PackageUpdate[], filter: string, streaming = false): PackageUpdate[] {
+    return updatesInOrder(updates, filter, streaming);
 }
 
 const entryOf = (installed: InstalledResult | undefined, id: string) => installed?.packages.find(entry => entry.id.toLowerCase() === id.toLowerCase());

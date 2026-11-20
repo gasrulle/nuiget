@@ -122,6 +122,28 @@ describe('main panel: Updates tab', () => {
         expect(host.requests('updates/get').map(sent => sent.payload)).toEqual([{ projectPath: A, includePrerelease: false }, { projectPath: A, includePrerelease: true }]);
     });
 
+    it('streamed update rows keep their arrival order until the answer (X76)', async () => {
+        const host = await mountWith(null);
+        const [request] = host.requests('updates/get');
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[0] }));
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[1] }));
+        // Moq sorts before Serilog, yet the Serilog row the pointer may rest on stays where it was.
+        expect(names()).toEqual(['Serilog', 'Moq']);
+    });
+
+    it('the answer lists the updates by id, and the current row keeps its id when the answer sorts (X76)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith(null);
+        const [request] = host.requests('updates/get');
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[0] }));
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[1] }));
+        await user.click(optionOf('Moq'));
+        expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true');
+        await hostSays(() => host.respond(request, { projectPath: A, updates: UPDATES }, 1));
+        expect(names()).toEqual(['Moq', 'Newtonsoft.Json', 'Serilog']);
+        expect(optionOf('Moq')).toHaveAttribute('aria-current', 'true');
+    });
+
     it('Space on a busy row says an operation runs and leaves the bulk selection as it was (UX-P3.1a)', async () => {
         const user = userEvent.setup();
         await mountWith();

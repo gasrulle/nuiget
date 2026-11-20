@@ -105,6 +105,23 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByTestId('group-row-direct')).not.toHaveAttribute('data-vscode-context');
     });
 
+    it('the bar stays over a provisional first list until the answer, with no skeleton and the list aria-busy (X78)', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        const [request] = host.requests('installed/get');
+        // The skeleton's first load is never aria-busy (the cells main-installed-loading and sidebar-installed-loading).
+        expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+        await hostSays(() => host.chunk(request, { kind: 'provisional', result: { ...installed(A, THREE), fidelity: 'provisional' } }));
+        expect(names()).toHaveLength(3);
+        expect(screen.getByTestId('installed-progress')).toHaveAccessibleName('Loading installed packages');
+        expect(document.querySelector('.nuiget-skeleton')).toBeNull();
+        expect(screen.getByTestId('installed-list')).toHaveAttribute('aria-busy', 'true');
+        await hostSays(() => host.respond(request, installed(A, THREE), 1));
+        expect(screen.queryByTestId('installed-progress')).toBeNull();
+        expect(screen.getByTestId('installed-list')).not.toHaveAttribute('aria-busy', 'true');
+    });
+
     it('a first load is the bar and the skeleton; an answer replaces them, a revalidation keeps the rows under the bar', async () => {
         const host = mount();
         await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
@@ -913,6 +930,16 @@ describe('main panel: Installed tab', () => {
             render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} announce={message => { heard.push(message); view.announce(message); }} />} updates={() => null} /></StoreProvider>);
             return { host, heard };
         }
+
+        it('a provisional first list is said once (X78)', async () => {
+            const { host, heard } = mountHeard();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+            const [request] = host.requests('installed/get');
+            await hostSays(() => host.chunk(request, { kind: 'provisional', result: { ...installed(A, THREE), fidelity: 'provisional' } }));
+            await hostSays(() => host.respond(request, installed(A, THREE), 1));
+            expect(heard).toEqual(['Loading installed packages']);
+        });
 
         it('once on a first load, not on a revalidation, not for a list the store holds, and again for another project', async () => {
             const user = userEvent.setup();

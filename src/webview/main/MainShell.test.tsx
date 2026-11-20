@@ -59,6 +59,46 @@ describe('main panel shell', () => {
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Loading installed packages'));
     });
 
+    describe('firstUsefulRender under All Projects (N81a, UX-P4.8b)', () => {
+        const marks = (host: FakeHost): string[] => host.requests('perf/mark').map(request => request.payload.name);
+        const list = (path: string) => ({ projectPath: path, fidelity: 'authoritative' as const, isCpm: false, packages: [] });
+        async function allProjects(): Promise<FakeHost> {
+            const { host } = await mountReady({ selectedProject: ALL_PROJECTS });
+            await waitFor(() => expect(host.requests('allProjects/installed').length).toBeGreaterThan(0));
+            await hostSays(() => host.chunk(host.requests('allProjects/installed')[0], { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            return host;
+        }
+
+        it('marks firstUsefulRender once under All Projects when the first project\'s list shows', async () => {
+            const host = await allProjects();
+            expect(marks(host)).toEqual(['webviewReady']);
+            const [stream] = host.requests('allProjects/installed');
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: list(A) } }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: list(B) } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+
+        it('marks at the answer when no project has a list', async () => {
+            const host = await allProjects();
+            const [stream] = host.requests('allProjects/installed');
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', error: 'assets file unreadable' } }));
+            expect(marks(host)).toEqual(['webviewReady']);
+            await hostSays(() => host.respond(stream, { projectPaths: [], errored: [{ projectPath: A, error: 'assets file unreadable' }] }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+
+        it('never marks twice after a project switch', async () => {
+            const host = await allProjects();
+            await hostSays(() => host.chunk(host.requests('allProjects/installed')[0], { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: list(A) } }));
+            await hostSays(() => host.event('session/changed', snapshot(2)));
+            await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+            await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, list(A), 1));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+    });
+
     it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
         const host = createFakeHost();
         const { rerender } = render(<StrictMode><StoreProvider bus={host.bus}><MainShell installed={() => <p>Installed list</p>} /></StoreProvider></StrictMode>);

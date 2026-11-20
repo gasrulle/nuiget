@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useMessageBus } from './bus/useMessageBus';
+import { useAllProjects, type AllProjectsState } from './store/allProjects';
+import { useInstalled, type InstalledState } from './store/installed';
 import { useOps } from './store/ops';
 import { describeOutcome } from './store/outcomes';
 
@@ -51,4 +53,25 @@ export function useFirstUsefulRenderMark(shown: boolean): void {
             bus.request('perf/mark', { name: 'firstUsefulRender', detail: `${Math.round(performance.now())} ms after load` }).catch(() => undefined);
         }
     }, [bus, shown]);
+}
+
+/**
+ * Whether a first useful list is on screen: one project at its answer; under All Projects the first project chunk with a
+ * list, or the fan-out's answer when no project has one (N81(a), UX-P4.8b). A fan-out error is no answer, as a project's is none.
+ */
+export function firstListShown(installed: Pick<InstalledState, 'status' | 'result'>, all: Pick<AllProjectsState, 'active' | 'status' | 'chunks'>): boolean {
+    if (all.active) {
+        return all.status === 'ready' || [...all.chunks.values()].some(chunk => chunk.result !== undefined);
+    }
+    return installed.status === 'ready' && installed.result !== undefined;
+}
+
+/**
+ * Each shell's `firstUsefulRender` mark (N81), once per page, when the first list is shown. A leaf of its own, always mounted and
+ * rendered once by each shell: Browse unmounts the tabs, and the list subscriptions stay out of `MainShell` and out of
+ * `SidebarView`'s body (UX-P2.7; UX-P3.10 push D, architecture ruling of 2026-11-14; UX-P4.8b, architecture ruling of 2026-11-20).
+ */
+export function FirstUsefulRenderMark(): null {
+    useFirstUsefulRenderMark(firstListShown(useInstalled(), useAllProjects()));
+    return null;
 }

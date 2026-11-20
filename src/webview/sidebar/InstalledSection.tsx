@@ -218,7 +218,7 @@ export function InstalledSection({ filter, announce, ask, focusSearch, expanded:
         content = installed.status === 'error' ? null : <Skeleton density="compact" />;
     } else {
         count = headerCount(result.packages.length, shownOf(result.packages));
-        content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} ask={ask} focusSearch={focusSearch} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating} selectedId={selectedId} onSelectedChange={setSelectedId} />;
+        content = <ProjectPackages projectPath={projectPath} result={result} filter={filter} announce={announce} ask={ask} focusSearch={focusSearch} labelledBy={titleId} testId="sidebar-installed-list" busy={installed.revalidating || installed.status === 'loading'} selectedId={selectedId} onSelectedChange={setSelectedId} />;
     }
 
     // The pane loads or revalidates: its 2 px bar over the list's top edge (DS-STATE-2, UX-P3.8); the header's spinner is the first

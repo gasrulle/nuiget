@@ -263,7 +263,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
             count = rows.length;
             shown = shownOf(rows);
         }
-        const single = updateCandidates(visibleUpdates(rows, filter), installed.result, id => isPackageBusy(projectPath, id));
+        const single = updateCandidates(visibleUpdates(rows, filter, updates.status === 'loading'), installed.result, id => isPackageBusy(projectPath, id));
         groups = single.length > 0 ? [{ projectPath, projectName: '', updates: single }] : [];
         // A check that could not be made, or failed, with nothing to list: its banner is the one message (UX-P3.10 follow-up 1, F1).
         const unsupported = installed.result?.unsupported;
@@ -293,6 +293,7 @@ export function UpdatesSection({ announce, ask, focusSearch, filter = '', expand
                     labelledBy={titleId}
                     testId="sidebar-updates-list"
                     busy={updates.revalidating}
+                    streaming={updates.status === 'loading'}
                     empty={emptyMessage(rows.length, filter.trim(), unreadable)}
                     selectedId={selectedId}
                     onSelectedChange={setSelectedId}

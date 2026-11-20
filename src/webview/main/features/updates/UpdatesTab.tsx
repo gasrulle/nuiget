@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { busyText, filterById, isCentral as isCentralRow, projectNameOf, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, isCentral as isCentralRow, projectNameOf, updateCandidates, updateRowContext, updatesInOrder, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -97,8 +97,9 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
     const needle = filter.trim().toLowerCase();
     /** A package row's id in the tree, as the Installed tab's (UX-P3.1a). */
     const keyOf = (packageId: string): string => rowId(projectPath ?? '', packageId);
-    // Alphabetical by id, as 1.x listed them (MU9); the stream's rows keep their place while more arrive.
-    const shown = useMemo(() => filterById(rows, needle), [rows, needle]);
+    // Arrival order while the first check streams, so a shown row never moves; alphabetical by id from the answer on (MU9, X76).
+    const streaming = updates.status === 'loading';
+    const shown = useMemo(() => updatesInOrder(rows, needle, streaming), [rows, needle, streaming]);
     // One grouped list (D48): the Direct packages group row counts the updates shown, `k of N` under a filter (DS-COPY-5).
     // Without a row to list the group row is left out: the empty sentence stands alone (the state cells are UX-P3.1b's).
     const items = useMemo<Item[]>(() => {

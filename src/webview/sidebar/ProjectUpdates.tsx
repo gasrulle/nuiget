@@ -25,6 +25,8 @@ export interface ProjectUpdatesProps {
     labelledBy: string;
     testId: string;
     busy: boolean;
+    /** The first check still streams: its rows keep their arrival order until the answer (X76, UX-P4.8b). */
+    streaming: boolean;
     /** The empty state's sentence. */
     empty: string;
     selectedId: string | null;
@@ -39,9 +41,9 @@ export interface ProjectUpdatesProps {
  * unsupported project is read-only.
  */
 export function ProjectUpdates(props: ProjectUpdatesProps): React.JSX.Element {
-    const { projectPath, rows, installed, filter, announce, ask, focusSearch, labelledBy, testId, busy: revalidating, empty, selectedId, onSelectedChange } = props;
+    const { projectPath, rows, installed, filter, announce, ask, focusSearch, labelledBy, testId, busy: revalidating, streaming, empty, selectedId, onSelectedChange } = props;
     const { updateOne, askUninstall, viewDetails, renderUpdateRow } = useUpdateRows(announce, ask);
-    const items = useMemo<Item[]>(() => visibleUpdates(rows, filter).map(update => ({ id: update.id, update })), [rows, filter]);
+    const items = useMemo<Item[]>(() => visibleUpdates(rows, filter, streaming).map(update => ({ id: update.id, update })), [rows, filter, streaming]);
 
     return (
         <Listbox

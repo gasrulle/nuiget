@@ -75,6 +75,61 @@ beforeEach(() => {
 });
 
 describe('sidebar: Installed section', () => {
+    it('a provisional first list is aria-busy under the pane\'s bar (X78)', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        const [request] = host.requests('installed/get');
+        expect(installedContent().querySelector('[aria-busy="true"]')).toBeNull();
+        await hostSays(() => host.chunk(request, { kind: 'provisional', result: installed(A, [pkg('Serilog')], { fidelity: 'provisional' }) }));
+        expect(list()).toHaveAttribute('aria-busy', 'true');
+        expect(screen.getByTestId('sidebar-installed-progress')).toHaveAccessibleName('Loading installed packages');
+        await hostSays(() => host.respond(request, installed(A, [pkg('Serilog')]), 1));
+        expect(list()).not.toHaveAttribute('aria-busy', 'true');
+        expect(screen.queryByTestId('sidebar-installed-progress')).toBeNull();
+    });
+
+    describe('firstUsefulRender under All Projects (N81a, UX-P4.8b)', () => {
+        const marks = (host: FakeHost): string[] => host.requests('perf/mark').map(request => request.payload.name);
+        async function allProjects(): Promise<FakeHost> {
+            const host = mount();
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+            await waitFor(() => expect(host.requests('allProjects/installed').length).toBeGreaterThan(0));
+            await hostSays(() => host.chunk(host.requests('allProjects/installed')[0], { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+            return host;
+        }
+
+        it('marks firstUsefulRender once under All Projects when the first project\'s list shows', async () => {
+            const host = await allProjects();
+            expect(marks(host)).toEqual(['webviewReady']);
+            const [stream] = host.requests('allProjects/installed');
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: installed(B, []) } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+
+        it('marks at the answer when no project has a list', async () => {
+            const host = await allProjects();
+            const [stream] = host.requests('allProjects/installed');
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', error: 'assets file unreadable' } }));
+            expect(marks(host)).toEqual(['webviewReady']);
+            await hostSays(() => host.respond(stream, { projectPaths: [], errored: [{ projectPath: A, error: 'assets file unreadable' }] }));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+
+        it('never marks twice after a project switch', async () => {
+            const host = await allProjects();
+            await hostSays(() => host.chunk(host.requests('allProjects/installed')[0], { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Serilog')]) } }));
+            await hostSays(() => host.event('session/changed', snapshot(2, A)));
+            await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(0));
+            await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Serilog')]), 1));
+            expect(marks(host)).toEqual(['webviewReady', 'firstUsefulRender']);
+        });
+    });
+
     it('sends perf/mark webviewReady once at mount and firstUsefulRender once when the first installed list is shown', async () => {
         const host = createFakeHost();
         const { rerender } = render(<StrictMode><StoreProvider bus={host.bus}><SidebarView /></StoreProvider></StrictMode>);

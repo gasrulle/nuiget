@@ -13,7 +13,7 @@ import { useSources } from '../shared/store/sources';
 import { BrowseResults } from './BrowseResults';
 import { InstalledSection } from './InstalledSection';
 import { UpdatesSection } from './UpdatesSection';
-import { useFirstUsefulRenderMark, useShellChrome } from '../shared/shellChrome';
+import { FirstUsefulRenderMark, useShellChrome } from '../shared/shellChrome';
 import type { ViewStateStore } from '../shared/viewState';
 
 /** What the view keeps across reloads in the webview's own state (`getState`/`setState`). */
@@ -108,7 +108,6 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [layout, setLayout] = useState<SidebarLayout>(() => readLayout(viewState));
 
-    useFirstUsefulRenderMark(installed.status === 'ready' && installed.result !== undefined);
     // Kept when a change ends (a toggle, a key on the sash, the end of a drag): `setState` posts to VS Code, and a drag
     // would otherwise post once per pointer step.
     const keepLayout = (next: SidebarLayout): void => {
@@ -152,6 +151,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     const sourceName = selectedSource === 'all' ? undefined : (sources?.find(source => source.url === selectedSource)?.name ?? selectedSource);
     return (
         <main className="nuiget-sidebar" data-testid="nuiget-sidebar" style={cssVars({ '--nuiget-tree-indent': `${config?.treeIndent ?? 8}px` })}>
+            <FirstUsefulRenderMark />
             <div className="nuiget-sidebar-header">
                 {sourceName === undefined
                     ? <p className="nuiget-sidebar-context" data-testid="sidebar-source">All Sources</p>

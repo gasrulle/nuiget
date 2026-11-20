@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
-import { UNRESOLVED_HINT, browseRowContext, busyText, filterById, projectNameOf, updateCandidates, updateRowContext, versionCell, whyNotDeletable } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyText, filterById, projectNameOf, updateCandidates, updateRowContext, updatesInOrder, versionCell, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -97,6 +97,18 @@ describe('busyText (UX-P3.12b)', () => {
         it('a running entry beside a queued one reads the word of its kind', () => {
             expect(busyText(new Map([['op', progress({ status: 'running' })], ['other', other({ status: 'queued' })]]), '/w/App.csproj', 'Serilog')).toBe('Updating');
         });
+    });
+});
+
+describe('updatesInOrder (X76, UX-P4.8b)', () => {
+    const rows = [{ id: 'Serilog' }, { id: 'Moq' }, { id: 'Serilog.Sinks.Console' }];
+    it('keeps the arrival order while the first check streams, filtered', () => {
+        expect(updatesInOrder(rows, '', true).map(row => row.id)).toEqual(['Serilog', 'Moq', 'Serilog.Sinks.Console']);
+        expect(updatesInOrder(rows, ' seri ', true).map(row => row.id)).toEqual(['Serilog', 'Serilog.Sinks.Console']);
+    });
+    it('lists the rows by id from the answer on, as filterById does', () => {
+        expect(updatesInOrder(rows, '', false).map(row => row.id)).toEqual(['Moq', 'Serilog', 'Serilog.Sinks.Console']);
+        expect(updatesInOrder(rows, 'seri', false)).toEqual(filterById(rows, 'seri'));
     });
 });
 

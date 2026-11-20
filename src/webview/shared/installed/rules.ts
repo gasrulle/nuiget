@@ -38,6 +38,18 @@ export function filterById<T extends { id: string }>(rows: readonly T[], filter:
     return rows.filter(row => row.id.toLowerCase().includes(needle)).sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/**
+ * The update rows of one project as a list shows them: in arrival order while the first check streams them, so a row already
+ * shown never moves under the pointer, and by id from the answer on, as every list does (X76, UX-P4.8b).
+ */
+export function updatesInOrder<T extends { id: string }>(rows: readonly T[], filter: string, streaming: boolean): T[] {
+    if (!streaming) {
+        return filterById(rows, filter);
+    }
+    const needle = filter.trim().toLowerCase();
+    return rows.filter(row => row.id.toLowerCase().includes(needle));
+}
+
 /** The version a row shows: what the project resolves to where the declaration is a pattern, else what it declares. */
 export function shownVersion(entry: InstalledPackage): string {
     if (entry.declaration === 'unresolved' || entry.versionType === 'unresolved') {

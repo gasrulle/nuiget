@@ -377,9 +377,13 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         const open = !collapsed.has('direct');
         const failed = (section: Section): boolean => section.status === 'error' || section.error !== undefined;
         const revalidating = sections.some(section => section.revalidating);
+        // The first list of a project shown before its answer (its provisional chunk) stays under the first load's bar and is
+        // aria-busy until the answer; the badge says fidelity, not progress (X78, UX-P4.8b).
+        const provisionalFirst = !allMode && installed.status === 'loading' && installed.result !== undefined;
+        const loadingFirst = firstLoad || provisionalFirst;
         body = (
             <>
-                {firstLoad || revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={firstLoad ? LOADING_INSTALLED : 'Refreshing installed packages'} data-testid="installed-progress" /></div> : null}
+                {loadingFirst || revalidating ? <div className="nuiget-installed-progress"><ProgressBar label={loadingFirst ? LOADING_INSTALLED : 'Refreshing installed packages'} data-testid="installed-progress" /></div> : null}
                 {sections.map(section => (
                     <Fragment key={section.projectPath}>
                         {!allMode && section.result?.unsupported ? <Banner severity="warning" data-testid="installed-unsupported">{`Unsupported project: ${sentence(section.result.unsupported.message)}`}</Banner> : null}
@@ -397,7 +401,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                     typeaheadLabel={item => (item.kind === 'group' ? item.title : item.kind === 'package' || item.kind === 'transitive' ? item.entry.id : undefined)}
                     testId="installed-list"
                     density="comfortable"
-                    busy={revalidating}
+                    busy={revalidating || provisionalFirst}
                     empty={firstLoad ? <Skeleton density="comfortable" /> : undefined}
                     selectedId={current}
                     selectedIds={bulk.selected}

@@ -85,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Under All Projects, the sidebar's Installed list is one tree of folders and projects that fold with the arrow keys**
 - **Sidebar section headers show their buttons when you point at or move into the section, and no 0 while a list is empty**
 - **In a narrow editor the package details give way to the list**
+- **The Installed tab keeps its progress bar until the package list is complete**
 - **Updating or uninstalling across several projects says how many projects were changed**
 
 ### Fixed
@@ -111,6 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The notification for a failed restore of one project names the project and the reason**
 - **An operation that fails before it starts no longer reports a restore of 0 projects**
 - **Installed packages no longer vanish and return after a save or an operation**
+- **Update rows no longer jump while the update check is still running**
+- **The first-render timing is logged when All Projects is selected**
 
 ## [2.0.0] - 2026-10-17
 

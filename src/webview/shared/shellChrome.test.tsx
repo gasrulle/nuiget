@@ -4,7 +4,7 @@ import type React from 'react';
 import { describe, expect, it } from 'vitest';
 import type { BulkOutcome, OperationOutcome, Surface } from '../../protocol';
 import { createFakeHost, type FakeHost } from './bus/testSupport';
-import { useFirstUsefulRenderMark, useShellChrome } from './shellChrome';
+import { firstListShown, useFirstUsefulRenderMark, useShellChrome } from './shellChrome';
 import { useOpsActions, type OpsActions } from './store/ops';
 import { StoreProvider } from './store/StoreProvider';
 
@@ -136,5 +136,27 @@ describe('useShellChrome', () => {
             await second.settled;
             expect(said()).toHaveAttribute('data-repeat', '2');
         });
+    });
+});
+
+describe('firstListShown (N81a, UX-P4.8b)', () => {
+    const result = { projectPath: '/w/A.csproj', fidelity: 'authoritative' as const, isCpm: false, packages: [] };
+    const idle = { active: false, status: 'idle' as const, chunks: new Map() };
+    const chunk = (withList: boolean) => ({ projectPath: '/w/A.csproj', projectName: 'A', ...(withList ? { result } : { error: 'unreadable' }) });
+    it('one project at its answer', () => {
+        expect(firstListShown({ status: 'loading', result }, idle)).toBe(false);
+        expect(firstListShown({ status: 'ready', result: undefined }, idle)).toBe(false);
+        expect(firstListShown({ status: 'ready', result }, idle)).toBe(true);
+    });
+    it('All Projects at the first chunk with a result, or at the answer when none has one', () => {
+        const none = { status: 'idle' as const, result: undefined };
+        expect(firstListShown(none, { active: true, status: 'loading', chunks: new Map() })).toBe(false);
+        expect(firstListShown(none, { active: true, status: 'loading', chunks: new Map([['a', chunk(false)]]) })).toBe(false);
+        expect(firstListShown(none, { active: true, status: 'loading', chunks: new Map([['a', chunk(true)]]) })).toBe(true);
+        expect(firstListShown(none, { active: true, status: 'ready', chunks: new Map([['a', chunk(false)]]) })).toBe(true);
+        expect(firstListShown(none, { active: true, status: 'error', chunks: new Map() })).toBe(false);
+    });
+    it('never from chunks while All Projects is not active', () => {
+        expect(firstListShown({ status: 'loading', result: undefined }, { active: false, status: 'ready', chunks: new Map([['a', chunk(true)]]) })).toBe(false);
     });
 });

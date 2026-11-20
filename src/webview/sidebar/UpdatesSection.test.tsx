@@ -86,6 +86,30 @@ describe('sidebar: Updates section', () => {
         expect(within(updatesList()).getAllByRole('option')).toHaveLength(2);
     });
 
+    it('streamed update rows keep their arrival order until the answer, which lists them by id (X76)', async () => {
+        const host = await mountWith();
+        const [request] = host.requests('updates/get');
+        const shown = (): Array<string | null | undefined> => within(updatesList()).getAllByRole('option').map(element => element.querySelector('.nuiget-row-name')?.textContent);
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[0] }));
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[1] }));
+        expect(shown()).toEqual(['Serilog', 'Newtonsoft.Json']);
+        await hostSays(() => host.respond(request, { projectPath: A, updates: UPDATES }, 1));
+        expect(shown()).toEqual(['Newtonsoft.Json', 'Serilog']);
+    });
+
+    it('the selected update row keeps its id when the answer sorts (X76)', async () => {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        const [request] = host.requests('updates/get');
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[0] }));
+        await hostSays(() => host.chunk(request, { kind: 'found', update: UPDATES[1] }));
+        await user.click(updateOption('Serilog'));
+        expect(updateOption('Serilog')).toHaveAttribute('aria-selected', 'true');
+        await hostSays(() => host.respond(request, { projectPath: A, updates: UPDATES }, 1));
+        expect(updateOption('Serilog')).toHaveAttribute('aria-selected', 'true');
+        expect(updateOption('Newtonsoft.Json')).toHaveAttribute('aria-selected', 'false');
+    });
+
     it('asks the updates of the selected project and lists them with their versions, counted on the header', async () => {
         const host = await mountWith();
         expect(host.requests('updates/get').map(request => request.payload)).toEqual([{ projectPath: A, includePrerelease: false }]);
