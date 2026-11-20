@@ -102,6 +102,25 @@ describe('StoreProvider: every slice (P5.2)', () => {
         expect(screen.getByTestId('every')).toHaveTextContent('session,sessionActions,projects,installed,updates,transitive,search,details,detailsActions,allProjects,sources,config,ops,opsActions');
         expect(host.sent.map(message => message.kind === 'request' ? message.type : message.kind).sort()).toEqual(['projects/list', 'session/get']);
     });
+
+    it('the sidebar\'s store mounts no details slice: useDetails throws under SidebarStoreProvider, and the other slices still ask only session/get and projects/list (UX-P4.8c)', async () => {
+        const [{ useDetails }, { SidebarStoreProvider }] = await Promise.all([import('./details'), import('./StoreProvider')]);
+        function Details() {
+            useDetails();
+            return null;
+        }
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        try {
+            expect(() => render(<SidebarStoreProvider bus={createFakeHost().bus}><Details /></SidebarStoreProvider>)).toThrow('useDetails needs a DetailsProvider above it');
+        } finally {
+            error.mockRestore();
+        }
+
+        const host = createFakeHost();
+        render(<SidebarStoreProvider bus={host.bus} prefetch={false} surface="sidebar"><Everything /></SidebarStoreProvider>);
+        expect(host.sent.map(message => message.kind === 'request' ? message.type : message.kind).sort()).toEqual(['projects/list', 'session/get']);
+        expect(screen.getByTestId('all')).toHaveTextContent('- | - | - | false');
+    });
 });
 
 describe('StoreProvider: the transitive prefetch (P9.fix-1, N87)', () => {

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, expectFocusOnListTabStop, installFakeLayout } from '../shared/primitives/testSupport';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
 import { SidebarView } from './SidebarView';
 
 /** What the view says, recorded on its way to the live region (UX-P4.fix-9): the region keeps only the last sentence. */

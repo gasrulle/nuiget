@@ -4,7 +4,7 @@ import type { RequestPayload } from '../../protocol';
 import { createMessageBus } from '../shared/bus/MessageBus';
 import { applyLook } from '../shared/look';
 import { ErrorBoundary } from '../shared/primitives';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider } from '../shared/store/StoreProvider';
 import '../shared/tokens.css';
 import './sidebar.css';
 import { SidebarView } from './SidebarView';
@@ -34,9 +34,9 @@ if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <StrictMode>
             <ErrorBoundary onError={report}>
-                <StoreProvider bus={bus} prefetch={false} surface="sidebar">
+                <SidebarStoreProvider bus={bus} prefetch={false} surface="sidebar">
                     <SidebarView viewState={api} />
-                </StoreProvider>
+                </SidebarStoreProvider>
             </ErrorBoundary>
         </StrictMode>
     );

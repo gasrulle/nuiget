@@ -14,14 +14,16 @@ import { SourcesProvider } from './sources';
 import { TransitiveProvider } from './transitive';
 import { UpdatesProvider } from './updates';
 
-/**
- * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
- * component renders for the slice it reads and no other. Mounting it is what makes the surface ask the host
- * for the session and the projects. `prefetch={false}` keeps the transitive slice from asking before a
- * view opens it (the sidebar shows no transitive packages). `surface` is the surface this store belongs to: an
- * operation its row menu ran carries it as the outcome's `origin`, and only this surface says it (UX-P4.fix-11).
- */
-export function StoreProvider({ bus, children, prefetch = true, surface }: { bus: MessageBus; children: React.ReactNode; prefetch?: boolean; surface?: Surface }): React.JSX.Element {
+interface StoreProps {
+    bus: MessageBus;
+    children: React.ReactNode;
+    prefetch?: boolean;
+    surface?: Surface;
+}
+
+/** The slices in their one order; `details` wraps the ops slice where the surface has a details pane. */
+function Store({ bus, children, prefetch = true, surface, details: Details }: StoreProps & { details?: typeof DetailsProvider }): React.JSX.Element {
+    const ops = <OpsProvider surface={surface}>{children}</OpsProvider>;
     return (
         <MessageBusProvider bus={bus}>
             <SessionProvider>
@@ -32,11 +34,7 @@ export function StoreProvider({ bus, children, prefetch = true, surface }: { bus
                                 <AllProjectsProvider>
                                     <ConfigProvider>
                                         <SourcesProvider>
-                                            <SearchProvider>
-                                                <DetailsProvider>
-                                                    <OpsProvider surface={surface}>{children}</OpsProvider>
-                                                </DetailsProvider>
-                                            </SearchProvider>
+                                            <SearchProvider>{Details === undefined ? ops : <Details>{ops}</Details>}</SearchProvider>
                                         </SourcesProvider>
                                     </ConfigProvider>
                                 </AllProjectsProvider>
@@ -47,4 +45,23 @@ export function StoreProvider({ bus, children, prefetch = true, surface }: { bus
             </SessionProvider>
         </MessageBusProvider>
     );
+}
+
+/**
+ * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
+ * component renders for the slice it reads and no other. Mounting it is what makes the surface ask the host
+ * for the session and the projects. `prefetch={false}` keeps the transitive slice from asking before a
+ * view opens it (the sidebar shows no transitive packages). `surface` is the surface this store belongs to: an
+ * operation its row menu ran carries it as the outcome's `origin`, and only this surface says it (UX-P4.fix-11).
+ */
+export function StoreProvider(props: StoreProps): React.JSX.Element {
+    return <Store {...props} details={DetailsProvider} />;
+}
+
+/**
+ * The sidebar's store: every slice but details, which only the main panel's details pane reads, so the sidebar bundle
+ * leaves the slice out (UX-P4.8c).
+ */
+export function SidebarStoreProvider(props: StoreProps): React.JSX.Element {
+    return <Store {...props} />;
 }

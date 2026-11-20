@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type PackageSearchResult, type PackageUpdate, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
 import { BROWSE_DEBOUNCE_MS, SidebarView } from './SidebarView';
 
 const A = '/w/App/App.csproj';

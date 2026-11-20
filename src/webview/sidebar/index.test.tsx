@@ -80,9 +80,9 @@ describe('sidebar 2.0 entry', () => {
         vi.doMock('../shared/store/StoreProvider', async importOriginal => {
             const actual = await importOriginal<typeof import('../shared/store/StoreProvider')>();
             return {
-                StoreProvider: (props: Parameters<typeof actual.StoreProvider>[0]) => {
+                SidebarStoreProvider: (props: Parameters<typeof actual.SidebarStoreProvider>[0]) => {
                     seen.push(props);
-                    return <actual.StoreProvider {...props} />;
+                    return <actual.SidebarStoreProvider {...props} />;
                 },
             };
         });

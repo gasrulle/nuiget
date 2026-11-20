@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { installFakeLayout } from '../shared/primitives/testSupport';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
 import { readLayout, SidebarView, type ViewStateStore } from './SidebarView';
 
 const A = '/w/App/App.csproj';

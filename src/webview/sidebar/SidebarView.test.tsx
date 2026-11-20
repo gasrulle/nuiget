@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
 import { UNRESOLVED_HINT, whyNotUpdatable } from '../shared/installed/rules';
 import { shownVersion, whyNotRemovable } from './InstalledSection';
 import { SidebarView } from './SidebarView';

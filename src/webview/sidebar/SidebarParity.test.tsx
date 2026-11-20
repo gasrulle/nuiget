@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_PROJECTS, type ExtensionConfig, type InstalledPackage, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { installFakeLayout, installStylesheet } from '../shared/primitives/testSupport';
-import { StoreProvider } from '../shared/store/StoreProvider';
+import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
 import { SidebarView } from './SidebarView';
 
 const A = '/w/App/App.csproj';

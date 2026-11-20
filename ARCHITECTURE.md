@@ -326,7 +326,7 @@ frontend test file is skipped and says so.
 ([ADR-008](docs/adr/008-webview-architecture.md)): `Listbox`, `Row`, `SectionHeader`, `IconButton`, `Badge`,
 `LiveStatus`, `EmptyState`, `Skeleton`, `Spinner`, `ProgressBar`, `Banner`, `Sash`, `Dialog`, `ConfirmDialog`,
 `DialogGroups`, `Tabs`, `Toolbar`, `Button`, `Checkbox`, `Select`, `TextField`, `PropertyList`, `GroupCaption`, `ErrorBoundary`, the icons and `cssVars`. Each has a test with React Testing Library
-that ends in an axe run. `PropertyList` lays label–value pairs out as a two-column definition list, every value in one column; `GroupCaption` is the heading of a group that does not collapse, which sets no spacing of its own (UX-P3.3a). `Toolbar` owns its insets and places a bulk toolbar's primary in its `end` slot; `IconButton` takes its size, colour and fill from the `--nuiget-icon-button-*` carriers, which a section header and a row's actions set for it (UX-P2.5). `SectionHeader` has one anatomy on both surfaces (chevron, title, spinner, badges, actions, count at the end inset), and `Badge`'s `kind` tells a count from a label (UX-P2.6). Both shells take their live region, marks, search focus and outcome announcements from `useShellChrome` (`src/webview/shared/shellChrome.ts`); `MainTabs` and the shared leaf `FirstUsefulRenderMark` (`src/webview/shared/shellChrome.ts`, rendered once by each shell) hold the list subscriptions, so neither shell re-renders with each list; under All Projects the mark is the first project list (`firstListShown`, N81a) (UX-P2.7; UX-P3.10; UX-P4.8b). `ErrorBoundary` (P9.9) is the one class component: each entry wraps its `StoreProvider` in it,
+that ends in an axe run. `PropertyList` lays label–value pairs out as a two-column definition list, every value in one column; `GroupCaption` is the heading of a group that does not collapse, which sets no spacing of its own (UX-P3.3a). `Toolbar` owns its insets and places a bulk toolbar's primary in its `end` slot; `IconButton` takes its size, colour and fill from the `--nuiget-icon-button-*` carriers, which a section header and a row's actions set for it (UX-P2.5). `SectionHeader` has one anatomy on both surfaces (chevron, title, spinner, badges, actions, count at the end inset), and `Badge`'s `kind` tells a count from a label (UX-P2.6). Both shells take their live region, marks, search focus and outcome announcements from `useShellChrome` (`src/webview/shared/shellChrome.ts`); `MainTabs` and the shared leaf `FirstUsefulRenderMark` (`src/webview/shared/shellChrome.ts`, rendered once by each shell) hold the list subscriptions, so neither shell re-renders with each list; under All Projects the mark is the first project list (`firstListShown`, N81a) (UX-P2.7; UX-P3.10; UX-P4.8b). `ErrorBoundary` (P9.9) is the one class component: each entry wraps its store provider (`StoreProvider`, the sidebar's `SidebarStoreProvider`) in it,
 so a rendering error shows the empty state "Something went wrong in this view." with Reload, which remounts the store
 and the view, and the entry reports the error to the host as `ui/reportError`, which the host writes to the output
 channel (each field capped at 4000 characters, redacted by the logger).
@@ -494,8 +494,9 @@ one place for three rules:
 **Slices.** Each is a reducer with a context of its own (`useSession`, `useProjects`, `useInstalled`,
 `useTransitive`, `useAllProjects`, `useUpdates`, `useConfig`, `useSources`, `useSearch`, `useDetails`, `useOps`), so a component
 renders for the slice it reads; the functions that change something (`useSessionActions`, `useDetailsActions`,
-`useOpsActions`) are in separate contexts and never change. `StoreProvider` mounts all eleven, which is what makes a surface ask `session/get` and `projects/list` when it
-starts; the other slices ask when they have something to ask for.
+`useOpsActions`) are in separate contexts and never change. `StoreProvider` mounts all eleven; `SidebarStoreProvider` mounts ten,
+without `details`, which only the main panel's details pane reads, so the sidebar bundle leaves the slice out (UX-P4.8c). Mounting
+either is what makes a surface ask `session/get` and `projects/list` when it starts; the other slices ask when they have something to ask for.
 
 - `session` (ADR-001): `committed` is the last snapshot of the host that was applied, and a snapshot is
   applied only when its `rev` is above that one. `set(intent)` shows the change at once as *pending* and sends
@@ -521,7 +522,7 @@ starts; the other slices ask when they have something to ask for.
   answer into the map; another project or other rows cancel the ask, and an error is no metadata (P5.10, P6.2b).
 - `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
   the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects; never in the sidebar, whose
-  entry passes `prefetch={false}` to `StoreProvider`, P9.fix-1, N87) or at once when the section is opened
+  entry passes `prefetch={false}` to `SidebarStoreProvider`, P9.fix-1, N87) or at once when the section is opened
   first (`enable()`); another project starts again. The protocol has no forced restore (removed at UX-P4.fix-11): the banner's Restore is the feature's `ops/restore` through the ops slice, and the host's invalidation of
   `transitive:<path>` after it lists again (UX-P4.fix-10). The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
   answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
@@ -591,7 +592,7 @@ starts; the other slices ask when they have something to ask for.
   `ops/completed` with a sequence number for the live region. `isPackageBusy(project, id)` is true on both
   surfaces, whoever started the operation. `run` resolves with the outcome; the surface that asked receives it
   as response and as event, and it counts once (by `opId`). `own`, what the live region says, is set from that response, or
-  from an `ops/completed` event whose `origin` is the surface `StoreProvider` was given (its row menu ran it; UX-P4.fix-11).
+  from an `ops/completed` event whose `origin` is the surface its store provider (`StoreProvider` or `SidebarStoreProvider`) was given (its row menu ran it; UX-P4.fix-11).
 
 Tests use `createFakeHost()` (`bus/testSupport.ts`): the real bus over an `EventTarget`, with a record of
 what was posted and helpers to make the host answer, fail, stream, broadcast and invalidate.
@@ -619,7 +620,7 @@ stylesheets, `dist/sidebar.css` (the tokens, the primitives' rules and `sidebar.
 links.
 
 - `index.tsx` acquires the VS Code API (once, and only when its root element is on the page), creates the
-  message bus and mounts `StoreProvider` around `SidebarView`.
+  message bus and mounts `SidebarStoreProvider` (the store without the details slice, UX-P4.8c) around `SidebarView`.
 - `SidebarView.tsx` is the shell (`nuiget-sidebar`): a search box (`sidebar-search-input`) that for now
   filters the installed packages by id, a progress bar while the list is revalidated, a banner for an
   unsupported project and one with "Retry" for an error, the Installed section and the one live region
