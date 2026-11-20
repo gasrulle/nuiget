@@ -48,6 +48,16 @@ describe('check-design-tokens', () => {
         expect(tokenDefects(REFERENCE, CSS, new Map([['P9.9', 'open']]), OWNER)).toEqual([]);
     });
 
+    it('finds a colour token with a forced-colours value in neither file (UX-P4.10)', () => {
+        const statuses = new Map([['P9.9', 'open']]);
+        const colour = { tokens: [...REFERENCE.tokens, token('--nuiget-color-c', 'var(--vscode-c)', { kind: 'color' })] };
+        const css = CSS.replace('    --nuiget-b: 2px;\n', '    --nuiget-b: 2px;\n    --nuiget-color-c: var(--vscode-c);\n');
+        expect(tokenDefects(colour, css, statuses, OWNER)).toEqual(['--nuiget-color-c forced colours: tokens.json has none']);
+        // A size token needs none, and a colour token with its forced value passes.
+        const withForced = { tokens: [...REFERENCE.tokens.map(entry => entry.name === '--nuiget-a' ? { ...entry, kind: 'color' } : entry)] };
+        expect(tokenDefects(withForced, CSS, statuses, OWNER)).toEqual([]);
+    });
+
     it('finds a token that differs in any block, one that is absent and one the reference lacks', () => {
         const statuses = new Map([['P9.9', 'open']]);
         expect(tokenDefects(REFERENCE, CSS.replace('var(--vscode-a, 1px)', 'var(--vscode-a, 9px)'), statuses, OWNER)).toEqual(['--nuiget-a :root: tokens.css var(--vscode-a, 9px), tokens.json var(--vscode-a, 1px)']);

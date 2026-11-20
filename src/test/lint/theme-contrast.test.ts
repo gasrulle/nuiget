@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
-import { composite, CONTRAST_LINT_STATUS, CONTRAST_PAIRS_PENDING, contrastPairLine, contrastRatio, exemptIn, pairName, pairRatio, parseCssColor, thresholdFor, TOKEN_PAIRS } from '../ui/v2/contrast';
+import { composite, CONTRAST_LINT_STATUS, CONTRAST_PAIRS_PENDING, contrastPairLine, FORCED_PAIRS_PENDING, FORCED_PAIRS_STATUS, forcedPairLine, contrastRatio, exemptIn, pairName, pairRatio, parseCssColor, thresholdFor, TOKEN_PAIRS } from '../ui/v2/contrast';
 
 /**
  * UX-P0.25 (H49; `a11y-text-contrast-all-states`, `a11y-nontext-contrast`): the curated token pairs of
@@ -59,6 +59,15 @@ describe('theme contrast (UX-P0.25)', () => {
         expect(contrastPairLine({ ...scoped, exempt: { reason: 'parity' } }, 'dark-high-contrast', 'modern', null, 'hard', []).failure).toBeUndefined();
     });
 
+    it('resolves a pair through a forced-colours block: a listed pairing, one outside the list, a transparent background over its surface, an equal pair, a missing token (UX-P4.10)', () => {
+        const forced = new Map([['--nuiget-color-fg', 'CanvasText'], ['--nuiget-color-bg', 'Canvas'], ['--nuiget-color-hover', 'transparent'], ['--nuiget-color-field', 'Field'], ['--nuiget-color-focus', 'Highlight'], ['--nuiget-color-active', 'Highlight']]);
+        expect(forcedPairLine({ fg: 'fg', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/bg (text): CanvasText on Canvas (hard)', legal: true });
+        expect(forcedPairLine({ fg: 'fg', bg: 'field', kind: 'text' }, forced)).toEqual({ line: '[forced] fg/field (text): CanvasText on Field (not a listed pairing) (pending P4.10)', legal: false });
+        expect(forcedPairLine({ fg: 'fg', bg: 'hover', over: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/hover over bg (text): CanvasText on Canvas (hard)', legal: true });
+        expect(forcedPairLine({ fg: 'focus', bg: 'active', kind: 'non-text' }, forced, 'hard')).toEqual({ line: '[forced] focus/active (non-text): Highlight on Highlight (not a listed pairing) (hard)', legal: false });
+        expect(forcedPairLine({ fg: 'link', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] link/bg (text): none on Canvas (not a listed pairing) (hard)', legal: false });
+    });
+
     it('reads the twelve token records of the theme dump, six themes in two looks', () => {
         expect(records.map(record => `${record.theme}/${record.look}`)).toEqual([
             'dark-2026/modern', 'dark-2026/classic', 'dark-high-contrast/modern', 'dark-high-contrast/classic', 'dark-modern/modern', 'dark-modern/classic',
@@ -82,6 +91,41 @@ describe('theme contrast (UX-P0.25)', () => {
         }
         if (CONTRAST_LINT_STATUS === 'hard') {
             expect(failures).toEqual([]);
+        }
+    });
+
+    it('resolves every curated pair through the forced-colours block and prints it; a reading while pending (UX-P4.10)', () => {
+        const css = fs.readFileSync(path.join(process.cwd(), 'src/webview/shared/tokens.css'), 'utf8');
+        const start = css.indexOf('@media (forced-colors: active) {');
+        expect(start).toBeGreaterThan(0);
+        const block = css.slice(start, css.indexOf('}', css.indexOf(':root', start)));
+        const forced = new Map([...block.matchAll(/(--nuiget-color-[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()]));
+        const outside: string[] = [];
+        for (const pair of TOKEN_PAIRS) {
+            const { line, legal } = forcedPairLine(pair, forced);
+            console.warn(line);
+            if (!legal && !FORCED_PAIRS_PENDING.some(entry => entry.pair === pairName(pair))) {
+                outside.push(pairName(pair));
+            }
+        }
+        console.warn(`[forced] ${TOKEN_PAIRS.length} pairs, ${outside.length} outside the listed pairings`);
+        if (FORCED_PAIRS_STATUS === 'hard') {
+            expect(outside).toEqual([]);
+        }
+    });
+
+    it('names in the forced pending entries and status only open tracker rows, and in each entry a curated pair (UX-P4.10)', () => {
+        const names = new Set(TOKEN_PAIRS.map(pairName));
+        const status = new Map(fs.readFileSync(path.join(root, 'docs/plans/STATUS-ux.md'), 'utf8').split(/\r?\n/).flatMap(line => {
+            const match = /^\| (P[0-9][0-9a-z.-]*) \|[^|]*\|[^|]*\| ([a-z -]+) \|/.exec(line);
+            return match ? [[match[1], match[2]]] : [];
+        }));
+        if (FORCED_PAIRS_STATUS !== 'hard') {
+            expect(status.has(FORCED_PAIRS_STATUS.pending) && status.get(FORCED_PAIRS_STATUS.pending) !== 'done', FORCED_PAIRS_STATUS.pending).toBe(true);
+        }
+        for (const entry of FORCED_PAIRS_PENDING) {
+            expect(names.has(entry.pair), entry.pair).toBe(true);
+            expect(status.has(entry.item) && status.get(entry.item) !== 'done', entry.item).toBe(true);
         }
     });
 

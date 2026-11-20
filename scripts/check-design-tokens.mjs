@@ -65,6 +65,10 @@ export function tokenDefects(reference, css, statuses, allowance = ALLOWANCE) {
         }
         compare(token.name, look, 'Modern UI', token.modernValue);
         compare(token.name, forced, 'forced colours', token.forcedColors);
+        // A colour token that has a forced value in neither file would pass the comparison above: every colour has one (UX-P4.10).
+        if (token.kind === 'color' && token.forcedColors === undefined && !forced.has(token.name)) {
+            defects.push(`${token.name} forced colours: tokens.json has none`);
+        }
     }
     const names = new Set(reference.tokens.map(token => token.name));
     for (const [label, block] of [[':root', root], ['Modern UI', look], ['forced colours', forced]]) {

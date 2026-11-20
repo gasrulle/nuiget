@@ -120,6 +120,13 @@ describe('2.0 webview tokens', () => {
         expect([...forced].filter(([name, value]) => !name.startsWith('--nuiget-color-') || !system.includes(value))).toEqual([]);
     });
 
+    it('declares every colour token in the forced-colors rule, and nothing else there (UX-P4.10)', () => {
+        const root = [...blockAfter(':root')].map(([name]) => name).filter(name => name.startsWith('--nuiget-color-')).sort();
+        const forced = [...blockAfter('@media (forced-colors: active) {\n    :root')].map(([name]) => name).sort();
+        expect(root.length).toBeGreaterThan(0);
+        expect(forced).toEqual(root);
+    });
+
     it('covers both high-contrast themes in one rule', () => {
         expect(code).toMatch(/body\.vscode-high-contrast,\s*body\.vscode-high-contrast-light \{/);
         const contrast = blockAfter('body.vscode-high-contrast-light');

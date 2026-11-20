@@ -161,6 +161,42 @@ const cells = (pairs: readonly string[], themes: readonly string[], item: string
 export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
 ];
 
+/**
+ * UX-P4.10 (design-advisor ruling of 2026-11-20 and follow-up 1): the curated pairs resolved through the forced-colours block
+ * of `tokens.css`. A reading until the pairing set below is taken verbatim from CSS Color 4 §6.2: its status stays pending
+ * on the item, and a pair outside the set is printed, not judged.
+ */
+export const FORCED_PAIRS_STATUS: RuleStatus = { pending: 'P4.10' };
+
+/** A forced-colours pair outside the listed pairings, with the item that fixes it: a forced resolution has no theme or look. */
+export interface ForcedPairPending {
+    pair: string;
+    item: string;
+}
+
+/** The forced-colours pairs today's tokens resolve outside the set, each with the item that fixes it (none before its row exists). */
+export const FORCED_PAIRS_PENDING: readonly ForcedPairPending[] = [];
+
+/**
+ * The system-colour pairings CSS Color 4 §6.2 expects to be legible, as a page summary of the Candidate Recommendation Draft of
+ * 18 November 2026 reported them (not verbatim spec text; to be settled before the status goes hard), plus GrayText, which the
+ * spec expects to be readable over any of the backgrounds.
+ */
+export const FORCED_LEGAL: ReadonlySet<string> = new Set([
+    'CanvasText on Canvas', 'LinkText on Canvas', 'VisitedText on Canvas', 'ActiveText on Canvas', 'ButtonText on ButtonFace',
+    'FieldText on Field', 'MarkText on Mark', 'HighlightText on Highlight', 'SelectedItemText on SelectedItem',
+    'AccentColorText on AccentColor', 'GrayText on Canvas', 'GrayText on ButtonFace', 'GrayText on Field', 'GrayText on Highlight',
+]);
+
+/** One pair resolved through the forced-colours block (`over` when its background is transparent), as the lint prints it. */
+export function forcedPairLine(pair: TokenPair, forced: ReadonlyMap<string, string>, status: RuleStatus = FORCED_PAIRS_STATUS): { line: string; legal: boolean } {
+    const value = (name: string | undefined): string | undefined => (name === undefined ? undefined : forced.get(`--nuiget-color-${name}`));
+    const fg = value(pair.fg);
+    const bg = value(pair.bg) === 'transparent' ? value(pair.over) : value(pair.bg);
+    const legal = fg !== undefined && bg !== undefined && fg !== bg && FORCED_LEGAL.has(`${fg} on ${bg}`);
+    return { line: `[forced] ${pairName(pair)} (${pair.kind}): ${fg ?? 'none'} on ${bg ?? 'none'}${legal ? '' : ' (not a listed pairing)'} (${statusText(status)})`, legal };
+}
+
 /** Whether the pair is exempt in this theme. */
 export const exemptIn = (pair: TokenPair, theme: string): boolean => pair.exempt !== undefined && (pair.exempt.themes === undefined || pair.exempt.themes.includes(theme));
 
