@@ -183,19 +183,20 @@ ran on GitHub-hosted `ubuntu-latest`, image version as listed. Times in ms.
 After, the item's own green runs (7f7be39a): one run, on a newer image, so compared, not re-based, and not judged (one run is
 never judged); the next green runs that contain the item's code complete the row for the planning session.
 
-| Metric | 44732130015 | After median | Verdict |
-|---|---|---|---|
-| refresh → list settled | 263 (1.66 × 158) | (1 run) | not judged |
-| project chosen → first row | 411 (1.90 × 216) | (1 run) | not judged |
-| project chosen → authoritative list | 424 (1.91 × 222) | (1 run) | not judged |
-| project chosen → icons | 589 (1.53 × 386) | (1 run) | not judged |
-| Runner image | 20261111.635 | | |
+| Metric | 44732130015 | 44736499934 | After median | Verdict |
+|---|---|---|---|---|
+| refresh → list settled | 263 (1.66 × 158) | 266 (1.68 ×) | (2 runs) | not judged |
+| project chosen → first row | 411 (1.90 × 216) | 504 (2.33 ×) | (2 runs) | not judged |
+| project chosen → authoritative list | 424 (1.91 × 222) | 510 (2.30 ×) | (2 runs) | not judged |
+| project chosen → icons | 589 (1.53 × 386) | 697 (1.81 ×) | (2 runs) | not judged |
+| Runner image | 20261111.635 | 20261103.629 | | |
 
 The one after-run reads 1.53 to 1.91 times the before medians on all four lines, above the 1.5 × pass line: it trends red,
 and the gate is open until the next green runs that contain the item's code decide it (UX-P4.9 is `blocked` on that). None of
 the four chains passes through X43 (the All Projects fan-out); every lite `enrich` call now starts the deadline and races each
-package's vulnerability read against it, which decides nothing before 5 s. The after-run is also on a newer runner image.
-Whether the difference is the runner or the item is not measured.
+package's vulnerability read against it, which decides nothing before 5 s. The first after-run is on a newer runner image; the second (44736499934, the push of the blocked-state commit
+13abd996) is on the before-runs' own image and reads higher still, so the image does not explain the difference. The cause is
+not measured; it is with the architecture-advisor.
 
 ## Definitions
 
