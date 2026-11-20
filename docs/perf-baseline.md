@@ -162,41 +162,106 @@ What each chain measures:
   `[P5.6] cold search` row above. **`search again`**: the same text again after Escape. Both read nuget.org live and vary
   with it.
 
-### UX-P4.9: the in-page timings before and after (architecture-advisor ruling of 2026-11-20)
+### UX-P4.9: the in-page timings before and after (architecture-advisor ruling of 2026-11-20 and its follow-up 1)
 
 UX-P4.9 (X43: All Projects asks the lite metadata of the provisional rows first; X33 reduced: the lite enricher bounds its
-vulnerability leg once per call) is judged on four lines of the `project chosen` and `refresh` chains: `refresh → list
-settled`, `project chosen → first row`, `project chosen → authoritative list` and `project chosen → icons`. The `≤`
-panel-open lines, the `select` lines and the search lines are pasted, not judged. Before: the three latest green push runs
-on `labs/ux` before the item's first push; after: three green runs that contain the item's code. A line passes when its
-after-median is at most 1.5 × its before-median (the dotnet rows' rule above); one run is never judged. Each run's `UI` job
-ran on GitHub-hosted `ubuntu-latest`, image version as listed. Times in ms.
+vulnerability leg once per call) is judged on four lines: `refresh → list settled`, `project chosen → first row`,
+`project chosen → authoritative list` and `project chosen → icons`. The `≤` panel-open lines and the search lines are
+pasted, not judged; `select → details`, `select → dependencies` and `recorder started` stand beside them as controls the
+item cannot touch. The lines are bimodal by runner VM, so a run is compared within its class (follow-up 1): the class is read
+from the capture pass's own Mocha total (the second `N passing (Xm)` line of `ui-output.txt`), fast when ≤ 14 min, slow when
+≥ 15 min. Each after-run's line is divided by the before-median of its own class; a line passes when the median of the three
+ratios is at most 1.5 (the dotnet rows' tolerance, unchanged). One run is never judged. The first reading compared three
+before-runs that were all fast-class with after-runs that were slow-class, and read red for that reason.
 
-| Metric | 44713612548 | 44721186954 | 44725528260 | Before median |
-|---|---|---|---|---|
-| refresh → list settled | 210 | 153 | 158 | 158 |
-| project chosen → first row | 255 | 166 | 216 | 216 |
-| project chosen → authoritative list | 261 | 171 | 222 | 222 |
-| project chosen → icons | 386 | 602 | 310 | 386 |
-| Runner image | 20261103.629 | 20261103.629 | 20261103.629 | |
+**The before set.** The 61 pre-item green push runs on `labs/ux` with `[perf]` lines among the run folders under `captures/`
+numbered from 44006473449 (2026-11-15) to 44725528260, each checked `push success labs/ux` with `gh api`; nothing was fetched
+for it. It is not every run on record: `captures/` also holds older run folders (40023246433 to 43994145813), left out
+because the window was chosen by run number, not by a reason in the runs; the architecture-advisor's follow-up read 13 of the
+most recent. A pre-commit reviewer's estimate over all such runs (about 237) gives class medians fast 223 / 308.5 / 315 / 530 and
+slow 252 / 373 / 381 / 551, and the advisor's 13 give fast 176 / 216 / 222 / 422 and slow 245.5 / 427.5 / 435.5 / 596: the verdict
+below holds under all three sets (not recomputed here for the 237). Times in ms.
 
-After, the item's own green runs (7f7be39a): one run, on a newer image, so compared, not re-based, and not judged (one run is
-never judged); the next green runs that contain the item's code complete the row for the planning session.
+| Class | Runs | refresh → list settled | first row | authoritative list | icons |
+|---|---|---|---|---|---|
+| fast (≤ 14m) | 40 | 184 | 240 | 245 | 437.5 |
+| slow (≥ 15m) | 21 | 248 | 373 | 381 | 556 |
 
-| Metric | 44732130015 | 44736499934 | After median | Verdict |
-|---|---|---|---|---|
-| refresh → list settled | 263 (1.66 × 158) | 266 (1.68 ×) | (2 runs) | not judged |
-| project chosen → first row | 411 (1.90 × 216) | 504 (2.33 ×) | (2 runs) | not judged |
-| project chosen → authoritative list | 424 (1.91 × 222) | 510 (2.30 ×) | (2 runs) | not judged |
-| project chosen → icons | 589 (1.53 × 386) | 697 (1.81 ×) | (2 runs) | not judged |
-| Runner image | 20261111.635 | 20261103.629 | | |
+After, the item's three green runs (7f7be39a and the two docs commits on it), each line with its ratio to its class median:
 
-The one after-run reads 1.53 to 1.91 times the before medians on all four lines, above the 1.5 × pass line: it trends red,
-and the gate is open until the next green runs that contain the item's code decide it (UX-P4.9 is `blocked` on that). None of
-the four chains passes through X43 (the All Projects fan-out); every lite `enrich` call now starts the deadline and races each
-package's vulnerability read against it, which decides nothing before 5 s. The first after-run is on a newer runner image; the second (44736499934, the push of the blocked-state commit
-13abd996) is on the before-runs' own image and reads higher still, so the image does not explain the difference. The cause is
-not measured; it is with the architecture-advisor.
+| Run | Class | refresh | first row | authoritative | icons | select → details | select → dependencies | recorder started |
+|---|---|---|---|---|---|---|---|---|
+| 44732130015 | slow (17m) | 263 (1.06) | 411 (1.10) | 424 (1.11) | 589 (1.06) | 13 | 500 | 217 |
+| 44736499934 | slow (16m) | 266 (1.07) | 504 (1.35) | 510 (1.34) | 697 (1.25) | 19 | 310 | 210 |
+| 44740395026 | fast (11m) | 147 (0.80) | 316 (1.32) | 321 (1.31) | 344 (0.79) | 7 | 129 | 133 |
+| Median ratio | | 1.06 | 1.32 | 1.31 | 1.06 | | | |
+| Verdict | | pass | pass | pass | pass | | | |
+
+The before set, run by run:
+
+| Run | Class | refresh | first row | authoritative | icons | select → details | select → dependencies | recorder started |
+|---|---|---|---|---|---|---|---|---|
+| 44006473449 | fast (11m) | 167 | 178 | 185 | 273 | 8 | 129 | 130 |
+| 44017225108 | fast (13m) | 195 | 180 | 188 | 296 | 7 | 160 | 143 |
+| 44020687480 | fast (12m) | 189 | 333 | 339 | 808 | 20 | 98 | 165 |
+| 44031276097 | fast (11m) | 165 | 181 | 186 | 692 | 6 | 172 | 188 |
+| 44036837521 | fast (10m) | 156 | 171 | 175 | 258 | 5 | 117 | 129 |
+| 44040040328 | slow (16m) | 273 | 381 | 392 | 530 | 8 | 276 | 198 |
+| 44048105231 | slow (15m) | 214 | 353 | 359 | 556 | 13 | 310 | 182 |
+| 44088824993 | slow (16m) | 263 | 352 | 362 | 519 | 11 | 229 | 205 |
+| 44111085167 | fast (13m) | 231 | 289 | 295 | 411 | 8 | 227 | 163 |
+| 44116707127 | slow (16m) | 254 | 405 | 414 | 575 | 13 | 283 | 201 |
+| 44125387157 | fast (14m) | 212 | 308 | 316 | 438 | 7 | 217 | 175 |
+| 44130059273 | fast (13m) | 210 | 272 | 279 | 437 | 7 | 238 | 200 |
+| 44149001126 | fast (13m) | 226 | 343 | 349 | 471 | 7 | 192 | 165 |
+| 44157815833 | fast (13m) | 197 | 316 | 322 | 427 | 6 | 287 | 156 |
+| 44169068801 | slow (15m) | 221 | 352 | 360 | 631 | 11 | 284 | 196 |
+| 44175345104 | slow (15m) | 256 | 352 | 358 | 515 | 8 | 363 | 191 |
+| 44180874252 | fast (12m) | 188 | 205 | 209 | 1090 | 6 | 234 | 130 |
+| 44184633461 | fast (11m) | 171 | 198 | 207 | 292 | 6 | 129 | 131 |
+| 44191260179 | fast (12m) | 171 | 196 | 202 | 992 | 7 | 178 | 131 |
+| 44194939732 | fast (12m) | 183 | 215 | 224 | 349 | 7 | 249 | 153 |
+| 44209521600 | fast (12m) | 224 | 235 | 240 | 733 | 10 | 190 | 146 |
+| 44260186997 | fast (13m) | 185 | 211 | 219 | 324 | 10 | 257 | 195 |
+| 44263173962 | slow (15m) | 248 | 386 | 393 | 565 | 10 | 242 | 197 |
+| 44267610384 | slow (15m) | 224 | 404 | 414 | 631 | 9 | 251 | 223 |
+| 44272851463 | fast (12m) | 167 | 298 | 298 | 1195 | 7 | 312 | 133 |
+| 44278515805 | fast (13m) | 222 | 291 | 296 | 405 | 7 | 203 | 153 |
+| 44283541873 | fast (13m) | 215 | 245 | 250 | 357 | 7 | 222 | 167 |
+| 44290207055 | fast (11m) | 170 | 220 | 225 | 315 | 6 | 163 | 147 |
+| 44303433180 | fast (12m) | 174 | 231 | 237 | 685 | 7 | 99 | 142 |
+| 44314020299 | fast (12m) | 188 | 297 | 303 | 1000 | 8 | 285 | 144 |
+| 44319150988 | fast (12m) | 163 | 207 | 215 | 1040 | 6 | 222 | 133 |
+| 44323521066 | fast (13m) | 230 | 350 | 355 | 456 | 9 | 587 | 150 |
+| 44350651585 | fast (13m) | 240 | 268 | 274 | 392 | 7 | 178 | 167 |
+| 44356085581 | fast (12m) | 165 | 297 | 303 | 1333 | 7 | 1000 | 134 |
+| 44364800640 | slow (16m) | 263 | 365 | 374 | 519 | 11 | 333 | 232 |
+| 44374049262 | slow (16m) | 261 | 373 | 381 | 556 | 8 | 255 | 233 |
+| 44380575458 | slow (16m) | 230 | 386 | 393 | 552 | 9 | 308 | 191 |
+| 44386424171 | slow (16m) | 251 | 365 | 370 | 532 | 10 | 282 | 200 |
+| 44394529420 | fast (13m) | 198 | 225 | 231 | 349 | 15 | 211 | 158 |
+| 44399914588 | slow (15m) | 243 | 442 | 450 | 617 | 11 | 301 | 201 |
+| 44416987719 | fast (12m) | 171 | 209 | 215 | 1094 | 30 | 197 | 140 |
+| 44428362148 | slow (16m) | 266 | 326 | 334 | 485 | 13 | 284 | 194 |
+| 44432587034 | slow (18m) | 246 | 338 | 348 | 512 | 9 | 550 | 225 |
+| 44445946322 | fast (13m) | 205 | 335 | 343 | 446 | 8 | 466 | 159 |
+| 44449385049 | fast (14m) | 176 | 320 | 325 | 414 | 7 | 363 | 176 |
+| 44452956857 | slow (16m) | 247 | 414 | 421 | 598 | 10 | 274 | 211 |
+| 44464137487 | fast (12m) | 170 | 308 | 315 | 794 | 8 | 219 | 137 |
+| 44470888225 | slow (16m) | 236 | 333 | 342 | 491 | 9 | 261 | 193 |
+| 44604160966 | fast (14m) | 197 | 181 | 188 | 302 | 9 | 152 | 163 |
+| 44614226491 | fast (12m) | 171 | 158 | 163 | 635 | 8 | 88 | 144 |
+| 44622304312 | slow (16m) | 254 | 418 | 426 | 557 | 13 | 355 | 210 |
+| 44628177911 | fast (13m) | 216 | 279 | 285 | 422 | 7 | 298 | 150 |
+| 44633074875 | fast (12m) | 168 | 279 | 286 | 1158 | 10 | 190 | 132 |
+| 44636682366 | slow (16m) | 249 | 496 | 505 | 692 | 9 | 307 | 197 |
+| 44642077252 | slow (16m) | 241 | 437 | 445 | 635 | 16 | 322 | 196 |
+| 44656619145 | fast (12m) | 176 | 161 | 169 | 661 | 8 | 111 | 139 |
+| 44664479917 | fast (13m) | 180 | 255 | 260 | 371 | 8 | 237 | 151 |
+| 44709230961 | slow (16m) | 242 | 342 | 350 | 522 | 10 | 240 | 228 |
+| 44713612548 | fast (13m) | 210 | 255 | 261 | 386 | 8 | 166 | 200 |
+| 44721186954 | fast (12m) | 153 | 166 | 171 | 602 | 5 | 74 | 125 |
+| 44725528260 | fast (11m) | 158 | 216 | 222 | 310 | 6 | 138 | 134 |
 
 ## Definitions
 
