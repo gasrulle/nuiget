@@ -3988,6 +3988,13 @@ function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } |
     return !layout.flatList && top > 0 ? { value: `no group header in the window (scrollTop ${top})`, pass: true } : undefined;
 }
 
+/**
+ * The status of the zoomed cell's readings (UX-P4.10, design-advisor ruling of 2026-11-20, DO 9): while pending, the capture
+ * suite's zoom describe prints the cell's reds as `[zoom] red: …` and throws only for its mechanics (ratio, width, restore,
+ * crop); the item's closing commit makes it `hard`, each red rule of the reading pending on its owner row.
+ */
+export const ZOOM_STATUS: RuleStatus = { pending: 'P4.10' };
+
 /** The words a busy row's status may read (DS-STATE-6, UX-P4.7; Finishing while a successful edit waits for its list, X31, UX-P4.8c). */
 const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued', 'Finishing'];
 

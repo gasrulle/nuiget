@@ -72,6 +72,11 @@ export interface NamedState {
      * `DIFF_TOLERANCE_START` to start, 0 once the state's live regions are masked.
      */
     diffTolerance: number;
+    /**
+     * The `window.zoomLevel` the state is captured at (UX-P4.10): written by the capture suite's last nested describe and
+     * restored in its own `afterEach`; such a state is Tier B only, in the `dark-high-contrast` matrix shard.
+     */
+    zoomLevel?: number;
 }
 
 /** A state's pixel-diff tolerance until its live regions are masked, in percent of the crop (plan P0.15). */
@@ -327,6 +332,11 @@ export const STATES: readonly NamedState[] = [
         "Serilog current, its README held and the README tab chosen: the 2 px bar over the README skeleton (marker readme-progress); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-readme-error', 'main', [primary('main')],
         "Serilog current, its README released as a failure, one fixed sentence: the inline error with Retry (marker readme-error).", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    // UX-P4.10 (design-advisor ruling of 2026-11-20, DO 5): the one cell at a fractional device pixel ratio, Tier B only, in the
+    // dark-high-contrast shard, where every boundary is a 1 px line; its readings land pending on UX-P4.10 until its closing commit.
+    { name: 'main-installed-zoom2-800px', surface: 'main', tier: 'B', captures: [], zoomLevel: 2, status: 'ready', diffTolerance: DIFF_TOLERANCE_START,
+        setup: 'The main-installed-single reach (Gateway selected, its direct rows) at window.zoomLevel 2, written through the Settings editor by the capture suite\'s last nested describe and restored to 0 in its own afterEach; panel 800 px.',
+        masks: [LIVE_ICONS] },
 ];
 
 /**
@@ -406,7 +416,9 @@ export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture
     // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (UX-P3.9
     // drew the dashed hover line on tabs only): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3). No hovered current row is captured there (UX-P2.8a).
     const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover' || state.name === 'main-installed-hover-current') && theme.includes('high-contrast'));
-    return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B') && shown(state)).flatMap(state => {
+    // A zoomed state is captured in the dark-high-contrast shard only (UX-P4.10, design-advisor ruling DO 5).
+    const zoomed = (state: NamedState) => state.zoomLevel === undefined || theme === 'dark-high-contrast';
+    return STATES.filter(state => isReady(state) && (state.tier === 'A' || state.tier === 'B') && shown(state) && zoomed(state)).flatMap(state => {
         const fixed = namedWidth(state);
         const widths = fixed !== undefined ? [fixed] : state.surface === 'main' ? PANEL_WIDTHS : SIDEBAR_WIDTHS;
         return widths.map(width => ({ state, capture: { theme, look: 'modern' as const, width } }));

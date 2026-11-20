@@ -255,6 +255,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
     it('puts every named state into a state group', () => {
         const groups = Object.fromEntries(STATES.map(state => [state.name, stateGroup(state.name)]));
         expect(groups['main-installed-single']).toBe('main-installed');
+        expect(groups['main-installed-zoom2-800px']).toBe('main-installed');
         expect(groups['main-transitive-expanded']).toBe('main-installed');
         expect(groups['main-updates']).toBe('main-updates');
         expect(groups['main-browse-results']).toBe('browse');

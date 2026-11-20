@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ZOOM_STATUS } from '../ui/v2/measure';
 import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_THEMES, matrixCaptures, pending as pendingState, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
 
 /**
@@ -28,8 +29,20 @@ describe('the named states (UX-P0.8)', () => {
         for (const state of STATES) {
             expect(state.name, 'a state name is kebab-case').toMatch(/^(main|sidebar)-[a-z0-9-]+$/);
             expect(state.name.startsWith(`${state.surface}-`), `${state.name} is named after its surface`).toBe(true);
-            expect(state.captures.length, `${state.name} has a capture`).toBeGreaterThan(0);
+            // A Tier B state is captured by its lane alone and lists no Tier A capture (UX-P4.10).
+            if (state.tier === 'A') {
+                expect(state.captures.length, `${state.name} has a capture`).toBeGreaterThan(0);
+            } else {
+                expect(state.captures, `${state.name} is Tier B`).toEqual([]);
+            }
             expect(state.setup.length, `${state.name} says how it is reached`).toBeGreaterThan(0);
+        }
+    });
+
+    it('names in ZOOM_STATUS, while pending, a tracker row that is not done (UX-P4.10)', () => {
+        if (ZOOM_STATUS !== 'hard') {
+            const statuses = trackerStatuses();
+            expect(statuses.has(ZOOM_STATUS.pending) && statuses.get(ZOOM_STATUS.pending) !== 'done', ZOOM_STATUS.pending).toBe(true);
         }
     });
 
@@ -138,9 +151,11 @@ describe('the named states (UX-P0.8)', () => {
         for (const theme of MATRIX_THEMES) {
             const files = laneFiles('matrix', theme);
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
-            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported; UX-P4.2a: main-installed-uninstall-dialog; UX-P4.2b: sidebar-uninstall-dialog; UX-P4.fix-13: main-installed-busy; UX-P4.fix-19: main-updates-update-all-dialog; UX-P4.fix-23: main-installed-provisional and sidebar-installed-provisional.
-            const expected = theme.includes('high-contrast') ? 259 : 268;
+            // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported; UX-P4.2a: main-installed-uninstall-dialog; UX-P4.2b: sidebar-uninstall-dialog; UX-P4.fix-13: main-installed-busy; UX-P4.fix-19: main-updates-update-all-dialog; UX-P4.fix-23: main-installed-provisional and sidebar-installed-provisional; UX-P4.10: main-installed-zoom2-800px, in the dark-high-contrast shard only, at 800 only.
+            const expected = theme === 'dark-high-contrast' ? 260 : theme.includes('high-contrast') ? 259 : 268;
             expect(files, theme).toHaveLength(expected);
+            const zoomed = files.filter(file => file.startsWith('main-installed-zoom2-'));
+            expect(zoomed, theme).toEqual(theme === 'dark-high-contrast' ? ['main-installed-zoom2-800px.dark-high-contrast.800.png'] : []);
             expect(new Set(files).size).toBe(expected);
             expect(files.every(file => file.includes(`.${theme}.`) && !file.includes('-classic'))).toBe(true);
         }
@@ -160,6 +175,8 @@ describe('the named states (UX-P0.8)', () => {
         const files = laneFiles('floor');
         // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported, and UX-P4.2a's main-installed-uninstall-dialog, and UX-P4.2b's sidebar-uninstall-dialog, and UX-P4.fix-13's main-installed-busy, and UX-P4.fix-19's main-updates-update-all-dialog, and UX-P4.fix-23's main-installed-provisional and sidebar-installed-provisional.
         expect(files).toHaveLength(109);
+        // The zoomed cell is in no lane but its matrix shard (UX-P4.10).
+        expect([...expectedFiles(), ...files, ...laneFiles('macos')].filter(file => file.startsWith('main-installed-zoom2-'))).toEqual([]);
         expect(new Set(files).size).toBe(109);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);

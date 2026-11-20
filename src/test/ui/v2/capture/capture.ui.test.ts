@@ -4,12 +4,12 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import { ActivityBar, By, EditorView, Key, VSBrowser } from 'vscode-extension-tester';
 import { selectTheme, setPanelWidth, setSidebarWidth, webviewRect, windowSize } from '../layout';
-import { type ArtboardSpec, cellList, DIALOG_FRINGE_STATES, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights } from '../measure';
+import { type ArtboardSpec, cellList, DIALOG_FRINGE_STATES, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, formatLine, type Layout, type LookMeasure, measureLines, outerScrollVerdict, pixelRuleLines, RAMP, type SpecLook, thumbVerdict, TOLERANCES, type WorkbenchHeights, ZOOM_STATUS } from '../measure';
 import { COLLECT_TEXT_LINES, fringeLine, fringeVerdict, hostGuard, type HostReading, type LineVerdict, summarize, type TextLine } from '../fringe';
 import { chooseProject, chooseProjectCommitted, enterMainWebview, openMainPanel, optionFor, untilProjects } from '../mainWebview';
 import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW, installedRowOf, type PerfChain, perfComplete, perfLines, perfRecorder, type PerfResult, PROVISIONAL, READ_PERF, REVALIDATING, SETTLED, STOP_PERF } from '../perf';
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
-import { measureExemplar, measureWorkbench, setReduceMotion } from '../workbench';
+import { measureExemplar, measureWorkbench, setReduceMotion, setZoomLevel } from '../workbench';
 import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
@@ -559,6 +559,8 @@ const HOVER_STATES = ['main-installed-hover', 'main-installed-hover-current', 'm
 
 const REACH: Record<string, Reach> = {
     'main-installed-single': { reach: gatewayInstalled },
+    // UX-P4.10 (design-advisor ruling DO 8): the same reach, at window.zoomLevel 2, run by the zoom describe alone.
+    'main-installed-zoom2-800px': { reach: gatewayInstalled },
     'main-installed-loading': {
         reach: async () => {
             await gatewayInstalled();
@@ -2737,7 +2739,10 @@ const laneJobs = LANE === 'matrix'
         : STATES.filter(isReady).flatMap(state => state.captures.filter(capture => capture.look === LOOK).map(capture => ({ state, capture })));
 const isDefaultWidth = (job: { state: NamedState; capture: Capture }): boolean =>
     job.capture.width === (job.state.surface === 'main' ? PANEL_WIDTH : SIDEBAR_WIDTH);
+/** A zoomed state (UX-P4.10) is captured by the last nested describe, never in the per-cell loop: its zoom would outlive a failed cell. */
+const zoomJobs = laneJobs.filter(job => job.state.zoomLevel !== undefined);
 const jobs = laneJobs
+    .filter(job => job.state.zoomLevel === undefined)
     .map((job, order) => ({ ...job, order }))
     .sort((a, b) => MATRIX_THEMES.indexOf(a.capture.theme) - MATRIX_THEMES.indexOf(b.capture.theme)
         || Number(!isDefaultWidth(a)) - Number(!isDefaultWidth(b))
@@ -3172,6 +3177,92 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 printLines(reading.lines);
                 if (MOTION_STATUS === 'hard' && reading.failures.length > 0) {
                     throw new Error(`[motion] ${reading.failures.join('; ')}`);
+                }
+            });
+        });
+    }
+
+    if (zoomJobs.length > 0) {
+        // UX-P4.10 (design-advisor ruling of 2026-11-20, DO 8-9): the one cell at a fractional device pixel ratio. A nested
+        // describe, last, so its zoom never reaches another cell; `window.zoomLevel` is written for this cell alone and written 0
+        // again in the describe's own afterEach, which proves the baseline ratio in the top document and both webviews.
+        describe('zoom (UX-P4.10)', () => {
+            const ratio = 'return window.devicePixelRatio;';
+            let baseline: number | undefined;
+
+            /** The device pixel ratio of the top document and of both webviews, the panel and the side bar opened for it. */
+            const ratios = async (): Promise<{ top: number; main: number; sidebar: number }> => {
+                await leaveWebview();
+                const top = await script<number>(ratio);
+                await openMainPanel();
+                await enterMainWebview();
+                const main = await script<number>(ratio);
+                await leaveWebview();
+                await openSidebarView();
+                await enterSidebarWebview();
+                const sidebar = await script<number>(ratio);
+                await leaveWebview();
+                return { top, main, sidebar };
+            };
+
+            afterEach(async function () {
+                this.timeout(180_000);
+                await leaveWebview();
+                await driverOf().actions().clear();
+                await setZoomLevel(0);
+                const restored = await ratios();
+                console.warn(`[zoom] restored: dpr ${restored.top} main ${restored.main} sidebar ${restored.sidebar} (baseline ${baseline ?? 'not read'})`);
+                if (baseline !== undefined && [restored.top, restored.main, restored.sidebar].some(value => value !== baseline)) {
+                    throw new Error(`[zoom] not restored: dpr ${restored.top} main ${restored.main} sidebar ${restored.sidebar}, baseline ${baseline}`);
+                }
+            });
+
+            // The title spelled out, as the per-cell loop's (scripts/check-regression-matrix.mjs reads it from the source).
+            it('main-installed-zoom2-800px.dark-high-contrast.800.png', async function () {
+                this.timeout(300_000);
+                const { state, capture } = zoomJobs[0];
+                await leaveWebview();
+                baseline = await script<number>(ratio);
+                // The ruled absolute range holds on the CI runner, whose ratio is 1 before the zoom (design-advisor ruling DO 11).
+                if (process.env.CI === 'true' && baseline !== 1) {
+                    throw new Error(`[zoom] the baseline device pixel ratio is ${baseline} on CI, not 1`);
+                }
+                await applyTheme(capture.theme);
+                await setZoomLevel(state.zoomLevel ?? 0);
+                const zoomed = await ratios();
+                const window = await script<{ width: number; height: number }>('return { width: window.innerWidth, height: window.innerHeight };');
+                console.warn(`[zoom] dpr ${zoomed.top} main ${zoomed.main} sidebar ${zoomed.sidebar} window ${window.width}x${window.height}`);
+                // Chromium's zoom step is 1.2 per level: level 2 multiplies the host's ratio by about 1.44 (1 on the CI runner).
+                const factor = (value: number): number => value / (baseline ?? 1);
+                if ([zoomed.top, zoomed.main, zoomed.sidebar].some(value => factor(value) < 1.43 || factor(value) > 1.45)) {
+                    throw new Error(`[zoom] window.zoomLevel ${state.zoomLevel} did not reach every document: dpr ${zoomed.top} main ${zoomed.main} sidebar ${zoomed.sidebar}`);
+                }
+                await applyWidth(state, capture.width);
+                await freshMainPanel();
+                try {
+                    await REACH[state.name].reach();
+                } catch (error) {
+                    const reason = error instanceof Error ? error.message : String(error);
+                    console.warn(`[capture] ${captureFile(state.name, capture)}: not reachable (${reason})`);
+                    throw new Error(`${state.name} is not reachable: ${reason}`, { cause: error });
+                }
+                await parkMainPointer();
+                const { red, overflowHard } = await measure(state, capture);
+                const facts = await script<CaptureFacts>(CAPTURE_FACTS, 'nuiget-app', state.masks.map(mask => ({ selector: mask.selector })), capture.width);
+                // The document as it stands immediately before the shot, as the per-cell loop reads it (UX-P2.1a).
+                const page = await script<{ width: number; height: number; scrollWidth: number; scrollHeight: number }>(READ_DOCUMENT);
+                console.warn(`[overflow] ${captureFile(state.name, capture)}: document ${page.width}×${page.height}, scroll ${page.scrollWidth}×${page.scrollHeight}`);
+                if (overflowHard && (page.scrollWidth > page.width || page.scrollHeight > page.height)) {
+                    red.push(`[overflow] the document scrolls before the shot: ${page.scrollWidth}×${page.scrollHeight} in ${page.width}×${page.height}`);
+                }
+                await shoot(state, capture);
+                writeSidecar(state, capture, facts);
+                // A reading while pending: the cell's reds are printed, not thrown; the mechanics above throw regardless.
+                if (red.length > 0) {
+                    if (ZOOM_STATUS === 'hard') {
+                        throw new Error(`hard measurement red: ${red.join('; ')}`);
+                    }
+                    console.warn(`[zoom] red: ${red.join('; ')}`);
                 }
             });
         });

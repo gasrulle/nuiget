@@ -288,3 +288,29 @@ export async function setReduceMotion(value: 'on' | 'off'): Promise<void> {
     await driver.switchTo().defaultContent();
     await new EditorView().closeAllEditors().catch(() => undefined);
 }
+
+/**
+ * Writes `window.zoomLevel` through the workbench's Settings editor and reads it back (UX-P4.10, design-advisor ruling of
+ * 2026-11-20, DO 7), in the form of `setReduceMotion`: the one place a suite writes the key, from the capture suite's last nested
+ * describe, which restores it to 0 in its own `afterEach`. Closing the editors closes the nUIget panel too: the caller reopens it.
+ */
+export async function setZoomLevel(level: number): Promise<void> {
+    const driver = driverOf();
+    await driver.switchTo().defaultContent();
+    // The palette leaves Ctrl/Cmd+Shift held (UX-P3.fix-11): released before and after it.
+    await driver.actions().clear();
+    const settings = await new Workbench().openSettings();
+    const setting = await settings.findSettingByID('window.zoomLevel');
+    if (setting === undefined) {
+        throw new Error('[zoom] window.zoomLevel not found in the Settings editor');
+    }
+    await setting.setValue(String(level));
+    try {
+        await poll(async () => (Number(await setting.getValue()) === level ? true : undefined), `window.zoomLevel reading ${level}`, 30_000);
+    } catch {
+        throw new Error(`[zoom] window.zoomLevel not set to ${level}`);
+    }
+    await driver.actions().clear();
+    await driver.switchTo().defaultContent();
+    await new EditorView().closeAllEditors().catch(() => undefined);
+}
