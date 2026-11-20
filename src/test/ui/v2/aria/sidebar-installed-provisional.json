@@ -1,0 +1,28 @@
+{
+  "state": "sidebar-installed-provisional",
+  "lines": [
+    "main \"\" {nuiget-sidebar}",
+    "  search \"\"",
+    "    combobox \"Search packages, or filter with @installed or @updates\" [collapsed] {sidebar-search-input}",
+    "    button \"Clear Search\"",
+    "    button \"Filters\"",
+    "  heading \"Installed #\"",
+    "    button \"Installed #\" [expanded] {section-header-installed}",
+    "  progressbar \"Loading installed packages\" {sidebar-installed-progress}",
+    "  listbox \"Installed\" [busy] {sidebar-installed-list}",
+    "    option \"CsvHelper #\"",
+    "    option \"Dapper #\"",
+    "    option \"Humanizer.Core #\"",
+    "    option \"Microsoft.Extensions.Configuration.CommandLine #\"",
+    "    option \"Microsoft.Extensions.Configuration.UserSecrets #\"",
+    "    option \"Microsoft.Extensions.Hosting #\"",
+    "    option \"Microsoft.Extensions.Hosting.Abstractions #\"",
+    "    option \"Newtonsoft.Json #\"",
+    "    option \"NodaTime #\"",
+    "    option \"Serilog #\"",
+    "    option \"Spectre.Console #\"",
+    "    option \"System.CommandLine #-beta#\"",
+    "    option \"YamlDotNet #\"",
+    "  status \"\" {status-live}"
+  ]
+}

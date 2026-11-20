@@ -453,8 +453,8 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(feedbackLines('s', json, { info: ['nUIget: Updated NewtonsoftXJson to 13.0.3 in App.'], all: [] }, [], 'x').failures).toEqual([]);
     });
 
-    it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar\'s Installed and Updates panes hard since P4.fix-9, its Browse printed (a11y-first-load-announced, UX-P4.6, UX-P4.fix-9)', () => {
-        expect(Object.entries(LIVE_EXPECTED).filter(([, cell]) => cell.status === 'hard').map(([state]) => state)).toEqual(['main-installed-loading', 'main-updates-loading', 'main-details-loading', 'main-readme-loading', 'sidebar-installed-loading', 'sidebar-updates-loading']);
+    it('reads a held loading cell\'s live region: the four main first loads hard, Browse pending P5.9, the sidebar\'s Installed and Updates panes hard since P4.fix-9, the two first provisional lists hard since UX-P4.fix-23, its Browse printed (a11y-first-load-announced, UX-P4.6, UX-P4.fix-9, UX-P4.fix-23)', () => {
+        expect(Object.entries(LIVE_EXPECTED).filter(([, cell]) => cell.status === 'hard').map(([state]) => state)).toEqual(['main-installed-loading', 'main-updates-loading', 'main-details-loading', 'main-readme-loading', 'sidebar-installed-loading', 'sidebar-updates-loading', 'main-installed-provisional', 'sidebar-installed-provisional']);
         expect(liveLines('main-installed-loading', 'Loading installed packages')).toEqual({ lines: ['[live] main-installed-loading: "Loading installed packages" (hard)'], failures: [] });
         expect(liveLines('main-updates-loading', 'Refreshed')).toEqual({ lines: ['[live] main-updates-loading: "Refreshed" (hard)'], failures: ['[live] main-updates-loading: "Refreshed", expected "Loading updates"'] });
         expect(liveLines('main-details-loading', null).failures).toEqual(['[live] main-details-loading: no live region, expected "Loading details"']);

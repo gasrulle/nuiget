@@ -862,9 +862,9 @@ export const LIVE_EXPECTED: Readonly<Record<string, { text: string; status: Rule
     'sidebar-updates-loading': { text: 'Loading updates', status: 'hard' },
     'sidebar-browse-loading': { text: 'Searching', status: 'printed' },
     // UX-P4.fix-23 (design-advisor ruling DO 8): a first provisional list says the first load once, at its start; read on the
-    // proving push, flipped in the closing commit.
-    'main-installed-provisional': { text: 'Loading installed packages', status: { pending: 'P4.fix-23' } },
-    'sidebar-installed-provisional': { text: 'Loading installed packages', status: { pending: 'P4.fix-23' } },
+    // proving push (run 44721186954) and asserted since its closing commit.
+    'main-installed-provisional': { text: 'Loading installed packages', status: 'hard' },
+    'sidebar-installed-provisional': { text: 'Loading installed packages', status: 'hard' },
 };
 
 /** Runs in the webview: the text of the surface's one live region, `null` when it has none. */
