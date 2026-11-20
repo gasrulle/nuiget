@@ -3,7 +3,8 @@
  * service knows the id, the icon as a `data:` URI from the icon resolver (which asks the policy itself), and the known
  * vulnerabilities from every source's data. A package whose vulnerability data could not be read completely keeps
  * `vulnerabilities` absent (unknown), never `[]` (none). Each package is enriched on its own; one failure leaves that entry
- * bare and the others intact.
+ * bare and the others intact. The vulnerability leg is bounded once per call (X33, UX-P4.9): past the deadline a package keeps
+ * its icon and authors with `vulnerabilities` absent, and the shared data set keeps loading for the next ask.
  */
 
 import type { Logger } from '../contracts';
@@ -22,14 +23,23 @@ import { consoleFallbackLogger, mapWithConcurrency } from './wire';
 
 export const ENRICH_CONCURRENCY = 8;
 
+/** How long one `enrich` call waits for vulnerability data before it answers without it (X33, UX-P4.9; a product budget). */
+export const VULNERABILITY_WAIT_MS = 5_000;
+
+/** What a vulnerability read resolves to once the call's deadline passed. */
+const EXPIRED = Symbol('expired');
+
 export interface MetadataEnricherOptions {
     concurrency?: number;
+    /** The one deadline of a call for the vulnerability leg; icons and authors are never bounded by it. */
+    vulnerabilityWaitMs?: number;
 }
 
 export class DefaultMetadataEnricher implements MetadataEnricher {
     private readonly deps: Pick<FeedsDeps, 'policy'>;
     private readonly logger: Logger;
     private readonly concurrency: number;
+    private readonly vulnerabilityWaitMs: number;
 
     constructor(
         deps: Pick<FeedsDeps, 'policy' | 'logger'>,
@@ -41,9 +51,18 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
         this.deps = deps;
         this.logger = deps.logger ?? consoleFallbackLogger;
         this.concurrency = options.concurrency ?? ENRICH_CONCURRENCY;
+        this.vulnerabilityWaitMs = options.vulnerabilityWaitMs ?? VULNERABILITY_WAIT_MS;
     }
 
     enrich(sources: ResolvedSource[], packages: Array<{ id: string; version: string }>, signal?: AbortSignal): Promise<PackageMetadataLite[]> {
+        // One deadline for the whole call: a timer per package would add up to rounds × the bound under the concurrency limit.
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const deadline = new Promise<typeof EXPIRED>(resolve => {
+            timer = setTimeout(() => resolve(EXPIRED), this.vulnerabilityWaitMs);
+        });
+        // The bound is for a read still downloading: past the deadline each read gets one macrotask, so a read the loaded data
+        // set answers (within microtasks) still wins, and a package reached after the deadline keeps its vulnerabilities.
+        const expired = (): Promise<typeof EXPIRED> => deadline.then(() => new Promise<typeof EXPIRED>(resolve => setTimeout(() => resolve(EXPIRED), 0)));
         return mapWithConcurrency(packages, this.concurrency, async ({ id, version }): Promise<PackageMetadataLite> => {
             const lite: PackageMetadataLite = { id, version };
             // A cancelled request asks no feed for the packages it has not reached; they stay bare.
@@ -51,10 +70,13 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
                 return lite;
             }
             try {
+                const reading = this.vulnerabilities.forPackage(sources, id, version, signal);
+                // A read the deadline left behind may still reject: it is no longer anyone's to report.
+                reading.catch(() => undefined);
                 const [found, iconUrl, known] = await Promise.all([
                     this.lookup(sources, id, signal),
                     this.icons.icon(sources, id, version, signal),
-                    this.vulnerabilities.forPackage(sources, id, version, signal),
+                    Promise.race([reading, expired()]),
                 ]);
                 if (found?.verified !== undefined) {
                     lite.verified = found.verified;
@@ -68,7 +90,8 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
                 if (iconUrl !== undefined) {
                     lite.iconUrl = iconUrl;
                 }
-                if (!known.sourcesUnavailable) {
+                // Past the deadline the data is unknown: absent, never `[]` ("Empty is not unknown").
+                if (known !== EXPIRED && !known.sourcesUnavailable) {
                     lite.vulnerabilities = known.vulnerabilities;
                 }
             } catch (error) {
@@ -78,7 +101,7 @@ export class DefaultMetadataEnricher implements MetadataEnricher {
                 this.logger.warn(`[Enrich] ${id}@${version} failed: ${redact(error instanceof Error ? error.message : String(error))}`);
             }
             return lite;
-        });
+        }).finally(() => clearTimeout(timer));
     }
 
     /** The first allowed source, in source order, whose search service knows the id. */

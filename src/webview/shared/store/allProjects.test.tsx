@@ -62,6 +62,19 @@ describe('allProjects slice', () => {
         expect(current.metadata.get(B)?.get('moq')?.description).toBe('Mocking');
     });
 
+    it('two metadata chunks of one project merge: the provisional rows\' first, the rows the evaluation added after it (X43, UX-P4.9)', async () => {
+        const host = await mount(ALL_PROJECTS);
+        const request = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(request, { kind: 'start', projects: [{ name: 'A', path: A }] }));
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: chunkOf(A, ['Serilog']) }));
+        await hostSays(() => host.chunk(request, { kind: 'metadata', projectPath: A, packages: [{ id: 'Serilog', version: '3.0.0', authors: 'Serilog Contributors' }] }));
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: chunkOf(A, ['Serilog', 'Implicit.Sdk']) }));
+        await hostSays(() => host.chunk(request, { kind: 'metadata', projectPath: A, packages: [{ id: 'Implicit.Sdk', version: '8.0.0', authors: 'Microsoft' }] }));
+        await hostSays(() => host.respond(request, { projectPaths: [A], errored: [] }));
+        expect(current.metadata.get(A)?.get('serilog')?.authors).toBe('Serilog Contributors');
+        expect(current.metadata.get(A)?.get('implicit.sdk')?.authors).toBe('Microsoft');
+    });
+
     it('asks again when an invalidation names projects or any installed key, and keeps the chunks meanwhile', async () => {
         const host = await mount(ALL_PROJECTS);
         await list(host, 0, ['Serilog'], ['Moq']);

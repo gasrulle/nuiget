@@ -162,6 +162,26 @@ What each chain measures:
   `[P5.6] cold search` row above. **`search again`**: the same text again after Escape. Both read nuget.org live and vary
   with it.
 
+### UX-P4.9: the in-page timings before and after (architecture-advisor ruling of 2026-11-20)
+
+UX-P4.9 (X43: All Projects asks the lite metadata of the provisional rows first; X33 reduced: the lite enricher bounds its
+vulnerability leg once per call) is judged on four lines of the `project chosen` and `refresh` chains: `refresh → list
+settled`, `project chosen → first row`, `project chosen → authoritative list` and `project chosen → icons`. The `≤`
+panel-open lines, the `select` lines and the search lines are pasted, not judged. Before: the three latest green push runs
+on `labs/ux` before the item's first push; after: three green runs that contain the item's code. A line passes when its
+after-median is at most 1.5 × its before-median (the dotnet rows' rule above); one run is never judged. Each run's `UI` job
+ran on GitHub-hosted `ubuntu-latest`, image version as listed. Times in ms.
+
+| Metric | 44713612548 | 44721186954 | 44725528260 | Before median |
+|---|---|---|---|---|
+| refresh → list settled | 210 | 153 | 158 | 158 |
+| project chosen → first row | 255 | 166 | 216 | 216 |
+| project chosen → authoritative list | 261 | 171 | 222 | 222 |
+| project chosen → icons | 386 | 602 | 310 | 386 |
+| Runner image | 20261103.629 | 20261103.629 | 20261103.629 | |
+
+After: recorded by the item's closing commit (`docs/plans/handoff/P4.9.md`).
+
 ## Definitions
 
 - **Cold restore**: the first `dotnet restore` into empty folders for `NUGET_PACKAGES` and `NUGET_HTTP_CACHE_PATH`.

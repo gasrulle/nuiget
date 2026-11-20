@@ -189,7 +189,10 @@ Everything the 2.0 core asks of a package feed goes through four layers ([ADR-00
   or `dotnet package search --format json` in the read's directory for local feeds and feeds without one; the JSON is
   read after any `info :`/`warn :` lines), registration, vulnerabilities, icons, README and README images, nuspec and
   offline metadata, the update checker (every allowed source awaited, the newest version wins), the enricher and the
-  metadata resolver (registration → nuspec → search per allowed source, then the global-packages folder).
+  metadata resolver (registration → nuspec → search per allowed source, then the global-packages folder). The lite
+  enricher bounds its vulnerability leg once per `enrich` call (`VULNERABILITY_WAIT_MS`, 5 s; X33, UX-P4.9): past the
+  deadline a package keeps its icon and authors with `vulnerabilities` absent, never `[]`, nothing is cached for the
+  bound, and the shared data set keeps loading for the next ask; `package/metadata` (the details pane) is not bounded.
 
 **Empty is not unknown.** A source that could not answer is reported, never read as "no result": `search` and
 `updates` carry `sourcesUnavailable` (also when a selected source is excluded as unhealthy; a project whose authoritative installed
@@ -530,7 +533,11 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
   `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any
   `installed:` key, keeps what it shows until the new answer, and applies the chunks and the answer of its
-  latest request only. Its `transitive` part asks `transitive/metadata` once for the unique packages of the aggregate
+  latest request only. The host sends a project's lite metadata in two phases (X43, UX-P4.9): a `metadata` chunk for
+  the provisional rows starts with them and is never awaited before the authoritative `project` chunk, and a second
+  one carries only the rows the evaluation added or re-versioned (every row when the first enrichment failed); every
+  chunk precedes the answer, and the reducer merges both by lower-cased id.
+  Its `transitive` part asks `transitive/metadata` once for the unique packages of the aggregate
   after each answer of `allProjects/transitive` (P9.5) and exposes it while it belongs to that answer.
   Leaving All Projects resets it and cancels the stream, so a chunk that arrives late for it is
   never shown (harness gate `late allProjects chunk after switching is discarded`, P5.9). Since P5.9 it also streams

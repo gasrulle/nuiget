@@ -26,10 +26,12 @@ The benchmarks of 2.0 sit next to the module they measure, as `<module>.bench.ts
 - `src/core/ops/ops.bench.ts` — what the operation queue adds to a workflow
 - `src/core/queries/queries.bench.ts` — which resource keys an invalidation scope reaches, and merging scopes
 - `src/core/http/transport.bench.ts` — `NodeTransport` over HTTP/1.1 from a local server, plain and gzip
-- `src/core/catalog/catalog.bench.ts` — `Catalog.updates`, `versions`, `search`, `metadata`, `quickSearch` and
-  `allProjectsTransitive` through the real feed clients over a fake transport, nuspec parsing and relevance ranking
+- `src/core/catalog/catalog.bench.ts` — `Catalog.updates`, `versions`, `search`, `metadata`, `quickSearch`,
+  `allProjectsTransitive` and `allProjectsInstalled` (provisional then evaluated, enriched, UX-P4.9) through the real feed
+  clients over a fake transport, nuspec parsing and relevance ranking
 - `src/core/project/project.bench.ts` — static inspection of the fixture projects, the assets file, project references
 - `src/core/feeds/health.bench.ts` — the source health tracker
+- `src/core/feeds/enricher.bench.ts` — the lite enricher over fifty packages with the vulnerability data loaded (UX-P4.9)
 - `src/core/cli/validate.bench.ts` — the argument validators of the dotnet runner
 - `src/core/util/topo.bench.ts` — dependency ordering of multi-project operations
 - `src/webview/shared/primitives/Listbox.bench.ts` — mounting a virtualized list of 1 000 rows (jsdom)

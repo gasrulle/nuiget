@@ -136,3 +136,106 @@ describe('DefaultMetadataEnricher', () => {
         expect(logger.warn).not.toHaveBeenCalled();
     });
 });
+
+describe('DefaultMetadataEnricher: the vulnerability leg is bounded once per call (X33, UX-P4.9)', () => {
+    const never = (): VulnerabilityClient & { forPackage: ReturnType<typeof vi.fn> } => ({ forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>(() => undefined)), clear: vi.fn() });
+
+    it('a vulnerability read that never settles gives icons and authors at the bound, with vulnerabilities absent', async () => {
+        vi.useFakeTimers();
+        try {
+            const lookup = search({ 'a/Lib': { id: 'Lib', version: '1.0.0', authors: 'Ada' } });
+            const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, lookup, icons({ Lib: 'data:image/png;base64,AAAA' }), never(), { vulnerabilityWaitMs: 5_000 });
+            let entries: PackageMetadataLite[] | undefined;
+            const done = subject.enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]).then(result => { entries = result; });
+            await vi.advanceTimersByTimeAsync(4_999);
+            expect(entries).toBeUndefined();
+            // The bound, then the one macrotask a read gets past it.
+            await vi.advanceTimersByTimeAsync(2);
+            await done;
+            expect(entries).toEqual([{ id: 'Lib', version: '1.0.0', authors: 'Ada', iconUrl: 'data:image/png;base64,AAAA' }]);
+            expect(entries?.[0]).not.toHaveProperty('vulnerabilities');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('a fast vulnerability read is unchanged and the call leaves no timer behind', async () => {
+        vi.useFakeTimers();
+        try {
+            const entries = await enricher(search({}), icons(), vulnerabilities({ Lib: { vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://example.test/a' }], sourcesUnavailable: false } })).enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+            expect(entries).toEqual([{ id: 'Lib', version: '1.0.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://example.test/a' }] }]);
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('one deadline covers many packages, whatever the concurrency', async () => {
+        vi.useFakeTimers();
+        try {
+            const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, search({}), icons(), never(), { concurrency: 2, vulnerabilityWaitMs: 5_000 });
+            let entries: PackageMetadataLite[] | undefined;
+            const done = subject.enrich([source('a')], ['A', 'B', 'C', 'D', 'E', 'F'].map(id => ({ id, version: '1.0.0' }))).then(result => { entries = result; });
+            // Three rounds of two under one bound: every entry is answered at 5 s (plus one macrotask per round), not at 15 s.
+            await vi.advanceTimersByTimeAsync(5_010);
+            await done;
+            expect(entries?.map(entry => entry.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+            expect(entries?.every(entry => !('vulnerabilities' in entry))).toBe(true);
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('a package reached after the bound keeps the vulnerabilities the loaded data set answers at once', async () => {
+        vi.useFakeTimers();
+        try {
+            const slow = {
+                lookup: vi.fn((_src: ResolvedSource, id: string) => new Promise<PackageMetadataLite | undefined>(resolve => {
+                    // The first package's lookup alone outlasts the bound, so the second is reached after it.
+                    setTimeout(() => resolve({ id, version: '1.0.0', authors: 'Ada' }), id === 'First' ? 6_000 : 0);
+                })),
+            };
+            // Answered from data already loaded, through the awaits the real client takes (an async read over a resolved load).
+            const advisory = { severity: 'High' as const, advisoryUrl: 'https://example.test/second' };
+            const known: VulnerabilityClient = {
+                forPackage: vi.fn(async (_sources: ResolvedSource[], id: string) => {
+                    const [loaded] = await Promise.all([Promise.resolve(id === 'Second' ? [advisory] : [])]);
+                    return { vulnerabilities: loaded, sourcesUnavailable: false };
+                }),
+                clear: vi.fn(),
+            };
+            const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, slow, icons(), known, { concurrency: 1, vulnerabilityWaitMs: 5_000 });
+            const done = subject.enrich([source('a')], [{ id: 'First', version: '1.0.0' }, { id: 'Second', version: '1.0.0' }]);
+            await vi.advanceTimersByTimeAsync(7_000);
+            const [first, second] = await done;
+            expect(first.vulnerabilities).toEqual([]);
+            expect(second.vulnerabilities).toEqual([advisory]);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('a read that rejects after the bound is not an unhandled rejection', async () => {
+        vi.useFakeTimers();
+        const unhandled: unknown[] = [];
+        const record = (reason: unknown): void => { unhandled.push(reason); };
+        process.on('unhandledRejection', record);
+        try {
+            let fail!: (error: Error) => void;
+            const late: VulnerabilityClient = { forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>((_resolve, reject) => { fail = reject; })), clear: vi.fn() };
+            const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, search({}), icons(), late, { vulnerabilityWaitMs: 5_000 });
+            const done = subject.enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+            await vi.advanceTimersByTimeAsync(5_001);
+            expect(await done).toEqual([{ id: 'Lib', version: '1.0.0' }]);
+            fail(new Error('the data set could not be read'));
+            // Real timers for the flush: Node reports an unhandled rejection after the microtask queue drains.
+            vi.useRealTimers();
+            await new Promise(resolve => setTimeout(resolve, 10));
+            expect(unhandled).toEqual([]);
+        } finally {
+            process.off('unhandledRejection', record);
+            vi.useRealTimers();
+        }
+    });
+});

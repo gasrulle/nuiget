@@ -2,14 +2,15 @@
  * Benchmarks for the 2.0 feed reads (`src/core/catalog` over `src/core/feeds`): `Catalog.updates`, `Catalog.versions`
  * and `Catalog.search`, each through the real feed clients, the real service index and a `FakeTransport` that answers
  * at once, so the numbers are the cost of the core itself, not of a network. Each iteration recomputes: the resource is
- * invalidated first. Plus two pure paths the reads take for every row: nuspec parsing and relevance ranking.
+ * invalidated first. Plus two pure paths the reads take for every row: nuspec parsing and relevance ranking, and the All Projects
+ * installed fan-out with an evaluation, whose lite metadata comes in two phases (UX-P4.9, X43).
  */
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { describe, test, vi } from 'vitest';
 import * as cacheModule from '../cache';
 import * as catalogModule from '../catalog';
-import type { DotnetRunner, SourceProvider } from '../contracts';
+import type { DotnetRunner, ProjectEvaluator, SourceProvider } from '../contracts';
 import * as feedsModule from '../feeds';
 import { FakeTransport, json, ok } from '../feeds/testSupport';
 import * as queriesModule from '../queries';
@@ -65,7 +66,13 @@ function handler(request: { url: string }) {
     return json({});
 }
 
-function benchCatalog() {
+/** An evaluation that answers at once with the provisional rows plus one implicit reference, as authoritative (UX-P4.9). */
+const evaluator: ProjectEvaluator = {
+    evaluate: async context => ({ ...installed, projectPath: context.projectPath, fidelity: 'authoritative', packages: [...installed.packages, { id: 'Bench.Implicit', version: '8.0.0', versionType: 'standard', declaration: 'project', isImplicit: true }] }),
+    cachedFidelity: () => undefined,
+};
+
+function benchCatalog(withEvaluator = false) {
     const transport = new FakeTransport(handler);
     const runner = { run: vi.fn(), sdkVersion: vi.fn(), clearSdkCache: vi.fn() } as unknown as DotnetRunner;
     const credentials = { getAuthHeader: async () => undefined, prewarm: () => undefined, clear: () => undefined };
@@ -87,6 +94,7 @@ function benchCatalog() {
         discoverProjects: async () => projects,
         feeds: feedClients,
         feedContexts,
+        ...(withEvaluator ? { evaluator } : {}),
     });
     return catalog;
 }
@@ -133,6 +141,18 @@ describe('core feeds — Catalog reads over a fake transport', () => {
         await runBenchmark(context, `Catalog.allProjectsTransitive (${projects.length} projects)`, async () => {
             catalog.invalidate({ kind: 'project', projectPaths: projects.map(item => item.path) }, 'manual-refresh');
             await catalog.allProjectsTransitive(() => undefined, signal);
+        });
+    });
+});
+
+describe('core feeds — the All Projects installed fan-out (UX-P4.9)', () => {
+    const catalog = benchCatalog(true);
+    const signal = new AbortController().signal;
+
+    test(`Catalog.allProjectsInstalled (${projects.length} projects, provisional then evaluated, enriched)`, async (context) => {
+        await runBenchmark(context, `Catalog.allProjectsInstalled (${projects.length} projects, provisional then evaluated, enriched)`, async () => {
+            catalog.invalidate({ kind: 'project', projectPaths: projects.map(item => item.path) }, 'manual-refresh');
+            await catalog.allProjectsInstalled(() => undefined, signal);
         });
     });
 });

@@ -87,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **In a narrow editor the package details give way to the list**
 - **The Installed tab keeps its progress bar until the package list is complete**
 - **Updating or uninstalling across several projects says how many projects were changed**
+- **Icons and authors under All Projects appear before the list is verified**
 
 ### Fixed
 - **Keyboard focus is no longer lost when the panel narrows and hides the package details**
@@ -115,6 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update rows no longer jump while the update check is still running**
 - **The first-render timing is logged when All Projects is selected**
 - **A package can no longer be acted on twice while its list refreshes after an install, update or uninstall**
+- **A slow vulnerability feed no longer holds back package icons**
 
 ## [2.0.0] - 2026-10-17
 

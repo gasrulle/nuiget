@@ -34,6 +34,8 @@ const authoritativeOf = (projectPath: string): InstalledResult => ({
         { id: 'Implicit.Sdk', version: '8.0.0', versionType: 'standard', declaration: 'project', isImplicit: true },
     ],
 });
+/** A fan-out chunk by what it says: a project chunk by its result's fidelity, the others by their kind. */
+const kindOf = (chunk: RequestChunk<'allProjects/installed'>): string | undefined => chunk.kind === 'project' ? chunk.chunk.result?.fidelity : chunk.kind;
 const contextOf = (projectPath: string): ProjectExecutionContext => ({ projectPath, projectDir: path.dirname(projectPath), configFiles: [], sourceUrls: [], revision: 'abcdef0123456789' });
 
 function deferred<T>() {
@@ -511,11 +513,70 @@ describe('Catalog all-projects fan-outs', () => {
         expect(result).toEqual({ projectPaths: [appPath, libPath], errored: [{ projectPath: libPath, error: 'EACCES, token=[REDACTED]' }] });
     });
 
+    // UX-P4.9 (X43): rewritten in place; the evaluation is released by the test, so the order is controlled, not raced.
     it('allProjectsInstalled sends a second chunk when an evaluation delivers the authoritative result', async () => {
         const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
-        const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(async context => authoritativeOf(context.projectPath)) });
-        await new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
-        expect(chunks.map(chunk => chunk.kind === 'project' ? chunk.chunk.result?.fidelity : chunk.kind)).toEqual(['start', 'provisional', 'authoritative', 'metadata']);
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(() => evaluation.promise) });
+        const done = new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+        // The provisional rows' lite metadata arrives while the evaluation still runs.
+        await vi.waitFor(() => expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata']));
+        evaluation.resolve(authoritativeOf(appPath));
+        await done;
+        expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata', 'authoritative', 'metadata']);
+    });
+
+    it('allProjectsInstalled: a second metadata chunk carries only the rows the evaluation added or re-versioned (X43, UX-P4.9)', async () => {
+        const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(() => evaluation.promise) });
+        const done = new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+        await vi.waitFor(() => expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata']));
+        evaluation.resolve(authoritativeOf(appPath));
+        await done;
+        const rows = chunks.flatMap(chunk => chunk.kind === 'metadata' ? [chunk.packages.map(entry => `${entry.id}@${entry.version}`)] : []);
+        // newtonsoft.json@13.0.3 was asked with the provisional rows (any case); only the implicit SDK reference is new.
+        expect(rows).toEqual([['Newtonsoft.Json@13.0.3', 'StyleCop.Analyzers@1.2.0'], ['Implicit.Sdk@8.0.0']]);
+        expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata', 'authoritative', 'metadata']);
+    });
+
+    it('allProjectsInstalled: a row the evaluation re-versions is asked again at its new version (X43, UX-P4.9)', async () => {
+        const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(() => evaluation.promise) });
+        const done = new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+        await vi.waitFor(() => expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata']));
+        const provisional = provisionalOf(appPath);
+        evaluation.resolve({ ...provisional, fidelity: 'authoritative', packages: provisional.packages.map(pkg => pkg.id === 'Newtonsoft.Json' ? { ...pkg, version: '13.0.4', resolvedVersion: '13.0.4' } : pkg) });
+        await done;
+        const rows = chunks.flatMap(chunk => chunk.kind === 'metadata' ? [chunk.packages.map(entry => `${entry.id}@${entry.version}`)] : []);
+        expect(rows).toEqual([['Newtonsoft.Json@13.0.3', 'StyleCop.Analyzers@1.2.0'], ['Newtonsoft.Json@13.0.4']]);
+    });
+
+    it('allProjectsInstalled: an evaluation with the rows already asked sends no second metadata chunk (X43, UX-P4.9)', async () => {
+        const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ discoverProjects: async () => [app], evaluator: fakeEvaluator(() => evaluation.promise) });
+        const done = new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+        await vi.waitFor(() => expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata']));
+        evaluation.resolve({ ...provisionalOf(appPath), fidelity: 'authoritative' });
+        await done;
+        expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'metadata', 'authoritative']);
+    });
+
+    it('allProjectsInstalled: when the first enrichment fails, every row of the authoritative list is asked after it (X43, UX-P4.9)', async () => {
+        const rig = feedRig();
+        rig.clients.enricher.enrich.mockRejectedValueOnce(new Error('the feed did not answer'));
+        const chunks: Array<RequestChunk<'allProjects/installed'>> = [];
+        const evaluation = deferred<InstalledResult>();
+        const deps = makeDeps({ feeds: rig.feeds, feedContexts: rig.feedContexts, discoverProjects: async () => [app], evaluator: fakeEvaluator(() => evaluation.promise), logger: fakeLogger() });
+        const done = new Catalog(deps).allProjectsInstalled(chunk => { chunks.push(chunk); }, new AbortController().signal);
+        await vi.waitFor(() => expect(rig.clients.enricher.enrich).toHaveBeenCalledTimes(1));
+        evaluation.resolve(authoritativeOf(appPath));
+        await done;
+        const rows = chunks.flatMap(chunk => chunk.kind === 'metadata' ? [chunk.packages.map(entry => `${entry.id}@${entry.version}`)] : []);
+        expect(rows).toEqual([['newtonsoft.json@13.0.3', 'Implicit.Sdk@8.0.0']]);
+        expect(chunks.map(kindOf)).toEqual(['start', 'provisional', 'authoritative', 'metadata']);
     });
 
     it('allProjectsTransitive streams protocol chunks and lists the projects that failed', async () => {

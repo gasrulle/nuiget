@@ -93,6 +93,9 @@ export interface SearchQueryResult {
     sourcesUnavailable?: boolean;
 }
 
+/** A row of a lite-metadata ask: the id in lower case and the version asked. */
+const rowKey = (id: string, version: string): string => `${id.toLowerCase()}@${version}`;
+
 /**
  * A feed-dependent computation that ends with an incomplete answer (`sourcesUnavailable`, offline or no metadata) throws
  * this carrier, so the coordinator stores nothing (it caches successes only); `queryWithRetry` is the one place that
@@ -322,13 +325,29 @@ export class Catalog {
                 if (!signal.aborted) {
                     emit({ kind: 'project', chunk: { ...origin, result } });
                 }
-                const authoritative = await upgrade;
-                // An evaluation that failed resolves with the provisional result again; nothing new to say then.
-                if (authoritative !== undefined && authoritative !== result && !signal.aborted) {
-                    emit({ kind: 'project', chunk: { ...origin, result: authoritative } });
+                if (upgrade === undefined) {
+                    if (!signal.aborted) {
+                        await this.emitInstalledMetadata(project.path, result, emit, signal);
+                    }
+                    return;
+                }
+                // X43 (UX-P4.9): the provisional rows' lite metadata starts with them and is never awaited before the
+                // authoritative chunk (ADR-009 d.1); the rows the evaluation adds or re-versions follow in a second chunk.
+                const first = signal.aborted ? Promise.resolve(undefined) : this.emitInstalledMetadata(project.path, result, emit, signal);
+                let authoritative: InstalledResult | undefined;
+                let delivered: ReadonlySet<string> | undefined;
+                try {
+                    authoritative = await upgrade;
+                    // An evaluation that failed resolves with the provisional result again; nothing new to say then.
+                    if (authoritative !== undefined && authoritative !== result && !signal.aborted) {
+                        emit({ kind: 'project', chunk: { ...origin, result: authoritative } });
+                    }
+                } finally {
+                    // Every chunk precedes the answer: the first enrichment is awaited whatever the evaluation did.
+                    delivered = await first;
                 }
                 if (!signal.aborted) {
-                    await this.emitInstalledMetadata(project.path, authoritative ?? result, emit, signal);
+                    await this.emitInstalledMetadata(project.path, authoritative ?? result, emit, signal, delivered);
                 }
             } catch (error) {
                 const message = redact(describe(error));
@@ -341,14 +360,18 @@ export class Catalog {
         return { projectPaths: projects.map(project => project.path), errored };
     }
 
-    /** Lite metadata of a project's rows as a `metadata` chunk; a failed enrichment is logged, the list is already shown. */
-    private async emitInstalledMetadata(projectPath: string, result: InstalledResult, emit: (chunk: RequestChunk<'allProjects/installed'>) => void, signal: AbortSignal): Promise<void> {
+    /**
+     * Lite metadata of a project's rows as a `metadata` chunk, leaving out the rows of `skip` (`id@version`, the id in lower
+     * case); answers the rows it delivered, or `undefined` when the enrichment failed, which is logged: the list is already
+     * shown.
+     */
+    private async emitInstalledMetadata(projectPath: string, result: InstalledResult, emit: (chunk: RequestChunk<'allProjects/installed'>) => void, signal: AbortSignal, skip?: ReadonlySet<string>): Promise<ReadonlySet<string> | undefined> {
         const rows = result.packages.flatMap(pkg => {
             const version = pkg.resolvedVersion ?? pkg.version;
-            return parseVersion(version) ? [{ id: pkg.id, version }] : [];
+            return parseVersion(version) && !skip?.has(rowKey(pkg.id, version)) ? [{ id: pkg.id, version }] : [];
         });
         if (rows.length === 0) {
-            return;
+            return new Set();
         }
         try {
             const context = await this.deps.feedContexts.forProject(projectPath);
@@ -357,8 +380,10 @@ export class Catalog {
             if (!signal.aborted) {
                 emit({ kind: 'metadata', projectPath, packages });
             }
+            return new Set(rows.map(row => rowKey(row.id, row.version)));
         } catch (error) {
             this.deps.logger?.warn(redact(`Lite metadata of ${projectPath} could not be read: ${describe(error)}`));
+            return undefined;
         }
     }
 
