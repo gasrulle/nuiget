@@ -59,13 +59,17 @@ describe('theme contrast (UX-P0.25)', () => {
         expect(contrastPairLine({ ...scoped, exempt: { reason: 'parity' } }, 'dark-high-contrast', 'modern', null, 'hard', []).failure).toBeUndefined();
     });
 
-    it('resolves a pair through a forced-colours block: a listed pairing, one outside the list, a transparent background over its surface, an equal pair, a missing token (UX-P4.10)', () => {
-        const forced = new Map([['--nuiget-color-fg', 'CanvasText'], ['--nuiget-color-bg', 'Canvas'], ['--nuiget-color-hover', 'transparent'], ['--nuiget-color-field', 'Field'], ['--nuiget-color-focus', 'Highlight'], ['--nuiget-color-active', 'Highlight']]);
+    it('resolves a pair through a forced-colours block: a listed pairing, one outside the list, a transparent background over its surface, an equal pair, a missing token, GrayText and a ButtonBorder border (UX-P4.10)', () => {
+        const forced = new Map([['--nuiget-color-fg', 'CanvasText'], ['--nuiget-color-bg', 'Canvas'], ['--nuiget-color-hover', 'transparent'], ['--nuiget-color-field', 'Field'], ['--nuiget-color-focus', 'Highlight'], ['--nuiget-color-active', 'Highlight'], ['--nuiget-color-muted', 'GrayText'], ['--nuiget-color-mark', 'Mark'], ['--nuiget-color-border', 'ButtonBorder']]);
         expect(forcedPairLine({ fg: 'fg', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/bg (text): CanvasText on Canvas (hard)', legal: true });
-        expect(forcedPairLine({ fg: 'fg', bg: 'field', kind: 'text' }, forced)).toEqual({ line: '[forced] fg/field (text): CanvasText on Field (not a listed pairing) (pending P4.10)', legal: false });
+        expect(forcedPairLine({ fg: 'fg', bg: 'field', kind: 'text' }, forced, { pending: 'P4.fix-24' })).toEqual({ line: '[forced] fg/field (text): CanvasText on Field (not a listed pairing) (pending P4.fix-24)', legal: false });
         expect(forcedPairLine({ fg: 'fg', bg: 'hover', over: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/hover over bg (text): CanvasText on Canvas (hard)', legal: true });
         expect(forcedPairLine({ fg: 'focus', bg: 'active', kind: 'non-text' }, forced, 'hard')).toEqual({ line: '[forced] focus/active (non-text): Highlight on Highlight (not a listed pairing) (hard)', legal: false });
         expect(forcedPairLine({ fg: 'link', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] link/bg (text): none on Canvas (not a listed pairing) (hard)', legal: false });
+        // GrayText reads over any listed background; ButtonBorder is a border pairing, so it is legal on a non-text pair only.
+        expect(forcedPairLine({ fg: 'muted', bg: 'mark', kind: 'text' }, forced, 'hard').legal).toBe(true);
+        expect(forcedPairLine({ fg: 'border', bg: 'field', kind: 'non-text' }, forced, 'hard')).toEqual({ line: '[forced] border/field (non-text): ButtonBorder on Field (hard)', legal: true });
+        expect(forcedPairLine({ fg: 'border', bg: 'bg', kind: 'text' }, forced, 'hard').legal).toBe(false);
     });
 
     it('reads the twelve token records of the theme dump, six themes in two looks', () => {
@@ -94,17 +98,23 @@ describe('theme contrast (UX-P0.25)', () => {
         }
     });
 
-    it('resolves every curated pair through the forced-colours block and prints it; a reading while pending (UX-P4.10)', () => {
+    /** The forced-colours block of `tokens.css`, token name to value. */
+    const forcedBlock = (): Map<string, string> => {
         const css = fs.readFileSync(path.join(process.cwd(), 'src/webview/shared/tokens.css'), 'utf8');
         const start = css.indexOf('@media (forced-colors: active) {');
         expect(start).toBeGreaterThan(0);
         const block = css.slice(start, css.indexOf('}', css.indexOf(':root', start)));
-        const forced = new Map([...block.matchAll(/(--nuiget-color-[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()]));
+        return new Map([...block.matchAll(/(--nuiget-color-[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()]));
+    };
+
+    it('resolves every curated pair through the forced-colours block and prints it; a pair outside the listed pairings fails unless pending (UX-P4.10)', () => {
+        const forced = forcedBlock();
         const outside: string[] = [];
         for (const pair of TOKEN_PAIRS) {
-            const { line, legal } = forcedPairLine(pair, forced);
+            const owner = FORCED_PAIRS_PENDING.find(entry => entry.pair === pairName(pair));
+            const { line, legal } = forcedPairLine(pair, forced, owner ? { pending: owner.item } : FORCED_PAIRS_STATUS);
             console.warn(line);
-            if (!legal && !FORCED_PAIRS_PENDING.some(entry => entry.pair === pairName(pair))) {
+            if (!legal && !owner) {
                 outside.push(pairName(pair));
             }
         }
@@ -123,10 +133,16 @@ describe('theme contrast (UX-P0.25)', () => {
         if (FORCED_PAIRS_STATUS !== 'hard') {
             expect(status.has(FORCED_PAIRS_STATUS.pending) && status.get(FORCED_PAIRS_STATUS.pending) !== 'done', FORCED_PAIRS_STATUS.pending).toBe(true);
         }
+        const forced = forcedBlock();
         for (const entry of FORCED_PAIRS_PENDING) {
             expect(names.has(entry.pair), entry.pair).toBe(true);
             expect(status.has(entry.item) && status.get(entry.item) !== 'done', entry.item).toBe(true);
+            // A stale entry: its pair now resolves to a listed pairing, so the entry is removed by the item that re-valued it.
+            const pair = TOKEN_PAIRS.find(candidate => pairName(candidate) === entry.pair);
+            expect(pair && forcedPairLine(pair, forced).legal, `a stale entry: ${entry.pair}`).toBe(false);
         }
+        const listed = FORCED_PAIRS_PENDING.map(entry => entry.pair);
+        expect(listed.filter((pair, index) => listed.indexOf(pair) !== index), 'a pair listed twice').toEqual([]);
     });
 
     it('names in its pending entries and exemptions only pairs, themes and looks the records have, each entry on an open tracker row and on a cell that fails', () => {

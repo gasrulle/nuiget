@@ -153,8 +153,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(specLines('ui').length).toBeGreaterThan(0);
         expect([...specLines('floor'), ...specLines('macos')]).toEqual([]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': 'hard' });
-        // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state.
-        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toBeUndefined();
+        // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state but the zoomed
+        // cell, whose fractional-ratio reds UX-P4.10 left pending on UX-P4.fix-24 (design-advisor follow-up 2 of 2026-11-20).
+        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
+        expect(RULES.find(rule => rule.id === 'DS-COLOR-4')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
+        expect(RULES.find(rule => rule.id === 'DS-HC-1')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toBeUndefined();
         // UX-P0.14's 220 px width closed at UX-P2.7a.
@@ -1787,7 +1790,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
-        // No product rule uses pendingStates since UX-P3.fix-6; the mechanism stays, so a synthetic rule keeps its branch tested.
+        // Product rules use pendingStates only for the zoomed cell since UX-P4.10; a synthetic rule keeps both branches tested.
         const synthetic: RuleDefinition[] = [
             rule('X-PENDING-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingStates: { 'main-installed-single': 'P9.9' } }),
             rule('X-PENDING-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingStates: { 'main-installed-single': 'P9.9' } }),

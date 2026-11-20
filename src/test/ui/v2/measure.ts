@@ -641,7 +641,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
-    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, tolerance: TOLERANCES.chrome }),
+    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] }, scopeExceptStates: { sidebar: SIDEBAR_NO_TRAILER_STATES } }),
@@ -665,7 +665,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
-    rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
+    rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, tolerance: TOLERANCES.containment }),
     // UX-P2.6b (design trigger 6).
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.fontExact, exceptStates: SIDEBAR_BROWSE_NO_LIST_STATES }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
@@ -679,7 +679,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines (UX-P3.9) are asserted by the theme pass (`expectTabLines`, both HC themes).
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -3989,11 +3989,11 @@ function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } |
 }
 
 /**
- * The status of the zoomed cell's readings (UX-P4.10, design-advisor ruling of 2026-11-20, DO 9): while pending, the capture
- * suite's zoom describe prints the cell's reds as `[zoom] red: …` and throws only for its mechanics (ratio, width, restore,
- * crop); the item's closing commit makes it `hard`, each red rule of the reading pending on its owner row.
+ * The status of the zoomed cell's readings (UX-P4.10, design-advisor ruling of 2026-11-20, DO 9 and 12, follow-up 2): hard, so
+ * a hard red of the cell fails the zoom describe; the three rules the reading dispatch read red at a fractional ratio (MS-8,
+ * DS-COLOR-4, DS-HC-1) are pending on UX-P4.fix-24 through their `pendingStates`.
  */
-export const ZOOM_STATUS: RuleStatus = { pending: 'P4.10' };
+export const ZOOM_STATUS: RuleStatus = 'hard';
 
 /** The words a busy row's status may read (DS-STATE-6, UX-P4.7; Finishing while a successful edit waits for its list, X31, UX-P4.8c). */
 const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued', 'Finishing'];

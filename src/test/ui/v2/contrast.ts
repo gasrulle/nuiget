@@ -162,11 +162,11 @@ export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
 ];
 
 /**
- * UX-P4.10 (design-advisor ruling of 2026-11-20 and follow-up 1): the curated pairs resolved through the forced-colours block
- * of `tokens.css`. A reading until the pairing set below is taken verbatim from CSS Color 4 §6.2: its status stays pending
- * on the item, and a pair outside the set is printed, not judged.
+ * UX-P4.10 (design-advisor ruling of 2026-11-20, follow-ups 1 and 2): the curated pairs resolved through the forced-colours
+ * block of `tokens.css` must form a pairing CSS Color 4 §6.2 lists (`FORCED_LEGAL`); a pair outside the list fails unless an
+ * exact `FORCED_PAIRS_PENDING` entry names the open row that re-values it.
  */
-export const FORCED_PAIRS_STATUS: RuleStatus = { pending: 'P4.10' };
+export const FORCED_PAIRS_STATUS: RuleStatus = 'hard';
 
 /** A forced-colours pair outside the listed pairings, with the item that fixes it: a forced resolution has no theme or look. */
 export interface ForcedPairPending {
@@ -174,26 +174,52 @@ export interface ForcedPairPending {
     item: string;
 }
 
-/** The forced-colours pairs today's tokens resolve outside the set, each with the item that fixes it (none before its row exists). */
-export const FORCED_PAIRS_PENDING: readonly ForcedPairPending[] = [];
+/**
+ * The forced-colours pairs today's tokens resolve outside the set, each with the item that re-values it: the twelve findings
+ * of UX-P4.10's reading, classified by the design-advisor's follow-up 2 of 2026-11-20 (`focus/list-active-bg` resolves to
+ * Highlight on Highlight, identical colours; the other eleven have no guaranteed contrast).
+ */
+export const FORCED_PAIRS_PENDING: readonly ForcedPairPending[] = [
+    { pair: 'fg/dropdown-bg', item: 'P4.fix-24' },
+    { pair: 'icon/dropdown-bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-border/bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-border/widget-bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-bg/bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-select-border/list-active-bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-select-border/list-inactive-bg', item: 'P4.fix-24' },
+    { pair: 'dropdown-border/bg', item: 'P4.fix-24' },
+    { pair: 'input-border/bg', item: 'P4.fix-24' },
+    { pair: 'focus/bg', item: 'P4.fix-24' },
+    { pair: 'tab-indicator/bg-sidebar', item: 'P4.fix-24' },
+    { pair: 'focus/list-active-bg', item: 'P4.fix-24' },
+];
+
+/** The backgrounds of the pairings CSS Color 4 §6.2 lists; GrayText is expected to be readable over each of them. */
+const FORCED_BACKGROUNDS = ['Canvas', 'ButtonFace', 'Field', 'Mark', 'Highlight', 'SelectedItem', 'AccentColor'];
 
 /**
- * The system-colour pairings CSS Color 4 §6.2 expects to be legible, as a page summary of the Candidate Recommendation Draft of
- * 18 November 2026 reported them (not verbatim spec text; to be settled before the status goes hard), plus GrayText, which the
- * spec expects to be readable over any of the backgrounds.
+ * The system-colour pairings CSS Color 4 §6.2 (Candidate Recommendation Draft of 18 November 2026) expects to be legible, as
+ * the planning session settled them from the spec text on 2026-11-20 (UX-P4.fix-24's row): CanvasText, LinkText, VisitedText
+ * and ActiveText on Canvas; ButtonText on ButtonFace; FieldText on Field; MarkText on Mark; HighlightText on Highlight;
+ * SelectedItemText on SelectedItem; AccentColorText on AccentColor; and GrayText over any of the backgrounds. Any other
+ * pairing has no guaranteed contrast. Never a pairing of nUIget's own.
  */
 export const FORCED_LEGAL: ReadonlySet<string> = new Set([
     'CanvasText on Canvas', 'LinkText on Canvas', 'VisitedText on Canvas', 'ActiveText on Canvas', 'ButtonText on ButtonFace',
     'FieldText on Field', 'MarkText on Mark', 'HighlightText on Highlight', 'SelectedItemText on SelectedItem',
-    'AccentColorText on AccentColor', 'GrayText on Canvas', 'GrayText on ButtonFace', 'GrayText on Field', 'GrayText on Highlight',
+    'AccentColorText on AccentColor', ...FORCED_BACKGROUNDS.map(background => `GrayText on ${background}`),
 ]);
+
+/** The border pairings of the same list: a ButtonBorder border on Canvas, ButtonFace or Field (a non-text pair only). */
+export const FORCED_BORDER_LEGAL: ReadonlySet<string> = new Set(['ButtonBorder on Canvas', 'ButtonBorder on ButtonFace', 'ButtonBorder on Field']);
 
 /** One pair resolved through the forced-colours block (`over` when its background is transparent), as the lint prints it. */
 export function forcedPairLine(pair: TokenPair, forced: ReadonlyMap<string, string>, status: RuleStatus = FORCED_PAIRS_STATUS): { line: string; legal: boolean } {
     const value = (name: string | undefined): string | undefined => (name === undefined ? undefined : forced.get(`--nuiget-color-${name}`));
     const fg = value(pair.fg);
     const bg = value(pair.bg) === 'transparent' ? value(pair.over) : value(pair.bg);
-    const legal = fg !== undefined && bg !== undefined && fg !== bg && FORCED_LEGAL.has(`${fg} on ${bg}`);
+    const listed = (key: string): boolean => FORCED_LEGAL.has(key) || (pair.kind === 'non-text' && FORCED_BORDER_LEGAL.has(key));
+    const legal = fg !== undefined && bg !== undefined && fg !== bg && listed(`${fg} on ${bg}`);
     return { line: `[forced] ${pairName(pair)} (${pair.kind}): ${fg ?? 'none'} on ${bg ?? 'none'}${legal ? '' : ' (not a listed pairing)'} (${statusText(status)})`, legal };
 }
 
