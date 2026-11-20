@@ -180,7 +180,22 @@ ran on GitHub-hosted `ubuntu-latest`, image version as listed. Times in ms.
 | project chosen → icons | 386 | 602 | 310 | 386 |
 | Runner image | 20261103.629 | 20261103.629 | 20261103.629 | |
 
-After: recorded by the item's closing commit (`docs/plans/handoff/P4.9.md`).
+After, the item's own green runs (7f7be39a): one run, on a newer image, so compared, not re-based, and not judged (one run is
+never judged); the next green runs that contain the item's code complete the row for the planning session.
+
+| Metric | 44732130015 | After median | Verdict |
+|---|---|---|---|
+| refresh → list settled | 263 (1.66 × 158) | (1 run) | not judged |
+| project chosen → first row | 411 (1.90 × 216) | (1 run) | not judged |
+| project chosen → authoritative list | 424 (1.91 × 222) | (1 run) | not judged |
+| project chosen → icons | 589 (1.53 × 386) | (1 run) | not judged |
+| Runner image | 20261111.635 | | |
+
+The one after-run reads 1.53 to 1.91 times the before medians on all four lines, above the 1.5 × pass line: it trends red,
+and the gate is open until the next green runs that contain the item's code decide it (UX-P4.9 is `blocked` on that). None of
+the four chains passes through X43 (the All Projects fan-out); every lite `enrich` call now starts the deadline and races each
+package's vulnerability read against it, which decides nothing before 5 s. The after-run is also on a newer runner image.
+Whether the difference is the runner or the item is not measured.
 
 ## Definitions
 
