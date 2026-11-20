@@ -62,7 +62,7 @@ describe('theme contrast (UX-P0.25)', () => {
     it('resolves a pair through a forced-colours block: a listed pairing, one outside the list, a transparent background over its surface, an equal pair, a missing token, GrayText and a ButtonBorder border (UX-P4.10)', () => {
         const forced = new Map([['--nuiget-color-fg', 'CanvasText'], ['--nuiget-color-bg', 'Canvas'], ['--nuiget-color-hover', 'transparent'], ['--nuiget-color-field', 'Field'], ['--nuiget-color-focus', 'Highlight'], ['--nuiget-color-active', 'Highlight'], ['--nuiget-color-muted', 'GrayText'], ['--nuiget-color-mark', 'Mark'], ['--nuiget-color-border', 'ButtonBorder']]);
         expect(forcedPairLine({ fg: 'fg', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/bg (text): CanvasText on Canvas (hard)', legal: true });
-        expect(forcedPairLine({ fg: 'fg', bg: 'field', kind: 'text' }, forced, { pending: 'P4.fix-24' })).toEqual({ line: '[forced] fg/field (text): CanvasText on Field (not a listed pairing) (pending P4.fix-24)', legal: false });
+        expect(forcedPairLine({ fg: 'fg', bg: 'field', kind: 'text' }, forced, { pending: 'P9.9' })).toEqual({ line: '[forced] fg/field (text): CanvasText on Field (not a listed pairing) (pending P9.9)', legal: false });
         expect(forcedPairLine({ fg: 'fg', bg: 'hover', over: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] fg/hover over bg (text): CanvasText on Canvas (hard)', legal: true });
         expect(forcedPairLine({ fg: 'focus', bg: 'active', kind: 'non-text' }, forced, 'hard')).toEqual({ line: '[forced] focus/active (non-text): Highlight on Highlight (not a listed pairing) (hard)', legal: false });
         expect(forcedPairLine({ fg: 'link', bg: 'bg', kind: 'text' }, forced, 'hard')).toEqual({ line: '[forced] link/bg (text): none on Canvas (not a listed pairing) (hard)', legal: false });
@@ -70,6 +70,8 @@ describe('theme contrast (UX-P0.25)', () => {
         expect(forcedPairLine({ fg: 'muted', bg: 'mark', kind: 'text' }, forced, 'hard').legal).toBe(true);
         expect(forcedPairLine({ fg: 'border', bg: 'field', kind: 'non-text' }, forced, 'hard')).toEqual({ line: '[forced] border/field (non-text): ButtonBorder on Field (hard)', legal: true });
         expect(forcedPairLine({ fg: 'border', bg: 'bg', kind: 'text' }, forced, 'hard').legal).toBe(false);
+        // A ruled pair prints its own status (UX-P4.fix-24).
+        expect(forcedPairLine({ fg: 'focus', bg: 'bg', kind: 'non-text' }, forced, 'ruled')).toEqual({ line: '[forced] focus/bg (non-text): Highlight on Canvas (not a listed pairing) (ruled)', legal: false });
     });
 
     it('reads the twelve token records of the theme dump, six themes in two looks', () => {
@@ -107,24 +109,28 @@ describe('theme contrast (UX-P0.25)', () => {
         return new Map([...block.matchAll(/(--nuiget-color-[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()]));
     };
 
-    it('resolves every curated pair through the forced-colours block and prints it; a pair outside the listed pairings fails unless pending (UX-P4.10)', () => {
+    it('resolves every curated pair through the forced-colours block and prints it; a pair outside the listed pairings fails unless pending or ruled (UX-P4.10, UX-P4.fix-24)', () => {
         const forced = forcedBlock();
         const outside: string[] = [];
+        let ruled = 0;
         for (const pair of TOKEN_PAIRS) {
             const owner = FORCED_PAIRS_PENDING.find(entry => entry.pair === pairName(pair));
-            const { line, legal } = forcedPairLine(pair, forced, owner ? { pending: owner.item } : FORCED_PAIRS_STATUS);
+            const status = owner === undefined ? FORCED_PAIRS_STATUS : 'item' in owner ? { pending: owner.item } : 'ruled';
+            const { line, legal } = forcedPairLine(pair, forced, status);
             console.warn(line);
             if (!legal && !owner) {
                 outside.push(pairName(pair));
             }
+            ruled += status === 'ruled' ? 1 : 0;
         }
-        console.warn(`[forced] ${TOKEN_PAIRS.length} pairs, ${outside.length} outside the listed pairings`);
+        console.warn(`[forced] ${TOKEN_PAIRS.length} pairs, ${outside.length} outside the listed pairings, ${ruled} ruled`);
         if (FORCED_PAIRS_STATUS === 'hard') {
             expect(outside).toEqual([]);
         }
     });
 
-    it('names in the forced pending entries and status only open tracker rows, and in each entry a curated pair (UX-P4.10)', () => {
+    it('names in the forced pending entries and status only open tracker rows or recorded decisions, and in each entry a curated pair (UX-P4.10, UX-P4.fix-24)', () => {
+        const decisions = fs.readFileSync(path.join(root, 'docs/design/DECISIONS.md'), 'utf8').split(/\r?\n/);
         const names = new Set(TOKEN_PAIRS.map(pairName));
         const status = new Map(fs.readFileSync(path.join(root, 'docs/plans/STATUS-ux.md'), 'utf8').split(/\r?\n/).flatMap(line => {
             const match = /^\| (P[0-9][0-9a-z.-]*) \|[^|]*\|[^|]*\| ([a-z -]+) \|/.exec(line);
@@ -136,7 +142,14 @@ describe('theme contrast (UX-P0.25)', () => {
         const forced = forcedBlock();
         for (const entry of FORCED_PAIRS_PENDING) {
             expect(names.has(entry.pair), entry.pair).toBe(true);
-            expect(status.has(entry.item) && status.get(entry.item) !== 'done', entry.item).toBe(true);
+            if ('item' in entry) {
+                expect(status.has(entry.item) && status.get(entry.item) !== 'done', entry.item).toBe(true);
+            } else {
+                // A ruled entry: one DECISIONS row carries its date and title (`| <date> | <title> |`) and names the pair.
+                const [date, ...title] = entry.decision.split(' ');
+                expect(entry.reason.length, entry.pair).toBeGreaterThan(0);
+                expect(decisions.some(line => line.startsWith(`| ${date} | ${title.join(' ')} |`) && line.includes(entry.pair)), `${entry.pair}: ${entry.decision}`).toBe(true);
+            }
             // A stale entry: its pair now resolves to a listed pairing, so the entry is removed by the item that re-valued it.
             const pair = TOKEN_PAIRS.find(candidate => pairName(candidate) === entry.pair);
             expect(pair && forcedPairLine(pair, forced).legal, `a stale entry: ${entry.pair}`).toBe(false);

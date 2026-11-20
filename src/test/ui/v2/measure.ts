@@ -297,6 +297,15 @@ export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'ch
 
 export type Scope = StateGroup | ElementGroup;
 
+/**
+ * The used width of an authored line as the device snaps it: whole device pixels, at least one (CSS's border-width snap). At
+ * ratio 1 and 2 a 1 px line stays 1; at 1.44 it reads 1/1.44 (UX-P4.fix-24, design-advisor opening ruling DO 11).
+ */
+export const snappedLine = (px: number, dpr: number): number => Math.max(1, Math.floor(px * dpr)) / dpr;
+
+/** Whether a computed line width is the authored `px` as the device snaps it, to the printed precision of a computed style. */
+export const isSnappedLine = (reading: number, px: number, dpr: number): boolean => Math.abs(reading - snappedLine(px, dpr)) < 0.001;
+
 /** D34's tolerances, written once: never changed to make a rule green (design trigger 1). */
 export const TOLERANCES = {
     /** Edges meant to coincide (shared insets, symmetric insets). */
@@ -641,7 +650,7 @@ export const RULES: readonly RuleDefinition[] = [
     // The `ui` lane's 800/932/1200 and the matrix lane's 800/1200/1600, the widths P0.12 asserted it at; narrower widths are
     // V50's and DS-OVERFLOW-1/3/5's (UX-P0.14 rulings, design trigger 1).
     rule('PF-4', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-updates'], widths: [800, 932, 1200, 1600] }),
-    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, tolerance: TOLERANCES.chrome }),
+    rule('MS-8', { helper: 6, scopes: { chrome: 'hard', 'first-row': 'hard' }, tolerance: TOLERANCES.chrome }),
     // The document never scrolls (V72, design-advisor ruling of 2026-10-24).
     rule('DS-OVERFLOW-6', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-INSET-3', { helper: 6, scopes: { rows: 'hard', toolbars: 'hard', headers: 'hard', 'main-header': 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] }, scopeExceptStates: { sidebar: SIDEBAR_NO_TRAILER_STATES } }),
@@ -665,7 +674,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
-    rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, tolerance: TOLERANCES.containment }),
+    rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P2.6b (design trigger 6).
     rule('DS-TYPE-5', { helper: 3, scopes: { headers: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.fontExact, exceptStates: SIDEBAR_BROWSE_NO_LIST_STATES }),
     rule('DS-COPY-5', { helper: 6, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
@@ -679,7 +688,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
     rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.fontExact }),
     // The tab's high-contrast lines (UX-P3.9) are asserted by the theme pass (`expectTabLines`, both HC themes).
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), pendingStates: { 'main-installed-zoom2-800px': 'P4.fix-24' }, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -979,6 +988,8 @@ export interface ChromeReference {
     state: string;
     chrome: Chrome;
     firstRow: number | undefined;
+    /** The reference's unrounded document width: MS-8 lets a rect follow a host frame of another width (UX-P4.fix-24). */
+    documentWidth?: number;
     /** The first comfortable row's icon and name left of `main-installed-single`, DS-ROW-2's reference across views (UX-P3.2). */
     rowLefts?: RowLefts;
 }
@@ -1038,6 +1049,9 @@ export interface Layout {
     detailsButtons: { uninstall: { left: number; height: number } | undefined; update: { left: number; height: number } | undefined };
     /** The webview's width (PF-3a's 1200). */
     width: number;
+    /** The webview document's device pixel ratio and unrounded width: a zoomed cell reads lines and the chrome against them (UX-P4.fix-24). */
+    dpr?: number;
+    documentWidth?: number;
     /** The root's height: a spec element at or below it is below the fold (SPEC, UX-P2.8a). */
     height: number;
     rows: RowFacts[];
@@ -2530,7 +2544,7 @@ for (const el of document.body.querySelectorAll('*')) {
 }
 const rootStyle = getComputedStyle(document.documentElement);
 const scrollbar = { rootColor: rootStyle.scrollbarColor || '', slider: rootStyle.getPropertyValue('--nuiget-color-scrollbar').trim(), scrollers, shadowColour: computedColour('--nuiget-color-scroll-shadow') };
-return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, rowBadges, detailsButtons, width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
+return { root: true, height: round(rootBox.height), slots, classicBadges, flatList: Boolean(scope.querySelector('[role="listbox"]')) && !scope.querySelector('[role="tree"]'), listScrollTop: round(scope.querySelector('[data-testid="installed-list"]')?.scrollTop ?? 0), examined, offRamp, offRampCount, blockGaps, sections, toolbars, mainHeader: mainHeaderInsets(), sidebarHeader: sidebarHeader ? rowInsets(sidebarHeader) : undefined, mainLefts, mainRegionLeft, details, sidebar, heights, centring, rowBadges, detailsButtons, width, dpr: window.devicePixelRatio, documentWidth: document.documentElement.getBoundingClientRect().width, rows, chrome, firstRow, overflow, transitiveGap, primaryEdges, browsing, documentOverflow, endOfP0, testIds, scrollbar };
 `;
 
 // ---- the workbench of the same run (helper 3's parity) --------------------------------------------------------------
@@ -3065,13 +3079,17 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
                 return { value: `reference (${present.map(([name, rect]) => `${name} ${rectText(rect)}`).join('; ')})`, pass: true };
             }
             // An element the reference lacks is new here: the capture suite adds it to the reference.
+            // A rect's width also holds when it follows the host frame: the document width's own change (a zoomed frame snaps to device pixels, UX-P4.fix-24).
+            const docDelta = layout.documentWidth !== undefined && reference.documentWidth !== undefined ? layout.documentWidth - reference.documentWidth : 0;
             const moved = present.flatMap(([name, rect]) => {
                 const before = reference.chrome[name];
                 if (before === undefined) {
                     return [];
                 }
-                const delta = Math.max(Math.abs(rect.left - before.left), Math.abs(rect.top - before.top), Math.abs(rect.width - before.width), Math.abs(rect.height - before.height));
-                return delta > tolerance ? [`${name} ${rectText(before)} → ${rectText(rect)}`] : [];
+                const widthDelta = rect.width - before.width;
+                const widthHolds = Math.abs(widthDelta) <= tolerance || Math.abs(widthDelta - docDelta) <= tolerance;
+                const delta = Math.max(Math.abs(rect.left - before.left), Math.abs(rect.top - before.top), Math.abs(rect.height - before.height));
+                return delta > tolerance || !widthHolds ? [`${name} ${rectText(before)} → ${rectText(rect)}`] : [];
             });
             // Chrome that disappears fails too, but for the tab strip while the Browse view is shown (`layout.browsing`).
             const absent = Object.keys(reference.chrome).filter(name => reference.chrome[name] !== undefined && layout.chrome[name] === undefined);
@@ -3319,7 +3337,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             const others = tabs.filter(tab => !tab.selected);
             const { active, inactive, indicator } = facts.tabColours;
             // One predicate per tab, used by pass and by the red line's off: suffix (UX-P3.fix-18): a red line prints what it compared.
-            const selectedHolds = (tab: (typeof tabs)[number]) => tab.colour === active && tab.lineWidth === 1 && tab.lineColour === indicator;
+            const selectedHolds = (tab: (typeof tabs)[number]) => tab.colour === active && isSnappedLine(tab.lineWidth, 1, layout.dpr ?? 1) && tab.lineColour === indicator;
             const otherHolds = (tab: (typeof tabs)[number]) => tab.colour === inactive && (tab.lineWidth === 0 || tab.lineColour === 'rgba(0, 0, 0, 0)');
             const off = [
                 ...selected.filter(tab => !selectedHolds(tab)).map(tab => `[${tab.id}] selected colour ${tab.colour} line ${tab.lineWidth} ${tab.lineColour} (expected colour ${active} line 1 ${indicator})`),
@@ -3873,9 +3891,11 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
             }
             const untoned = badges.filter(badge => badge.toned !== true);
             const toned = badges.filter(badge => badge.toned === true);
+            // 1 px as the device snaps it: one device pixel at a fractional ratio (UX-P4.fix-24).
+            const onePx = (width: number | undefined): boolean => width !== undefined && isSnappedLine(width, 1, layout.dpr ?? 1);
             return {
-                value: `badges ${badges.length}: 1 px contrastBorder ×${untoned.filter(badge => badge.borderWidth === 1 && badge.borderColor === line).length}${toned.length === 0 ? '' : `; toned 1 px ×${toned.filter(badge => badge.borderWidth === 1).length}`}`,
-                pass: untoned.every(badge => badge.borderWidth === 1 && badge.borderColor === line) && toned.every(badge => badge.borderWidth === 1),
+                value: `badges ${badges.length}: 1 px contrastBorder ×${untoned.filter(badge => onePx(badge.borderWidth) && badge.borderColor === line).length}${toned.length === 0 ? '' : `; toned 1 px ×${toned.filter(badge => onePx(badge.borderWidth)).length}`}`,
+                pass: untoned.every(badge => onePx(badge.borderWidth) && badge.borderColor === line) && toned.every(badge => onePx(badge.borderWidth)),
             };
         }
         case 'DS-FOCUS-1': {
@@ -3990,8 +4010,9 @@ function scrolledPastHeaders(layout: Layout): { value: string; pass: boolean } |
 
 /**
  * The status of the zoomed cell's readings (UX-P4.10, design-advisor ruling of 2026-11-20, DO 9 and 12, follow-up 2): hard, so
- * a hard red of the cell fails the zoom describe; the three rules the reading dispatch read red at a fractional ratio (MS-8,
- * DS-COLOR-4, DS-HC-1) are pending on UX-P4.fix-24 through their `pendingStates`.
+ * a hard red of the cell fails the zoom describe. The three rules the reading dispatch read red at a fractional ratio (MS-8,
+ * DS-COLOR-4, DS-HC-1) were helper defects, read since UX-P4.fix-24 against the device's snap (`snappedLine`) and the host
+ * frame's width (MS-8's `docDelta`).
  */
 export const ZOOM_STATUS: RuleStatus = 'hard';
 

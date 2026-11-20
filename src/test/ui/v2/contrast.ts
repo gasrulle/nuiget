@@ -134,7 +134,7 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     { fg: 'dropdown-border', bg: 'dropdown-bg', kind: 'non-text', exempt: DROPDOWN_BORDER_PARITY },
     { fg: 'input-error-border', bg: 'widget-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): inputValidation.errorBorder of the two dark default themes reads below 3:1 (2.57 / 2.90 over the editor background)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'button-secondary-fg', bg: 'button-secondary-bg', over: 'bg', kind: 'text' },
-    { fg: 'focus', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
+    { fg: 'list-focus-outline', bg: 'list-active-bg', kind: 'non-text', exempt: { reason: 'workbench parity (D22, H49): the focused selected row rings in focusBorder/list.focusOutline on list.activeSelectionBackground at 2.65 (Dark Modern) and 2.58 (Dark 2026)', themes: ['dark-2026', 'dark-modern'] } },
     { fg: 'input-border', bg: 'input-bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
     { fg: 'input-border', bg: 'bg', kind: 'non-text', exempt: INPUT_BORDER_PARITY },
 ];
@@ -164,34 +164,25 @@ export const CONTRAST_PAIRS_PENDING: readonly PairPending[] = [
 /**
  * UX-P4.10 (design-advisor ruling of 2026-11-20, follow-ups 1 and 2): the curated pairs resolved through the forced-colours
  * block of `tokens.css` must form a pairing CSS Color 4 §6.2 lists (`FORCED_LEGAL`); a pair outside the list fails unless an
- * exact `FORCED_PAIRS_PENDING` entry names the open row that re-values it.
+ * exact `FORCED_PAIRS_PENDING` entry names the open row that re-values it or the ruled reason it stays (UX-P4.fix-24).
  */
 export const FORCED_PAIRS_STATUS: RuleStatus = 'hard';
 
-/** A forced-colours pair outside the listed pairings, with the item that fixes it: a forced resolution has no theme or look. */
-export interface ForcedPairPending {
-    pair: string;
-    item: string;
-}
+/**
+ * A forced-colours pair outside the listed pairings (a forced resolution has no theme or look), in one of two forms: the open
+ * row that re-values it, or a ruled reason with the `docs/design/DECISIONS.md` row (its date and title) that records it
+ * (UX-P4.fix-24, design-advisor opening ruling of 2026-11-21, DO 7).
+ */
+export type ForcedPairPending = { pair: string; item: string } | { pair: string; reason: string; decision: string };
 
 /**
- * The forced-colours pairs today's tokens resolve outside the set, each with the item that re-values it: the twelve findings
- * of UX-P4.10's reading, classified by the design-advisor's follow-up 2 of 2026-11-20 (`focus/list-active-bg` resolves to
- * Highlight on Highlight, identical colours; the other eleven have no guaranteed contrast).
+ * The forced-colours pairs outside the listed pairings that UX-P4.fix-24 ruled, each with its reason (design-advisor opening
+ * ruling of 2026-11-21): the other nine of UX-P4.10's twelve findings were re-valued to listed pairings.
  */
 export const FORCED_PAIRS_PENDING: readonly ForcedPairPending[] = [
-    { pair: 'fg/dropdown-bg', item: 'P4.fix-24' },
-    { pair: 'icon/dropdown-bg', item: 'P4.fix-24' },
-    { pair: 'checkbox-border/bg', item: 'P4.fix-24' },
-    { pair: 'checkbox-border/widget-bg', item: 'P4.fix-24' },
-    { pair: 'checkbox-bg/bg', item: 'P4.fix-24' },
-    { pair: 'checkbox-select-border/list-active-bg', item: 'P4.fix-24' },
-    { pair: 'checkbox-select-border/list-inactive-bg', item: 'P4.fix-24' },
-    { pair: 'dropdown-border/bg', item: 'P4.fix-24' },
-    { pair: 'input-border/bg', item: 'P4.fix-24' },
-    { pair: 'focus/bg', item: 'P4.fix-24' },
-    { pair: 'tab-indicator/bg-sidebar', item: 'P4.fix-24' },
-    { pair: 'focus/list-active-bg', item: 'P4.fix-24' },
+    { pair: 'checkbox-bg/bg', reason: 'two backgrounds: the box\'s boundary is checkbox-border, ButtonBorder on Canvas', decision: '2026-11-21 Forced-colours values and the three ruled pairs (UX-P4.fix-24)' },
+    { pair: 'focus/bg', reason: 'the ring covers a field\'s border at offset -1 (DS-FOCUS-1); only Highlight keeps it distinct from ButtonBorder', decision: '2026-11-21 Forced-colours values and the three ruled pairs (UX-P4.fix-24)' },
+    { pair: 'list-focus-outline/list-active-bg', reason: 'one token on Canvas and on Highlight: listed where the ring is the only focus mark; the band marks the selected row', decision: '2026-11-21 Forced-colours values and the three ruled pairs (UX-P4.fix-24)' },
 ];
 
 /** The backgrounds of the pairings CSS Color 4 §6.2 lists; GrayText is expected to be readable over each of them. */
@@ -214,13 +205,13 @@ export const FORCED_LEGAL: ReadonlySet<string> = new Set([
 export const FORCED_BORDER_LEGAL: ReadonlySet<string> = new Set(['ButtonBorder on Canvas', 'ButtonBorder on ButtonFace', 'ButtonBorder on Field']);
 
 /** One pair resolved through the forced-colours block (`over` when its background is transparent), as the lint prints it. */
-export function forcedPairLine(pair: TokenPair, forced: ReadonlyMap<string, string>, status: RuleStatus = FORCED_PAIRS_STATUS): { line: string; legal: boolean } {
+export function forcedPairLine(pair: TokenPair, forced: ReadonlyMap<string, string>, status: RuleStatus | 'ruled' = FORCED_PAIRS_STATUS): { line: string; legal: boolean } {
     const value = (name: string | undefined): string | undefined => (name === undefined ? undefined : forced.get(`--nuiget-color-${name}`));
     const fg = value(pair.fg);
     const bg = value(pair.bg) === 'transparent' ? value(pair.over) : value(pair.bg);
     const listed = (key: string): boolean => FORCED_LEGAL.has(key) || (pair.kind === 'non-text' && FORCED_BORDER_LEGAL.has(key));
     const legal = fg !== undefined && bg !== undefined && fg !== bg && listed(`${fg} on ${bg}`);
-    return { line: `[forced] ${pairName(pair)} (${pair.kind}): ${fg ?? 'none'} on ${bg ?? 'none'}${legal ? '' : ' (not a listed pairing)'} (${statusText(status)})`, legal };
+    return { line: `[forced] ${pairName(pair)} (${pair.kind}): ${fg ?? 'none'} on ${bg ?? 'none'}${legal ? '' : ' (not a listed pairing)'} (${status === 'ruled' ? 'ruled' : statusText(status)})`, legal };
 }
 
 /** Whether the pair is exempt in this theme. */

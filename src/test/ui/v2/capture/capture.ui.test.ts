@@ -2711,6 +2711,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
             merged.chrome[name] ??= rect ?? undefined;
         }
         merged.firstRow ??= layout.firstRow ?? undefined;
+        merged.documentWidth ??= layout.documentWidth ?? undefined;
         // DS-ROW-2 across views reads the Browse rows against these (UX-P3.2).
         if (state.name === ROW_LEFTS_REFERENCE) {
             merged.rowLefts ??= rowLeftsOf(state.name, layout);

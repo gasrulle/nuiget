@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
+import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -153,11 +153,11 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(specLines('ui').length).toBeGreaterThan(0);
         expect([...specLines('floor'), ...specLines('macos')]).toEqual([]);
         expect(scopes('MS-8')).toEqual({ chrome: 'hard', 'first-row': 'hard' });
-        // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state but the zoomed
-        // cell, whose fractional-ratio reds UX-P4.10 left pending on UX-P4.fix-24 (design-advisor follow-up 2 of 2026-11-20).
-        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
-        expect(RULES.find(rule => rule.id === 'DS-COLOR-4')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
-        expect(RULES.find(rule => rule.id === 'DS-HC-1')?.pendingStates).toEqual({ 'main-installed-zoom2-800px': 'P4.fix-24' });
+        // V72 closed at UX-P2.1a: the document never scrolls and the chrome holds still, hard in every state, the zoomed cell
+        // included since UX-P4.fix-24 (its fractional-ratio reds were helper defects, read against the device's snap).
+        expect(RULES.find(rule => rule.id === 'MS-8')?.pendingStates).toBeUndefined();
+        expect(RULES.find(rule => rule.id === 'DS-COLOR-4')?.pendingStates).toBeUndefined();
+        expect(RULES.find(rule => rule.id === 'DS-HC-1')?.pendingStates).toBeUndefined();
         expect(scopes('DS-OVERFLOW-6')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sources: 'hard', sidebar: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-6')?.pendingStates).toBeUndefined();
         // UX-P0.14's 220 px width closed at UX-P2.7a.
@@ -562,6 +562,29 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             .toMatchObject({ pass: true });
     });
 
+
+    it('lets a chrome rect\'s width follow the host frame\'s own change of width, and only that (UX-P4.fix-24)', () => {
+        const header = { left: 0, top: 0, width: 800, height: 103.2 };
+        const reference = { state: 'main-installed-single', chrome: { 'main-header': header }, firstRow: undefined, documentWidth: 800 };
+        const line = (rect: typeof header, documentWidth: number) => measureLines('main-installed-zoom2-800px', layout({ chrome: { 'main-header': rect }, documentWidth }), 'modern', {}, reference).find(entry => entry.name === 'MS-8@main-installed-zoom2-800px/chrome');
+        // The zoomed frame snaps to device pixels: the document and the header narrow together (dispatch 44822955956).
+        expect(line({ ...header, width: 799.3, height: 102.9 }, 799.3)).toMatchObject({ pass: true, value: 'still (as main-installed-single)' });
+        // Equal documents behave as before: a rect narrower by 0.7 is red.
+        expect(line({ ...header, width: 799.3 }, 800)).toMatchObject({ pass: false, value: 'moved against main-installed-single: main-header 0,0 800×103.2 → 0,0 799.3×103.2' });
+        // A frame change explains the width only, never a move or a height.
+        expect(line({ ...header, left: 0.7, width: 799.3 }, 799.3)).toMatchObject({ pass: false });
+    });
+
+    it('reads a 1 px line as the device snaps it: one device pixel at a fractional ratio (UX-P4.fix-24)', () => {
+        expect(snappedLine(1, 1)).toBe(1);
+        expect(snappedLine(1, 2)).toBe(1);
+        expect(isSnappedLine(1, 1, 1)).toBe(true);
+        expect(isSnappedLine(1, 1, 2)).toBe(true);
+        expect(isSnappedLine(0.694444, 1, 1.440000057220459)).toBe(true);
+        // A planted two-device-pixel line, and an unsnapped 1, are off at 1.44.
+        expect(isSnappedLine(1.388889, 1, 1.440000057220459)).toBe(false);
+        expect(isSnappedLine(1, 1, 1.440000057220459)).toBe(false);
+    });
     it('holds MS-8\'s chrome and DS-OVERFLOW-6 hard in V72\'s four states too, and asserts the document never scrolls (UX-P2.1a)', () => {
         const scrolling = layout({ chrome: { 'main-header': { left: 0, top: 0, width: 1185, height: 36 } }, documentOverflow: { clientWidth: 1185, clientHeight: 803, scrollWidth: 1185, scrollHeight: 2410, outside: '.nuiget-installed-lists 0,135 420×2275' } });
         const reference = { state: 'main-installed-single', chrome: { 'main-header': { left: 0, top: 0, width: 1200, height: 36 } }, firstRow: undefined };
@@ -1547,6 +1570,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(hoveredOther?.pass).toBe(true);
         expect(hoveredOther?.value.endsWith('no line; under the pointer: [updates-tab]')).toBe(true);
         expect(color4(layout())).toMatchObject({ pass: false, value: 'not measurable (no tab)' });
+        // At a fractional ratio the 1 px underline is one device pixel (UX-P4.fix-24): 0.694444 holds at 1.44, an unsnapped 1 does not.
+        expect(color4({ ...tabs({ ...selected, lineWidth: 0.694444 }, other), dpr: 1.44 })).toMatchObject({ pass: true });
+        expect(color4({ ...tabs(selected, other), dpr: 1.44 })).toMatchObject({ pass: false });
         const color5 = (built: Layout) => lineOf('main-installed-single', built, 'DS-COLOR-5@main-installed-single/tabs');
         expect(color5(tabs(selected, other))).toMatchObject({ pass: true, status: 'hard', value: 'tabs: selected line in panelTitle.activeBorder; 1 others unlined' });
         expect(color5(tabs(selected, { ...other, lineColour: selected.lineColour }))).toMatchObject({ pass: false });
@@ -1663,6 +1689,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(hc(contrast({ borderWidth: 1, borderColor: 'rgb(111, 195, 223)' }))).toMatchObject({ pass: true, value: 'badges 1: 1 px contrastBorder ×1' });
         expect(hc(contrast({ borderWidth: 0, borderColor: 'rgb(111, 195, 223)' }))).toMatchObject({ pass: false });
         expect(hc(contrast({ borderWidth: 1, borderColor: 'rgb(1, 1, 1)', toned: true }))).toMatchObject({ pass: true, value: 'badges 1: 1 px contrastBorder ×0; toned 1 px ×1' });
+        // At a fractional ratio the 1 px border is one device pixel (UX-P4.fix-24): 0.694444 holds at 1.44, an unsnapped 1 does not.
+        expect(hc({ ...contrast({ borderWidth: 0.694444, borderColor: 'rgb(111, 195, 223)' }), dpr: 1.44 })).toMatchObject({ pass: true, value: 'badges 1: 1 px contrastBorder ×1' });
+        expect(hc({ ...contrast({ borderWidth: 1, borderColor: 'rgb(111, 195, 223)' }), dpr: 1.44 })).toMatchObject({ pass: false });
         // DS-GRID-2b on border boxes.
         const grid = (above: number, below: number) => layout({ sections: [{ id: 'direct', variant: 'group', insets: undefined, above, below }] });
         expect(lineOf('main-installed-single', grid(0, 0), 'DS-GRID-2b@main-installed-single')).toMatchObject({ pass: true, status: 'hard', value: 'direct 0/0' });
@@ -1790,7 +1819,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
-        // Product rules use pendingStates only for the zoomed cell since UX-P4.10; a synthetic rule keeps both branches tested.
+        // No product rule uses pendingStates since UX-P4.fix-24; the mechanism stays, so a synthetic rule keeps its branch tested.
         const synthetic: RuleDefinition[] = [
             rule('X-PENDING-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingStates: { 'main-installed-single': 'P9.9' } }),
             rule('X-PENDING-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingStates: { 'main-installed-single': 'P9.9' } }),

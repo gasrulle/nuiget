@@ -116,7 +116,7 @@ describe('2.0 webview tokens', () => {
         expect(code.match(/forced-colors: active/g)).toHaveLength(1);
         const forced = blockAfter('@media (forced-colors: active) {\n    :root');
         expect(forced.size).toBeGreaterThan(0);
-        const system = ['CanvasText', 'Canvas', 'Highlight', 'HighlightText', 'ButtonFace', 'ButtonText', 'GrayText', 'LinkText', 'Field', 'FieldText', 'transparent'];
+        const system = ['CanvasText', 'Canvas', 'Highlight', 'HighlightText', 'ButtonFace', 'ButtonText', 'ButtonBorder', 'GrayText', 'LinkText', 'Field', 'FieldText', 'transparent'];
         expect([...forced].filter(([name, value]) => !name.startsWith('--nuiget-color-') || !system.includes(value))).toEqual([]);
     });
 
