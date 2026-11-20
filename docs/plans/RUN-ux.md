@@ -260,10 +260,14 @@ When the last row of a phase (or of a P5.x feature mini-phase) is `done` and CI 
 Stop, write the report in §8, and end the turn when any of these holds:
 
 - An item became `blocked` (reason in its row), including an advisor's `OWNER MUST DECIDE`.
-- **A before/after page awaits the owner's answer:** P2.10 (`slice-1`) or P7.4 (`release`) was just committed. The
-  owner answers "better" or "not better" per state; a "not better" becomes a failing harness rule, then a fix row.
-- **A design decision awaits the owner's pick:** a design-advisor ruling names a fork for the owner's round (rounds 1
-  and 2 precede the plan; nothing else asks the owner for taste).
+- **A before/after page awaits an answer:** P2.10 (`slice-1`) or P7.4 (`release`) was just committed. Since 2026-11-20 the
+  planning session answers "better" or "not better" per state under the owner's delegation of every product and
+  user-experience decision (the owner may overrule by a message); a "not better" becomes a failing harness rule, then a fix
+  row.
+- **A design decision awaits a pick:** a design-advisor ruling names a fork for a round. Since 2026-11-20 the planning
+  session picks under the owner's delegation and records the pick in `docs/design/DECISIONS.md` as delegated (rounds 1
+  and 2 precede the plan; nothing else asks the owner for taste). Publishing, merging, `main`, the rulesets, the settings
+  files and money stay the owner's.
 - **The next row the work depends on is an owner-action row** (a row added for a patch the session wrote).
   P0.0 does not stop the session: rows that do not need it continue, and P0.28 waits.
 - P2.11 re-based the plan above 150 % of its total: the owner cuts features.
