@@ -312,6 +312,49 @@ P0 item provides.
 
 ## Phase gates
 
+### P4 gate on 997a2842 (UX-P4.fix-25), 2026-11-21: collected; phase review pending
+
+Collected after every P4 row is `done` (last: UX-P4.fix-25, 9f5b8f64). The plan's **P4 gate** line, clause by clause:
+
+- Every `a11y-*` rule `hard` except `a11y-sr-speech`: **met within Appendix B.** The tracker's a11y rows: `a11y-focus-after-close` hard since
+  UX-P4.4, `a11y-enter-not-destructive` hard on both surfaces (UX-P4.2a, UX-P4.2b), `a11y-hint-truthful` hard since UX-P2.9a,
+  `a11y-reduced-motion-both-signals` hard since UX-P4.5, `a11y-text-contrast-all-states` hard since UX-P4.6, `a11y-nontext-contrast` hard
+  since UX-P2.3, `a11y-full-axe-real-page` hard (P0.23), `a11y-first-load-announced` hard on the main panel (UX-P4.6) and the side bar's
+  Installed and Updates (UX-P4.fix-9), its Browse part `pending P5.9` as Appendix B assigns ("main: P4.6 · Browse: P5.9", plan line 929).
+  Statuses in `src/test/ui/v2/a11y.ts`: `FULL_AXE_STATUS`, `KEYS_STATUS`, `MOTION_STATUS`, `FEEDBACK_STATUS`, `CONTRAST_STATUS` all `'hard'`.
+  Push run 44852110277 (997a2842): the pending list holds one line, `(pending P5.9)`.
+- The §5 keyboard paths walked on every screen: **met.** 60 `[keys]` lines in the push run's `ui-output.txt`, none pending or red;
+  `KEYS_PENDING` empty since UX-P4.3.
+- Interaction model §5–§6 match the code: for the phase review (below).
+- The polish contract bundle landed: **met**, UX-P4.1 (ae2dddf, 58b90c3, 261e59e).
+- One Tier B dispatch and one `ui-macos` run green: **met.** Dispatch 44854659411 on 997a2842 (UX-P4.fix-25's proof; its ruling DO 12
+  admits it: every lane green, and `git diff --stat 997a2842..HEAD -- . ':!docs/plans'` is empty at collection), every job `success`
+  (logs in `captures/44854659411/ui-log*/`):
+
+| Job | Start → completion (UTC) | Job time | Conclusion |
+|---|---|---|---|
+| UI floor (1.90.0) | 02:13:21 → 02:29:27 | 16 min 06 s | success |
+| UI macOS | 02:13:21 → 02:45:49 | 32 min 28 s | success |
+| UI matrix (dark-2026, part 1) | 02:13:21 → 02:29:05 | 15 min 44 s | success |
+| UI matrix (dark-2026, part 2) | 02:13:21 → 02:28:44 | 15 min 23 s | success |
+| UI matrix (dark-high-contrast, part 1) | 02:13:21 → 02:28:50 | 15 min 29 s | success |
+| UI matrix (dark-high-contrast, part 2) | 02:13:21 → 02:26:25 | 13 min 04 s | success |
+| UI matrix (dark-modern, part 1) | 02:13:20 → 02:28:56 | 15 min 36 s | success |
+| UI matrix (dark-modern, part 2) | 02:13:21 → 02:27:07 | 13 min 46 s | success |
+| UI matrix (light-2026, part 1) | 02:13:21 → 02:31:18 | 17 min 57 s | success |
+| UI matrix (light-2026, part 2) | 02:13:20 → 02:32:28 | 19 min 08 s | success |
+| UI matrix (light-high-contrast, part 1) | 02:13:20 → 02:26:33 | 13 min 13 s | success |
+| UI matrix (light-high-contrast, part 2) | 02:13:58 → 02:32:20 | 18 min 22 s | success |
+| UI matrix (light-modern, part 1) | 02:13:48 → 02:28:57 | 15 min 09 s | success |
+| UI matrix (light-modern, part 2) | 02:13:44 → 02:28:48 | 15 min 04 s | success |
+| UI | 02:16:50 → 02:34:58 | 18 min 08 s | success |
+
+  Counts: `ui` 13, 54 and 119 passing, `[diff] summary: 120 compared, 120 at 0 px`; macOS Modern `109 passing`, classic `11 passing`; floor
+  `110 passing`; the twelve matrix jobs 128/140 (four themes), 123/137 (dark-high-contrast), 122/137 (light-high-contrast). Every lane:
+  `not reachable` 0, `hard measurement red` 0, no `failing` line. Every other job (Lint, both Test jobs, both E2E jobs, both SDK probes,
+  Build & Package, Benchmark, Perf baseline) `success`; Negative control skipped (no `negative_sha`).
+- Phase review: pending (RUN-ux §6 step 2).
+
 ### For the P4 phase review (collected by the planning session; the gate has not run)
 
 - Run 44474252266 (190ea215) red on `SDK probe (10.0.x)` on two ordinary unit tests at the 5 s budget on a slow runner (N92): rerun once
