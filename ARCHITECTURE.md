@@ -740,8 +740,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
 `installed={view => <InstalledTab {...view} />}`, so the shell did not grow.
 
 - **One tree.** Each view is one `Listbox` with `groups` (`installed-list`, `role="tree"`, D48, UX-P2.1d): for a
-  single project the `direct` group row (`Direct Packages`, its count badge at the end inset; the text `k of N` while a filter is on, the total while the
-  vulnerability data of `@vulnerable` is unknown) over its packages; in All Projects a `project-<name>` group row per
+  single project the `direct` group row (`Direct Packages`, its count badge at the end inset; the text `k of N` while a filter is on; under `@vulnerable` the total until
+  the view's vulnerability data first settled, `k of N` after it whatever is unknown, through `groupCount` of `shared/installed/rules.ts`) over its packages; in All Projects a `project-<name>` group row per
   project from the `allProjects` slice, under a `folder-<folder>` group row with two or more workspace folders. Enter,
   Left and Right expand and collapse a group row, and the list's hint says so. A project's status (count, spinner,
   `Unsupported` and `Provisional` badges) is decoration on its group row, through `SectionHeader`'s `content`
@@ -788,7 +788,7 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   hands the focus to the Transitive group row (`focusListRow`, UX-P4.fix-16); the group's 2 px progress bar, empty state
   and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the main panel asks the
   aggregate once the projects' lists answered, without a click (the side bar only when the group is opened); the group row
-  shows its row count once the stream answers (`k of N` under `@vulnerable` only when every row and part is known), and its rows carry an `N projects` badge whose title names each project's roots.
+  shows its row count once the stream answers (`k of N` under `@vulnerable` once the view has first settled), and its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)
 

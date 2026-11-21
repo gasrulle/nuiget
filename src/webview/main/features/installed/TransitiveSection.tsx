@@ -2,8 +2,7 @@ import type React from 'react';
 import type { PackageMetadataLite, TransitivePackage } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, Banner, EmptyState, ProgressBar, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
-import { directCount } from '../../../shared/counts';
-import { vulnerabilityOf } from '../../../shared/installed/rules';
+import { groupCount, vulnerabilityOf } from '../../../shared/installed/rules';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 import { failure } from '../../../shared/updates/sentence';
@@ -23,10 +22,10 @@ const ERRORS: Record<string, string> = {
  * the lite metadata and no description (D14) and open a read-only details view with what requires them. When the project
  * has not been restored, a banner above the tree offers Restore, which runs `restore` (the feature's `ops/restore`); while a restore
  * of the project is queued or running (`restoring`) the bar says so (UX-P4.fix-10). Under `@vulnerable` (`vulnerableOnly`) only
- * the rows known vulnerable are listed, and a group's count reads `k of N` only when every row of it is known (UX-P5.1a,
- * DS-COPY-5).
+ * the rows known vulnerable are listed, and a group's count reads `k of N` once the view has first `settled`, whatever is
+ * unknown (UX-P5.1a, DS-COPY-5).
  */
-export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>, restore: (projectPath: string) => void, restoring: boolean, vulnerableOnly = false): { items: TreeItem[]; message: React.ReactNode } {
+export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>, restore: (projectPath: string) => void, restoring: boolean, vulnerableOnly = false, settled = false): { items: TreeItem[]; message: React.ReactNode } {
     if (state.projectPath === null) {
         return { items: [], message: null };
     }
@@ -37,8 +36,7 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
     const total = frameworks.reduce((count, framework) => count + framework.packages.length, 0);
     const known = (entry: Pick<TransitivePackage, 'id' | 'version'>) => vulnerabilityOf(state.metadata.get(metadataKey(entry.id, entry.version)));
     const shown = (packages: ReadonlyArray<Pick<TransitivePackage, 'id' | 'version'>>) => (vulnerableOnly ? packages.filter(entry => known(entry) === 'vulnerable') : packages);
-    // `k of N` only when every row of the group is known; otherwise the total (UX-P5.1a).
-    const countOf = (packages: ReadonlyArray<Pick<TransitivePackage, 'id' | 'version'>>) => directCount(packages.length, shown(packages).length, vulnerableOnly && packages.every(entry => known(entry) !== 'unknown'));
+    const countOf = (packages: ReadonlyArray<Pick<TransitivePackage, 'id' | 'version'>>) => groupCount(packages.length, shown(packages).length, false, vulnerableOnly, settled);
     const items: TreeItem[] = [{
         kind: 'group',
         id: 'transitive',

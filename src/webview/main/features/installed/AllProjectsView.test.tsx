@@ -431,6 +431,9 @@ describe('main panel: All Projects', () => {
             await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
             // Lib is not restored: its transitive packages are unknown, so one banner and no sentence.
             expect(screen.getByTestId('installed-vulnerable-unavailable-banner')).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
+            // The counts read `k of N` all the same, the aggregate's too: the banner alone says what is unknown (design follow-up 4).
+            expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+            expect(screen.getByTestId('section-box-project-app').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
             expect(screen.queryByTestId('installed-empty')).toBeNull();
             expect(screen.queryByText('No vulnerable packages.')).toBeNull();
             const results = await axe(document.body);

@@ -1,4 +1,5 @@
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult } from '../../../protocol';
+import { directCount } from '../counts';
 import { busyKey, type OpsState } from '../store/ops';
 import { metadataKey } from '../store/transitive';
 
@@ -218,6 +219,15 @@ export const browseRowContext = (result: PackageSearchResult, projectPath: strin
     'nuiget.installed': installedVersion !== undefined,
     'nuiget.readOnly': readOnly,
 });
+
+/**
+ * A group row's count in the Installed tree (DS-COPY-5, UX-P5.1a): `k of N` while the id filter is on (`idFiltering`, for
+ * the groups that read it), and under `@vulnerable` once the view has first `settled`, whatever is unknown: the banner
+ * alone says that. Before the first settle under `@vulnerable` the count is the total.
+ */
+export function groupCount(total: number, shown: number, idFiltering: boolean, vulnerableOnly: boolean, settled: boolean): number | string {
+    return directCount(total, shown, vulnerableOnly ? settled : idFiltering);
+}
 
 /**
  * What the lite metadata says about a row's vulnerabilities (UX-P5.1a, D38): `vulnerable` with one or more advisories,

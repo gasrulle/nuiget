@@ -94,7 +94,7 @@ In this mode:
   yet listed, or whose list could not be read, cannot be picked.
 - Transitive dependencies aggregate into one group row. In the main panel they are asked once the projects' lists
   answered, without a click (the side bar asks them only when opened), and the group row shows the aggregate's row count
-  once they answered; under `@vulnerable` the row reads `k of N` only when every row is known, and the projects' and the
+  once they answered; under `@vulnerable` every group row reads `k of N` once the view has first settled, whatever is unknown, and the projects' and the
   aggregate's vulnerability data follow the single-project rules of §2 and §4 with one banner above the whole tree and
   "Vulnerability data is not available for these projects yet." before the first settle (UX-P5.1a).
 - With ≤ 1 project the mode is automatically downgraded to that project (host normalization).

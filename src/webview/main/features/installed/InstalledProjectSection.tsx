@@ -118,7 +118,7 @@ export function statusBadges(result: InstalledResult | undefined, marker?: strin
 }
 
 /**
- * The single-project group row's count: the total, `k of N` while a filter is on (shared with the sidebar, UX-P3.7b). While the
- * vulnerability data is unknown `@vulnerable` counts nothing, so the count stays the total.
+ * A list header's count: the total, `k of N` while a filter is on (shared with the sidebar, UX-P3.7b). The Installed tree's
+ * group rows take it through `groupCount` (`shared/installed/rules.ts`), which adds the `@vulnerable` rule (UX-P5.1a).
  */
 export { directCount } from '../../../shared/counts';

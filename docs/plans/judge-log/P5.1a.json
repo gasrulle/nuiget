@@ -52,8 +52,8 @@
             "geometry",
             "states"
           ],
-          "disposition": "accepted-as-design",
-          "reason": "The form the design-advisor opening ruling of 2026-11-21 ordered: DO 6c (under @vulnerable with an unknown part the banner stands alone, never an empty sentence beside it) and DO 6e (a group with an unknown entry keeps its total N); DS-COPY-5 forbids a badge and \"(N)\" together and its hard line is green (headers 2: count badges 1, \"(N)\" texts 0); a single project's sentence sits above the tree, never in it (gotcha \"A message inside a grouped list\"); DECISIONS 2026-11-21 \"Unknown vulnerability data in the Installed tab (UX-P5.1a)\". Design-advisor follow-up 2 of 2026-11-21, docs/plans/handoff/P5.1a.md."
+          "disposition": "fixed",
+          "reason": "Amended by design-advisor follow-up 4 of 2026-11-21: first accepted as design (DO 6e of the opening ruling, follow-up 2), then reversed. Under @vulnerable, once the view has first settled, every group that lists package rows reads k of N whatever is unknown, and the banner alone says the unknown. Fixed in UX-P5.1a push 3c (groupCount, src/webview/shared/installed/rules.ts); the cell is re-adopted from push 3c's run under follow-up 4 DO 8a."
         }
       ],
       "singleJudge": [
@@ -85,6 +85,129 @@
           "rule": "spec-conflict",
           "disposition": "refuted",
           "reason": "The crop shows the capture's placeholder \"Search or type @ to filter\" and the artboard's older \"Search packages, or filter: @...\", but the capture follows the copy that design-system.md's main-header overflow row sets (since UX-P3.fix-15). The hard measurement confirms that copy fits: DS-OVERFLOW-2@main-installed-cpm/placeholder reads \"Search or type @ to filter\" 164 of 1136 px. The redline's spec.json says nothing about the placeholder, so this is not a §6 artboard-versus-spec conflict and there is no visible defect in the capture itself."
+        }
+      ]
+    },
+    {
+      "runId": "44883630632",
+      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "tree": "49bee353 (push 3b)",
+      "look": "modern",
+      "workflow": "wf_c39bcfe5-170",
+      "note": "The new All Projects cell and the two moved cells (main-installed-all, main-updates-all) judged in screen mode against main-installed-all.dark-modern.1200 (its artboard and spec). Two standing DS-COPY-5 findings, fixed in push 3c under design-advisor follow-up 4; one single-judge finding, informational; three candidates refuted. Nothing was adopted from this run (follow-up 4 DO 9).",
+      "captures": {
+        "main-installed-all-vulnerable-unavailable": {
+          "png": "captures/44883630632/main-installed-all-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "609cb28929bb83a26645652fd1ca529b032ba84961818c501901011eba9cad6d",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode)"
+        },
+        "main-installed-all": {
+          "png": "captures/44883630632/main-installed-all.dark-modern.1200.png",
+          "sha256": "bc88cd1b38f194e806eb7bfd2e264f0e1bcf635ea7f63b8457fc5d73fa58dcf8",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode)"
+        },
+        "main-updates-all": {
+          "png": "captures/44883630632/main-updates-all.dark-modern.1200.png",
+          "sha256": "d9a47078a08ae2b0742ac8b638624ef5cb9df5117b4ed41e3865408931e3e7de",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode)"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 8,
+        "standing": 2,
+        "blocking": 0,
+        "refuted": 3,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-all-vulnerable-unavailable#D1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "[native] Under the @vulnerable filter the Transitive Packages group header shows a count badge of 68 over a single listed row, while every project header in the same list shows the filtered \"N of M\" text (Gateway.csproj \"1 of 15\", Utility.csproj \"0 of 13\"), so one surface mixes two count styles and the badge reads as 68 vulnerable transitive packages. | [states] While the @vulnerable filter is active, the Transitive Packages group header shows a \"68\" count badge, the unfiltered total, with a single matching row (SQLitePCLRaw) under it. The project headers on the same surface use the filtering \"k of N\" style, so this header should read \"1 of 68\".",
+          "severity": "major",
+          "box": [
+            377,
+            564,
+            28,
+            19
+          ],
+          "rule": "DS-COPY-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "reason": "Design-advisor follow-up 4 of 2026-11-21, DO 1 and DO 6: under @vulnerable, once the view has first settled, every group that lists package rows reads k of N whatever is unknown, and the banner alone says the unknown. Fixed in UX-P5.1a push 3c (groupCount)."
+        },
+        {
+          "id": "main-installed-all-vulnerable-unavailable#D2",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "[native] Unresolved.csproj's group header shows a count badge of 2 while the filter is active and its group lists no row and no message beneath it. Its sibling project headers (Empty.csproj \"0 of 0\", Unsupported.csproj \"0 of 3\") use the \"N of M\" text, so the list mixes count styles and does not say what the 2 counts. | [states] While the @vulnerable filter is active, Unresolved.csproj's expanded header carries a plain count badge \"2\" with no rows under it, while every other project header on the surface shows the filtered \"k of N\" text (\"0 of 13\", \"1 of 15\", \"0 of 3\"). That mixes two count styles on one surface, and the badge reads as two matching packages that are not shown.",
+          "severity": "major",
+          "box": [
+            383,
+            452,
+            22,
+            20
+          ],
+          "rule": "DS-COPY-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "reason": "Design-advisor follow-up 4 of 2026-11-21, DO 1 and DO 6: under @vulnerable, once the view has first settled, every group that lists package rows reads k of N whatever is unknown, and the banner alone says the unknown. Fixed in UX-P5.1a push 3c (groupCount)."
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-all#D1",
+          "state": "main-installed-all",
+          "finding": "[states] The search box placeholder reads \"Search or type @ to filter\" while the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows design-system.md's main-header overflow row (placeholder copy since UX-P3.fix-15), so the artboard drawing is stale against the rules, not the product wrong.",
+          "severity": "minor",
+          "box": [
+            16,
+            42,
+            420,
+            26
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "A single-judge finding is informational (G-UI step 4). Follow-up 4 DO 6: the main-installed-all artboard's search placeholder predates UX-P3.fix-15; an artboard is never edited after its run, so the planning session re-renders it in an item of its own (tracker row)."
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "The first Transitive Packages row (SQLitePCLRaw, icon top at y 605) sits about 1 px inside the bottom of its 28 px group header (divider at y 560, so the header runs to 588; the row's top is at 587). Every other header-to-first-child gap is 3 px: the artboard's Tools folder header ends at 175 and Empty.csproj starts at 178, the capture's Tools (392 to 420) is followed by Empty.csproj at 423, and Gateway.csproj's header is followed by its Newtonsoft.Json row 3 px below.",
+          "severity": "major",
+          "rule": "DS-GRID-2",
+          "disposition": "refuted",
+          "reason": "The crop shows the SQLitePCLRaw row cleanly below the Transitive Packages header, with no overlap. The hard DS-GRID-2b reads \"transitive 0/0\", the same as the folder headers \"folder-app 0/0\" and \"folder-tools 0/0\". This contradicts the judge's claim that Tools is followed by a 3 px gap."
+        },
+        {
+          "id": "geometry-2",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "Adjacent project group headers that have no matching rows (Empty.csproj, Unresolved.csproj, Unsupported.csproj, and Catalog.csproj with Gateway.csproj above) are pitched 28 px for a 22 px header, a 6 px gap. Every other gap between consecutive tree items is 3 px: the spec's Tools header to Empty.csproj is 175 to 178, the Serilog row to Unsupported.csproj is 403 to 406 and the rows to Utility.csproj are 675 to 678.",
+          "severity": "major",
+          "rule": "DS-GRID-2",
+          "disposition": "refuted",
+          "reason": "Empty, Unresolved and Unsupported headers sit on a 28 px pitch (433, 461, 489). The artboard draws headers on the same pitch: Tools 160, Empty 188, and the message 216 to Unresolved 244. The hard DS-GRID-2b reads 3/3 for every project header."
+        },
+        {
+          "id": "states-1",
+          "state": "main-updates-all",
+          "finding": "The search box placeholder reads \"Search or type @ to filter\", where the artboard's search-input element reads \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's wording does not name the filters the box accepts.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard crop shows \"Search packages, or filter: @installed, @updates, @vulnerable\", but the spec.json's search-input entry declares no text, and docs/design/design-system.md line 437 makes this shorter copy the deliberate placeholder (the side bar's copy, chosen so it fits from 228 px since UX-P3.fix-15). The field's accessible label still names the filters, so the artboard text is stale and the capture follows the rule."
         }
       ]
     }

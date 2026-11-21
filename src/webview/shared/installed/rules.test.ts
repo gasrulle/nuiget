@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
 import type { Settling } from '../store/ops';
-import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, whyNotDeletable } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, groupCount, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -206,5 +206,16 @@ describe('vulnerability knowledge (UX-P5.1a)', () => {
         expect(transitiveVulnerability({ ...result, dataSourceAvailable: false }, metadata)).toEqual({ vulnerable: 0, unknown: true });
         expect(transitiveVulnerability({ ...result, errorKind: 'fs-error' }, metadata)).toEqual({ vulnerable: 0, unknown: true });
         expect(transitiveVulnerability(undefined, metadata)).toEqual({ vulnerable: 0, unknown: true });
+    });
+});
+
+describe('groupCount (UX-P5.1a design follow-up 4)', () => {
+    it('reads k of N while the id filter is on, and under @vulnerable only once the view has settled, whatever is unknown', () => {
+        expect(groupCount(3, 3, false, false, false)).toBe(3);
+        expect(groupCount(3, 1, true, false, false)).toBe('1 of 3');
+        // Under @vulnerable the settle decides, not the id filter.
+        expect(groupCount(3, 0, true, true, false)).toBe(3);
+        expect(groupCount(3, 0, false, true, true)).toBe('0 of 3');
+        expect(groupCount(68, 1, false, true, true)).toBe('1 of 68');
     });
 });

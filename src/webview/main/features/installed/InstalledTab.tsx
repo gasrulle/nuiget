@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
-import { transitiveVulnerability, whyNotRemovable } from '../../../shared/installed/rules';
+import { groupCount, transitiveVulnerability, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, TrashIcon, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
@@ -14,7 +14,7 @@ import { metadataKey, useTransitive } from '../../../shared/store/transitive';
 import type { ListView } from '../../MainShell';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
 import { BulkUninstallDialog, type Removal } from './BulkUninstallDialog';
-import { directCount, InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
+import { InstalledRow, statusBadges, visibleRows } from './InstalledProjectSection';
 import { parseRowId, rowId, type Section, type TreeItem } from './installedTree';
 import { transitiveGroupContent, transitiveRow, transitiveTree } from './TransitiveSection';
 import { aggregateVulnerability, allProjectsTransitiveGroupContent, allProjectsTransitiveTree } from './AllProjectsTransitiveSection';
@@ -236,9 +236,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     }, [restoringPaths, allMode, run, announce]);
     const transitivePart = useMemo(
         () => (allMode
-            ? allProjectsTransitiveTree(all, transitiveExpanded, restoreProjects, allRestoring, vulnerableView)
-            : transitiveTree(transitive, transitiveExpanded, collapsed, projectPath => restoreProjects([projectPath]), singleRestoring, vulnerableView)),
-        [allMode, all, transitive, transitiveExpanded, collapsed, restoreProjects, allRestoring, singleRestoring, vulnerableView],
+            ? allProjectsTransitiveTree(all, transitiveExpanded, restoreProjects, allRestoring, vulnerableView, singleSettled || everSettled)
+            : transitiveTree(transitive, transitiveExpanded, collapsed, projectPath => restoreProjects([projectPath]), singleRestoring, vulnerableView, singleSettled || everSettled)),
+        [allMode, all, transitive, transitiveExpanded, collapsed, restoreProjects, allRestoring, singleRestoring, vulnerableView, singleSettled, everSettled],
     );
 
     const items = useMemo((): TreeItem[] => {
@@ -271,8 +271,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                 const { result, metadata } = section;
                 const shown = visibleRows(result, metadata, filter, vulnerableOnly, singleSettled || everSettled);
                 const nothing = result.unsupported !== undefined && result.packages.length === 0;
-                // `k of N` under `@vulnerable` only when every row is known (UX-P5.1a, DS-COPY-5).
-                const count = nothing ? undefined : directCount(result.packages.length, shown.items.length, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && (shown.unknown || !installed.metadataSettled)));
+                const count = nothing ? undefined : groupCount(result.packages.length, shown.items.length, filter.trim() !== '', vulnerableOnly, singleSettled || everSettled);
                 list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct Packages', count, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
@@ -281,11 +280,11 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         }
         const project = (section: Section, level: number): void => {
             const id = projectGroups.get(section.projectPath) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`;
-            // Under `@vulnerable` a project's count reads `k of N` only when every row of it is known (UX-P5.1a); else its total.
+            // Under `@vulnerable` a project's count reads `k of N` once the view has first settled (UX-P5.1a); before, its total.
             // A project with no packages to list (unsupported, no list) shows no count, as under `@installed`.
             const listless = section.result !== undefined && section.result.unsupported !== undefined && section.result.packages.length === 0;
             const shown = vulnerableOnly && section.result !== undefined && !listless ? visibleRows(section.result, section.metadata, filter, true, singleSettled || everSettled) : undefined;
-            const count = shown === undefined || section.result === undefined ? undefined : directCount(section.result.packages.length, shown.items.length, !shown.unknown && all.metadataSettled);
+            const count = shown === undefined || section.result === undefined ? undefined : groupCount(section.result.packages.length, shown.items.length, false, true, singleSettled || everSettled);
             list.push({ kind: 'group', id, level, title: section.projectName, section, variant: level === 1 ? 'group' : 'level', count });
             packagesOf(section, id);
         };
@@ -304,7 +303,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         }
         list.push(...transitivePart.items);
         return list;
-    }, [allMode, sections, projectGroups, collapsed, filter, vulnerableOnly, transitivePart.items, singleSettled, everSettled, installed.metadataSettled, all.metadataSettled]);
+    }, [allMode, sections, projectGroups, collapsed, filter, vulnerableOnly, transitivePart.items, singleSettled, everSettled]);
 
     // A selection of this tab that comes back (the tab shown again) makes its row current again.
     const detailsSelection = useDetails().selection;

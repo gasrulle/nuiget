@@ -809,12 +809,17 @@ describe('main panel: Installed tab', () => {
         await user.type(screen.getByTestId('search-input'), '@vulnerable');
         counted();
         expect(screen.getByText('Vulnerability data is not available for this project yet.')).toBeInTheDocument();
-        // `k of N` once every direct row is known (UX-P5.1a): Moq vulnerable, the other two clear.
+        // `k of N` once the view has first settled, the direct and the transitive asks both (UX-P5.1a design follow-up 4):
+        // Moq vulnerable, the other two clear; the transitive list holds no package.
         await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [
             { id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] },
             { id: 'Serilog', version: '3.0.0', vulnerabilities: [] },
             { id: 'Newtonsoft.Json', version: '13.0.1', vulnerabilities: [] },
         ] }));
+        counted();
+        // This mount asks the transitive list when its group opens.
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [] }, 1));
         filtered();
     });
 
@@ -846,10 +851,11 @@ describe('main panel: Installed tab', () => {
         expect(banner()).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
         expect(screen.queryByTestId('installed-empty')).toBeNull();
         expect(screen.queryByText('No vulnerable packages.')).toBeNull();
-        // The Direct group is fully known: `0 of 3`; the Transitive group holds an unknown row: its total.
+        // Settled: every group reads `k of N`, the Transitive group too although its one row is unknown; the banner says that
+        // (UX-P5.1a design follow-up 4).
         expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 3');
-        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toBeNull();
-        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toBeNull();
         const results = await axe(document.body);
         expect(results).toHaveNoViolations();
     });
@@ -870,18 +876,18 @@ describe('main panel: Installed tab', () => {
         expect(banner()).toBeNull();
     });
 
-    it('under @vulnerable a group counts k of N only when every row of it is known: a partly known Direct group and a framework group with an unknown row keep their totals (UX-P5.1a)', async () => {
+    it('under @vulnerable every group counts k of N once the view has settled, whatever is unknown: a partly known Direct group and a framework group with an unknown row (UX-P5.1a)', async () => {
         const net = (targetFramework: string, ids: string[]) => ({ targetFramework, packages: ids.map(id => ({ id, version: '1.0.0', requiredByChain: ['Moq'] })) });
         const { host } = await mountVulnerable({ projectPath: A, dataSourceAvailable: true, frameworks: [net('net8.0', ['X']), net('net10.0', ['X', 'Y'])] });
         // Newtonsoft.Json is not answered: unknown.
         await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect.slice(0, 2) }));
         await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }] }));
-        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-section-count-text')).toBeNull();
-        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-badge--count')).toHaveTextContent('3');
-        // The group opened (a vulnerable transitive row is known): net8.0 is fully known, net10.0 holds the unknown Y.
+        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 3');
+        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-badge--count')).toBeNull();
+        // The group opened (a vulnerable transitive row is known): net8.0 is fully known, net10.0 holds the unknown Y; both k of N.
         expect(screen.getByTestId('section-box-transitive-net8.0').querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 1');
-        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-section-count-text')).toBeNull();
-        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-badge--count')).toHaveTextContent('2');
+        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 2');
+        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-badge--count')).toBeNull();
         expect(banner()).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
     });
 

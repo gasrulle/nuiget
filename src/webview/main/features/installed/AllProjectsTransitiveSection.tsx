@@ -1,7 +1,6 @@
 import type React from 'react';
 import { Badge, Banner, EmptyState, ProgressBar, SectionHeader, Skeleton, type GroupPlacement } from '../../../shared/primitives';
-import { directCount } from '../../../shared/counts';
-import { vulnerabilityOf } from '../../../shared/installed/rules';
+import { groupCount, vulnerabilityOf } from '../../../shared/installed/rules';
 import type { AllProjectsState } from '../../../shared/store/allProjects';
 import { metadataKey } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
@@ -32,14 +31,14 @@ export function aggregateVulnerability(transitive: AllProjectsState['transitive'
  * restore of one of them is queued or running (`restoring`) a bar says so (UX-P4.fix-10). A
  * row shows how many projects have it (the origins are its description through that badge) and opens a read-only details
  * view with one block per project. Once the stream has answered the group row shows the aggregate's row count; under
- * `@vulnerable` (`vulnerableOnly`) only the rows known vulnerable are listed and the count reads `k of N` only when every row
- * and every part is known (UX-P5.1a).
+ * `@vulnerable` (`vulnerableOnly`) only the rows known vulnerable are listed and, once the view has first `settled`, the count
+ * reads `k of N` whatever is unknown: the banner alone says that (UX-P5.1a).
  */
-export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boolean, restore: (projectPaths: string[]) => void, restoring: boolean, vulnerableOnly = false): { items: TreeItem[]; message: React.ReactNode } {
+export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boolean, restore: (projectPaths: string[]) => void, restoring: boolean, vulnerableOnly = false, settled = false): { items: TreeItem[]; message: React.ReactNode } {
     const { transitive } = all;
     const knowledge = aggregateVulnerability(transitive);
     const listed = vulnerableOnly ? knowledge.rows.filter(row => vulnerabilityOf(transitive.metadata.get(metadataKey(row.id, row.version))) === 'vulnerable') : knowledge.rows;
-    const count = transitive.status === 'ready' ? directCount(knowledge.rows.length, listed.length, vulnerableOnly && !knowledge.unknown) : undefined;
+    const count = transitive.status === 'ready' ? groupCount(knowledge.rows.length, listed.length, false, vulnerableOnly, settled) : undefined;
     const items: TreeItem[] = [{ kind: 'group', id: 'transitive', level: 1, title: 'Transitive Packages', count, variant: 'group' }];
     if (!expanded) {
         return { items, message: null };
