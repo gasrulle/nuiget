@@ -709,6 +709,16 @@ const REACH: Record<string, Reach> = {
             await until('document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') !== null && document.querySelector(\'[data-testid="installed-empty"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending")', 'the vulnerability banner, no empty sentence, the tab settled', 120_000);
         },
     },
+    // UX-P5.1a push 3b (design-advisor ruling for push 3b, DO 8): a predicate that does not hold is `not reachable`, never a retry.
+    'main-installed-all-vulnerable-unavailable': {
+        reach: async () => {
+            await chooseFixtureProject(ALL_PROJECTS);
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'the All Projects list', 'the Installed list');
+            await typeInSearch('@vulnerable');
+            await installedListAtTop();
+            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); const aggregate = document.querySelector(\'[data-testid="section-box-transitive"]\'); return document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') !== null && document.querySelector(\'[data-testid="installed-empty"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending") && options.length >= 1 && options.every(option => option.textContent.includes("Vulnerable")) && aggregate !== null && /[0-9]/.test(aggregate.textContent || ""); })()', 'the banner, the vulnerable rows, the aggregate count, the tab settled', 120_000);
+        },
+    },
     'main-installed-vulnerable': {
         reach: async () => {
             await gatewayInstalled();
@@ -1733,8 +1743,8 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     // UX-P5.1a (design-advisor ruling DO 11, architecture follow-up 1 DO 11): the Installed tab's text and its settle truth at
     // the shot, read in the webview before the shot leaves it; informational; the reading before any adoption.
     if (state.surface === 'main') {
-        const tab = await script<{ text: string; pending: boolean } | null>('const tab = document.querySelector(\'[data-testid="installed-tab"]\'); return tab ? { text: (tab.textContent || "").replace(/\\s+/g, " ").trim(), pending: tab.hasAttribute("data-pending") } : null;');
-        console.warn(`[pending] ${file}: ${tab === null ? 'no Installed tab' : `tab "${tab.text}", data-pending ${tab.pending ? 'present' : 'absent'}`}`);
+        const tab = await script<{ text: string; pending: boolean; transitive: string | null } | null>('const tab = document.querySelector(\'[data-testid="installed-tab"]\'); const aggregate = document.querySelector(\'[data-testid="section-box-transitive"]\'); return tab ? { text: (tab.textContent || "").replace(/\\s+/g, " ").trim(), pending: tab.hasAttribute("data-pending"), transitive: aggregate ? (aggregate.textContent || "").replace(/\\s+/g, " ").trim() : null } : null;');
+        console.warn(`[pending] ${file}: ${tab === null ? 'no Installed tab' : `tab "${tab.text}", data-pending ${tab.pending ? 'present' : 'absent'}${tab.transitive === null ? '' : `, transitive group "${tab.transitive}"`}`}`);
     }
     if (!HOVER_STATES.includes(state.name)) {
         await leaveWebview();

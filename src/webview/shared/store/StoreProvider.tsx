@@ -31,7 +31,7 @@ function Store({ bus, children, prefetch = true, surface, details: Details }: St
                     <InstalledProvider>
                         <UpdatesProvider>
                             <TransitiveProvider prefetch={prefetch}>
-                                <AllProjectsProvider>
+                                <AllProjectsProvider prefetchTransitive={prefetch}>
                                     <ConfigProvider>
                                         <SourcesProvider>
                                             <SearchProvider>{Details === undefined ? ops : <Details>{ops}</Details>}</SearchProvider>
@@ -50,8 +50,9 @@ function Store({ bus, children, prefetch = true, surface, details: Details }: St
 /**
  * The store of a surface: the bus and the slices that exist so far, each with a context of its own, so that a
  * component renders for the slice it reads and no other. Mounting it is what makes the surface ask the host
- * for the session and the projects. `prefetch={false}` keeps the transitive slice from asking before a
- * view opens it (the sidebar shows no transitive packages). `surface` is the surface this store belongs to: an
+ * for the session and the projects. `prefetch={false}` keeps the transitive slices from asking before a
+ * view opens them: the single project's slice and the All Projects aggregate, which the main panel asks once the
+ * projects' lists answered (UX-P5.1a; the sidebar shows no transitive packages). `surface` is the surface this store belongs to: an
  * operation its row menu ran carries it as the outcome's `origin`, and only this surface says it (UX-P4.fix-11).
  */
 export function StoreProvider(props: StoreProps): React.JSX.Element {

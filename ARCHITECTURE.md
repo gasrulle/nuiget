@@ -786,8 +786,9 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   (`transitive-restore-banner`) above the tree when the assets file is missing, in one element shape with the bar beside it so a
   focused Restore keeps the focus while the restore runs; when the banner leaves with the focus on it, `useRestoreBannerFocus`
   hands the focus to the Transitive group row (`focusListRow`, UX-P4.fix-16); the group's 2 px progress bar, empty state
-  and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the aggregate is asked on
-  expand, its rows carry an `N projects` badge whose title names each project's roots.
+  and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the main panel asks the
+  aggregate once the projects' lists answered, without a click (the side bar only when the group is opened); the group row
+  shows its row count once the stream answers (`k of N` under `@vulnerable` only when every row and part is known), and its rows carry an `N projects` badge whose title names each project's roots.
 
 ### Updates feature (main and sidebar)
 
@@ -963,8 +964,8 @@ With All Projects committed, the Installed and Updates tabs show one tree each, 
 (`projectGroupIds` of `shared/allProjects/folderGroups.tsx`) under a group row per workspace folder when there are two or
 more (`groupByFolder`; UX-P2.1d, UX-P3.1b). An unsupported project keeps its group row in its folder, with an `Unsupported` badge and its reason as a
 message leaf ("Unsupported project: <message>."), its rows read-only; a project whose SDK is below 10 lists its packages read-only (D13), the other reasons
-have no packages and show no list. The Installed tab's Transitive group row aggregates `allProjects/transitive` on
-expand: one row per lower-cased id and version, with each project's top-level roots ("no traceable top-level package"
+have no packages and show no list. The Installed tab's Transitive group row aggregates `allProjects/transitive`, asked
+once the projects' lists answered (UX-P5.1a): one row per lower-cased id and version, with each project's top-level roots ("no traceable top-level package"
 for none) and Restore for the projects not restored. In the details pane an installed or update row changes its own
 project; a search result offers Install…, whose dialog (`MultiInstallDialog`) shows where the package is installed and
 sends `ops/bulkInstall` for the projects picked. A bulk install shows no preview, so the dialog asks `cpm/preview` for

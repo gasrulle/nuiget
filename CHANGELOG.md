@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Right-click menu on every package row** — Right-click, Shift+F10 or the Menu key opens VS Code's own menu with the row's actions, in the main panel and the side bar.
 - **Works with the .NET 11 SDK** — Installing and updating packages in a Central Package Management project works on the .NET 11 SDK as it does on SDK 10.
 - **Update All stays visible when VS Code always shows header actions** — With VS Code's `workbench.view.alwaysShowHeaderActions` setting on, the Update All button of the sidebar's Updates section is shown without hovering.
-- **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your project gets through its references, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
+- **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your projects get through their references, for one project or All Projects, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
 
 ### Changed
 - **Screen readers announce when the main panel's package lists, details or README start loading**

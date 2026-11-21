@@ -9,6 +9,7 @@ import { useSession } from '../shared/store/session';
 import { useTransitive } from '../shared/store/transitive';
 import { useUpdates } from '../shared/store/updates';
 import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
+import { aggregateVulnerability } from './features/installed/AllProjectsTransitiveSection';
 import type { MainTab } from './MainShell';
 
 const TABS: ReadonlyArray<TabItem<MainTab>> = [
@@ -42,19 +43,25 @@ export function MainTabs({ selected, onSelect, children }: { selected: MainTab; 
     const singleDirect = installedSlice.result?.packages.filter(entry => directVulnerability(installedSlice.metadata, entry.id) === 'vulnerable').length ?? 0;
     const singleTransitive = transitiveSlice.projectPath === installedSlice.projectPath ? transitiveVulnerability(transitiveSlice.result, transitiveSlice.metadata).vulnerable : 0;
     const singleVulnerable = singleDirect + singleTransitive || undefined;
-    const allVulnerable = [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.filter(entry => directVulnerability(allProjects.metadata.get(chunk.projectPath) ?? new Map(), entry.id) === 'vulnerable').length ?? 0), 0) || undefined;
+    // All Projects: each project's direct rows plus the aggregate's transitive rows (a package in three projects is one row there).
+    const allDirect = [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.filter(entry => directVulnerability(allProjects.metadata.get(chunk.projectPath) ?? new Map(), entry.id) === 'vulnerable').length ?? 0), 0);
+    const allVulnerable = allDirect + (allProjects.transitive.enabled ? aggregateVulnerability(allProjects.transitive).vulnerable : 0) || undefined;
     const vulnerableCount = session?.selectedProject === ALL_PROJECTS ? allVulnerable : singleVulnerable;
-    // The settle truth of the capture harness (UX-P5.1a, `data-pending`): a single project's Installed tab is pending from its
-    // list's answer until both slices first settled for it, latched per project; never on a later re-ask, never in All Projects.
-    const singlePath = session?.selectedProject === ALL_PROJECTS ? null : installedSlice.projectPath;
-    const bothSettled = installedSlice.metadataSettled && transitiveSlice.settled && transitiveSlice.projectPath === singlePath;
+    // The settle truth of the capture harness (UX-P5.1a, `data-pending`): the Installed tab is pending from the list's (or All
+    // Projects' fan-out's) answer until both metadata parts first settled for that view, latched per view; never on a re-ask.
+    const allMode = session?.selectedProject === ALL_PROJECTS;
+    const singlePath = allMode ? (allProjects.active ? ALL_PROJECTS : null) : installedSlice.projectPath;
+    const bothSettled = allMode
+        ? allProjects.metadataSettled && allProjects.transitive.settled
+        : installedSlice.metadataSettled && transitiveSlice.settled && transitiveSlice.projectPath === singlePath;
+    const listAnswered = allMode ? allProjects.status === 'ready' : installedSlice.status === 'ready';
     const [settledFor, setSettledFor] = useState<string | null>(null);
     useEffect(() => {
         if (singlePath !== null && bothSettled) {
             setSettledFor(singlePath);
         }
     }, [singlePath, bothSettled]);
-    const installedPending = singlePath !== null && installedSlice.status === 'ready' && settledFor !== singlePath && !bothSettled;
+    const installedPending = singlePath !== null && listAnswered && settledFor !== singlePath && !bothSettled;
     const tabs = TABS.map(item => {
         const counted = counts[item.id] !== undefined ? { ...item, count: counts[item.id] } : item;
         const pending = item.id === 'installed' && installedPending ? { ...counted, pending: true } : counted;

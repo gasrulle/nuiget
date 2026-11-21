@@ -163,6 +163,9 @@ export const STATES: readonly NamedState[] = [
         'The Unresolved project, "@vulnerable" in the search box: its Serilog row has no version to ask about and its transitive packages are not known (unrestored), so one warning banner says some packages could not be checked (marker installed-vulnerable-unavailable-banner); no "not available yet" sentence; the Installed tab settled (no data-pending).', [LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-installed-vulnerable', 'main', [primary('main')],
         'Gateway selected, "@vulnerable" in the search box: one or more options, each with a Vulnerable badge; no banner; the Installed tab settled (no data-pending).', [LIVE_CARET, LIVE_ICONS]), diffTolerance: 0 },
+    // UX-P5.1a push 3b (design-advisor ruling for push 3b, DO 8): All Projects under `@vulnerable`, always with an unknown part.
+    { ...ready('main-installed-all-vulnerable-unavailable', 'main', [primary('main')],
+        'All Projects, "@vulnerable" in the search box, the list at its top: the one warning banner above the tree (marker installed-vulnerable-unavailable-banner; Unresolved is unrestored), one or more vulnerable rows each with its Vulnerable badge, the aggregate group row with its count; no "not available yet" sentence; the Installed tab settled (no data-pending).', [LIVE_CARET, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-hover', 'main', [primary('main')],
         'Gateway selected, the list scrolled to the Serilog row (the thirteenth in id order), the pointer on it; the row matches :hover.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-hover-current', 'main', [primary('main')],

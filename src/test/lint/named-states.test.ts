@@ -153,7 +153,8 @@ describe('the named states (UX-P0.8)', () => {
             // The two hover states are not in a high-contrast shard: neither has a fill to read there (UX-P2.3, UX-P2.5b); nor is the hovered current row (UX-P2.8a).
             // UX-P3.1b: eight Updates states, three widths each; UX-P3.2: six Browse and three quick-search states; UX-P3.5: the Multi Install dialog; UX-P3.6: seven sources states; UX-P3.7a: sidebar-hover; UX-P3.7b: sidebar-filter; UX-P3.7c: sidebar-all-projects; UX-P3.7d: sidebar-all-projects-updates; UX-P3.8: seven sidebar Browse and Installed cells; UX-P3.10: ten sidebar state cells, seven details cells and main-updates-unsupported; UX-P4.2a: main-installed-uninstall-dialog; UX-P4.2b: sidebar-uninstall-dialog; UX-P4.fix-13: main-installed-busy; UX-P4.fix-19: main-updates-update-all-dialog; UX-P4.fix-23: main-installed-provisional and sidebar-installed-provisional; UX-P4.10: main-installed-zoom2-800px, in the dark-high-contrast shard only, at 800 only.
             // UX-P5.1a: main-installed-vulnerable and main-installed-vulnerable-unavailable, three widths each.
-            const expected = theme === 'dark-high-contrast' ? 266 : theme.includes('high-contrast') ? 265 : 274;
+            // UX-P5.1a push 3b: main-installed-all-vulnerable-unavailable, three widths.
+            const expected = theme === 'dark-high-contrast' ? 269 : theme.includes('high-contrast') ? 268 : 277;
             expect(files, theme).toHaveLength(expected);
             const zoomed = files.filter(file => file.startsWith('main-installed-zoom2-'));
             expect(zoomed, theme).toEqual(theme === 'dark-high-contrast' ? ['main-installed-zoom2-800px.dark-high-contrast.800.png'] : []);
@@ -176,10 +177,10 @@ describe('the named states (UX-P0.8)', () => {
         const files = laneFiles('floor');
         // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported, and UX-P4.2a's main-installed-uninstall-dialog, and UX-P4.2b's sidebar-uninstall-dialog, and UX-P4.fix-13's main-installed-busy, and UX-P4.fix-19's main-updates-update-all-dialog, and UX-P4.fix-23's main-installed-provisional and sidebar-installed-provisional.
         // UX-P5.1a: the two @vulnerable states.
-        expect(files).toHaveLength(111);
+        expect(files).toHaveLength(112);
         // The zoomed cell is in no lane but its matrix shard (UX-P4.10).
         expect([...expectedFiles(), ...files, ...laneFiles('macos')].filter(file => file.startsWith('main-installed-zoom2-'))).toEqual([]);
-        expect(new Set(files).size).toBe(111);
+        expect(new Set(files).size).toBe(112);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());
@@ -189,10 +190,10 @@ describe('the named states (UX-P0.8)', () => {
         expect([...MATRIX_PARTS]).toEqual(['1', '2']);
         // Architecture-advisor ruling of 2026-11-21: part 1 the main panel below its widest width, part 2 the main panel at its widest width and the side bar.
         // UX-P5.1a: the two @vulnerable states add 800 and 1200 to part 1 and 1600 to part 2.
-        const counts: Record<string, [number, number]> = { 'dark-high-contrast': [127, 139], 'light-high-contrast': [126, 139] };
+        const counts: Record<string, [number, number]> = { 'dark-high-contrast': [129, 140], 'light-high-contrast': [128, 140] };
         for (const theme of MATRIX_THEMES) {
             const [one, two] = MATRIX_PARTS.map(part => laneFiles('matrix', theme, part));
-            expect([one.length, two.length], theme).toEqual(counts[theme] ?? [132, 142]);
+            expect([one.length, two.length], theme).toEqual(counts[theme] ?? [134, 143]);
             expect(one.filter(file => two.includes(file)), theme).toEqual([]);
             expect(new Set([...one, ...two]), theme).toEqual(new Set(laneFiles('matrix', theme)));
             const keys = (part: '1' | '2') => new Set(matrixCaptures(theme, part).map(({ state, capture }) => `${state.surface}:${capture.width}`));

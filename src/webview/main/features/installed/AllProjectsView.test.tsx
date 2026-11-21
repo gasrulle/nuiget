@@ -175,7 +175,8 @@ describe('main panel: All Projects', () => {
     it('the Transitive group row aggregates every project once expanded, and the banner above the tree offers Restore for the projects not restored', async () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));
-        expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        // Asked once after the fan-out answered, without a click (UX-P5.1a push 3b: the main panel's eager stream).
+        expect(host.requests('allProjects/transitive')).toHaveLength(1);
         // One tree: the aggregate's group row follows the project group rows (P9.fix-2, D48).
         expect(groupRows()).toEqual(['project-app', 'project-lib', 'transitive']);
 
@@ -373,6 +374,155 @@ describe('main panel: All Projects', () => {
         expect(results).toHaveNoViolations();
         expect(['aria-allowed-attr', 'aria-required-children', 'aria-required-parent', 'nested-interactive'].map(rule => axeRuleOutcome(results, rule))).toEqual(['passes', 'passes', 'passes', 'passes']);
     });
+
+    describe('vulnerabilities under All Projects (UX-P5.1a push 3b)', () => {
+        const advisory = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+        /** All Projects with each project's metadata chunk before the fan-out's answer, as the host streams it. */
+        async function mountWithMetadata(direct: Record<string, Array<{ id: string; version: string; vulnerabilities?: typeof advisory }>>): Promise<FakeHost> {
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
+            const stream = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: PROJECTS }));
+            for (const project of PROJECTS) {
+                await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: project.path, projectName: project.name, workspaceFolder: project.workspaceFolder, result: installed(project.path, [pkg('Serilog')]) } }));
+                await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: project.path, packages: direct[project.path] ?? [] }));
+            }
+            await hostSays(() => host.respond(stream, { projectPaths: PROJECTS.map(project => project.path), errored: [] }));
+            return host;
+        }
+        const x = (projectPath: string, name: string, dataSourceAvailable = true) => transitiveChunk(projectPath, name, dataSourceAvailable ? [{ targetFramework: 'net8.0', packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['Serilog'] }] }] : [], dataSourceAvailable);
+        const tab = (): HTMLElement => screen.getByTestId('installed-tab');
+
+        it('the badge counts each project\'s known vulnerable direct rows and the aggregate\'s rows once per package, and the tab is pending until both parts first settle', async () => {
+            const host = await mountWithMetadata({
+                [A]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: advisory }],
+                [B]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: advisory }],
+                [C]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }],
+            });
+            // The eager stream is asked once the fan-out answered; the tab is pending until it and its metadata settle.
+            expect(host.requests('allProjects/transitive')).toHaveLength(1);
+            expect(tab()).toHaveAttribute('data-pending', '');
+            const stream = host.requests('allProjects/transitive')[0];
+            for (const [path, name] of [[A, 'App'], [B, 'Lib'], [C, 'Tool']]) {
+                await hostSays(() => host.chunk(stream, { kind: 'project', chunk: x(path, name) }));
+            }
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }] }));
+            // Two direct rows (App, Lib) and one aggregate row (X in three projects): three.
+            expect(screen.getByRole('tab', { name: 'Installed 3 3 packages with known vulnerabilities' })).toBe(tab());
+            expect(tab()).not.toHaveAttribute('data-pending');
+            // The aggregate's group row counts its rows once the stream answered, collapsed or not.
+            expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
+        });
+
+        it('under @vulnerable: not available for these projects until both parts settle, then one banner for an unknown part', async () => {
+            const user = userEvent.setup();
+            const clear = { [A]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [B]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [C]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] };
+            const host = await mountWithMetadata(clear);
+            await user.type(screen.getByTestId('search-input'), '@vulnerable');
+            expect(screen.getByTestId('installed-empty')).toHaveTextContent('Vulnerability data is not available for these projects yet.');
+            expect(screen.queryByTestId('installed-vulnerable-unavailable-banner')).toBeNull();
+            const stream = host.requests('allProjects/transitive')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: x(A, 'App') }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: x(B, 'Lib', false) }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
+            // Lib is not restored: its transitive packages are unknown, so one banner and no sentence.
+            expect(screen.getByTestId('installed-vulnerable-unavailable-banner')).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
+            expect(screen.queryByTestId('installed-empty')).toBeNull();
+            expect(screen.queryByText('No vulnerable packages.')).toBeNull();
+            const results = await axe(document.body);
+            expect(results).toHaveNoViolations();
+        });
+
+        it('under @vulnerable with every part known and no vulnerable row, "No vulnerable packages." stands alone and each project counts k of N', async () => {
+            const user = userEvent.setup();
+            const clear = { [A]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [B]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [C]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] };
+            const host = await mountWithMetadata(clear);
+            await user.type(screen.getByTestId('search-input'), '@vulnerable');
+            const stream = host.requests('allProjects/transitive')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: x(A, 'App') }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
+            expect(screen.getByTestId('installed-empty')).toHaveTextContent('No vulnerable packages.');
+            expect(screen.queryByTestId('installed-vulnerable-unavailable-banner')).toBeNull();
+            expect(screen.getByTestId('section-box-project-app').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+            expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+        });
+
+        it('under @vulnerable the aggregate opens by itself once a row of it is vulnerable, lists only that row and counts nothing before the stream answers', async () => {
+            const user = userEvent.setup();
+            const clear = { [A]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [B]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [C]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] };
+            const host = await mountWithMetadata(clear);
+            await user.type(screen.getByTestId('search-input'), '@vulnerable');
+            const stream = host.requests('allProjects/transitive')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', [{ targetFramework: 'net8.0', packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['Serilog'] }, { id: 'Y', version: '2.0.0', requiredByChain: ['Serilog'] }] }]) }));
+            // Before the stream's answer the group row counts nothing.
+            expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count, .nuiget-section-count-text')).toBeNull();
+            await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }, { id: 'Y', version: '2.0.0', vulnerabilities: [] }] }));
+            // Opened without a click, the vulnerable row alone, and every part known: 1 of 2.
+            const group = screen.getByTestId('group-row-transitive').querySelector('[role="treeitem"]');
+            expect(group).toHaveAttribute('aria-expanded', 'true');
+            const rows = screen.getByTestId('installed-list').querySelectorAll('[data-testid="group-row-transitive"] ~ .nuiget-row:not([data-row-kind="group"]) .nuiget-row-option');
+            expect([...rows].map(row => row.getAttribute('data-item-id') ?? row.textContent)).toHaveLength(1);
+            expect(rows[0]).toHaveTextContent('X');
+            expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 2');
+            expect(screen.queryByTestId('installed-vulnerable-unavailable-banner')).toBeNull();
+        });
+
+        it('under @vulnerable an errored project of the stream or a chunk with an error kind is an unknown part: one banner, never "No vulnerable packages."', async () => {
+            const user = userEvent.setup();
+            const clear = { [A]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [B]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }], [C]: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] };
+            const host = await mountWithMetadata(clear);
+            await user.type(screen.getByTestId('search-input'), '@vulnerable');
+            const stream = host.requests('allProjects/transitive')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: x(A, 'App') }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [{ projectPath: B, errorKind: 'fs-error' }] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
+            expect(screen.getByTestId('installed-vulnerable-unavailable-banner')).toBeInTheDocument();
+            expect(screen.queryByText('No vulnerable packages.')).toBeNull();
+
+            // A fresh ask whose chunk carries an error kind is unknown too.
+            await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+            const again = host.requests('allProjects/transitive')[1];
+            await hostSays(() => host.chunk(again, { kind: 'project', chunk: { ...x(A, 'App'), errorKind: 'parse-failed' } }));
+            await hostSays(() => host.respond(again, { projectPaths: [A], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
+            await waitFor(() => expect(screen.getByTestId('installed-vulnerable-unavailable-banner')).toBeInTheDocument());
+            expect(screen.queryByText('No vulnerable packages.')).toBeNull();
+        });
+
+        it('under @vulnerable a project whose list failed is an unknown part, and an unsupported project without packages shows no count', async () => {
+            const user = userEvent.setup();
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: PROJECTS }, 1));
+            const fan = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(fan, { kind: 'start', projects: PROJECTS }));
+            await hostSays(() => host.chunk(fan, { kind: 'project', chunk: { projectPath: A, projectName: 'App', workspaceFolder: 'w1', result: installed(A, [pkg('Serilog')]) } }));
+            await hostSays(() => host.chunk(fan, { kind: 'metadata', projectPath: A, packages: [{ id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] }));
+            await hostSays(() => host.chunk(fan, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', workspaceFolder: 'w1', result: { ...installed(B, []), unsupported: { reason: 'packages-config', message: 'packages.config projects are not supported' } } } }));
+            await hostSays(() => host.chunk(fan, { kind: 'project', chunk: { projectPath: C, projectName: 'Tool', workspaceFolder: 'w2', error: 'the project file is locked' } }));
+            await hostSays(() => host.respond(fan, { projectPaths: [A, B], errored: [{ projectPath: C, error: 'the project file is locked' }] }));
+            await user.type(screen.getByTestId('search-input'), '@vulnerable');
+            const stream = host.requests('allProjects/transitive')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', []) }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [] }));
+            // Tool's packages were never checked: the banner, beside its own error banner, and no "No vulnerable packages.".
+            expect(screen.getByTestId('installed-error-tool')).toBeInTheDocument();
+            expect(screen.getByTestId('installed-vulnerable-unavailable-banner')).toBeInTheDocument();
+            expect(screen.queryByText('No vulnerable packages.')).toBeNull();
+            // Lib has nothing to list: no count, as under @installed.
+            const lib = screen.getByTestId('group-row-project-lib');
+            expect(lib.querySelector('.nuiget-badge--count, .nuiget-section-count-text')).toBeNull();
+            expect(screen.getByTestId('section-box-project-app').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+        });
+    });
+
 });
 
 describe('aggregateTransitive', () => {

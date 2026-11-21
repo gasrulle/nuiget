@@ -539,6 +539,7 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-empty': ['installed-empty'],
     // UX-P5.1a (design-advisor ruling DO 10): `@vulnerable` with an unknown part says it once, in a warning banner.
     'main-installed-vulnerable-unavailable': ['installed-vulnerable-unavailable-banner'],
+    'main-installed-all-vulnerable-unavailable': ['installed-vulnerable-unavailable-banner'],
     'main-installed-error': ['installed-error'],
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
     'main-installed-unresolved': [],
@@ -603,9 +604,9 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 // UX-P4.4 (GOLDEN ruling DO 2): `main-details-readonly`, whose focus sits on the Installed list's empty slot at a first load.
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
-const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
+const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
 
 /**
  * The states that show a disabled icon button (UX-P3.10 push E, design-advisor ruling of 2026-11-14, point 1): DS-COLOR-6

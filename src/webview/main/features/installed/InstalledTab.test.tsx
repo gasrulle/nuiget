@@ -331,7 +331,7 @@ describe('main panel: Installed tab', () => {
         expect(tree).toHaveAttribute('data-testid', 'installed-list');
         expect(within(tree).getByTestId('group-row-project-app').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
         expect(within(tree).getByTestId('group-row-project-lib').querySelector('[role="treeitem"]')).toHaveAttribute('aria-level', '1');
-        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(0);
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false'); expect(host.requests('allProjects/transitive')).toHaveLength(1); // Asked once after the fan-out answered, without a click (UX-P5.1a push 3b).
         await user.click(optionOf('Serilog').querySelector('.nuiget-row-check') as Element);
         await user.click(optionOf('xunit').querySelector('.nuiget-row-check') as Element);
         expect(uninstallSelected()).toHaveTextContent('Uninstall Selected (2)');
