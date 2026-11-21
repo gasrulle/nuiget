@@ -3,7 +3,7 @@
   "runs": [
     {
       "runId": "44721186954",
-      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
       "tree": "f1f324f1 (proving push)",
       "look": "modern",
       "workflow": "wf_555a6240-5ac",
@@ -39,7 +39,6 @@
           "lenses": [
             "states"
           ],
-          "disposition": "informational",
           "reason": "A single-judge finding is informational. The capture follows the ruled copy (\"Search or type @ to filter\", UX-P3.fix-15); the artboard drawing predates it."
         }
       ],
@@ -51,7 +50,7 @@
           "finding": "The Installed tab shows no count badge while the Updates tab beside it shows 13 and the Direct Packages group shows 13. The artboard draws a count badge right after the INSTALLED label (x 82-108), so the tab strip uses two count styles: one tab has a count and the other does not.",
           "severity": "major",
           "rule": "judge-only",
-          "disposition": "refuted",
+          "disposition": "refuted-by-measurement",
           "reason": "The crop shows the INSTALLED tab with no badge and UPDATES with its badge. There are not two count styles: the hard DS-COPY-5 line reads 'tabs 2: count badges 1' and 'headers 2: count badges 1, \"(N)\" texts 0', so the surface uses one style. The artboard is the settled All Projects state with live counts 46 and 1 (§6 live content), and the provisional first list is a loading state, which by design shows no tab number."
         },
         {
@@ -60,7 +59,7 @@
           "finding": "The search box placeholder reads 'Search or type @ to filter', but the artboard's search-input draws 'Search packages, or filter: @installed, @updates, @vulnerable' in the same 1168 px field at 1200 px. The text is shorter and no longer names the filter keywords.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted",
+          "disposition": "refuted-by-measurement",
           "reason": "The crop shows the placeholder 'Search or type @ to filter'. That is the main header copy the Design System's overflow table declares (\"Search or type @ to filter\", since UX-P3.fix-15), and the hard DS-OVERFLOW-2 line measures it at '164 of 1136 px'. The spec wins over the older artboard drawing (§6), so the capture is not at fault."
         },
         {
@@ -69,7 +68,7 @@
           "finding": "The Installed tab has no count badge. The artboard's installed-tab draws one, and in this capture the list already shows 13 rows, the Direct Packages header shows the count 13 and the Updates tab shows its count, so the tab is the only place where the count is missing.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted",
+          "disposition": "refuted-by-measurement",
           "reason": "The crop shows no count on the INSTALLED tab, while the artboard crop shows '46' and '1'. The artboard draws the settled All Projects state, so its counts are live content (§6). This capture is a provisional first list, a loading state in which the tab carries no number. The hard DS-COPY-5 line 'tabs 2: count badges 1' passes, and no rule or spec rect requires a tab count while the list is provisional."
         }
       ]

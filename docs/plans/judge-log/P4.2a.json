@@ -43,7 +43,8 @@
      "reason": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard crop shows \"Search packages, or filter: @…\". But docs/design/design-system.md (main header overflow row) declares that copy as the search box's placeholder since UX-P3.fix-15, so the artboard copy is out of date and the capture follows the rule. The accessible name still lists @installed, @updates and @vulnerable, so this is not a defect of this state.",
      "method": "crop",
      "refuterSeverity": "minor",
-     "disposition": "refuted-by-measurement: the placeholder \"Search or type @ to filter\" is the Design System's copy since UX-P3.fix-15; the artboard draws the older one (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
+     "disposition": "refuted-by-measurement",
+     "ruling": "the placeholder \"Search or type @ to filter\" is the Design System's copy since UX-P3.fix-15; the artboard draws the older one (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
     },
     {
      "id": "geometry-1",
@@ -62,7 +63,8 @@
      "reason": "The crop shows the uninstall dialog for Serilog over an empty details pane (\"Select a package to see its details.\"). The artboard is the main-installed-details scene, with Newtonsoft.Json current, and is not this state's scene: a Serilog uninstall dialog cannot sit over Newtonsoft.Json's details. The capture shows what its name promises, and the dialog measures clean (DS-GRID-2a gaps 8, DS-HEIGHT-6 26 ×2, DS-HEIGHT-9 18×18, DS-INSET-2 footer 0/0 0/0, all hard), so the missing details content and band are a different scene, not a missing element.",
      "method": "crop",
      "refuterSeverity": "blocking",
-     "disposition": "refuted-by-measurement: the dialog's own hard measurements are green (DS-GRID-2a gaps 8, DS-INSET-2 footer 0/0, DS-HEIGHT-6 26 ×2, DS-HEIGHT-9 18×18, DS-RADIUS-2 layer 8, DS-DIVIDER-2, DS-DIVIDER-5, DS-TYPE-7); the artboard is the page beneath, not this scene (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
+     "disposition": "refuted-by-measurement",
+     "ruling": "the dialog's own hard measurements are green (DS-GRID-2a gaps 8, DS-INSET-2 footer 0/0, DS-HEIGHT-6 26 ×2, DS-HEIGHT-9 18×18, DS-RADIUS-2 layer 8, DS-DIVIDER-2, DS-DIVIDER-5, DS-TYPE-7); the artboard is the page beneath, not this scene (design-advisor GOLDEN ruling of 2026-11-17, DO 5)"
     }
    ]
   }

@@ -53,7 +53,7 @@
           "finding": "The main search box placeholder reads \"Search or type @ to filter\", but the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The placeholder copy no longer matches the artboard element.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted",
+          "disposition": "refuted-by-measurement",
           "reason": "The capture's placeholder reads \"Search or type @ to filter\". The artboard's longer copy is stale: design-system.md row 437 names \"Search or type @ to filter\" as the main search box's placeholder since UX-P3.fix-15, so the capture follows the ruled copy, and the box's rect (16,42,1168,26) matches the spec."
         }
       ]

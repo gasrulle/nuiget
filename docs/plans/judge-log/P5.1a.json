@@ -3,7 +3,7 @@
   "runs": [
     {
       "runId": "44873141329",
-      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
       "tree": "191f4c33 (push 2b)",
       "look": "modern",
       "workflow": "wf_a4181975-0c6",
@@ -90,7 +90,7 @@
     },
     {
       "runId": "44883630632",
-      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
       "tree": "49bee353 (push 3b)",
       "look": "modern",
       "workflow": "wf_c39bcfe5-170",
@@ -213,7 +213,7 @@
     },
     {
       "runId": "44887575870",
-      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
       "tree": "ed56c67a (push 3c)",
       "look": "modern",
       "workflow": "wf_b8399e05-d5e",
