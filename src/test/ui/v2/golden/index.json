@@ -139,9 +139,9 @@
   },
   "main-installed-cpm.dark-modern.1200.png": {
     "status": "approved",
-    "run": "43790398405",
-    "sha256": "6e01289fe98755d170d47339056f570b0a5a7cc3940002ff82e3805059de3f63",
-    "sidecarSha256": "40b9cfbcd496347dac3a96bf3392b25abf60181ccd92777367b48c761ed61f5e"
+    "run": "44876062815",
+    "sha256": "2a40861541acbaac9603b9714d0a3b6d71093e9f4261fd1a66c82488046479de",
+    "sidecarSha256": "c4fe0a852ef4b0e4373bacf5bf7422426b1e8d505e2298cdf8cb8d7b37e61530"
   },
   "main-installed-details.dark-high-contrast.1200.png": {
     "status": "approved",
