@@ -556,6 +556,11 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   while All Projects is committed, under the committed prerelease flag; it asks again on a flag change and on an
   invalidation naming `projects` or an `updates:` key (never `installed:`), applies the chunks, icons and answer of its
   latest request only (N11), and asks once more when a source recovers while the answer said `sourcesUnavailable`.
+  `metadataSettled` (UX-P5.1a) is true once the latest fan-out answered (its metadata chunks precede the answer) or a
+  re-ask over a ready list failed; the transitive stream's `settled` is true once it failed with no answer, its answer
+  lists no package, or the metadata ask for that answer ended (never by a cancelled ask), and its metadata is kept and
+  merged by key across newer answers until All Projects is left. With `prefetchTransitive` (opt-in; the main panel's
+  provider passes it from UX-P5.1a push 3b) the slice enables the stream itself once the fan-out answered.
 - `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
   prerelease flag; another flag is another resource, so a toggle asks again. Nothing is asked without a single
   project. Before the answer the rows are the bare `found` chunks of the latest request; the answer replaces them

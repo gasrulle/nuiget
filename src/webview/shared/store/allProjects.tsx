@@ -22,6 +22,11 @@ export interface AllProjectsState {
     error: ProtocolRequestError | undefined;
     /** A request is on its way while earlier lists are shown. */
     revalidating: boolean;
+    /**
+     * Whether the direct rows' metadata has settled (UX-P5.1a): the metadata chunks precede the fan-out's answer, so true once
+     * the latest fan-out answered or a re-ask over a ready list failed; false while a request runs and after a first failure.
+     */
+    metadataSettled: boolean;
     refresh: () => void;
     /** The transitive packages of every project, streamed once `enableTransitive()` was called in this All Projects. */
     transitive: AllProjectsTransitive;
@@ -65,8 +70,17 @@ export interface AllProjectsTransitive {
     chunks: ReadonlyMap<string, ProjectTransitiveChunk>;
     errored: RequestResult<'allProjects/transitive'>['errored'];
     error: ProtocolRequestError | undefined;
-    /** What `transitive/metadata` said about the aggregate's packages, by `metadataKey`; empty while it said nothing. */
+    /**
+     * What `transitive/metadata` said about the aggregate's packages, by `metadataKey`; empty while it said nothing. A newer
+     * answer of the stream keeps it until its own ask answers; leaving All Projects drops it (UX-P5.1a).
+     */
     metadata: ReadonlyMap<string, PackageMetadataLite>;
+    /**
+     * Whether the aggregate and its metadata have ended (UX-P5.1a): true once the stream failed with no answer, or its answer
+     * lists no package, or the metadata ask for that answer answered or failed; never by a cancelled ask; false when not
+     * enabled and while the stream has neither an answer nor an error.
+     */
+    settled: boolean;
     refresh: () => void;
 }
 
@@ -143,6 +157,16 @@ export function allProjectsReducer(state: Stored, action: Action): Stored {
     return { ...state, status: state.status === 'ready' ? 'ready' : 'error', error: action.error, requesting: false };
 }
 
+/** `AllProjectsTransitive.settled` once enabled (UX-P5.1a, architecture-advisor follow-up 2 DO 4). */
+function transitiveSettled(transitive: TransitiveStored, settledAnswer: ReadonlyMap<string, ProjectTransitiveChunk> | undefined): boolean {
+    const { answered } = transitive;
+    if (answered === undefined) {
+        return transitive.status === 'error';
+    }
+    const empty = [...answered.values()].every(chunk => chunk.frameworks.every(framework => framework.packages.length === 0));
+    return empty || settledAnswer === answered;
+}
+
 const AllProjectsContext = createContext<AllProjectsState | null>(null);
 
 const asRequestError = (error: unknown): ProtocolRequestError =>
@@ -155,7 +179,7 @@ const asRequestError = (error: unknown): ProtocolRequestError =>
  * projects or any project's installed packages, keeps what it shows until the new answer, and applies the chunks
  * and the answer of its latest request only.
  */
-export function AllProjectsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function AllProjectsProvider({ children, prefetchTransitive = false }: { children: React.ReactNode; prefetchTransitive?: boolean }): React.JSX.Element {
     const bus = useMessageBus();
     const active = useSession().committed?.selectedProject === ALL_PROJECTS;
     const [stored, dispatch] = useReducer(allProjectsReducer, EMPTY);
@@ -164,6 +188,9 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
     const [transitiveEnabled, setTransitiveEnabled] = useState(false);
     const [transitiveAsks, setTransitiveAsks] = useState(0);
     const [transitive, setTransitive] = useState<TransitiveStored>(NO_TRANSITIVE);
+    const [transitiveMetadata, setTransitiveMetadata] = useState<ReadonlyMap<string, PackageMetadataLite>>();
+    // The stream answer whose metadata ask last ended, answered or failed (UX-P5.1a).
+    const [settledAnswer, setSettledAnswer] = useState<ReadonlyMap<string, ProjectTransitiveChunk>>();
     const includePrerelease = useSession().committed?.includePrerelease ?? false;
     const [updatesAsks, setUpdatesAsks] = useState(0);
     const [updates, setUpdates] = useState<UpdatesStored>(NO_UPDATES);
@@ -176,6 +203,8 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             dispatch({ type: 'reset' });
             setTransitiveEnabled(false);
             setTransitive(NO_TRANSITIVE);
+            setTransitiveMetadata(undefined);
+            setSettledAnswer(undefined);
             setUpdates(previous => ({ ...NO_UPDATES, seq: previous.seq }));
             return undefined;
         }
@@ -276,9 +305,17 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         return () => controller.abort();
     }, [bus, active, transitiveEnabled, transitiveAsks]);
 
+    // The main panel's eager stream (UX-P5.1a, `prefetchTransitive`): enabled once the fan-out answered, never from a timer or a
+    // component; leaving All Projects resets it, and the next activation enables it again after its own first answer.
+    useEffect(() => {
+        if (prefetchTransitive && active && stored.status === 'ready') {
+            setTransitiveEnabled(true);
+        }
+    }, [prefetchTransitive, active, stored.status]);
+
     // The lite metadata of the aggregate (icon, authors, Verified, vulnerabilities): one ask for the unique packages once
-    // the stream has answered, again after each newer answer; an error is no metadata.
-    const [transitiveMetadata, setTransitiveMetadata] = useState<{ chunks: ReadonlyMap<string, ProjectTransitiveChunk>; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
+    // the stream has answered, again after each newer answer; an error is no metadata. The answered metadata is kept and
+    // merged by key across newer answers (UX-P5.1a).
     const answered = transitive.answered;
     useEffect(() => {
         if (!active || answered === undefined) {
@@ -299,10 +336,24 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             return undefined;
         }
         const controller = new AbortController();
+        const settle = (): void => {
+            // A cancelled ask settles nothing: a newer answer or leaving All Projects asked again.
+            if (!controller.signal.aborted) {
+                setSettledAnswer(answered);
+            }
+        };
         bus.request('transitive/metadata', { packages: [...pairs.values()] }, { signal: controller.signal }).then(answer => {
-            setTransitiveMetadata({ chunks: answered, byKey: new Map(answer.result.metadata.map(entry => [metadataKey(entry.id, entry.version), entry])) });
+            setTransitiveMetadata(previous => {
+                const byKey = new Map(previous ?? []);
+                for (const entry of answer.result.metadata) {
+                    byKey.set(metadataKey(entry.id, entry.version), entry);
+                }
+                return byKey;
+            });
+            settle();
         }, () => {
-            // No metadata is no error of the list.
+            // No metadata is no error of the list; it settles.
+            settle();
         });
         return () => controller.abort();
     }, [bus, active, answered]);
@@ -339,6 +390,7 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
         errored: stored.errored,
         error: stored.error,
         revalidating: stored.requesting && stored.status === 'ready',
+        metadataSettled: active && stored.status === 'ready' && !stored.requesting,
         refresh,
         transitive: {
             enabled: active && transitiveEnabled,
@@ -346,7 +398,8 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             chunks: transitive.chunks,
             errored: transitive.errored,
             error: transitive.error,
-            metadata: transitiveMetadata !== undefined && transitiveMetadata.chunks === transitive.answered ? transitiveMetadata.byKey : NO_METADATA,
+            metadata: active && transitiveMetadata !== undefined ? transitiveMetadata : NO_METADATA,
+            settled: active && transitiveEnabled && transitiveSettled(transitive, settledAnswer),
             refresh: refreshTransitive,
         },
         enableTransitive,
@@ -360,7 +413,7 @@ export function AllProjectsProvider({ children }: { children: React.ReactNode })
             revalidating: updates.requesting && updates.status === 'ready',
             refreshUpdates,
         },
-    }), [active, stored, refresh, transitiveEnabled, transitive, transitiveMetadata, refreshTransitive, enableTransitive, updates, refreshUpdates]);
+    }), [active, stored, refresh, transitiveEnabled, transitive, transitiveMetadata, settledAnswer, refreshTransitive, enableTransitive, updates, refreshUpdates]);
 
     return <AllProjectsContext.Provider value={state}>{children}</AllProjectsContext.Provider>;
 }

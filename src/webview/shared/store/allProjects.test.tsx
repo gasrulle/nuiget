@@ -28,9 +28,9 @@ const hostSays = (say: () => void): Promise<void> => act(async () => {
 });
 const text = (): string => screen.getByTestId('all').textContent ?? '';
 
-async function mount(selected: string): Promise<FakeHost> {
+async function mount(selected: string, prefetchTransitive?: boolean): Promise<FakeHost> {
     const host = createFakeHost();
-    render(<MessageBusProvider bus={host.bus}><SessionProvider><AllProjectsProvider><Probe /></AllProjectsProvider></SessionProvider></MessageBusProvider>);
+    render(<MessageBusProvider bus={host.bus}><SessionProvider><AllProjectsProvider prefetchTransitive={prefetchTransitive}><Probe /></AllProjectsProvider></SessionProvider></MessageBusProvider>);
     await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, selected)));
     return host;
 }
@@ -183,6 +183,100 @@ describe('allProjects slice', () => {
         await hostSays(() => host.respond(second, { projectPaths: [A, B], errored: [] }));
         expect(host.requests('transitive/metadata')).toHaveLength(2);
         expect(host.requests('transitive/metadata')[1].payload.packages.map(entry => entry.id)).toEqual(['Serilog.Core', 'Shared', 'Other']);
+    });
+
+    describe('settle signals and the eager stream (UX-P5.1a)', () => {
+        const frameworks = (ids: string[]) => [{ targetFramework: 'net8.0', packages: ids.map(id => ({ id, version: '1.0.0', requiredByChain: ['Serilog'] })) }];
+        const streamChunk = (projectPath: string, ids: string[]) => ({ kind: 'project' as const, chunk: { projectPath, projectName: projectPath.split('/')[2], frameworks: frameworks(ids), dataSourceAvailable: true } });
+
+        it('prefetchTransitive: the stream is asked once after the fan-out answered, without a click, and never without the prop', async () => {
+            const eager = await mount(ALL_PROJECTS, true);
+            expect(eager.requests('allProjects/transitive')).toHaveLength(0);
+            await list(eager, 0, ['Serilog'], ['Moq']);
+            expect(eager.requests('allProjects/transitive')).toHaveLength(1);
+            expect(current.transitive.enabled).toBe(true);
+            // A re-ask of the fan-out asks the stream no second time.
+            await hostSays(() => current.refresh());
+            await list(eager, 1, ['Serilog'], ['Moq']);
+            expect(eager.requests('allProjects/transitive')).toHaveLength(1);
+        });
+
+        it('metadataSettled: false until the fan-out answers, false while a re-ask runs, true again on its answer or failure', async () => {
+            const host = await mount(ALL_PROJECTS);
+            expect(current.metadataSettled).toBe(false);
+            await list(host, 0, ['Serilog'], ['Moq']);
+            expect(current.metadataSettled).toBe(true);
+            await hostSays(() => current.refresh());
+            expect(current.metadataSettled).toBe(false);
+            await list(host, 1, ['Serilog'], ['Moq']);
+            expect(current.metadataSettled).toBe(true);
+            await hostSays(() => current.refresh());
+            await hostSays(() => host.fail(host.requests('allProjects/installed')[2], 'failed', 'boom'));
+            expect(current.metadataSettled).toBe(true);
+            // A first request that fails is not settled.
+            await hostSays(() => host.event('session/changed', snapshot(2, A)));
+            await hostSays(() => host.event('session/changed', snapshot(3, ALL_PROJECTS)));
+            await hostSays(() => host.fail(host.requests('allProjects/installed')[3], 'failed', 'boom'));
+            expect(current.metadataSettled).toBe(false);
+        });
+
+        it('transitive.settled: a failed stream or an empty aggregate settles without a metadata ask', async () => {
+            const host = await mount(ALL_PROJECTS);
+            await list(host, 0, ['Serilog'], ['Moq']);
+            expect(current.transitive.settled).toBe(false);
+            await act(async () => current.enableTransitive());
+            expect(current.transitive.settled).toBe(false);
+            await hostSays(() => host.fail(host.requests('allProjects/transitive')[0], 'failed', 'boom'));
+            expect(current.transitive.settled).toBe(true);
+            await act(async () => current.transitive.refresh());
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[1], streamChunk(A, [])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[1], { projectPaths: [A], errored: [] }));
+            expect(current.transitive.settled).toBe(true);
+            expect(host.requests('transitive/metadata')).toHaveLength(0);
+        });
+
+        it('transitive.settled: the aggregate settles when its metadata answers or rejects, never by a cancelled ask', async () => {
+            const host = await mount(ALL_PROJECTS);
+            await list(host, 0, ['Serilog'], ['Moq']);
+            await act(async () => current.enableTransitive());
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[0], streamChunk(A, ['X'])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[0], { projectPaths: [A], errored: [] }));
+            expect(current.transitive.settled).toBe(false);
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0' }] }));
+            expect(current.transitive.settled).toBe(true);
+            // A newer answer cancels the ask of the one before it; that late answer settles nothing.
+            await act(async () => current.transitive.refresh());
+            expect(current.transitive.settled).toBe(true);
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[1], streamChunk(A, ['X', 'Y'])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[1], { projectPaths: [A], errored: [] }));
+            expect(current.transitive.settled).toBe(false);
+            const cancelled = host.requests('transitive/metadata')[1];
+            await act(async () => current.transitive.refresh());
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[2], streamChunk(A, ['X', 'Y', 'Z'])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[2], { projectPaths: [A], errored: [] }));
+            expect(host.cancelled()).toContain(cancelled.id);
+            await hostSays(() => host.respond(cancelled, { metadata: [] }));
+            expect(current.transitive.settled).toBe(false);
+            await hostSays(() => host.fail(host.requests('transitive/metadata')[2], 'unsupported'));
+            expect(current.transitive.settled).toBe(true);
+        });
+
+        it('a newer stream answer keeps the answered metadata until its own answer; leaving All Projects drops it', async () => {
+            const host = await mount(ALL_PROJECTS);
+            await list(host, 0, ['Serilog'], ['Moq']);
+            await act(async () => current.enableTransitive());
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[0], streamChunk(A, ['X'])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[0], { projectPaths: [A], errored: [] }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', authors: 'Ada' }] }));
+            await act(async () => current.transitive.refresh());
+            await hostSays(() => host.chunk(host.requests('allProjects/transitive')[1], streamChunk(A, ['X', 'Y'])));
+            await hostSays(() => host.respond(host.requests('allProjects/transitive')[1], { projectPaths: [A], errored: [] }));
+            expect(current.transitive.metadata.get('x@1.0.0')?.authors).toBe('Ada');
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'Y', version: '1.0.0', authors: 'Bo' }] }));
+            expect([...current.transitive.metadata.keys()].sort()).toEqual(['x@1.0.0', 'y@1.0.0']);
+            await hostSays(() => host.event('session/changed', snapshot(2, A)));
+            expect(current.transitive.metadata.size).toBe(0);
+        });
     });
 
     it('leaving All Projects closes the transitive stream; coming back starts closed', async () => {
