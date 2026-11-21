@@ -31,7 +31,7 @@
     "      button \"Uninstall Selected (#)\" [disabled] {uninstall-selected-button}",
     "    status \"\" {installed-vulnerable-unavailable-banner}",
     "    tree \"Installed packages\" [multiselectable] {installed-list}",
-    "      treeitem \"Direct Packages #\" [expanded, level 1]",
+    "      treeitem \"Direct Packages # of #\" [expanded, level 1]",
     "      treeitem \"Transitive Packages\" [collapsed, level 1]",
     "  separator \"Resize the package list\" {sash}",
     "  region \"Package details\" {package-details-panel}",

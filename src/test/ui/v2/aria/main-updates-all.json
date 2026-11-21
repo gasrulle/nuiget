@@ -22,7 +22,7 @@
     "    combobox \"Search packages, or filter with @installed, @updates or @vulnerable\" [collapsed] {search-input}",
     "    button \"Filters\"",
     "  tablist \"Package lists\" {tab-bar}",
-    "    tab \"Installed # # package with known vulnerabilities\" {installed-tab}",
+    "    tab \"Installed # # packages with known vulnerabilities\" {installed-tab}",
     "    tab \"Updates #\" [selected, focused] {updates-tab}",
     "  tabpanel \"Updates #\"",
     "    toolbar \"Bulk actions\" {updates-toolbar}",
