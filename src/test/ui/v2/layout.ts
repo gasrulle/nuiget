@@ -172,19 +172,21 @@ async function sideBarSash(): Promise<WebElement> {
 }
 
 /**
- * Drags the side bar's sash until the sidebar's webview is `width` px wide (± 1 px), or fails (VS Code keeps the side
- * bar at 170 px or more).
+ * Drags the side bar's sash until the sidebar's webview is `width` px wide (at least `width` − 0.5 px, the bound of the
+ * capture suite's shot, and at most `width` + 1 px), or fails (VS Code keeps the side bar at 170 px or more). UX-P4.fix-25:
+ * run 44848788460 shot 25 side bar cells at 299 px for 300 when no main cell had moved the sash first.
  */
 export async function setSidebarWidth(width: number): Promise<void> {
+    const reachedWidth = (current: number): boolean => current >= width - 0.5 && current <= width + 1;
     for (let attempt = 0; attempt < 5; attempt++) {
         const current = await settledWidth('nuiget-sidebar');
-        if (Math.abs(current - width) <= 1) {
+        if (reachedWidth(current)) {
             return;
         }
         await dragSideBar(width - current);
     }
     const reached = await settledWidth('nuiget-sidebar');
-    if (Math.abs(reached - width) > 1) {
+    if (!reachedWidth(reached)) {
         throw new Error(`the sidebar does not reach ${width} px: it is ${reached} px after five drags`);
     }
 }
