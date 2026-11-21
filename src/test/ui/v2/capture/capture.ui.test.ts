@@ -11,7 +11,7 @@ import { authoritative, BROWSE_ROW, dependencies, details, icons, INSTALLED_ROW,
 import { driverOf, enterSidebarWebview, findByTestId, leaveWebview, openSidebarView, poll, typeHeld, waitForTestIdGone, waitForText } from '../sidebarWebview';
 import { measureExemplar, measureWorkbench, setReduceMotion, setZoomLevel } from '../workbench';
 import { artboardOf } from '../artboards';
-import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
+import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_PARTS, type MatrixPart, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
 import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
@@ -34,6 +34,18 @@ const ALL_PROJECTS = '__all_projects__';
 /** The lane (`NUIGET_UI_LANE`, UX-P0.9): unset is the per-push `ui` job; `NUIGET_UI_THEME` names a matrix shard. */
 const LANE: Lane = (['matrix', 'floor', 'macos'] as const).find(lane => lane === process.env.NUIGET_UI_LANE) ?? 'ui';
 const SHARD_THEME = MATRIX_THEMES.find(theme => theme === process.env.NUIGET_UI_THEME) ?? 'dark-modern';
+// One of a matrix theme's two jobs (UX-P4.fix-25): unset or empty runs the whole shard; any other value fails at load, never a silent default.
+const SHARD_PART: MatrixPart | undefined = (() => {
+    const value = process.env.NUIGET_UI_PART;
+    if (value === undefined || value === '') {
+        return undefined;
+    }
+    const part = MATRIX_PARTS.find(candidate => candidate === value);
+    if (part === undefined) {
+        throw new Error(`NUIGET_UI_PART is ${JSON.stringify(value)}, not one of ${MATRIX_PARTS.join(', ')}`);
+    }
+    return part;
+})();
 
 /** Throws `not reachable` with what the readiness predicate waited for. */
 class NotReachable extends Error {}
@@ -2734,7 +2746,7 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
 
 /** This run's captures: the lane's set (Tier A in this run's look for the `ui` job and macOS), theme by theme, the default width of each surface first. */
 const laneJobs = LANE === 'matrix'
-    ? matrixCaptures(SHARD_THEME)
+    ? matrixCaptures(SHARD_THEME, SHARD_PART)
     : LANE === 'floor'
         ? floorCaptures()
         : STATES.filter(isReady).flatMap(state => state.captures.filter(capture => capture.look === LOOK).map(capture => ({ state, capture })));
@@ -2770,7 +2782,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         host.chromium = chromium;
         const dpr = await script<number>('return window.devicePixelRatio;');
         const png = Buffer.from(await driverOf().takeScreenshot(), 'base64');
-        console.warn(`[capture] lane ${LANE} vscode ${VSBrowser.instance.version} chromium ${chromium} ${process.platform} dpr ${dpr} look ${LOOK} window ${window.width}x${window.height} png ${pngSize(png)}`);
+        console.warn(`[capture] lane ${LANE}${SHARD_PART === undefined ? '' : ` part ${SHARD_PART}`} vscode ${VSBrowser.instance.version} chromium ${chromium} ${process.platform} dpr ${dpr} look ${LOOK} window ${window.width}x${window.height} png ${pngSize(png)}`);
         // The workbench of this run, in its look (UX-P0.11): written next to the crops as workbench.<look>.json, the
         // file docs/design/workbench/<look>.json is copied from.
         const widgets = await measureWorkbench();

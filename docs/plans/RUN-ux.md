@@ -142,7 +142,7 @@ This replaces `RUN.md`'s visual-evidence rule. **A session never certifies a cap
 green on the item's push:
 
 1. `gh run download <run-id> -n ui-screenshots -D captures/<run-id>` and `gh run download <run-id> -n ui-log -D
-   captures/<run-id>` (and the `ui-screenshots-<theme>`, `ui-screenshots-floor` and `ui-screenshots-macos` artifacts at a phase gate).
+   captures/<run-id>` (and the `ui-screenshots-<theme>-<part>`, `ui-screenshots-floor` and `ui-screenshots-macos` artifacts at a phase gate).
 2. `shasum -a 256 captures/<run-id>/*.png` → keep the hashes; every PNG a decision cites is named with its run id and
    sha256. A local capture (macOS, DPR 2) is never evidence for pixels and never updates a golden.
 3. Paste into the HANDOFF NOTE under "Visual evidence": the `[measure]` lines of the item's states (hard and

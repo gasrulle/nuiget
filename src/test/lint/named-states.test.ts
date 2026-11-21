@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ZOOM_STATUS } from '../ui/v2/measure';
-import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_THEMES, matrixCaptures, pending as pendingState, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
+import { captureFile, DIFF_TOLERANCE_START, expectedFiles, floorCaptures, isReady, laneFiles, laneProblems, LEGACY_STATES, MATRIX_PARTS, MATRIX_THEMES, matrixCaptures, matrixPart, pending as pendingState, screenshotProblems, STATES, THEMES } from '../ui/v2/states';
 
 /**
  * UX-P0.8: the one list of named states (`src/test/ui/v2/states.ts`). A pending state names an item that is still
@@ -183,6 +183,35 @@ describe('the named states (UX-P0.8)', () => {
         expect(laneFiles('macos')).toEqual(expectedFiles());
     });
 
+    it('splits each Tier B theme into two jobs by (surface, width), disjoint and together the whole shard (UX-P4.fix-25)', () => {
+        expect([...MATRIX_PARTS]).toEqual(['1', '2']);
+        // Architecture-advisor ruling of 2026-11-21: part 1 the main panel below its widest width, part 2 the main panel at its widest width and the side bar.
+        const counts: Record<string, [number, number]> = { 'dark-high-contrast': [123, 137], 'light-high-contrast': [122, 137] };
+        for (const theme of MATRIX_THEMES) {
+            const [one, two] = MATRIX_PARTS.map(part => laneFiles('matrix', theme, part));
+            expect([one.length, two.length], theme).toEqual(counts[theme] ?? [128, 140]);
+            expect(one.filter(file => two.includes(file)), theme).toEqual([]);
+            expect(new Set([...one, ...two]), theme).toEqual(new Set(laneFiles('matrix', theme)));
+            const keys = (part: '1' | '2') => new Set(matrixCaptures(theme, part).map(({ state, capture }) => `${state.surface}:${capture.width}`));
+            const [first, second] = [keys('1'), keys('2')];
+            expect([...first].filter(key => second.has(key)), theme).toEqual([]);
+            expect(one.filter(file => file.startsWith('main-installed-zoom2-')), theme).toEqual(theme === 'dark-high-contrast' ? ['main-installed-zoom2-800px.dark-high-contrast.800.png'] : []);
+            expect(two.filter(file => file.startsWith('main-installed-zoom2-')), theme).toEqual([]);
+        }
+        expect(matrixCaptures('dark-modern').every(({ state, capture }) => matrixPart(state, capture) === (state.surface === 'main' && capture.width < 1600 ? '1' : '2'))).toBe(true);
+    });
+
+    it('runs ci.yml\'s ui-matrix as the two parts of states.ts, each with its own artifacts (UX-P4.fix-25)', () => {
+        const workflow = read('.github/workflows/ci.yml');
+        const start = workflow.indexOf('\n  ui-matrix:\n');
+        const job = workflow.slice(start, workflow.indexOf('\n  ui-floor:\n', start));
+        const parts = /\n {8}part: \[ ([^\]]+) \]/.exec(job)?.[1].split(',').map(part => part.trim());
+        expect(parts).toEqual([...MATRIX_PARTS]);
+        expect(job).toContain('NUIGET_UI_PART: ${{ matrix.part }}');
+        expect(job).toContain('name: ui-log-${{ matrix.theme }}-${{ matrix.part }}');
+        expect(job).toContain('name: ui-screenshots-${{ matrix.theme }}-${{ matrix.part }}');
+    });
+
     it('fails a lane for a missing, an extra and a pending crop', () => {
         const files = laneFiles('matrix', 'dark-2026');
         expect(laneProblems(files, 'matrix', 'dark-2026')).toEqual([]);
@@ -192,6 +221,10 @@ describe('the named states (UX-P0.8)', () => {
         const probe = pendingState('main-pending-probe', 'main', 'P3.10', 'A state no item renders: the proof of the pending-crop branch.');
         expect(laneProblems([...files, 'main-pending-probe.dark-2026.1200.png'], 'matrix', 'dark-2026', [...STATES, probe])).toEqual(['a capture of the pending state main-pending-probe: main-pending-probe.dark-2026.1200.png']);
         expect(laneProblems([...files, 'main-pending-probe.dark-2026.1200.png'], 'matrix', 'dark-2026')).toEqual(['an unexpected capture main-pending-probe.dark-2026.1200.png']);
+        // A part's check (UX-P4.fix-25): a crop of the other part is unexpected there.
+        const one = laneFiles('matrix', 'dark-2026', '1');
+        expect(laneProblems(one, 'matrix', 'dark-2026', undefined, '1')).toEqual([]);
+        expect(laneProblems([...one, 'main-installed-single.dark-2026.1600.png'], 'matrix', 'dark-2026', undefined, '1')).toEqual(['an unexpected capture main-installed-single.dark-2026.1600.png']);
     });
 
     it('runs the Linux lanes under a window manager and the ui job without one', () => {

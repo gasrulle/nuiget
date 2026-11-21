@@ -455,14 +455,17 @@ jobs:
             console.log(expectedFiles().length + " captures expected, " + crops.length + " crops at the root, " + LEGACY_STATES.length + " states of the 2.0 set");
             process.exit(problems.length === 0 && LEGACY_STATES.length >= 15 ? 0 : 1);'
 
-  # Tier B (UX-P0.9, dispatch with tier=B): every ready named state at the three widths of its surface, one shard per
+  # Tier B (UX-P0.9, dispatch with tier=B): every ready named state at the three widths of its surface, two jobs per
   # theme, Modern UI. Under a window manager inside xvfb-run, ExTester's window.newWindowDimensions: maximized default takes the
   # 1920x1080 screen, so a 1600 px panel fits beside the side bar (the fullscreen key left the window at 1448 px in run
-  # 39992434105); the per-push ui job keeps VS Code's own 1440x900 window. The limit is 45 (UX-P3.fix-16): a light shard
-  # projects to about 33 min on run 43860871581, whose two light shards were cut at 30; any shard above 38 min of job time
-  # is a stop-and-ask about sharding further, never a second raise and never fewer states or widths.
+  # 39992434105); the per-push ui job keeps VS Code's own 1440x900 window. Each theme runs as two jobs (UX-P4.fix-25):
+  # part 1 is the main panel below its widest width, part 2 the main panel at its widest width and the side bar, so every
+  # (surface, width) stays in one job, as MS-8's reference and DS-ROW-2 need. The limit is 45 (UX-P3.fix-16). A whole-theme
+  # shard ran up to 37 min 42 s (run 44758720318); a part projects to about 21 min. Any job above 38 min of job time is a
+  # stop-and-ask to the architecture-advisor about a further split by (surface, width), never a raise of the limit or the
+  # trip-wire and never fewer states or widths.
   ui-matrix:
-    name: UI matrix (${{ matrix.theme }})
+    name: UI matrix (${{ matrix.theme }}, part ${{ matrix.part }})
     if: github.event_name == 'workflow_dispatch' && inputs.tier == 'B'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -470,9 +473,11 @@ jobs:
       fail-fast: false
       matrix:
         theme: [ dark-modern, light-modern, dark-high-contrast, light-high-contrast, dark-2026, light-2026 ]
+        part: [ 1, 2 ]
     env:
       NUIGET_UI_LANE: matrix
       NUIGET_UI_THEME: ${{ matrix.theme }}
+      NUIGET_UI_PART: ${{ matrix.part }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -538,7 +543,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ui-log-${{ matrix.theme }}
+          name: ui-log-${{ matrix.theme }}-${{ matrix.part }}
           path: ${{ runner.temp }}/ui-output.txt
           if-no-files-found: ignore
 
@@ -546,7 +551,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ui-screenshots-${{ matrix.theme }}
+          name: ui-screenshots-${{ matrix.theme }}-${{ matrix.part }}
           path: /tmp/nuiget-ui/screenshots
           if-no-files-found: error
 
@@ -557,10 +562,11 @@ jobs:
             const { laneFiles, laneProblems } = require("./out/test/ui/v2/states.js");
             const lane = process.env.NUIGET_UI_LANE;
             const theme = process.env.NUIGET_UI_THEME || undefined;
+            const part = process.env.NUIGET_UI_PART || undefined;
             const crops = fs.readdirSync("/tmp/nuiget-ui/screenshots", { withFileTypes: true }).filter(entry => entry.isFile() && entry.name.endsWith(".png")).map(entry => entry.name);
-            const problems = laneProblems(crops, lane, theme);
+            const problems = laneProblems(crops, lane, theme, undefined, part);
             for (const problem of problems) console.log("::error::" + problem);
-            console.log(laneFiles(lane, theme).length + " captures expected, " + crops.length + " crops at the root");
+            console.log(laneFiles(lane, theme, part).length + " captures expected, " + crops.length + " crops at the root");
             process.exit(problems.length === 0 ? 0 : 1);'
 
   # The floor (UX-P0.9, D55, closes N64): VS Code 1.90.0, Chromium 122, outside ExTester's declared range (a warning);

@@ -27,7 +27,7 @@ export const THEMES: Readonly<Record<Theme, { labels: readonly string[]; bodyCla
     'light-2026': { labels: ['Light 2026'], bodyClass: 'vscode-light' },
 };
 
-/** The six shards of the Tier B matrix (`ui-matrix` in `ci.yml`), one theme each. */
+/** The six themes of the Tier B matrix (`ui-matrix` in `ci.yml`), two jobs each (`MATRIX_PARTS`, UX-P4.fix-25). */
 export const MATRIX_THEMES: readonly Theme[] = ['dark-modern', 'light-modern', 'dark-high-contrast', 'light-high-contrast', 'dark-2026', 'light-2026'];
 
 /**
@@ -409,10 +409,22 @@ const namedWidth = (state: NamedState): number | undefined => {
 };
 
 /**
- * One Tier B shard: every ready state of tier A or B at each width of its surface (a state whose name fixes a width at
- * that width only), in `theme`, Modern UI.
+ * The two jobs of a Tier B theme (UX-P4.fix-25, architecture-advisor ruling of 2026-11-21): split by (surface, width), so every
+ * (surface, width) stays in one job, as MS-8's reference and DS-ROW-2's reference row need.
  */
-export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture: Capture }> {
+export const MATRIX_PARTS = ['1', '2'] as const;
+export type MatrixPart = (typeof MATRIX_PARTS)[number];
+
+/** A matrix capture's part: 1 is the main panel below its widest width, 2 the main panel at its widest width and the side bar. */
+export function matrixPart(state: NamedState, capture: Capture): MatrixPart {
+    return state.surface === 'main' && capture.width < Math.max(...PANEL_WIDTHS) ? '1' : '2';
+}
+
+/**
+ * One Tier B shard: every ready state of tier A or B at each width of its surface (a state whose name fixes a width at
+ * that width only), in `theme`, Modern UI; with `part`, that part's captures only, in the same order.
+ */
+export function matrixCaptures(theme: Theme, part?: MatrixPart): Array<{ state: NamedState; capture: Capture }> {
     // A secondary button's hover equals its rest in high contrast and an icon button's hover fill is transparent there (UX-P3.9
     // drew the dashed hover line on tabs only): the two hover states have no subject there (DS-COLOR-7, DS-COLOR-3). No hovered current row is captured there (UX-P2.8a).
     const shown = (state: NamedState) => !((state.name === 'main-installed-toolbar-hover' || state.name === 'main-installed-refresh-hover' || state.name === 'main-installed-hover-current') && theme.includes('high-contrast'));
@@ -422,7 +434,7 @@ export function matrixCaptures(theme: Theme): Array<{ state: NamedState; capture
         const fixed = namedWidth(state);
         const widths = fixed !== undefined ? [fixed] : state.surface === 'main' ? PANEL_WIDTHS : SIDEBAR_WIDTHS;
         return widths.map(width => ({ state, capture: { theme, look: 'modern' as const, width } }));
-    });
+    }).filter(job => part === undefined || matrixPart(job.state, job.capture) === part);
 }
 
 /** The floor lane (VS Code 1.90.0, which has no Modern UI): every Tier A (theme, width) of a ready state, classic. */
@@ -440,10 +452,10 @@ export function floorCaptures(): Array<{ state: NamedState; capture: Capture }> 
     });
 }
 
-/** The crops a lane must write: `theme` names the matrix shard. */
-export function laneFiles(lane: Lane, theme?: Theme): string[] {
+/** The crops a lane must write: `theme` names the matrix shard, `part` one of its two jobs (UX-P4.fix-25). */
+export function laneFiles(lane: Lane, theme?: Theme, part?: MatrixPart): string[] {
     const jobs = lane === 'matrix'
-        ? matrixCaptures(theme ?? 'dark-modern')
+        ? matrixCaptures(theme ?? 'dark-modern', part)
         : lane === 'floor'
             ? floorCaptures()
             : STATES.filter(isReady).flatMap(state => state.captures.map(capture => ({ state, capture })));
@@ -452,10 +464,11 @@ export function laneFiles(lane: Lane, theme?: Theme): string[] {
 
 /**
  * What a lane's check step fails for: a missing crop, an extra crop and a crop of a pending state. `states` exists for the lint
- * test's probe of the pending-crop check (UX-P3.10 push D, architecture ruling); CI passes three arguments.
+ * test's probe of the pending-crop check (UX-P3.10 push D, architecture ruling); the matrix check passes `part` as the fifth
+ * (UX-P4.fix-25), the other lanes three arguments.
  */
-export function laneProblems(root: Iterable<string>, lane: Lane, theme?: Theme, states: readonly NamedState[] = STATES): string[] {
-    const expected = new Set(laneFiles(lane, theme));
+export function laneProblems(root: Iterable<string>, lane: Lane, theme?: Theme, states: readonly NamedState[] = STATES, part?: MatrixPart): string[] {
+    const expected = new Set(laneFiles(lane, theme, part));
     const crops = [...root];
     const problems = [...expected].filter(file => !crops.includes(file)).map(file => `no capture ${file}`);
     for (const file of crops) {
