@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
 import type { Settling } from '../store/ops';
-import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, filterById, projectNameOf, updateCandidates, updateRowContext, updatesInOrder, versionCell, whyNotDeletable } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -183,5 +183,28 @@ describe('projectNameOf (UX-P4.2a)', () => {
         expect(projectNameOf([{ name: 'Gateway', path: '/w/Gateway/Gateway.csproj' }], '/w/Gateway/Gateway.csproj')).toBe('Gateway');
         expect(projectNameOf(undefined, '/w/Lib/Lib.csproj')).toBe('Lib');
         expect(projectNameOf([], 'C:\\w\\Tools\\Tools.fsproj')).toBe('Tools');
+    });
+});
+
+describe('vulnerability knowledge (UX-P5.1a)', () => {
+    const advisory = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+
+    it('is vulnerable with an advisory, clear with an empty list, and unknown without an entry or without the field', () => {
+        expect(vulnerabilityOf({ id: 'A', version: '1.0.0', vulnerabilities: advisory })).toBe('vulnerable');
+        expect(vulnerabilityOf({ id: 'A', version: '1.0.0', vulnerabilities: [] })).toBe('clear');
+        expect(vulnerabilityOf({ id: 'A', version: '1.0.0' })).toBe('unknown');
+        expect(vulnerabilityOf(undefined)).toBe('unknown');
+        expect(directVulnerability(new Map([['serilog', { id: 'Serilog', version: '3.0.0', vulnerabilities: advisory }]]), 'Serilog')).toBe('vulnerable');
+    });
+
+    it('counts a transitive package under two frameworks twice, and an unusable or missing list as unknown', () => {
+        const frameworks = ['net8.0', 'net10.0'].map(targetFramework => ({ targetFramework, packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['A'] }, { id: 'Y', version: '2.0.0', requiredByChain: ['A'] }] }));
+        const result = { projectPath: '/p.csproj', dataSourceAvailable: true, frameworks };
+        const metadata = new Map([['x@1.0.0', { id: 'X', version: '1.0.0', vulnerabilities: advisory }], ['y@2.0.0', { id: 'Y', version: '2.0.0', vulnerabilities: [] }]]);
+        expect(transitiveVulnerability(result, metadata)).toEqual({ vulnerable: 2, unknown: false });
+        expect(transitiveVulnerability(result, new Map([['x@1.0.0', { id: 'X', version: '1.0.0', vulnerabilities: advisory }]]))).toEqual({ vulnerable: 2, unknown: true });
+        expect(transitiveVulnerability({ ...result, dataSourceAvailable: false }, metadata)).toEqual({ vulnerable: 0, unknown: true });
+        expect(transitiveVulnerability({ ...result, errorKind: 'fs-error' }, metadata)).toEqual({ vulnerable: 0, unknown: true });
+        expect(transitiveVulnerability(undefined, metadata)).toEqual({ vulnerable: 0, unknown: true });
     });
 });

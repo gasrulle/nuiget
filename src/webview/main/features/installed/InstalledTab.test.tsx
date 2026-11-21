@@ -809,8 +809,102 @@ describe('main panel: Installed tab', () => {
         await user.type(screen.getByTestId('search-input'), '@vulnerable');
         counted();
         expect(screen.getByText('Vulnerability data is not available for this project yet.')).toBeInTheDocument();
-        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }] }));
+        // `k of N` once every direct row is known (UX-P5.1a): Moq vulnerable, the other two clear.
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [
+            { id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] },
+            { id: 'Serilog', version: '3.0.0', vulnerabilities: [] },
+            { id: 'Newtonsoft.Json', version: '13.0.1', vulnerabilities: [] },
+        ] }));
         filtered();
+    });
+
+    /** Mounts with the transitive list answered and its group collapsed again, so `@vulnerable` alone decides the opening. */
+    async function mountVulnerable(transitive: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net10.0', packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['Moq'] }] }] }) {
+        const user = userEvent.setup();
+        const host = await mountWith();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive, 1));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
+        await user.type(screen.getByTestId('search-input'), '@vulnerable');
+        return { user, host };
+    }
+    const advisory = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+    const clearDirect = [{ id: 'Serilog', version: '3.0.0', vulnerabilities: [] }, { id: 'Moq', version: '4.20.0', vulnerabilities: [] }, { id: 'Newtonsoft.Json', version: '13.0.1', vulnerabilities: [] }];
+    const banner = (): HTMLElement | null => screen.queryByTestId('installed-vulnerable-unavailable-banner');
+
+    it('under @vulnerable: not available until both slices settle, then one banner for an unknown part and never "No vulnerable packages." (UX-P5.1a)', async () => {
+        const { host } = await mountVulnerable();
+        expect(screen.getByTestId('installed-empty')).toHaveTextContent('Vulnerability data is not available for this project yet.');
+        expect(banner()).toBeNull();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));
+        // The transitive ask still runs: still not available, no banner while an ask runs.
+        expect(screen.getByTestId('installed-empty')).toHaveTextContent('Vulnerability data is not available for this project yet.');
+        expect(banner()).toBeNull();
+        // X answered without the field: its data is unknown.
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0' }] }));
+        expect(banner()).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
+        expect(screen.queryByTestId('installed-empty')).toBeNull();
+        expect(screen.queryByText('No vulnerable packages.')).toBeNull();
+        // The Direct group is fully known: `0 of 3`; the Transitive group holds an unknown row: its total.
+        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 3');
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toBeNull();
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-badge--count')).toHaveTextContent('1');
+        const results = await axe(document.body);
+        expect(results).toHaveNoViolations();
+    });
+
+    it('under @vulnerable: a fully known project without a vulnerable row says "No vulnerable packages." and shows no banner (UX-P5.1a)', async () => {
+        const { host } = await mountVulnerable();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [] }] }));
+        expect(screen.getByTestId('installed-empty')).toHaveTextContent('No vulnerable packages.');
+        expect(banner()).toBeNull();
+        // Every transitive row known: `0 of 1`.
+        expect(screen.getByTestId('section-box-transitive').querySelector('.nuiget-section-count-text')).toHaveTextContent('0 of 1');
+        // A re-ask after the first settle shows neither sentence until its own answer.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net10.0', packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['Moq'] }, { id: 'Y', version: '1.0.0', requiredByChain: ['Moq'] }] }] }, 2));
+        expect(screen.queryByText('Vulnerability data is not available for this project yet.')).toBeNull();
+        expect(screen.queryByTestId('installed-empty')).toBeNull();
+        expect(banner()).toBeNull();
+    });
+
+    it('under @vulnerable a group counts k of N only when every row of it is known: a partly known Direct group and a framework group with an unknown row keep their totals (UX-P5.1a)', async () => {
+        const net = (targetFramework: string, ids: string[]) => ({ targetFramework, packages: ids.map(id => ({ id, version: '1.0.0', requiredByChain: ['Moq'] })) });
+        const { host } = await mountVulnerable({ projectPath: A, dataSourceAvailable: true, frameworks: [net('net8.0', ['X']), net('net10.0', ['X', 'Y'])] });
+        // Newtonsoft.Json is not answered: unknown.
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect.slice(0, 2) }));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }] }));
+        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-section-count-text')).toBeNull();
+        expect(screen.getByTestId('section-box-direct').querySelector('.nuiget-badge--count')).toHaveTextContent('3');
+        // The group opened (a vulnerable transitive row is known): net8.0 is fully known, net10.0 holds the unknown Y.
+        expect(screen.getByTestId('section-box-transitive-net8.0').querySelector('.nuiget-section-count-text')).toHaveTextContent('1 of 1');
+        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-section-count-text')).toBeNull();
+        expect(screen.getByTestId('section-box-transitive-net10.0').querySelector('.nuiget-badge--count')).toHaveTextContent('2');
+        expect(banner()).toHaveTextContent('Some packages could not be checked for vulnerabilities.');
+    });
+
+    it('under @vulnerable the Transitive group opens while a vulnerable transitive row is known, the user may collapse it, and leaving the filter shows it as it was, with one tab stop throughout (UX-P5.1a)', async () => {
+        const { user, host } = await mountVulnerable();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }] }));
+        const tabStops = (): number => screen.getByTestId('installed-list').querySelectorAll('[tabindex="0"]').length;
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'true');
+        expect(transitiveRows().map(row => row.querySelector('.nuiget-row-name')?.textContent)).toEqual(['X']);
+        expect(screen.queryByTestId('installed-empty')).toBeNull();
+        expect(tabStops()).toBe(1);
+        expect(screen.getByTestId('search-input')).toHaveFocus();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
+        expect(tabStops()).toBe(1);
+        await user.clear(screen.getByTestId('search-input'));
+        // The group was collapsed before the filter: it shows collapsed again, nothing persisted.
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'false');
+        expect(tabStops()).toBe(1);
+        await user.type(screen.getByTestId('search-input'), '@vulnerable');
+        expect(groupItem('transitive')).toHaveAttribute('aria-expanded', 'true');
+        expect(tabStops()).toBe(1);
     });
 
     it('SDK and props rows carry their badge and a muted check mark, and Space says why', async () => {

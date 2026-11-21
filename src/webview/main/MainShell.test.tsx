@@ -479,6 +479,34 @@ describe('main panel shell', () => {
         expect(screen.getByRole('tab', { name: 'Installed 3 1 package with known vulnerabilities' })).toBeInTheDocument();
     });
 
+    it('the Installed badge counts the known vulnerable rows, direct plus transitive (a package under two frameworks twice), keeps its title with an unknown part, and the tab is pending until both slices first settle, never on a re-ask (UX-P5.1a)', async () => {
+        const { host } = await mountReady();
+        const pkg = (id: string) => ({ id, version: '1.0.0', versionType: 'standard' as const, declaration: 'project' as const });
+        const advisory = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+        const tab = (): HTMLElement => screen.getByTestId('installed-tab');
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog'), pkg('Moq'), pkg('Polly')] }, 1));
+        expect(tab()).toHaveAttribute('data-pending', '');
+        await waitFor(() => expect(host.requests('transitive/metadata')).toHaveLength(1));
+        // Polly has no entry: unknown adds nothing and removes nothing; the title keeps its words.
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '1.0.0', vulnerabilities: advisory }, { id: 'Serilog', version: '1.0.0', vulnerabilities: [] }] }));
+        expect(screen.getByRole('tab', { name: 'Installed 3 1 package with known vulnerabilities' })).toBe(tab());
+        expect(tab()).toHaveAttribute('data-pending', '');
+        await waitFor(() => expect(host.requests('transitive/get')).toHaveLength(1), { timeout: 2000 });
+        const framework = (targetFramework: string) => ({ targetFramework, packages: [{ id: 'X', version: '1.0.0', requiredByChain: ['Moq'] }] });
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], { projectPath: A, dataSourceAvailable: true, frameworks: [framework('net8.0'), framework('net10.0')] }, 1));
+        await waitFor(() => expect(host.requests('transitive/metadata')).toHaveLength(2));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: advisory }] }));
+        expect(screen.getByRole('tab', { name: 'Installed 3 3 packages with known vulnerabilities' })).toBe(tab());
+        expect(tab()).not.toHaveAttribute('data-pending');
+
+        // A re-ask of the list keeps the badge and never marks the tab pending again.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], { projectPath: A, fidelity: 'authoritative', isCpm: false, packages: [pkg('Serilog'), pkg('Moq'), pkg('Polly'), pkg('Dapper')] }, 2));
+        await waitFor(() => expect(host.requests('transitive/metadata')).toHaveLength(3));
+        expect(tab()).not.toHaveAttribute('data-pending');
+        expect(screen.getByRole('tab', { name: 'Installed 4 3 packages with known vulnerabilities' })).toBe(tab());
+    });
+
     it('the tabs are reached by keyboard', async () => {
         const user = userEvent.setup();
         await mountReady();

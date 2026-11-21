@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { InstalledPackage, InstalledResult, PackageMetadataLite } from '../../../../protocol';
-import { busyText, filterById, versionCell, whyNotRemovable } from '../../../shared/installed/rules';
+import { busyText, directVulnerability, filterById, versionCell, whyNotRemovable } from '../../../shared/installed/rules';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
@@ -11,23 +11,25 @@ export interface Item {
     entry: InstalledPackage;
 }
 
-const isVulnerable = (metadata: ReadonlyMap<string, PackageMetadataLite>, id: string): boolean =>
-    (metadata.get(id.toLowerCase())?.vulnerabilities?.length ?? 0) > 0;
-
-/** The rows a filter leaves, sorted by id as the sidebar's `visiblePackages` (P9.10, UX-P3.fix-1), and what to say when it leaves none. */
-export function visibleRows(result: InstalledResult, metadata: ReadonlyMap<string, PackageMetadataLite>, filter: string, vulnerableOnly: boolean): { items: Item[]; empty: string } {
+/**
+ * The rows a filter leaves, sorted by id as the sidebar's `visiblePackages` (P9.10, UX-P3.fix-1), what to say when it leaves
+ * none, and whether a row the id filter keeps has unknown vulnerability data (UX-P5.1a). Under `@vulnerable` only the rows
+ * known vulnerable stay; while the metadata ask has not `settled` and none is known vulnerable, the data is not available yet
+ * (empty is not unknown). `settled` defaults to "some metadata answered", the rule of a caller that has no settled signal.
+ */
+export function visibleRows(result: InstalledResult, metadata: ReadonlyMap<string, PackageMetadataLite>, filter: string, vulnerableOnly: boolean, settled = metadata.size > 0): { items: Item[]; empty: string; unknown: boolean } {
     let entries = filterById(result.packages, filter);
+    const unknown = entries.some(entry => directVulnerability(metadata, entry.id) === 'unknown');
     if (vulnerableOnly) {
-        // Empty is not unknown: without any metadata nothing can be said about vulnerabilities.
-        if (metadata.size === 0) {
-            return { items: [], empty: 'Vulnerability data is not available for this project yet.' };
+        entries = entries.filter(entry => directVulnerability(metadata, entry.id) === 'vulnerable');
+        if (entries.length === 0 && !settled) {
+            return { items: [], empty: 'Vulnerability data is not available for this project yet.', unknown };
         }
-        entries = entries.filter(entry => isVulnerable(metadata, entry.id));
     }
     const empty = result.packages.length === 0
         ? 'No packages installed.'
         : vulnerableOnly ? 'No vulnerable packages.' : `No installed package matches "${filter.trim()}".`;
-    return { items: entries.map(entry => ({ id: entry.id, entry })), empty };
+    return { items: entries.map(entry => ({ id: entry.id, entry })), empty, unknown };
 }
 
 export interface InstalledRowProps {
@@ -82,7 +84,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
                 {entry.versionType === 'floating'
                     ? <Badge label="Floating" title="Floating version pattern" />
                     : entry.versionType === 'range' ? <Badge label="Range" title="Version range" /> : null}
-                {isVulnerable(metadata, entry.id) ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
+                {directVulnerability(metadata, entry.id) === 'vulnerable' ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
             </>}
             actions={readOnly ? null : (
                 <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => onUninstall(entry)}><TrashIcon /></IconButton>

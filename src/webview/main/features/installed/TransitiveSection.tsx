@@ -2,6 +2,8 @@ import type React from 'react';
 import type { PackageMetadataLite, TransitivePackage } from '../../../../protocol';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, Banner, EmptyState, ProgressBar, Row, SectionHeader, Skeleton, type GroupPlacement, type RowPlacement } from '../../../shared/primitives';
+import { directCount } from '../../../shared/counts';
+import { vulnerabilityOf } from '../../../shared/installed/rules';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 import { failure } from '../../../shared/updates/sentence';
@@ -20,9 +22,11 @@ const ERRORS: Record<string, string> = {
  * project with several frameworks has a group row per framework inside. Rows show the icon, authors and Verified mark of
  * the lite metadata and no description (D14) and open a read-only details view with what requires them. When the project
  * has not been restored, a banner above the tree offers Restore, which runs `restore` (the feature's `ops/restore`); while a restore
- * of the project is queued or running (`restoring`) the bar says so (UX-P4.fix-10).
+ * of the project is queued or running (`restoring`) the bar says so (UX-P4.fix-10). Under `@vulnerable` (`vulnerableOnly`) only
+ * the rows known vulnerable are listed, and a group's count reads `k of N` only when every row of it is known (UX-P5.1a,
+ * DS-COPY-5).
  */
-export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>, restore: (projectPath: string) => void, restoring: boolean): { items: TreeItem[]; message: React.ReactNode } {
+export function transitiveTree(state: TransitiveState, expanded: boolean, collapsed: ReadonlySet<string>, restore: (projectPath: string) => void, restoring: boolean, vulnerableOnly = false): { items: TreeItem[]; message: React.ReactNode } {
     if (state.projectPath === null) {
         return { items: [], message: null };
     }
@@ -31,12 +35,16 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
     const frameworks = usable ? result.frameworks : [];
     const several = frameworks.length > 1;
     const total = frameworks.reduce((count, framework) => count + framework.packages.length, 0);
+    const known = (entry: Pick<TransitivePackage, 'id' | 'version'>) => vulnerabilityOf(state.metadata.get(metadataKey(entry.id, entry.version)));
+    const shown = (packages: ReadonlyArray<Pick<TransitivePackage, 'id' | 'version'>>) => (vulnerableOnly ? packages.filter(entry => known(entry) === 'vulnerable') : packages);
+    // `k of N` only when every row of the group is known; otherwise the total (UX-P5.1a).
+    const countOf = (packages: ReadonlyArray<Pick<TransitivePackage, 'id' | 'version'>>) => directCount(packages.length, shown(packages).length, vulnerableOnly && packages.every(entry => known(entry) !== 'unknown'));
     const items: TreeItem[] = [{
         kind: 'group',
         id: 'transitive',
         level: 1,
         title: 'Transitive Packages',
-        count: usable && !several ? total : undefined,
+        count: usable && !several ? (frameworks.length === 1 ? countOf(frameworks[0].packages) : total) : undefined,
         variant: 'group',
         tfm: !several && frameworks.length === 1 ? frameworks[0].targetFramework : undefined,
     }];
@@ -47,10 +55,10 @@ export function transitiveTree(state: TransitiveState, expanded: boolean, collap
         const tfm = framework.targetFramework;
         const groupId = `transitive-${tfm}`;
         if (several) {
-            items.push({ kind: 'group', id: groupId, level: 2, title: 'Transitive Packages', count: framework.packages.length, variant: 'level', tfm });
+            items.push({ kind: 'group', id: groupId, level: 2, title: 'Transitive Packages', count: countOf(framework.packages), variant: 'level', tfm });
         }
         if (!several || !collapsed.has(groupId)) {
-            for (const entry of framework.packages) {
+            for (const entry of shown(framework.packages)) {
                 const key = metadataKey(entry.id, entry.version);
                 items.push({ kind: 'transitive', id: rowId(`transitive:${tfm}`, key), scope: { projectPath, tfm }, entry: { id: entry.id, version: entry.version }, key });
             }
@@ -110,7 +118,7 @@ export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, 
             selectable={false}
             badges={<>
                 {badges}
-                {lite?.vulnerabilities?.length ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
+                {vulnerabilityOf(lite) === 'vulnerable' ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
             </>}
         />
     );

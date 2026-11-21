@@ -1,5 +1,6 @@
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk } from '../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult } from '../../../protocol';
 import { busyKey, type OpsState } from '../store/ops';
+import { metadataKey } from '../store/transitive';
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
@@ -217,3 +218,42 @@ export const browseRowContext = (result: PackageSearchResult, projectPath: strin
     'nuiget.installed': installedVersion !== undefined,
     'nuiget.readOnly': readOnly,
 });
+
+/**
+ * What the lite metadata says about a row's vulnerabilities (UX-P5.1a, D38): `vulnerable` with one or more advisories,
+ * `clear` with an empty list, `unknown` without an entry or without the field (no data, a partial read, the bound, a
+ * failed ask). The one predicate of both surfaces; never a second copy in a feature.
+ */
+export type VulnerabilityKnowledge = 'vulnerable' | 'clear' | 'unknown';
+
+export function vulnerabilityOf(lite: PackageMetadataLite | undefined): VulnerabilityKnowledge {
+    const advisories = lite?.vulnerabilities;
+    if (advisories === undefined) {
+        return 'unknown';
+    }
+    return advisories.length > 0 ? 'vulnerable' : 'clear';
+}
+
+/** A direct row's knowledge, by its lower-cased id in the installed slice's map. */
+export const directVulnerability = (metadata: ReadonlyMap<string, PackageMetadataLite>, id: string): VulnerabilityKnowledge =>
+    vulnerabilityOf(metadata.get(id.toLowerCase()));
+
+/**
+ * The transitive rows `@vulnerable` would show and whether any part is unknown (UX-P5.1a): a package under two frameworks
+ * is two rows; an unusable list (not restored, `errorKind`) or no list is all unknown.
+ */
+export function transitiveVulnerability(result: TransitiveResult | undefined, metadata: ReadonlyMap<string, PackageMetadataLite>): { vulnerable: number; unknown: boolean } {
+    if (result === undefined || !result.dataSourceAvailable || result.errorKind !== undefined) {
+        return { vulnerable: 0, unknown: true };
+    }
+    let vulnerable = 0;
+    let unknown = false;
+    for (const framework of result.frameworks) {
+        for (const entry of framework.packages) {
+            const known = vulnerabilityOf(metadata.get(metadataKey(entry.id, entry.version)));
+            vulnerable += known === 'vulnerable' ? 1 : 0;
+            unknown = unknown || known === 'unknown';
+        }
+    }
+    return { vulnerable, unknown };
+}

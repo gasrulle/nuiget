@@ -74,7 +74,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
@@ -215,7 +215,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
         // The states without a row by design (the Updates cells since UX-P3.1b): DS-TYPE-6 and DS-ROW-4 print nothing there, never a pass.
-        const noRow = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
+        const noRow = ['main-installed-filter-nomatch', 'main-installed-vulnerable-unavailable', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', 'main-updates-loading', 'main-updates-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-unavailable', 'main-browse-loading', 'main-browse-empty', 'main-browse-error', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-quicksearch-loading', 'main-quicksearch-error', 'main-quicksearch-grouped',
             // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): the sidebar cells with no row; UX-P3.10: the Updates pane filtered to none.
             'sidebar-browse-loading', 'sidebar-browse-empty', 'sidebar-browse-error', 'sidebar-installed-loading', 'sidebar-updates-nomatch', 'sidebar-updates-loading'];
         for (const id of ['DS-TYPE-6', 'DS-ROW-4']) {
@@ -870,6 +870,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(across(browse, reference(98))).toMatchObject({ pass: true, value: 'icon left spread 0, name left spread 0 (2 rows); against main-installed-single: icon 0, name 0' });
         expect(across(browse, reference(128))).toMatchObject({ pass: false, value: 'icon left spread 0, name left spread 0 (2 rows); against main-installed-single: icon 0, name -30' });
         expect(across(browse, undefined)).toMatchObject({ pass: false, value: expect.stringContaining('against main-installed-single: not measurable (no reference row)') });
+        // One comfortable row (UX-P5.1a, design-advisor follow-up 1): read against the reference row instead of a spread.
+        const oneRow = (built: Layout, reference: ChromeReference | undefined, state = 'main-installed-vulnerable') => measureLines(state, built, 'modern', {}, reference).find(line => line.name === `DS-ROW-2@${state}`);
+        const single = facts({ rows: [row()] });
+        expect(oneRow(single, reference(98))).toMatchObject({ pass: true, value: '1 row; against main-installed-single: icon 0, name 0' });
+        expect(oneRow(single, reference(128))).toMatchObject({ pass: false, value: '1 row; against main-installed-single: icon 0, name -30' });
+        expect(oneRow(single, undefined)).toMatchObject({ pass: false, value: '1 row; against main-installed-single: not measurable (no reference row)' });
+        expect(oneRow(single, reference(98), 'main-installed-single')).toMatchObject({ pass: false, value: 'not measurable (fewer than 2 comfortable rows)' });
         // DS-ROW-3: the painted box of a selected row is the band.
         expect(value('main-installed-details', facts({ rows: [row({ state: 'current', painted: { ...band, left: 4, right: 396 } })] }), 'DS-ROW-3@main-installed-details')).toMatchObject({ pass: false, value: 'current painted 4 from the band' });
         expect(value('main-installed-hover', facts({ rows: [row({ state: 'hover', painted: band })] }), 'DS-ROW-3@main-installed-hover')).toMatchObject({ pass: true });

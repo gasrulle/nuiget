@@ -766,8 +766,12 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   asked for (UX-P4.fix-10): it says the outcome in the words of a single operation ("Restored App", "Restored 2 projects"),
   and while `restoringProjects` (the ops slice) holds the project the Transitive group shows its bar and spinner; the
   summary toast stays.
-- **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the rows whose metadata lists
-  vulnerabilities, and says that the data is not there yet while no metadata has arrived (empty is not unknown).
+- **Filter modes.** `@installed <text>` filters by id; `@vulnerable` keeps the direct and transitive rows known
+  vulnerable (`vulnerabilityOf`, `src/webview/shared/installed/rules.ts`), says that the data is not there yet until both
+  slices' metadata first settled, then shows one warning banner when any part is unknown (never "No vulnerable
+  packages."), opens the Transitive group while a vulnerable transitive row is known (a toggle under the filter is local),
+  and the Installed tab's vulnerability badge counts the same rows; the tab carries `data-pending` until the first settle
+  (UX-P5.1a).
 - **Transitive.** A collapsed level-1 `transitive` group row after every other group; the list is prefetched after the
   installed list, so the row reads `Transitive packages` with the target framework as a badge and the count badge at its end, or, for several
   frameworks, holds a level-2 `transitive-<tfm>` group row per framework. `TransitiveSection.tsx` and

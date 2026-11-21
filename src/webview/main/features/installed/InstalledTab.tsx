@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
-import { whyNotRemovable } from '../../../shared/installed/rules';
+import { transitiveVulnerability, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, TrashIcon, type ListboxGroups } from '../../../shared/primitives';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
@@ -57,6 +57,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const [current, setCurrent] = useState<string | null>(null);
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(NOT_COLLAPSED);
     const [transitiveOpen, setTransitiveOpen] = useState(false);
+    // The user's toggle of the Transitive group while `@vulnerable` is on: never written to `transitiveOpen` (UX-P5.1a).
+    const [vulnerableOverride, setVulnerableOverride] = useState<boolean>();
     const [confirming, setConfirming] = useState(false);
 
     const selection = committed?.selectedProject;
@@ -65,8 +67,15 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     useEffect(() => {
         setCurrent(null);
         setTransitiveOpen(false);
+        setVulnerableOverride(undefined);
         setConfirming(false);
     }, [selection]);
+    // Leaving `@vulnerable` drops the user's toggle made under it: the group shows `transitiveOpen` as it was.
+    useEffect(() => {
+        if (!vulnerableOnly) {
+            setVulnerableOverride(undefined);
+        }
+    }, [vulnerableOnly]);
     const sections = useMemo((): Section[] => {
         if (allMode) {
             const listed: ReadonlyArray<{ name: string; path: string; workspaceFolder?: string }> = all.projects ?? [...all.chunks.values()].map(chunk => ({ name: chunk.projectName, path: chunk.projectPath, workspaceFolder: chunk.workspaceFolder }));
@@ -189,7 +198,21 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const projectGroups = useMemo((): ReadonlyMap<string, string> => (allMode ? projectGroupIds(sections) : new Map()), [allMode, sections]);
     const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? section.projectPath).slice(PROJECT_GROUP.length);
 
-    const transitiveExpanded = transitiveOpen && (allMode ? all.transitive.enabled : transitive.enabled);
+    // UX-P5.1a: a project's vulnerability data has settled once both slices' asks ended; under `@vulnerable` the Transitive
+    // group opens while a vulnerable transitive row is known, unless the user toggled it there.
+    const singleSettled = !allMode && installed.metadataSettled && transitive.settled;
+    // Latched per project: once settled, a re-ask never says "not available yet" again (UX-P5.1a).
+    const [settledFor, setSettledFor] = useState<string | null>(null);
+    useEffect(() => {
+        if (singleSettled && installed.projectPath !== null) {
+            setSettledFor(installed.projectPath);
+        }
+    }, [singleSettled, installed.projectPath]);
+    const everSettled = !allMode && installed.projectPath !== null && settledFor === installed.projectPath;
+    const transitiveKnowledge = useMemo(() => transitiveVulnerability(transitive.result, transitive.metadata), [transitive.result, transitive.metadata]);
+    const vulnerableView = vulnerableOnly && !allMode;
+    const transitiveWanted = vulnerableView ? vulnerableOverride ?? transitiveKnowledge.vulnerable > 0 : transitiveOpen;
+    const transitiveExpanded = transitiveWanted && (allMode ? all.transitive.enabled : transitive.enabled);
     // A restore queued or running, from the ops slice (UX-P4.fix-10): the Transitive bar and spinner say it, a second press starts nothing.
     const restoringPaths = useMemo(() => restoringProjects(ops), [ops]);
     const singleRestoring = !allMode && transitive.projectPath !== null && restoringPaths.has(transitive.projectPath);
@@ -206,8 +229,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const transitivePart = useMemo(
         () => (allMode
             ? allProjectsTransitiveTree(all, transitiveExpanded, restoreProjects, allRestoring)
-            : transitiveTree(transitive, transitiveExpanded, collapsed, projectPath => restoreProjects([projectPath]), singleRestoring)),
-        [allMode, all, transitive, transitiveExpanded, collapsed, restoreProjects, allRestoring, singleRestoring],
+            : transitiveTree(transitive, transitiveExpanded, collapsed, projectPath => restoreProjects([projectPath]), singleRestoring, vulnerableView)),
+        [allMode, all, transitive, transitiveExpanded, collapsed, restoreProjects, allRestoring, singleRestoring, vulnerableView],
     );
 
     const items = useMemo((): TreeItem[] => {
@@ -226,7 +249,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                     list.push({ ...message, cell: 'empty', text: 'No packages installed.' });
                 }
             }
-            for (const item of visibleRows(result, section.metadata, filter, vulnerableOnly).items) {
+            for (const item of visibleRows(result, section.metadata, filter, vulnerableOnly, allMode ? undefined : singleSettled || everSettled).items) {
                 list.push({ kind: 'package', id: rowId(section.projectPath, item.id), section, result, entry: item.entry });
             }
         };
@@ -238,9 +261,10 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
             }
             if (section?.result !== undefined) {
                 const { result, metadata } = section;
-                const shown = visibleRows(result, metadata, filter, vulnerableOnly);
+                const shown = visibleRows(result, metadata, filter, vulnerableOnly, singleSettled || everSettled);
                 const nothing = result.unsupported !== undefined && result.packages.length === 0;
-                const count = nothing ? undefined : directCount(result.packages.length, shown.items.length, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && metadata.size === 0));
+                // `k of N` under `@vulnerable` only when every row is known (UX-P5.1a, DS-COPY-5).
+                const count = nothing ? undefined : directCount(result.packages.length, shown.items.length, (filter.trim() !== '' || vulnerableOnly) && !(vulnerableOnly && (shown.unknown || !installed.metadataSettled)));
                 list.push({ kind: 'group', id: 'direct', level: 1, title: 'Direct Packages', count, section, variant: 'group' });
                 packagesOf(section, 'direct');
             }
@@ -267,7 +291,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
         }
         list.push(...transitivePart.items);
         return list;
-    }, [allMode, sections, projectGroups, collapsed, filter, vulnerableOnly, transitivePart.items]);
+    }, [allMode, sections, projectGroups, collapsed, filter, vulnerableOnly, transitivePart.items, singleSettled, everSettled, installed.metadataSettled]);
 
     // A selection of this tab that comes back (the tab shown again) makes its row current again.
     const detailsSelection = useDetails().selection;
@@ -324,7 +348,11 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                         enableTransitive();
                     }
                 }
-                setTransitiveOpen(expanded);
+                if (vulnerableView) {
+                    setVulnerableOverride(expanded);
+                } else {
+                    setTransitiveOpen(expanded);
+                }
                 return;
             }
             setCollapsed(previous => {
@@ -363,7 +391,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                 />
             );
         },
-    }), [allMode, all, allRestoring, collapsed, enableAllTransitive, enableTransitive, singleRestoring, transitive, transitiveExpanded]);
+    }), [allMode, all, allRestoring, collapsed, enableAllTransitive, enableTransitive, singleRestoring, transitive, transitiveExpanded, vulnerableView]);
 
     let body: React.ReactNode;
     if (sections.length === 0) {
@@ -372,7 +400,12 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
             : <EmptyState message={allMode ? 'No projects to list.' : 'No .NET projects found in this workspace.'} />;
     } else {
         const single = allMode ? undefined : sections[0];
-        const shown = single?.result === undefined ? undefined : visibleRows(single.result, single.metadata, filter, vulnerableOnly);
+        const shown = single?.result === undefined ? undefined : visibleRows(single.result, single.metadata, filter, vulnerableOnly, singleSettled || everSettled);
+        // Under `@vulnerable`, once settled, an unknown part is said once in a banner and never as "No vulnerable packages." (UX-P5.1a).
+        const vulnerabilityUnknown = vulnerableView && singleSettled && (shown?.unknown === true || transitiveKnowledge.unknown);
+        const knownVulnerable = vulnerableView && (shown?.items.length ?? 0) + transitiveKnowledge.vulnerable > 0;
+        // A re-ask after the first settle shows neither sentence nor banner until its own answer: no banner while an ask runs.
+        const reasking = vulnerableView && everSettled && !singleSettled;
         const listed = single?.result !== undefined && (single.result.unsupported === undefined || single.result.packages.length > 0);
         const open = !collapsed.has('direct');
         const failed = (section: Section): boolean => section.status === 'error' || section.error !== undefined;
@@ -390,7 +423,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                         {failed(section) ? <Banner severity="error" data-testid={allMode ? `installed-error-${markerOf(section)}` : 'installed-error'} action={{ label: 'Retry', onClick: section.onRetry }}>{failure(`The installed packages of ${section.projectName}`, 'loaded', section.error)}</Banner> : null}
                     </Fragment>
                 ))}
-                {open && listed && shown?.items.length === 0 ? <EmptyState message={shown.empty} data-testid="installed-empty" /> : null}
+                {vulnerabilityUnknown ? <Banner severity="warning" data-testid="installed-vulnerable-unavailable-banner">Some packages could not be checked for vulnerabilities.</Banner> : null}
+                {open && listed && shown?.items.length === 0 && !knownVulnerable && !vulnerabilityUnknown && !reasking ? <EmptyState message={shown.empty} data-testid="installed-empty" /> : null}
                 {transitivePart.message}
                 <Listbox
                     items={items}

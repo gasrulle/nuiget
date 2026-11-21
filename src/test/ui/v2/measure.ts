@@ -506,7 +506,7 @@ const NO_BADGE_STATES: readonly string[] = ['sidebar-filter'];
  * The states without a list row by design. The quick-search popup states stay here: a popup option is no list row, and the
  * `popup` scope of DS-RADIUS-2 and DS-HEIGHT-2 reads it (design-advisor ruling of 2026-11-06, UX-P3.2).
  */
-const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
+const NO_ROW_STATES: readonly string[] = ['main-installed-filter-nomatch', 'main-installed-vulnerable-unavailable', 'main-installed-loading', 'main-details-readonly', 'main-installed-empty', 'main-installed-error', ...UPDATES_NO_LIST_STATES, ...BROWSE_NO_LIST_STATES, ...POPUP_STATES];
 // UX-P3.8 (design-advisor follow-up 2 of 2026-11-13): what a sidebar Browse or loading cell does not show, by fact.
 /** Browse results replace the sections: no pane header in any sidebar Browse cell (interaction model §2). */
 // UX-P3.10 push A (red run 43603128771): sidebar-browse-unavailable is a Browse cell too, by the same fact.
@@ -537,6 +537,8 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     // UX-P4.fix-23 (design-advisor ruling DO 6b): the first provisional list, its bar and its badge.
     'main-installed-provisional': ['installed-progress', 'installed-provisional'],
     'main-installed-empty': ['installed-empty'],
+    // UX-P5.1a (design-advisor ruling DO 10): `@vulnerable` with an unknown part says it once, in a warning banner.
+    'main-installed-vulnerable-unavailable': ['installed-vulnerable-unavailable-banner'],
     'main-installed-error': ['installed-error'],
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
     'main-installed-unresolved': [],
@@ -601,9 +603,9 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
 const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 // UX-P4.4 (GOLDEN ruling DO 2): `main-details-readonly`, whose focus sits on the Installed list's empty slot at a first load.
-const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
+const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
 /** The states that show a disabled text button (the run's DS-STATE-7 lines, UX-P2.3). */
-const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
+const DISABLED_BUTTON_STATES: readonly string[] = ['main-installed-single', 'main-installed-all', 'main-installed-unsupported', 'main-installed-cpm', 'main-installed-details', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-hover', 'main-installed-focus', 'main-transitive-expanded', 'main-transitive-details', 'main-details-readme', 'main-updates-unsupported'];
 
 /**
  * The states that show a disabled icon button (UX-P3.10 push E, design-advisor ruling of 2026-11-14, point 1): DS-COLOR-6
@@ -3263,6 +3265,24 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
         case 'DS-ROW-2': {
             const named = comfortable.filter(row => row.nameLeft !== undefined);
             const iconed = comfortable.filter(row => row.icon !== undefined);
+            // A row's icon and name left against the reference row of `main-installed-single` (UX-P3.2's Browse form, UX-P5.1a).
+            const againstReference = (lefts: RowLefts, against: RowLefts) => {
+                const iconDelta = lefts.icon === undefined || against.icon === undefined ? undefined : tenth(lefts.icon - against.icon);
+                const nameDelta = tenth(lefts.name - against.name);
+                return { iconDelta, nameDelta, across: Math.abs(nameDelta) <= tolerance && (iconDelta === undefined || Math.abs(iconDelta) <= tolerance) };
+            };
+            // One comfortable row has no spread: it is read against the reference row instead (design-advisor follow-up 1 of
+            // 2026-11-21, UX-P5.1a); an icon hidden on one side only is red.
+            if (named.length === 1 && state !== ROW_LEFTS_REFERENCE) {
+                const lefts = rowLeftsOf(state, layout);
+                const against = reference?.rowLefts;
+                if (lefts === undefined || against === undefined) {
+                    return { value: `1 row; against ${ROW_LEFTS_REFERENCE}: ${NOT_MEASURABLE} (no reference row)`, pass: false };
+                }
+                const { iconDelta, nameDelta, across } = againstReference(lefts, against);
+                const iconsAgree = (lefts.icon === undefined) === (against.icon === undefined);
+                return { value: `1 row; against ${against.state}: icon ${iconDelta ?? 'hidden'}, name ${nameDelta}`, pass: across && iconsAgree };
+            }
             if (named.length < 2) {
                 return notMeasurable('fewer than 2 comfortable rows');
             }
@@ -3278,9 +3298,7 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
                 if (lefts === undefined || against === undefined) {
                     return { value: `${iconPart}, name left spread ${name} (${named.length} rows); against ${ROW_LEFTS_REFERENCE}: ${NOT_MEASURABLE} (no reference row)`, pass: false };
                 }
-                const iconDelta = lefts.icon === undefined || against.icon === undefined ? undefined : tenth(lefts.icon - against.icon);
-                const nameDelta = tenth(lefts.name - against.name);
-                const across = Math.abs(nameDelta) <= tolerance && (iconDelta === undefined || Math.abs(iconDelta) <= tolerance);
+                const { iconDelta, nameDelta, across } = againstReference(lefts, against);
                 return { value: `${iconPart}, name left spread ${name} (${named.length} rows); against ${against.state}: icon ${iconDelta ?? 'hidden'}, name ${nameDelta}`, pass: within && across };
             }
             return { value: `${iconPart}, name left spread ${name} (${named.length} rows)`, pass: within };

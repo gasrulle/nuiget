@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, type PackageMetadataLite } from '../../protocol';
+import { ALL_PROJECTS } from '../../protocol';
+import { directVulnerability, transitiveVulnerability } from '../shared/installed/rules';
 import { type TabItem, Tabs } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useSession } from '../shared/store/session';
+import { useTransitive } from '../shared/store/transitive';
 import { useUpdates } from '../shared/store/updates';
 import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
 import type { MainTab } from './MainShell';
@@ -13,14 +16,12 @@ const TABS: ReadonlyArray<TabItem<MainTab>> = [
     { id: 'updates', label: 'Updates', 'data-testid': 'updates-tab' },
 ];
 
-const isVulnerable = (metadata: ReadonlyMap<string, PackageMetadataLite> | undefined, id: string): boolean =>
-    (metadata?.get(id.toLowerCase())?.vulnerabilities?.length ?? 0) > 0;
-
 /** The Installed and Updates tabs with their counts: the list slices leave the shell with them (X38). */
 export function MainTabs({ selected, onSelect, children }: { selected: MainTab; onSelect: (next: MainTab) => void; children: React.ReactNode }): React.JSX.Element {
     const { session } = useSession();
     const updatesSlice = useUpdates();
     const installedSlice = useInstalled();
+    const transitiveSlice = useTransitive();
     // The badge counts the updates the host answered; while it checks or cannot say, there is no number.
     const allProjects = useAllProjects();
     const all = allProjects.updates;
@@ -36,15 +37,30 @@ export function MainTabs({ selected, onSelect, children }: { selected: MainTab; 
     const singleInstalled = installedSlice.status === 'ready' ? installedSlice.result?.packages.length ?? 0 : 0;
     const installedCount = (session?.selectedProject === ALL_PROJECTS ? allInstalled : singleInstalled) || undefined;
     const counts: Partial<Record<string, number>> = { installed: installedCount, updates: updateCount };
-    // The vulnerable packages, once the lite metadata is known: no number while it is not (empty is not unknown).
-    const singleVulnerable = installedSlice.metadata.size === 0 ? undefined : (installedSlice.result?.packages.filter(entry => isVulnerable(installedSlice.metadata, entry.id)).length || undefined);
-    const allVulnerable = allProjects.metadata.size === 0 ? undefined : [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.filter(entry => isVulnerable(allProjects.metadata.get(chunk.projectPath), entry.id)).length ?? 0), 0) || undefined;
+    // The rows `@vulnerable` would show that are known vulnerable, direct plus transitive (UX-P5.1a): no number at 0 or while
+    // nothing is known (empty is not unknown); an unknown part adds nothing and removes nothing.
+    const singleDirect = installedSlice.result?.packages.filter(entry => directVulnerability(installedSlice.metadata, entry.id) === 'vulnerable').length ?? 0;
+    const singleTransitive = transitiveSlice.projectPath === installedSlice.projectPath ? transitiveVulnerability(transitiveSlice.result, transitiveSlice.metadata).vulnerable : 0;
+    const singleVulnerable = singleDirect + singleTransitive || undefined;
+    const allVulnerable = [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.filter(entry => directVulnerability(allProjects.metadata.get(chunk.projectPath) ?? new Map(), entry.id) === 'vulnerable').length ?? 0), 0) || undefined;
     const vulnerableCount = session?.selectedProject === ALL_PROJECTS ? allVulnerable : singleVulnerable;
+    // The settle truth of the capture harness (UX-P5.1a, `data-pending`): a single project's Installed tab is pending from its
+    // list's answer until both slices first settled for it, latched per project; never on a later re-ask, never in All Projects.
+    const singlePath = session?.selectedProject === ALL_PROJECTS ? null : installedSlice.projectPath;
+    const bothSettled = installedSlice.metadataSettled && transitiveSlice.settled && transitiveSlice.projectPath === singlePath;
+    const [settledFor, setSettledFor] = useState<string | null>(null);
+    useEffect(() => {
+        if (singlePath !== null && bothSettled) {
+            setSettledFor(singlePath);
+        }
+    }, [singlePath, bothSettled]);
+    const installedPending = singlePath !== null && installedSlice.status === 'ready' && settledFor !== singlePath && !bothSettled;
     const tabs = TABS.map(item => {
         const counted = counts[item.id] !== undefined ? { ...item, count: counts[item.id] } : item;
+        const pending = item.id === 'installed' && installedPending ? { ...counted, pending: true } : counted;
         return item.id === 'installed' && vulnerableCount !== undefined
-            ? { ...counted, badge: { label: String(vulnerableCount), title: `${vulnerableCount} package${vulnerableCount === 1 ? '' : 's'} with known vulnerabilities`, tone: 'error' as const } }
-            : counted;
+            ? { ...pending, badge: { label: String(vulnerableCount), title: `${vulnerableCount} package${vulnerableCount === 1 ? '' : 's'} with known vulnerabilities`, tone: 'error' as const } }
+            : pending;
     });
     return <Tabs tabs={tabs} selected={selected} onSelect={onSelect} label="Package lists" data-testid="tab-bar">{children}</Tabs>;
 }

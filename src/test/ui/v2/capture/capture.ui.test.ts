@@ -700,6 +700,22 @@ const REACH: Record<string, Reach> = {
             await until('document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\').length === 0 && document.body.textContent.includes("No installed package matches")', 'the no-match text and no option', 30_000);
         },
     },
+    // UX-P5.1a (design-advisor ruling DO 9): a predicate that does not hold is `not reachable`, never a retry or a Refresh.
+    'main-installed-vulnerable-unavailable': {
+        reach: async () => {
+            await chooseFixtureProject('Unresolved.csproj');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="package-row-serilog"]\') !== null', 'the Unresolved list', 'the Installed list');
+            await typeInSearch('@vulnerable');
+            await until('document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') !== null && document.querySelector(\'[data-testid="installed-empty"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending")', 'the vulnerability banner, no empty sentence, the tab settled', 120_000);
+        },
+    },
+    'main-installed-vulnerable': {
+        reach: async () => {
+            await gatewayInstalled();
+            await typeInSearch('@vulnerable');
+            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); return options.length >= 1 && options.every(option => option.textContent.includes("Vulnerable")) && document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending"); })()', 'the vulnerable rows, no banner, the tab settled', 120_000);
+        },
+    },
     'main-installed-hover': {
         reach: async () => {
             await gatewayInstalled();
@@ -1714,6 +1730,12 @@ async function outerFrameScroll(rootTestId: string): Promise<[number, number]> {
  */
 async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
     const file = captureFile(state.name, capture);
+    // UX-P5.1a (design-advisor ruling DO 11, architecture follow-up 1 DO 11): the Installed tab's text and its settle truth at
+    // the shot, read in the webview before the shot leaves it; informational; the reading before any adoption.
+    if (state.surface === 'main') {
+        const tab = await script<{ text: string; pending: boolean } | null>('const tab = document.querySelector(\'[data-testid="installed-tab"]\'); return tab ? { text: (tab.textContent || "").replace(/\\s+/g, " ").trim(), pending: tab.hasAttribute("data-pending") } : null;');
+        console.warn(`[pending] ${file}: ${tab === null ? 'no Installed tab' : `tab "${tab.text}", data-pending ${tab.pending ? 'present' : 'absent'}`}`);
+    }
     if (!HOVER_STATES.includes(state.name)) {
         await leaveWebview();
         await driverOf().actions().move({ x: 1, y: 1 }).perform();
@@ -1941,6 +1963,8 @@ for (const id of ['installed-tab', 'updates-tab']) {
     if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
 }
 if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]'))) clauses.push('a comfortable row without authors');
+// UX-P5.1a (design-advisor ruling DO 5): the Installed tab's vulnerability count has not settled yet.
+if (document.querySelector('[data-testid="installed-tab"][data-pending]')) clauses.push('installed-tab pending');
 return clauses.join('; ');
 `;
 

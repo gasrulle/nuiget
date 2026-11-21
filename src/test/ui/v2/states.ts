@@ -158,6 +158,11 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, "@installed Microsoft.Extensions" in the search box; every listed option is a Microsoft.Extensions id.', [LIVE_CARET, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-filter-nomatch', 'main', [primary('main')],
         'Gateway selected, "@installed zz-no-such-package" in the search box; the list has no option and says "No installed package matches".', [LIVE_CARET]), diffTolerance: 0 },
+    // UX-P5.1a (design-advisor ruling of 2026-11-21, DO 9): `@vulnerable` with an unknown part, and with every row known.
+    { ...ready('main-installed-vulnerable-unavailable', 'main', [primary('main')],
+        'The Unresolved project, "@vulnerable" in the search box: its Serilog row has no version to ask about and its transitive packages are not known (unrestored), so one warning banner says some packages could not be checked (marker installed-vulnerable-unavailable-banner); no "not available yet" sentence; the Installed tab settled (no data-pending).', [LIVE_CARET]), diffTolerance: 0 },
+    { ...ready('main-installed-vulnerable', 'main', [primary('main')],
+        'Gateway selected, "@vulnerable" in the search box: one or more options, each with a Vulnerable badge; no banner; the Installed tab settled (no data-pending).', [LIVE_CARET, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-hover', 'main', [primary('main')],
         'Gateway selected, the list scrolled to the Serilog row (the thirteenth in id order), the pointer on it; the row matches :hover.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-hover-current', 'main', [primary('main')],
