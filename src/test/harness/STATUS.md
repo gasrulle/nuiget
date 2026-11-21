@@ -80,9 +80,9 @@ test -e .claude/.contract-change → false (created with "P7.2c" for the ADR-004
   with `verified: true` and serves the icon at the flat `…/<id>/<ver>/icon` of a published package (404 otherwise).
   Scenario `enrichment reaches both surfaces: updates/get and transitive/metadata carry authors, Verified and the icon
   the feed serves (TF7)`: on both surfaces `updates/get` carries `authors: 'Harness'`, `verified: true`,
-  `iconUrl: FAKE_ICON_DATA_URI`, and `transitive/metadata` the same plus `description` and `vulnerabilities: []`.
-  Step 19's last assertion was corrected from absent to `[]` (a feed without a `VulnerabilityInfo` resource publishes
-  no advisories, P4.8 Q6); the follow-up ruling is verbatim in `src/test/ui/v2/STATUS.md`. With step 18 alone →
+  `iconUrl: FAKE_ICON_DATA_URI`, and `transitive/metadata` the same plus `description`, with `vulnerabilities` absent.
+  Step 19's last assertion was corrected from absent to `[]` (P4.8 Q6, ruling verbatim in `src/test/ui/v2/STATUS.md`) and
+  back to absent by UX-P5.1a (a feed without a `VulnerabilityInfo` resource leaves the data unknown, ADR-009 d.1, D38). With step 18 alone →
   Tests 24 passed (24); with the scenario → Tests 25 passed (25).
 
 ## Exact next step (one item ID)

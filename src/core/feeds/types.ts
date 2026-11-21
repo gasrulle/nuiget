@@ -123,8 +123,9 @@ export type IconFetch =
 export interface VulnerabilityOutcome {
     vulnerabilities: PackageVulnerability[];
     /**
-     * True when a source with vulnerability data could not be read completely (its index or any page failed). The
-     * vulnerabilities are then unknown rather than none: a caller leaves `vulnerabilities` absent instead of `[]`.
+     * True when the vulnerabilities are unknown: no source handed in offers vulnerability data (an empty list included;
+     * ADR-009 d.1, UX-P5.1a), or a source with vulnerability data could not be read completely (its index or any page
+     * failed). A caller then leaves `vulnerabilities` absent instead of `[]` (D38).
      */
     sourcesUnavailable: boolean;
 }

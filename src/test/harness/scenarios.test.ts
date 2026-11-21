@@ -934,8 +934,8 @@ describe('two-surface harness', () => {
             expect(updates, name).toEqual([expect.objectContaining({ id: 'Serilog', latestVersion: '3.1.0', authors: 'Harness', verified: true, iconUrl: FAKE_ICON_DATA_URI })]);
             const [lite] = resultOf(await h.request(name, 'transitive/metadata', { packages: [{ id: 'Serilog', version: '3.0.0' }] }).response).metadata;
             expect(lite, name).toEqual(expect.objectContaining({ id: 'Serilog', version: '3.0.0', authors: 'Harness', description: 'Serilog package', verified: true, iconUrl: FAKE_ICON_DATA_URI }));
-            // The fake index has no VulnerabilityInfo resource: no source publishes advisories, so none (P4.8 Q6; vulnerability.test.ts:133). Unknown (absent) is a source whose data could not be read.
-            expect(lite.vulnerabilities, name).toEqual([]);
+            // The fake index has no VulnerabilityInfo resource: no source offers the data, so the vulnerabilities are unknown and stay absent (UX-P5.1a; ADR-009 d.1, D38; it was none under P4.8 Q6).
+            expect(lite, name).not.toHaveProperty('vulnerabilities');
         }
         await h.settle();
         [main, sidebar].forEach(expectOneResponsePerRequest);
