@@ -526,12 +526,18 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   `transitive/metadata` with the concrete versions of the rows it shows (two-phase, ADR-009 d.1): for the list it shows
   at once and for the response only when its rows differ, and writes the
   answer into the map; another project or other rows cancel the ask, and an error is no metadata (P5.10, P6.2b).
+  `metadataSettled` (UX-P5.1a) is true once the metadata ask for the rows on screen answered or failed, at once when no
+  row is askable, never by a cancelled ask; a re-ask keeps the answered metadata until its answer.
 - `transitive` (P5.4, P9.5): `useResource` for `transitive:<path>` of the committed project, asked 500 ms after
   the project's installed list is ready (`TRANSITIVE_PREFETCH_MS`, never in All Projects; never in the sidebar, whose
   entry passes `prefetch={false}` to `SidebarStoreProvider`, P9.fix-1, N87) or at once when the section is opened
   first (`enable()`); another project starts again. The protocol has no forced restore (removed at UX-P4.fix-11): the banner's Restore is the feature's `ops/restore` through the ops slice, and the host's invalidation of
   `transitive:<path>` after it lists again (UX-P4.fix-10). The rows' metadata comes from `transitive/metadata` by `id@version`; when the host cannot
-  answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone.
+  answer it (`unsupported` until the feeds of P4 exist) the rows show from `transitive/get` alone. The answered metadata
+  is kept per project and merged by key, so a new list keeps it until its own answer; another project starts empty.
+  `settled` (UX-P5.1a) is true once the list failed with no result, is unusable (not restored, `errorKind`) or empty,
+  or once the metadata ask for this result answered or failed; a cancelled ask settles nothing, and a revalidation keeps
+  the old result's settle until the new result arrives.
 - `allProjects` (P5.4): the stream of `allProjects/installed` while All Projects is committed, one chunk per
   project kept by its path. It is not a `useResource`: the fan-out has no generation and its key is never in
   `resources/invalidated` (ADR-009). The slice asks again when an invalidation names `projects` or any

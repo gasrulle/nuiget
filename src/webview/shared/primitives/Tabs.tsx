@@ -9,6 +9,11 @@ export interface TabItem<K extends string> {
     count?: number;
     /** A second badge after the count, named by its `title` (for example the vulnerable packages of the list). */
     badge?: { label: string; title: string; tone?: BadgeTone };
+    /**
+     * A count on the tab that is still settling (UX-P5.1a): renders an empty pending data attribute on the tab and nothing else
+     * (no class, style or ARIA), the capture harness's settle truth.
+     */
+    pending?: boolean;
     'data-testid'?: string;
 }
 
@@ -67,6 +72,7 @@ export function Tabs<K extends string>({ tabs, selected, onSelect, label, childr
                             aria-controls={isSelected ? panelId : undefined}
                             tabIndex={isSelected ? 0 : -1}
                             data-testid={tab['data-testid']}
+                            data-pending={tab.pending ? '' : undefined}
                             onClick={() => onSelect(tab.id)}
                         >
                             <span id={`${tabId(tab.id)}-label`} className="nuiget-tab-label">{tab.label}</span>

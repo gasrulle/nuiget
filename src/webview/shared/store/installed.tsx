@@ -18,6 +18,12 @@ export interface InstalledState {
     result: InstalledResult | undefined;
     /** What the host answered about the packages on screen (icon, description, …), by lower-cased package id. */
     metadata: ReadonlyMap<string, PackageMetadataLite>;
+    /**
+     * Whether the metadata ask for the rows on screen has ended, answered or failed (UX-P5.1a): true at once when no row is
+     * askable, false while the ask runs, never set by a cancelled ask, false with no project or no list. A re-ask keeps the
+     * answered `metadata` until its own answer.
+     */
+    metadataSettled: boolean;
     error: ProtocolRequestError | undefined;
     revalidating: boolean;
     refresh: () => void;
@@ -114,6 +120,8 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
     const projectPath = singleProject(useSession().committed?.selectedProject);
     // Metadata arrives with the answers of the asks below; kept per project.
     const [metadata, setMetadata] = useState<{ projectPath: string; byId: ReadonlyMap<string, PackageMetadataLite> }>();
+    // The project and asked set whose metadata ask last ended, answered or failed (UX-P5.1a).
+    const [settledAsk, setSettledAsk] = useState<{ projectPath: string; asked: string }>();
     // The latest provisional chunk. A request that starts with no list on screen drops it; over a list it stays until a newer
     // chunk or an answer. It counts only over the answer that was on screen when it came (ADR-009 d.3, X7, UX-P4.8a).
     const [provisional, setProvisional] = useState<{ projectPath: string; result: InstalledResult; over: InstalledResult | undefined }>();
@@ -177,6 +185,12 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
         }
         const requested = projectPath;
         const controller = new AbortController();
+        const settle = (): void => {
+            // A cancelled ask settles nothing: another project or other rows asked again.
+            if (!controller.signal.aborted) {
+                setSettledAsk({ projectPath: requested, asked });
+            }
+        };
         bus.request('transitive/metadata', { packages }, { signal: controller.signal }).then(({ result }) => {
             setMetadata(previous => {
                 const byId = new Map(previous?.projectPath === requested ? previous.byId : []);
@@ -185,7 +199,8 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
                 }
                 return { projectPath: requested, byId };
             });
-        }, () => undefined);
+            settle();
+        }, settle);
         return () => controller.abort();
     }, [bus, projectPath, asked]);
 
@@ -194,10 +209,11 @@ export function InstalledProvider({ children }: { children: React.ReactNode }): 
         status: resource.status,
         result: shown,
         metadata: metadata !== undefined && metadata.projectPath === projectPath ? metadata.byId : NO_METADATA,
+        metadataSettled: projectPath !== null && shown !== undefined && (asked === '[]' || (settledAsk?.projectPath === projectPath && settledAsk.asked === asked)),
         error: resource.error,
         revalidating: resource.revalidating,
         refresh: resource.refresh,
-    }), [projectPath, resource.status, shown, resource.error, resource.revalidating, resource.refresh, metadata]);
+    }), [projectPath, resource.status, shown, resource.error, resource.revalidating, resource.refresh, metadata, asked, settledAsk]);
 
     return <InstalledContext.Provider value={state}>{children}</InstalledContext.Provider>;
 }

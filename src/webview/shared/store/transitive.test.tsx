@@ -104,6 +104,70 @@ describe('transitive slice', () => {
         expect(current.metadata.get('x@1.0.0')?.iconUrl).toBe('https://api.nuget.org/x.png');
     });
 
+    it('settled: an unrestored, failed or empty list settles without a metadata ask', async () => {
+        const host = await mount();
+        expect(current.settled).toBe(false);
+        await hostSays(() => current.enable());
+        expect(current.settled).toBe(false);
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive(A, [], { frameworks: [], dataSourceAvailable: false }), 1));
+        expect(current.settled).toBe(true);
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        // An unusable list settles at once, without waiting for the metadata ask its rows still make.
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], transitive(A, ['X'], { errorKind: 'parse-failed' }), 2));
+        expect(current.settled).toBe(true);
+        expect(host.requests('transitive/metadata')).toHaveLength(1);
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 3]]));
+        await hostSays(() => host.respond(host.requests('transitive/get')[2], transitive(A, []), 3));
+        expect(current.settled).toBe(true);
+        // The unrestored and the empty list asked nothing.
+        expect(host.requests('transitive/metadata')).toHaveLength(1);
+
+        // A list that fails before any result settles as well.
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(current.settled).toBe(false);
+        await hostSays(() => current.enable());
+        await hostSays(() => host.fail(host.requests('transitive/get')[3], 'failed', 'boom'));
+        expect(current.settled).toBe(true);
+    });
+
+    it('settled: a usable list settles when its metadata answers or rejects, never by a cancelled ask', async () => {
+        const host = await mount();
+        await hostSays(() => current.enable());
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive(A, ['X']), 1));
+        expect(current.settled).toBe(false);
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0' }] }));
+        expect(current.settled).toBe(true);
+
+        // While the list revalidates the old result stays, and so does its settle.
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        expect(current.settled).toBe(true);
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], transitive(A, ['X', 'Y']), 2));
+        expect(current.settled).toBe(false);
+        const cancelled = host.requests('transitive/metadata')[1];
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 3]]));
+        await hostSays(() => host.respond(host.requests('transitive/get')[2], transitive(A, ['X', 'Y', 'Z']), 3));
+        expect(host.cancelled()).toContain(cancelled.id);
+        await hostSays(() => host.respond(cancelled, { metadata: [] }));
+        expect(current.settled).toBe(false);
+        await hostSays(() => host.fail(host.requests('transitive/metadata')[2], 'unsupported'));
+        expect(current.settled).toBe(true);
+    });
+
+    it('a new list keeps the project\'s answered metadata until its own answer, and another project starts empty', async () => {
+        const host = await mount();
+        await hostSays(() => current.enable());
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive(A, ['X']), 1));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'X', version: '1.0.0', iconUrl: 'x.png' }] }));
+        expect(current.metadata.size).toBe(1);
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await hostSays(() => host.respond(host.requests('transitive/get')[1], transitive(A, ['X', 'Y']), 2));
+        expect(current.metadata.get('x@1.0.0')?.iconUrl).toBe('x.png');
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'Y', version: '1.0.0' }] }));
+        expect([...current.metadata.keys()].sort()).toEqual(['x@1.0.0', 'y@1.0.0']);
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(current.metadata.size).toBe(0);
+    });
+
     it('another project resets the section to collapsed and asks nothing', async () => {
         const host = await mount();
         await hostSays(() => current.enable());

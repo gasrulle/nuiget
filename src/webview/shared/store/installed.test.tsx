@@ -31,6 +31,7 @@ function Packages() {
             <output data-testid="detail">{state.result?.packages.map(entry => [entry.id, entry.version, entry.resolvedVersion ?? '-', entry.isImplicit === true ? 'implicit' : '-', entry.targetFrameworks?.join('+') ?? '-'].join('|')).join(',') ?? 'none'}</output>
             <output data-testid="described">{[...state.metadata].map(([id, entry]) => `${id}=${entry.description}`).join(';') || 'none'}</output>
             <output data-testid="error">{state.error?.code ?? 'none'}</output>
+            <output data-testid="settled">{String(state.metadataSettled)}</output>
             <button type="button" onClick={() => set({ selectedProject: B })}>Select B</button>
             <button type="button" onClick={state.refresh}>Retry</button>
         </div>
@@ -237,6 +238,54 @@ describe('installed slice', () => {
         expect(host.cancelled()).toContain(pending.id);
         await hostSays(() => host.respond(pending, { metadata: [{ id: 'Serilog', version: '1.0.0', description: 'late' }] }));
         expect(text('described')).toBe('none');
+    });
+
+    it('metadataSettled: false while the ask runs, true when it answers, true when it rejects, never by a cancelled ask', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        expect(text('settled')).toBe('false');
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, 'Serilog'), 1));
+        expect(text('settled')).toBe('false');
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Serilog', version: '1.0.0' }] }));
+        expect(text('settled')).toBe('true');
+
+        // Other rows ask again; the first of two asks is cancelled by the second and its late answer settles nothing.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, 'Serilog', 'Moq'), 2));
+        expect(text('settled')).toBe('false');
+        const cancelled = host.requests('transitive/metadata')[1];
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 3]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[2], installed(A, 'Serilog', 'Moq', 'xunit'), 3));
+        expect(host.cancelled()).toContain(cancelled.id);
+        await hostSays(() => host.respond(cancelled, { metadata: [] }));
+        expect(text('settled')).toBe('false');
+        // A rejected ask settles too: the rows without an entry are then unknown.
+        await hostSays(() => host.fail(host.requests('transitive/metadata')[2], 'unsupported'));
+        expect(text('settled')).toBe('true');
+    });
+
+    it('metadataSettled: true at once when no row is askable', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], list([unresolved('Serilog')]), 1));
+        expect(host.requests('transitive/metadata')).toHaveLength(0);
+        expect(text('settled')).toBe('true');
+    });
+
+    it('a re-ask after the rows changed is unsettled and keeps the answered metadata until its answer', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, A)));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], installed(A, 'Serilog'), 1));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Serilog', version: '1.0.0', description: 'Logging' }] }));
+        expect(text('settled')).toBe('true');
+
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await hostSays(() => host.respond(host.requests('installed/get')[1], installed(A, 'Serilog', 'Moq'), 2));
+        expect(text('settled')).toBe('false');
+        expect(text('described')).toBe('serilog=Logging');
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'Moq', version: '1.0.0', description: 'Mocks' }] }));
+        expect(text('settled')).toBe('true');
+        expect(text('described')).toBe('serilog=Logging;moq=Mocks');
     });
 
     it('asks for the provisional rows at once and again on the response only when the rows differ', async () => {

@@ -14,8 +14,17 @@ export interface TransitiveState {
     status: ResourceState<TransitiveResult>['status'];
     /** The transitive packages by target framework; they stay on screen while a newer result is on its way. */
     result: TransitiveResult | undefined;
-    /** What `transitive/metadata` said about the packages, by lower-cased `id@version`; empty when it said nothing. */
+    /**
+     * What `transitive/metadata` said about the packages of this project, by lower-cased `id@version`; empty when it said
+     * nothing. A new list keeps the project's answered metadata until its own answer; another project starts empty (UX-P5.1a).
+     */
     metadata: ReadonlyMap<string, PackageMetadataLite>;
+    /**
+     * Whether the list and its metadata have ended (UX-P5.1a): true when the list failed with no result, is unusable (not
+     * restored, `errorKind`) or empty, or when the metadata ask for this result answered or failed; never by a cancelled ask;
+     * false with no project, before `enable`, and while neither a result nor an error exists.
+     */
+    settled: boolean;
     error: ProtocolRequestError | undefined;
     revalidating: boolean;
     /** The section was opened: from now on the list of this project is asked for and kept current. */
@@ -61,7 +70,9 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
         const timer = setTimeout(() => setEnabledFor(projectPath), TRANSITIVE_PREFETCH_MS);
         return () => clearTimeout(timer);
     }, [prefetch, projectPath, enabled, installedReady]);
-    const [metadata, setMetadata] = useState<{ result: TransitiveResult; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
+    const [metadata, setMetadata] = useState<{ projectPath: string; byKey: ReadonlyMap<string, PackageMetadataLite> }>();
+    // The result whose metadata ask last ended, answered or failed (UX-P5.1a).
+    const [settledResult, setSettledResult] = useState<TransitiveResult>();
 
     // A restore is an operation of the feature's (`ops/restore`); its invalidation of the key lists again (UX-P4.fix-10).
     const requester = useCallback((signal: AbortSignal) => bus.request('transitive/get', { projectPath: projectPath as string }, { signal }), [bus, projectPath]);
@@ -71,9 +82,10 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
 
     const result = resource.data;
     useEffect(() => {
-        if (result === undefined) {
+        if (result === undefined || projectPath === null) {
             return undefined;
         }
+        const requested = projectPath;
         const pairs = new Map<string, { id: string; version: string }>();
         for (const framework of result.frameworks) {
             for (const entry of framework.packages) {
@@ -84,13 +96,27 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
             return undefined;
         }
         const controller = new AbortController();
+        const settle = (): void => {
+            // A cancelled ask settles nothing: a newer list or another project asked again.
+            if (!controller.signal.aborted) {
+                setSettledResult(result);
+            }
+        };
         bus.request('transitive/metadata', { packages: [...pairs.values()] }, { signal: controller.signal }).then(answer => {
-            setMetadata({ result, byKey: new Map(answer.result.metadata.map(entry => [metadataKey(entry.id, entry.version), entry])) });
+            setMetadata(previous => {
+                const byKey = new Map(previous?.projectPath === requested ? previous.byKey : []);
+                for (const entry of answer.result.metadata) {
+                    byKey.set(metadataKey(entry.id, entry.version), entry);
+                }
+                return { projectPath: requested, byKey };
+            });
+            settle();
         }, () => {
-            // No metadata (`unsupported` until the feeds exist, or any other error) is no error of the list.
+            // No metadata (`unsupported` until the feeds exist, or any other error) is no error of the list; it settles.
+            settle();
         });
         return () => controller.abort();
-    }, [bus, result]);
+    }, [bus, result, projectPath]);
 
     const enable = useCallback((): void => setEnabledFor(projectPath), [projectPath]);
 
@@ -99,14 +125,27 @@ export function TransitiveProvider({ children, prefetch = true }: { children: Re
         enabled,
         status: resource.status,
         result,
-        metadata: metadata !== undefined && metadata.result === result ? metadata.byKey : NO_METADATA,
+        metadata: metadata !== undefined && metadata.projectPath === projectPath ? metadata.byKey : NO_METADATA,
+        settled: isSettled(projectPath, enabled, result, resource.error, settledResult),
         error: resource.error,
         revalidating: resource.revalidating,
         enable,
         refresh,
-    }), [projectPath, enabled, resource.status, result, metadata, resource.error, resource.revalidating, enable, refresh]);
+    }), [projectPath, enabled, resource.status, result, metadata, settledResult, resource.error, resource.revalidating, enable, refresh]);
 
     return <TransitiveContext.Provider value={state}>{children}</TransitiveContext.Provider>;
+}
+
+/** `TransitiveState.settled` (UX-P5.1a, architecture-advisor follow-up 1 DO 4). */
+function isSettled(projectPath: string | null, enabled: boolean, result: TransitiveResult | undefined, error: ProtocolRequestError | undefined, settledResult: TransitiveResult | undefined): boolean {
+    if (projectPath === null || !enabled) {
+        return false;
+    }
+    if (result === undefined) {
+        return error !== undefined;
+    }
+    const empty = result.frameworks.every(framework => framework.packages.length === 0);
+    return !result.dataSourceAvailable || result.errorKind !== undefined || empty || settledResult === result;
 }
 
 export function useTransitive(): TransitiveState {

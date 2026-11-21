@@ -111,6 +111,25 @@ describe('Tabs', () => {
         expect(await axe(container)).toHaveNoViolations();
     });
 
+    it('pending renders data-pending on the tab and nothing else; absent when false', async () => {
+        const tabs: ReadonlyArray<TabItem<MainTab>> = [
+            { id: 'installed', label: 'Installed', count: 15, pending: true, 'data-testid': 'installed-tab' },
+            { id: 'updates', label: 'Updates', count: 3, pending: false, 'data-testid': 'updates-tab' },
+        ];
+        const plain: ReadonlyArray<TabItem<MainTab>> = tabs.map(tab => ({ ...tab, pending: undefined }));
+        const { container, rerender } = render(<Tabs tabs={plain} selected="installed" onSelect={() => undefined} label="Package lists"><p>content</p></Tabs>);
+        const before = screen.getByTestId('installed-tab').outerHTML;
+        rerender(<Tabs tabs={tabs} selected="installed" onSelect={() => undefined} label="Package lists"><p>content</p></Tabs>);
+        const installed = screen.getByTestId('installed-tab');
+        expect(installed).toHaveAttribute('data-pending', '');
+        expect(screen.getByTestId('updates-tab')).not.toHaveAttribute('data-pending');
+        // Nothing else moves: the same markup but the attribute, the same name, no busy state.
+        expect(installed.outerHTML.replace(' data-pending=""', '')).toBe(before);
+        expect(installed).toHaveAccessibleName('Installed 15');
+        expect(installed).not.toHaveAttribute('aria-busy');
+        expect(await axe(container)).toHaveNoViolations();
+    });
+
     it('the strip height, the label type and the selected line come from the stylesheet', () => {
         const remove = installStylesheet();
         const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]) as CSSStyleRule[];
