@@ -312,7 +312,7 @@ P0 item provides.
 
 ## Phase gates
 
-### P4 gate on 997a2842 (UX-P4.fix-25), 2026-11-21: collected; phase review pending
+### P4 gate on 997a2842 (UX-P4.fix-25), 2026-11-21: holds; tag `labs/ux-P4-done`
 
 Collected after every P4 row is `done` (last: UX-P4.fix-25, 9f5b8f64). The plan's **P4 gate** line, clause by clause:
 
@@ -353,7 +353,84 @@ Collected after every P4 row is `done` (last: UX-P4.fix-25, 9f5b8f64). The plan'
   `110 passing`; the twelve matrix jobs 128/140 (four themes), 123/137 (dark-high-contrast), 122/137 (light-high-contrast). Every lane:
   `not reachable` 0, `hard measurement red` 0, no `failing` line. Every other job (Lint, both Test jobs, both E2E jobs, both SDK probes,
   Build & Package, Benchmark, Perf baseline) `success`; Negative control skipped (no `negative_sha`).
-- Phase review: pending (RUN-ux §6 step 2).
+- PHASE REVIEW: wf_cbd52644-41b, **PASS**: blocking 0, so no `P4.fix-n` row; refuted 0; incomplete none. `judgeDispositionRate`:
+  `{"refuted":1,"total":16,"cumulativeRefuted":21,"cumulativeTotal":936,"acceptedAsDesign":5,"fixed":5,"negativeControl":"not passed","hardnessRule":"not met"}`
+  (D37 stays unmet: the judge is informational into P5). The non-blocking observations are addressed to the planning session (X75 on
+  P5.4's row; the artifact refresh at the tag; one CHANGELOG entry for P6's pass; the gate line's "within Appendix B"; the judge-skip
+  form for plan §2.8 and RUN-ux §4.3, and the planning note's "the gate's judge reads every state" corrected; capture cells for the
+  Queued and Finishing row states before P5.4; the sidebar Browse `[live]` cell for P5.9; Delete walks for main-updates and the side
+  bar; judge-log format drift; forced colours held by lint alone), each verbatim below.
+
+`advisors.architecture.answer`, verbatim:
+
+> VERDICT: PASS
+>
+> Two corrections to the brief first. The host rule in force is Node 20.9 (D10 as amended by D25), not Node 18.15; I checked against 20.9. HEAD is bfa3cce9, not 9f5b8f64; the gate SHA 997a2842 differs from HEAD in docs/plans only.
+>
+> BLOCKING: none
+>
+> NON-BLOCKING:
+> 1. docs/plans/STATUS-ux.md:186 — UX-P4.9 landed two of four parts. X32 is on P5.0's row, but X75 is recorded only on P4.9's row and in the gate notes; P5.4's row is empty. Planning session: add the X75 note to the P5.4 row before it opens.
+> 2. docs/design/artifacts.md:12 — the Design System artifact still mirrors 854abd64; design-system.md and tokens.json moved in 6f0eb0cd and fd4ac434. Planning session, at the labs/ux-P4-done tag (RUN-ux §6 step 4).
+> 3. CHANGELOG.md:117 — "The first-render timing is logged when All Projects is selected" is an output-channel log line a user does not notice; the audience rule gives it no entry. Planning session: place it on P6's CHANGELOG pass.
+> 4. src/test/ui/v2/a11y.ts:860 — gate clause 1 says every a11y-* rule is hard, but a11y-first-load-announced's Browse cell is "pending P5.9". I rule this consistent with the plan: Appendix B (plan line 929) assigns the cell to P5.9 and §2.7 forbids another item to flip it. UX-P5.9 flips it; the planning session may add "within Appendix B" to the gate line.
+> 5. docs/plans/RUN-ux.md:263 and the plan's D31 row (line 94) — two owner-level texts were edited under the recorded delegation: D31's wording (0fb802e8, UX-P4.fix-1, by ruling) and RUN-ux §7's stop conditions (abbf7e87). Both match the delegation as the tracker records it. Owner: informational, confirm once if wanted.
+> 6. docs/plans/2026-10-23-nuiget-ux-execution-plan.md:531 — UX-P4.1 went past its row by ruling, not by the row: ADR-007 amended, a fourth look field, tab? on ui/viewPackage, packageId? on ui/selectProject. All sit inside the one sentinel window and are recorded as deviations in docs/plans/handoff/P4.1.md:89-97. No row needed; P5.0's brief should cite the protocol as it is.
+> 7. docs/plans/STATUS-ux.md:363 — design-judge was not run on eleven P4 product items that moved no capture. That is the design-advisor's half of this review.
+>
+> CHECKED:
+> - Range labs/ux-P3-done..bfa3cce9 (147 commits), working tree clean.
+> - Frozen paths: exactly three commits touch src/protocol/**, docs/adr/** or docs/protocol.md: ae2dddf9 (UX-P4.1), 0fb802e8 (UX-P4.fix-1), 7fce96a2 (UX-P4.fix-11). Each cites its sentinel and has the ruling pasted in its handoff note. src/core/contracts.ts and ADR-009 are untouched.
+> - Owner-only paths: no commit touches .claude/ or .mcp.json; no sentinel and no zz-forced-probe.test.ts in the tree or history.
+> - Tests: no test file deleted or renamed (the one deletion is src/webview/main/FirstUsefulRenderMark.tsx, moved by UX-P4.8b). No added skip, only, todo, retry or testTimeout. 42 removed titles against 309 added; each removed title has a successor or a naming item.
+> - Named tests present by title: "look change reaches an open webview" (src/extension.test.ts:203), "sidebar Enter opens the row's own tab" (src/test/harness/scenarios.test.ts:364), the X7 save scenario (scenarios.test.ts:637), R5 rewritten (installed.test.tsx:142), ARCHITECTURE.md:515-522 rewritten.
+> - Harness: tolerances unchanged; every pending and accepted list is empty except main-browse-loading on P5.9; no hard rule set back to pending. The forced-pair entries, the MS-8 width form, the snapped 1 px readings and the list-focus-outline re-key trace to pasted rulings in docs/plans/handoff/P4.fix-24.md and P4.10.md and to docs/design/DECISIONS.md:155-156.
+> - esbuild.mjs, vitest.config.mts, eslint.config.mjs and scripts/hooks are unchanged; no bundle ceiling raised.
+> - ci.yml: only the ui-matrix split into two parts; timeout and trip-wire unchanged, no continue-on-error.
+> - Boundaries and Node 20.9: no new cross-layer import in src/core, no new Node API in core, host or extension.ts, no useDetails reachable from the sidebar. Catalog.ts and enricher.ts diffs read in full.
+> - Gate clause 3: interaction model §5-§6 (lines 128-230) match Listbox.tsx:331-414, the sidebar and main list bindings, SidebarHost.ts:26 and MainPanelHost.ts:55-72.
+> - Gate numbers confirmed in the local logs: 60 [keys] lines, none pending or failing, in captures/44852110277; the 15 lane logs of captures/44854659411 hold the pasted passing counts, 0 "not reachable", no "failing".
+> - Docs duties: CHANGELOG changes only under [Unreleased] with both Breaking entries; README setting row and keyboard table; ARCHITECTURE.md, gotchas, design-system.md, DECISIONS.md, regression matrix and bench baseline moved with their items; no .claude mirror owed.
+> - Not re-read in full: plan §1-§4 and the tracker's Advisor decisions section.
+> - Not independently verified (read-only, no gh, no test run): the non-UI job conclusions, docs:protocol:check and coverage. The [perf] 1.5x tolerance is unchanged (docs/perf-baseline.md:43, :174).
+
+`advisors.design.answer`, verbatim:
+
+> VERDICT: PASS
+>
+> BLOCKING: none
+>
+> NON-BLOCKING:
+> 1. Judge skips ratified, with a correction. G-UI step 4 was skipped on UX-P4.1, P4.3, P4.7, P4.8a, P4.8b, P4.8c, P4.9, P4.10 and P4.fix-4, -6, -8, -9, -10, -11, -12, -16, -17, -18, -20, -21, -24. Ruling: a skip is admitted when the item's closing ui-lane [diff] reads every cell at 0 px and the item adds no named state, because the judge would re-read goldens already judged at adoption (the UX-P4.fix-18 closing ruling as a class). I confirmed the 0 px summary in the rows or notes of P4.3, P4.fix-4, P4.fix-8, P4.8b and P4.10; the others rest on their recorded lines. P4.3, P4.fix-4 and P4.fix-8 wrote no skip line at all, and P4.fix-11's note has none (its tracker row records it). The planning note's sentence "the gate's judge reads every state" (docs/plans/STATUS-ux.md:358-372) is wrong: RUN-ux §6 has no gate-level judge step and none ran. Item: the planning session adds the SKIPPED form (0 px, no state added, the [diff] summary pasted) to plan §2.8 and RUN-ux §4.3 before P5.0, and corrects the note.
+> 2. Two row states P4 introduced have no capture cell, so no lane measures them and no judge has seen them: "Queued" (UX-P4.7) and "Finishing" (UX-P4.8c). DS-STATE-6 holds them through jsdom cases only; the one held cell, main-installed-busy, shows "Uninstalling" (golden main-installed-busy.dark-modern.1200.png, box 275,285,65,14). A sidebar busy row has no cell either. Item: the planning session places a row before P5.4: one more posted ops/progress event in the busy cell's page script (queued) or a second held cell, with DS-STATE-6's line extended.
+> 3. The [live] line of sidebar-browse-loading prints no status suffix, so a grep of "(pending P5.9)" misses it; main-browse-loading reads "Loading installed packages" where LIVE_EXPECTED wants "Searching" (src/test/ui/v2/a11y.ts:860, pending P5.9 as Appendix B assigns). Item: UX-P5.9 gives the sidebar Browse cell a LIVE_EXPECTED entry and flips both.
+> 4. The keyboard walks cover four screens (main-installed, main-updates, main-browse, sidebar). Delete on an Updates row and on a sidebar row, ArrowLeft and ArrowRight on group rows, Space and Shift+F10 are held by jsdom tests and the two uninstall-dialog reaches, not by [keys] lines. The details pane and the sources dialog have no walk. The gate's "every screen" is those four, as before P4. Item: UX-P5.0 or the first P5 item that touches a list adds a rows Delete path for main-updates and the sidebar (Cancel leave), hard on landing.
+> 5. Judge-log format drift. docs/plans/judge-log/P4.2a.json:46,65 writes the disposition and its reason in one string, so the review's grep does not count its two refuted-by-measurement entries; P4.fix-19.json:56 and P4.fix-23.json:42,54,63,72 use "refuted" for panel-refuted candidates and "informational" for a single-judge finding. None is a standing finding, so no ruling is missing, but the rate is not computable by the one grep. Item: the next item that runs design-judge writes the judge-rubric §9 values only; the planning session normalizes the three files.
+> 6. D37 (a) is still not met and no row owns its re-evaluation (docs/plans/STATUS-ux.md:495, :511; carried from the P3 review). The judge stays informational into P5; every standing P4 finding is fixed or ruled. Item: planning session.
+> 7. Forced colours is held by lint alone: eight forced values moved in tokens.css (tab indicator and list focus outline to CanvasText, borders to ButtonBorder) and three pairs are ruled entries of FORCED_PAIRS_PENDING (src/test/ui/v2/contrast.ts:182-186). No lane renders under forced colours, so nothing has measured or shown these values in a webview. Item: planning session, a backlog row (research §18), not a P5 dependency.
+> 8. The Design System artifact lags design-system.md and tokens.json from 6f0eb0cd and fd4ac434 (DS-COLOR-4, DS-HC-1, eight forced values). Item: planning session at the labs/ux-P4-done tag (RUN-ux §6 step 4).
+> 9. The gate section still reads "phase review pending" (docs/plans/STATUS-ux.md:315), and HEAD moved from 9f5b8f64 to bfa3cce9 (docs/plans only, 43 lines) while this review ran. Item: the session that pastes this review.
+>
+> CHECKED:
+> - Range labs/ux-P3-done..bfa3cce9 (147 commits; bfa3cce9 touches docs/plans/STATUS-ux.md only); git diff --stat: 303 files at 9f5b8f64.
+> - Read: .github/agents/design-advisor.agent.md; docs/plans/RUN-ux.md §4.3 to §6; the plan's D37, §2.7, §2.8, the P4 table, the P4 gate line and Appendix B; docs/plans/STATUS-ux.md lines 140-178 (rows, truncated), 214-312 (pending table), 313-377 (gate and notes); docs/ux/interaction-model.md §5 and §6.
+> - Flip audit per commit over src/test/ui/v2/measure.ts, a11y.ts, contrast.ts and primitives/testSupport.ts: every flip is by its owner (P4.2a, P4.2b, P4.3, P4.4, P4.5, P4.6, P4.7, P4.10 and fix-3, -5, -9, -12, -13, -14, -15, -23, -24); no TOLERANCES value changed; diffTolerance moved only to 0 or to the start value on new cells; the helper holds one pending entry (a11y.ts:860, P5.9), as the tracker table says.
+> - KEYS_PENDING, KEYS_AWAITING_ARIA, AXE_PENDING, CONTRAST_PENDING, CONTRAST_PAIRS_PENDING and FOCUS_AFTER_CLOSE_PENDING empty; FORCED_PAIRS_PENDING holds three ruled reason entries with their DECISIONS row.
+> - captures/44852110277/ui-log/ui-output.txt: 60 [keys] lines, all hard; 2 lines "(pending P5.9)" and no other pending; 326 [axe] lines, 0 violations outside accepted-as-design; 23 [motion] lines, all hard; 90 [aria] lines, 0 differs; 11 [live] lines; both [feedback] lines hard at 0 notifications; [diff] summary 120 compared, 120 at 0 px.
+> - captures/44854659411/ui-log* (15 lane logs): passing counts as pasted (54/119; 128/140 ×4; 123/137; 122/137; floor 110; macOS 109 and 11), failing 0, not reachable 0, hard measurement red 0 in every lane; main-updates-update-all-dialog read in every lane, 0 not measurable, every line hard; the zoom cell's MS-8, DS-COLOR-4 and DS-HC-1 lines hard and [zoom] restored at dpr 1.
+> - Goldens: 27 PNGs changed (6 added, 21 modified) over 11 adoption commits; each PNG's sha256 equals its index.json entry and the crop under captures/<run>/ of the run the entry names; widths 1200 or 300 (DPR 1); 24 approved and 3 baseline; APPROVE rulings found in the handoff notes of P4.2a, P4.2b, P4.fix-3, P4.4, P4.5 (as a class, DO 10), P4.6, P4.fix-5, P4.fix-14, P4.fix-15 and P4.fix-19.
+> - PNGs opened with Read (sha256, first 16 hex): main-installed-uninstall-dialog.dark-modern.1200 6a27889aae16dba0; main-installed-busy.dark-modern.1200 bc15346097e3a2b8; main-updates-update-all-dialog.dark-modern.1200 44549ae9f39ec920; main-installed-provisional.dark-modern.1200 fa7f0784b9556de1; sidebar-installed-provisional.dark-modern.300 ad885ea69365bfd9; sidebar-uninstall-dialog.dark-modern.300 4cfeafe58b0489b9; sidebar-update-all-dialog.dark-modern.300 90ccf686e951a113; main-installed-hover.dark-modern.1200 d4113d447fa43b84. No pixel defect seen in the eight.
+> - Judge logs: the 12 docs/plans/judge-log/P4*.json; 8 standing findings (3 fixed, 5 accepted-as-design, each with a ruling), 0 incomplete, 0 standing blocking; the review's grep over P4 and over all logs.
+> - Tokens and rules: tokens.css and tokens.json move the same eight forced values; ALLOWANCE in scripts/check-design-tokens.mjs emptied (the P4.5 entry removed with the 150 ms re-value); every changed design-system.md rule has a DECISIONS row (43 added, 0 removed).
+> - Lint baseline: src/test/lint/__fixtures__/ unchanged in the range; css-audit-baseline.json holds 0 entries.
+> - Tests: no test file deleted or renamed (the one deleted file is src/webview/main/FirstUsefulRenderMark.tsx); no skip, only, todo, retry or testTimeout added; 40 titles removed and 277 added, the removed ones rewritten for Enter, Delete, toasts and the retired ui/contextMenu; no sentinel tracked.
+> - Primitive props: ConfirmDialog doNotAsk, DialogGroup package items, IconButton ref, Listbox onExitUp and typeaheadLabel, each with a ruling; no className, style or size prop added.
+> - Interaction model §5 and §6 against Listbox.tsx:331-414, src/protocol/messages.ts:162-199, the sidebar's openRowMenu sites and the [keys] lines: they agree.
+> - Frozen files: docs/adr and src/protocol changed only in ae2dddf9 (P4.1), 0fb802e8 (P4.fix-1) and 7fce96a2 (P4.fix-11), each a named contract item; the rubric and the settings files untouched.
+> - CHANGELOG [Unreleased] carries the P4.2a, P4.2b and P4.7 entries, the two breaking ones included.
+> - Not verified: that dispatch 44854659411 and push run 44852110277 ran on 997a2842, and the conclusions of the non-UI jobs (no gh call made); job times; any Tier B, floor or macOS PNG (only logs are downloaded, so the zoom cell and the 2026 and high-contrast cells were read by numbers only); the 19 other changed goldens and the ARIA snapshots were not opened; the architecture half (store, host, core, protocol) is the architecture-advisor's.
+>
+> JUDGE DISPOSITION RATE: 1/16 = 6.3 % for the P4 items by the review's grep (accepted-as-design 5, fixed 5; the other 5 are 4 "refuted" and 1 "informational", non-standard values on non-standing entries; with P4.2a's two free-text entries 3/18 = 16.7 %; standing findings only: 0/8, fixed 3, accepted-as-design 5); cumulative 21/936 = 2.2 % (accepted-as-design 63, fixed 847; the P3 review's 20/920 plus P4's 16); negative control not passed (D37 (a): V4 not met, V3 not pixel-reachable, unchanged since P2.fix-8; this dispatch's skipped Negative control job is the harness's, not the judge's); hardness rule not met (D37 (b) holds at 0 % over P2; the judge stays informational, every standing finding fixed or ruled)
 
 ### For the P4 phase review (collected by the planning session; the gate has not run)
 
