@@ -2326,6 +2326,39 @@ async function deleteKeys(): Promise<KeyOutcome[]> {
     return outcomes;
 }
 
+/**
+ * The Delete key on an Updates row of the main panel and on a side bar Installed row (UX-P5.1a push 0, architecture-advisor
+ * ruling of 2026-11-21 DO 1; the P4 phase review): it opens the confirmation with the focus on Cancel, Enter on Cancel closes
+ * it, and the row is active again; never confirmed, the box never ticked. On a build whose hint does not say Delete asks, the
+ * key is not pressed and the path is red.
+ */
+async function deleteCancelKeys(listTestId: string, rowTestId: string): Promise<KeyOutcome[]> {
+    await scrollListTo(listTestId, rowTestId);
+    // Scoped to the list: the side bar's Installed and Updates panes can both show the id.
+    const option = await driverOf().findElement(By.css(`[data-testid="${listTestId}"] [data-testid="${rowTestId}"] .nuiget-row-option`));
+    await script('arguments[0].focus();', option);
+    const before = await activeRow(listTestId);
+    if (!(await hintHas(listTestId, DELETE_ASKS))) {
+        return [{ path: 'rows Delete', observed: `not pressed: the hint lacks "${DELETE_ASKS}" (a build where Delete writes)`, expected: 'confirm-dialog-cancel' }];
+    }
+    const outcomes: KeyOutcome[] = [];
+    await press(Key.DELETE);
+    const opened = await findByTestId('confirm-dialog', 10_000).then(() => true, () => false);
+    const focused = opened ? await focusedTestId() : 'no dialog';
+    outcomes.push({ path: 'rows Delete', observed: focused, expected: 'confirm-dialog-cancel' });
+    // Leave with Cancel: Enter on the focused Cancel button; any other focus is closed by the Cancel button itself, never by a confirm.
+    if (focused === 'confirm-dialog-cancel') {
+        await press(Key.ENTER);
+    }
+    const closed = await poll(async () => ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length === 0 ? true : undefined), 'the dialog closed', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'rows Delete Cancel', observed: closed ? 'closed' : 'still open', expected: 'closed' });
+    if (!closed) {
+        await cancelDialog();
+    }
+    outcomes.push({ path: 'rows Delete restore', observed: await activeRow(listTestId), expected: before });
+    return outcomes;
+}
+
 /** Runs in the webview: the active row's index in the list and whether its box lies inside the list's (UX-P4.3). */
 const ACTIVE_FACTS = 'const list = document.querySelector(\'[data-testid="\' + arguments[0] + \'"]\'); const row = document.activeElement && document.activeElement.closest(\'[data-index]\'); if (!list || !row) { return { index: -1, inView: false }; } const a = row.getBoundingClientRect(); const b = list.getBoundingClientRect(); return { index: Number(row.getAttribute("data-index")), inView: a.top >= b.top - 1 && a.bottom <= b.bottom + 1 };';
 
@@ -2981,7 +3014,7 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyWidth(stateNamed('main-updates'), PANEL_WIDTH);
             await freshMainPanel();
             await REACH['main-updates'].reach();
-            await walkScreen('main-updates', 'nuiget-app', 'search-input', () => rowKeys('main-updates', 'updates-list', 'search-input', 'press'));
+            await walkScreen('main-updates', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-updates', 'updates-list', 'search-input', 'press'), ...await deleteCancelKeys('updates-list', 'package-row-dapper')]);
         });
 
         it('keyboard paths: main panel, Browse (UX-P0.24)', async function () {
@@ -2998,7 +3031,8 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await applyTheme('dark-modern');
             await applyWidth(stateNamed('sidebar-sections'), SIDEBAR_WIDTH);
             await sidebarSections();
-            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', async () => [...await rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', 'later'), ...await sidebarEnterKeys()]);
+            // Delete before Enter: Enter on a side bar row opens the main panel, so it stays the walk's last step (UX-P4.2b).
+            await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', async () => [...await rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', 'later'), ...await deleteCancelKeys('sidebar-installed-list', 'package-row-serilog'), ...await sidebarEnterKeys()]);
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state
