@@ -1,0 +1,495 @@
+{
+  "item": "P5.1b",
+  "runs": [
+    {
+      "runId": "44893944427",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "f69e970e",
+      "look": "modern",
+      "workflow": "wf_0b652303-b8a",
+      "note": "Moved cells of the proving push judged in screen mode (own artboards for main-installed-details, main-transitive-details and main-transitive-expanded; main-installed-all.dark-modern.1200 for the others). 0 blocking. Dispositions by the design-advisor's follow-up 1 of UX-P5.1b (2026-11-21).",
+      "captures": {
+        "main-installed-vulnerable": {
+          "png": "captures/44893944427/main-installed-vulnerable.dark-modern.1200.png",
+          "sha256": "64d23c380bd4fe1a22edee13c04a836533a07967b2a3fb6c7781132985da3993"
+        },
+        "main-installed-all-vulnerable-unavailable": {
+          "png": "captures/44893944427/main-installed-all-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "07fdfe63501fd12fd06f15c9a31ffeca97947058b30f859758f85f63a89a343a"
+        },
+        "main-installed-details": {
+          "png": "captures/44893944427/main-installed-details.dark-modern.1200.png",
+          "sha256": "04083a5e853d99454cf2dabac7a61dee80db53497264120ab79b2e19bebc8e4f"
+        },
+        "main-transitive-details": {
+          "png": "captures/44893944427/main-transitive-details.dark-modern.1200.png",
+          "sha256": "29d6faac7437fde91e627015176dbfe2a1eea974f1d6b20de98dd202a4e872e0"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/44893944427/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "49437933c7fdfd3c07da9a557eedfad9a624ef4d75ccbcd6abf6e8e5d9792ec1"
+        }
+      },
+      "panel": {
+        "states": 5,
+        "candidates": 12,
+        "standing": 2,
+        "blocking": 0,
+        "refuted": 4,
+        "singleJudge": 4,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] The Newtonsoft.Json row's vulnerability badge reads \"(x) High\" with a severity glyph where the approved artboard draws the word \"Vulnerable\"; the glyph, its 2 px gap and the pill height match DS-HEIGHT-10's severity-badge clause, so the artboard predates that rule rather than the capture being wrong. | [states] Newtonsoft.Json's badge reads an error glyph plus \"High\" where the artboard draws the word \"Vulnerable\" with no glyph; the capture follows DS-HEIGHT-10's severity badge (glyph before the word, border by severity, UX-P5.1b), which postdates the artboard.",
+          "severity": "minor",
+          "box": [
+            226,
+            332,
+            69,
+            19
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The artboard predates the rule: DECISIONS.md row of 2026-11-21 \"The vulnerability badge names its highest severity\" and DS-HEIGHT-10's severity clause (design-advisor follow-up 1 of UX-P5.1b, DO 2). Re-render on the tracker.",
+          "evidence": "docs/design/DECISIONS.md row of 2026-11-21 \"The vulnerability badge names its highest severity\"; DS-HEIGHT-10 severity clause (hard: glyph 10×10, height 20)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-transitive-details#D2",
+          "state": "main-transitive-details",
+          "finding": "[native] The search box's placeholder reads \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the design system's main-header overflow row gives the shorter text as the current copy, so the artboard is out of date rather than the capture. | [states] The search box placeholder reads \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows the Design System's overflow table (the copy since UX-P3.fix-15), so the artboard is stale, not the product.",
+          "severity": "minor",
+          "box": [
+            16,
+            42,
+            443,
+            26
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The Design System's main-header overflow row (UX-P3.fix-15) names the short placeholder; the artboard predates it (follow-up 1, DO 2).",
+          "evidence": "docs/design/design-system.md main-header overflow row (the placeholder \"Search or type @ to filter\", UX-P3.fix-15); DS-OVERFLOW-2 placeholder line (hard)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-all-vulnerable-unavailable#D1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "[states] The transitive restore banner reads \"Not restored, so their transitive packages are not known: Unresolved.csproj.\", which has no subject and uses a \"their\" that refers to nothing. That makes it a fragment rather than the whole sentence a banner message must be; §9 declares this banner (transitive-restore-banner) but does not declare its wording.",
+          "severity": "minor",
+          "box": [
+            16,
+            195,
+            295,
+            37
+          ],
+          "rule": "DS-COPY-3",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing restore banner copy, not this item's: routed to the tracker for the planning session (follow-up 1, DEFECTS).",
+          "evidence": "pre-existing; the cell's counted pixels are the badge band only (docs/plans/handoff/P5.1b.md, Visual evidence)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[states] The current Newtonsoft.Json row's badge reads an error glyph plus \"High\" with an error-coloured border, while the approved artboard draws the label badge \"Vulnerable\". The capture follows DS-HEIGHT-10's severity badge (glyph before the word, border by severity), so the artboard is stale against the rules here, not the product.",
+          "severity": "minor",
+          "box": [
+            226,
+            432,
+            50,
+            19
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The artboard predates the severity badge (DECISIONS 2026-11-21, DS-HEIGHT-10; follow-up 1, DO 2).",
+          "evidence": "docs/design/DECISIONS.md row of 2026-11-21 \"The vulnerability badge names its highest severity\"; DS-HEIGHT-10 severity clause (hard: glyph 10×10, height 20)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[states] The main search box's placeholder reads \"Search or type @ to filter\", while the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The overflow rule for the main header names the shorter copy as the placeholder, so the artboard is stale against the rules here, not the product.",
+          "severity": "minor",
+          "box": [
+            22,
+            46,
+            440,
+            18
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The short placeholder is the Design System's (UX-P3.fix-15; follow-up 1, DO 2).",
+          "evidence": "docs/design/design-system.md main-header overflow row (the placeholder \"Search or type @ to filter\", UX-P3.fix-15); DS-OVERFLOW-2 placeholder line (hard)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-transitive-details#D3",
+          "state": "main-transitive-details",
+          "finding": "[states] The Package Sources button draws the codicon settings-gear, where the artboard draws a hand-made sun-like stroke glyph (circle plus eight rays); the capture meets DS-ICON-1 (codicon only), so the artboard's glyph is the one that departs.",
+          "severity": "minor",
+          "box": [
+            1136,
+            10,
+            22,
+            22
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "DS-ICON-1: codicons only; the artboard's hand-drawn gear predates it (follow-up 1, DO 2).",
+          "evidence": "docs/design/design-system.md DS-ICON-1 (codicons only)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "Empty.csproj's group row reads \"0 of 0\" with no message leaf below it, where the redline declares the message leaf installed-empty-empty.csproj (\"No packages installed.\") under that header; the filter keeps the Unsupported.csproj leaf in this same capture, so the per-project empty state is the only per-project state that drops out.",
+          "severity": "major",
+          "rule": "DS-STATE-1",
+          "disposition": "refuted",
+          "reason": "The crop does show Empty.csproj at '0 of 0' with no leaf under it. But the leaf the finding cites, installed-empty-empty.csproj, is declared in the redline of the unfiltered main-installed-all artboard, not for this @vulnerable state. Under the filter, every project with zero matches renders no leaf: Catalog (0 of 13) and Utility (0 of 13) show none either, so Empty.csproj is treated like its siblings. The Unsupported leaf stays because it gives a reason the data cannot be read, not a filter result. No spec or state description for this capture declares the empty leaf."
+        },
+        {
+          "id": "native-1",
+          "state": "main-installed-details",
+          "finding": "The Details property list (Version through Report abuse) is drawn on a uniform 24-25 px row pitch where the artboard's list runs 22-24 px, so the block is about 10 px taller and pushes Vulnerabilities and Dependencies 10 px lower (Vulnerabilities heading at y 480 against the artboard's 470). Side by side the list looks slightly loose.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The crop shows the seven property rows at about 24 px pitch against about 23 px on the artboard, but DS-ALIGN-2 requires a pitch of at least 24 with 6 px gaps, and the hard measurement passes (pitch 24.2 ×6, gap 6 ×6, spread 0). The looser rhythm is therefore the rule, not a defect."
+        },
+        {
+          "id": "native-2",
+          "state": "main-installed-details",
+          "finding": "The same High-severity vulnerability uses two severity roles in one view. The current row's badge has an error glyph and an error-coloured border, while the Details pane's Vulnerabilities line has a yellow warning glyph and warning-coloured 'High severity' text. The badge's High maps to error, so a VS Code user reads them as two different severities. The artboard draws the details line with the warning glyph, but it predates the severity badge.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The crop shows the row badge with an error glyph and border beside the details line's yellow warning glyph and 'High severity'. The artboard draws that details line the same way, and the design system's High-to-error mapping is scoped to a vulnerable row's badge, so no rule or artboard element backs the claimed role clash (rubric §6)."
+        },
+        {
+          "id": "native-3",
+          "state": "main-transitive-details",
+          "finding": "In the details facts block the Authors row sits 2 px lower than in the artboard (its text spans y 157-167 against 155-165, so Version to Authors is 24 px instead of 22), which leaves the pair slightly looser than the artboard's facts grid while Required by stays put.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "Pixel rows confirm Authors text at y 157-167 in the capture against 155-165 in the artboard. The hard DS-ALIGN-2 measurement requires this pitch: it reads 'gap 6; pitch 24.2' and the rule asks for a pitch of at least 24, so the capture follows the rule and the artboard's 22 px pitch predates it."
+        }
+      ]
+    },
+    {
+      "runId": "44893944427",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "f69e970e",
+      "look": "modern",
+      "workflow": "wf_4ae88f98-fc2",
+      "note": "Moved cells of the proving push judged in screen mode (own artboards for main-installed-details, main-transitive-details and main-transitive-expanded; main-installed-all.dark-modern.1200 for the others). 0 blocking. Dispositions by the design-advisor's follow-up 1 of UX-P5.1b (2026-11-21).",
+      "captures": {
+        "main-installed-hover": {
+          "png": "captures/44893944427/main-installed-hover.dark-modern.1200.png",
+          "sha256": "49373199aa696b718a014eae71aaed215d9fb6747c95bd160844d053d59fd7dc"
+        },
+        "main-installed-hover-current": {
+          "png": "captures/44893944427/main-installed-hover-current.dark-modern.1200.png",
+          "sha256": "30dbd47630b168772fa05c8a3dc2134ea1470f0501ee8bb28214889ed91e9196"
+        },
+        "main-installed-unfocused": {
+          "png": "captures/44893944427/main-installed-unfocused.dark-modern.1200.png",
+          "sha256": "43a6e0e64f33be3af822dc0e8a16702f422ff009a6e3b99bcc0821a444e9eb58"
+        },
+        "main-installed-bulk-dialog": {
+          "png": "captures/44893944427/main-installed-bulk-dialog.dark-modern.1200.png",
+          "sha256": "a4bcb3845d66d12c9568073bf0cf9c3f16cf5b28a47777ece2aaaf39e1b37f4e"
+        },
+        "main-installed-uninstall-dialog": {
+          "png": "captures/44893944427/main-installed-uninstall-dialog.dark-modern.1200.png",
+          "sha256": "37c8537aa64aecd07f10d79db1b8e57f193a0ae505b6adff4d1befc0c7e849ca"
+        }
+      },
+      "panel": {
+        "states": 5,
+        "candidates": 6,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 3,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-hover-current#D1",
+          "state": "main-installed-hover-current",
+          "finding": "[native] The search box placeholder reads \"Search or type @ to filter\", the copy design-system.md (main header overflow row, UX-P3.fix-15) prescribes, while the artboard still draws the older \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows the spec, so the artboard drawing and the spec disagree. | [states] The search box's placeholder reads \"Search or type @ to filter\" while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the Design System's overflow table names the capture's copy as the placeholder (since UX-P3.fix-15), so the artboard drawing is stale against the rules, and this is reported once as the artboard/spec disagreement.",
+          "severity": "minor",
+          "box": [
+            16,
+            42,
+            1168,
+            26
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The Design System's main-header overflow row (UX-P3.fix-15) names the short placeholder; the artboard predates it (follow-up 1, DO 2).",
+          "evidence": "docs/design/design-system.md main-header overflow row (the placeholder \"Search or type @ to filter\", UX-P3.fix-15); DS-OVERFLOW-2 placeholder line (hard)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-hover-current#D2",
+          "state": "main-installed-hover-current",
+          "finding": "[geometry] In the hovered Newtonsoft.Json row the High severity badge makes the name line about 2 px taller than in rows without a badge. The name ink sits 1 px higher (row top +20..32 against +21..33) and the version/authors line 1 px lower (+42..51 against +41..50) than in Polly, Serilog and the artboard's Newtonsoft.Json row. The name-to-facts pitch is therefore 22 px here and 20 px in sibling rows, where DS-ROW-1's exemplar keeps the name with its badges in one 20 px line box. The NETStandard.Library row with SDK/Props badges shows the same shift.",
+          "severity": "minor",
+          "box": [
+            98,
+            432,
+            177,
+            35
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "refuted-by-measurement",
+          "reason": "DS-ROW-1 reads centre offsets 0 ×28, lines 2 ×14, and the diff against the old golden has no counted pixel outside x 234-293: the name and facts lines did not move with the badge; a 20 px pill on an 18 px name line is the badged row's form since UX-P2.2 (follow-up 1, DO 2).",
+          "evidence": "DS-ROW-1@main-installed-hover-current: centre offsets 0 ×28, lines 2 ×14 (hard); counted pixels only at x 234-293",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-bulk-dialog#D1",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[states] The confirm dialog opens with focus on Cancel (Design System component table: ConfirmDialog opens on Cancel, visual state 'the focused control's ring'), but no control in the dialog draws a focus ring: the pixels around Cancel (x 669-731, y 427-456) and Uninstall are the plain #202020 dialog surface, with no 1 px focusBorder ring at the +2 text-button offset, so the dialog state shows no visible focus anywhere.",
+          "severity": "major",
+          "box": [
+            669,
+            427,
+            63,
+            30
+          ],
+          "rule": "DS-FOCUS-3",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing, not this item's (the cell's diff is the badge band only): routed to the tracker for the planning session, needs a measured DS-FOCUS-3 clause for a dialog's opening focus first (follow-up 1, DEFECTS).",
+          "evidence": "pre-existing; the cell's counted pixels are the badge band only (docs/plans/handoff/P5.1b.md, Visual evidence)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-uninstall-dialog#D1",
+          "state": "main-installed-uninstall-dialog",
+          "finding": "[states] The main search box's placeholder reads \"Search or type @ to filter\", while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's visible hint no longer names the three filters the artboard lists.",
+          "severity": "minor",
+          "box": [
+            22,
+            47,
+            166,
+            16
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The short placeholder is the Design System's (UX-P3.fix-15; follow-up 1, DO 2).",
+          "evidence": "docs/design/design-system.md main-header overflow row (the placeholder \"Search or type @ to filter\", UX-P3.fix-15); DS-OVERFLOW-2 placeholder line (hard)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "state": "main-installed-unfocused",
+          "finding": "The state shows no current row drawn in inactive selection. The only banded row, Serilog, is the checked bulk-selection row: 'Uninstall Selected (1)' counts it, and the details pane still reads 'Select a package to see its details.', so no row is current. The artboard draws a current row (the Unresolved Newtonsoft.Json band with its details row), and DS-COLOR-2 says that row takes list.inactiveSelectionBackground once focus leaves the list. Here the inactive colour appears only as the bulk-selection colour, which a multi-select row shows whether the list has focus or not, so the capture never shows selection following list focus, which is what the state's name promises.",
+          "severity": "major",
+          "rule": "DS-COLOR-2",
+          "disposition": "refuted",
+          "reason": "The crop shows the checked Serilog row in the grey inactive band while the focus is in the search box. The hard measurement reads 'DS-COLOR-2@main-installed-unfocused/rows: selected rgb(55, 55, 61) (target rgb(55, 55, 61), list not focused)', so list.inactiveSelectionBackground is drawn with focus outside the list. The artboard's current Newtonsoft.Json band is declared in the spec as only a colour sample ('the state itself has no current row and its details pane shows the empty sentence'), so a missing current row is not a defect."
+        }
+      ]
+    },
+    {
+      "runId": "44893944427",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "f69e970e",
+      "look": "modern",
+      "workflow": "wf_67f828d0-4e4",
+      "note": "Moved cells of the proving push judged in screen mode (own artboards for main-installed-details, main-transitive-details and main-transitive-expanded; main-installed-all.dark-modern.1200 for the others). 0 blocking. Dispositions by the design-advisor's follow-up 1 of UX-P5.1b (2026-11-21).",
+      "captures": {
+        "main-details-error": {
+          "png": "captures/44893944427/main-details-error.dark-modern.1200.png",
+          "sha256": "fc842b34179c28ff6ecceea86e9ad84957942f053e7798c873bb1cc7715ff8c7"
+        },
+        "main-details-loading": {
+          "png": "captures/44893944427/main-details-loading.dark-modern.1200.png",
+          "sha256": "6e1a75fecac4d7ff5a39f44fe22c42004e11813e663fdc5902e844a33d324b8e"
+        },
+        "main-readme-error": {
+          "png": "captures/44893944427/main-readme-error.dark-modern.1200.png",
+          "sha256": "f062f99ed99df2ef4159394d120b138205bdc6e5a9b1eedf8baf70d49964ca06"
+        },
+        "main-readme-loading": {
+          "png": "captures/44893944427/main-readme-loading.dark-modern.1200.png",
+          "sha256": "b2cb882b5e3938ada2ca686970a34bfd3a07835900f640dc989ffd633a7a084a"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 10,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 8,
+        "singleJudge": 2,
+        "incomplete": 0
+      },
+      "findings": [],
+      "singleJudge": [
+        {
+          "id": "main-details-error#D1",
+          "state": "main-details-error",
+          "finding": "[native] The inline error block is squeezed against the Details/README strip: the Retry button's top border is 4 px below the strip's bottom line (y 241 to 246) and the error sentence sits about 10 px under it, while the pane keeps a 20 px start and end inset (title and glyph at 441, Retry ending at 1180) and the artboard's details-empty block pads 20 px on every side. Native editor content under the Extensions navbar does not touch the strip, so this reads as squeezed.",
+          "severity": "major",
+          "box": [
+            441,
+            241,
+            740,
+            31
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing, not this item's: routed to the tracker for the planning session with the proposed details-panel top rule (follow-up 1, DEFECTS).",
+          "evidence": "pre-existing; the cell's counted pixels are the badge band only (docs/plans/handoff/P5.1b.md, Visual evidence)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        },
+        {
+          "id": "main-details-loading#D1",
+          "state": "main-details-loading",
+          "finding": "[geometry] In the details tab panel the skeleton facts sit too close under the tab strip. The divider is at y 241, the progress bar at y 242-243 and the first skeleton bar at y 251-258, so the block starts about 9 px below the divider. In the loaded state (main-installed-details artboard and this run's capture, same divider at y 241) the first content line box starts at about y 262, 20 px below the divider, and the spec's details-empty pads 20 on all sides. Horizontally the skeleton is correct: it starts at x 441, the 20 px inset. The defect is the top inset only, and it is layout, not masked live metadata: the facts jump down about 11 px when the content arrives.",
+          "severity": "minor",
+          "box": [
+            421,
+            241,
+            487,
+            18
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing, not this item's: routed to the tracker with main-details-error#D1 (follow-up 1, DEFECTS).",
+          "evidence": "pre-existing; the cell's counted pixels are the badge band only (docs/plans/handoff/P5.1b.md, Visual evidence)",
+          "ruling": "docs/plans/handoff/P5.1b.md, Advisor decisions, 2026-11-21 UX-P5.1b design-advisor follow-up 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "state": "main-details-error",
+          "finding": "The error message capitalises the clause after the colon ('could not be loaded: The package source could not be read.'). That is two sentence-case sentences joined into one, not one sentence in sentence case as Extensions-view messages are written.",
+          "severity": "major",
+          "rule": "DS-COPY-1",
+          "disposition": "refuted",
+          "reason": "The crop does show 'could not be loaded: The package source could not be read.', but the capitalised clause is the failure reason the capture fakes for this state (failHeld('main-details-error', 'The package source could not be read.') in capture.ui.test.ts:1219), and the product passes that reason through unchanged. The product's own text starts in sentence case and ends with a period (DS-COPY-3 hard: '1 end with a full stop'). DS-COPY-1 covers the casing of labels, not a reason supplied at runtime."
+        },
+        {
+          "id": "states-1",
+          "state": "main-details-error",
+          "finding": "The search box placeholder reads \"Search or type @ to filter\", but the approved artboard's search-input (spec rect 16,42,1168×26) draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the capture's copy differs from the artboard element.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The capture's placeholder does read 'Search or type @ to filter' while the artboard draws the longer copy. The Design System sets that short copy for the main search box since UX-P3.fix-15 (design-system.md:437), and spec.json names no placeholder text for search-input. The hard DS-OVERFLOW-2 measurement reads 'placeholder \"Search or type @ to filter\" 164 of 1136 px', so the difference is declared and the artboard drawing is out of date."
+        },
+        {
+          "id": "native-1",
+          "state": "main-readme-error",
+          "finding": "The README error line (glyph, sentence and Retry) sits right under the Details/README strip's bottom line: the Retry button's top is 4 px below the line, but the line starts 21 px and ends 20 px from the pane edges. Everything else in the details pane uses the 20 px inset (the header's 20 on all sides), and the artboard's details message sits about 20 px below its strip line. The error reads squeezed against the tab strip instead of like an inline message in the README panel.",
+          "severity": "major",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The crop shows the inline error drawn as the shared banner row, with equal small block padding under the tab-strip line and a 20 px side inset (DS-INSET-1 measured 'content 20', hard). The installed-error and details-error captures of the same run use the same flush-under-strip form. The artboard draws no Details/README strip or README message at this box (it shows 'Select a package to see its details.' under the header line), so no rule, artboard element or exemplar supports a 20 px top inset (rubric §6)."
+        },
+        {
+          "id": "native-2",
+          "state": "main-readme-error",
+          "finding": "The inline README error writes two sentences joined by a colon, with a capital letter after the colon ('The README could not be loaded: The package source could not be read.'). DS-STATE-4 asks for one sentence in an inline error, so this reads as two fused sentences, not one workbench-style message.",
+          "severity": "minor",
+          "rule": "DS-STATE-4",
+          "disposition": "refuted",
+          "reason": "The crop reads 'The README could not be loaded: The package source could not be read.' This is the one failure pattern in Design System §10 item 8, '<What> could not be <verb>: <reason>.'. DECISIONS 2026-11-15 (UX-P3.11) rules that the host's reason keeps its casing after the colon. DS-STATE-4 measured '1 glyph (error), 1 buttons, ends with a full stop' (hard)."
+        },
+        {
+          "id": "geometry-1",
+          "state": "main-readme-error",
+          "finding": "The README error banner sits 4 px under the Details/README tab strip divider (divider y 241, Retry button top y 246, glyph and text from y 252), while its sides keep the details pane's 20 px inset (glyph x 441, Retry ends x 1179). The details pane's content inset is 20 px: the redline gives details-empty 20 px padding on all four sides, and the loaded README starts its content about 20 px below the same divider. So the error reads squeezed against the tab strip, and its top inset does not match its side insets.",
+          "severity": "major",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "In the crop the divider is at y 241 and the Retry button top is about 246, inside a banner row with symmetric block padding. That row is the same inline-banner form as main-details-error and main-installed-error in this run. DS-INSET-4 covers the details header only, and DS-INSET-1 measured the side inset 20 (hard). The redline's details-empty 20 px padding belongs to the empty state, not to an inline error banner, so the finding cites no rule for the top inset (rubric §6)."
+        },
+        {
+          "id": "states-1",
+          "state": "main-readme-error",
+          "finding": "The inline README error reads as two sentences glued with a colon and a capital after it (\"The README could not be loaded: The package source could not be read.\"), where DS-STATE-4 allows one sentence beside the severity glyph and DS-COPY-3 wants whole sentences.",
+          "severity": "major",
+          "rule": "DS-STATE-4",
+          "disposition": "refuted",
+          "reason": "The text in the crop follows Design System §10 item 8's declared failure form '<What> could not be <verb>: <reason>.', with the host reason's casing kept by the DECISIONS 2026-11-15 ruling. The hard DS-STATE-4 line reads '1 glyph (error), 1 buttons, ends with a full stop' and DS-COPY-3 reads '1 end with a full stop'."
+        },
+        {
+          "id": "states-2",
+          "state": "main-readme-error",
+          "finding": "The main search box's placeholder reads \"Search or type @ to filter\", but the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the copy no longer matches the approved artboard element.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "disposition": "refuted",
+          "reason": "The crop shows 'Search or type @ to filter' against the artboard's longer hint. DECISIONS 2026-11-16 (UX-P3.fix-15) gives the main search box the side bar's hint, and 2026-11-19 records the placeholder against the older artboard as accepted-as-design. DS-OVERFLOW-2 placeholder measures '164 of 1136 px' (hard)."
+        },
+        {
+          "id": "native-1",
+          "state": "main-readme-loading",
+          "finding": "The row check box of the SDK-implicit NETStandard.Library row draws its border in a light grey (about #7e7e7e) instead of the checkbox.border #3c3c3c that every other unselected row's check box uses, so the one check box that cannot act stands out brighter than the enabled ones, the reverse of how a workbench disabled check box dims.",
+          "severity": "minor",
+          "rule": "DS-HEIGHT-9",
+          "disposition": "refuted",
+          "reason": "The crop shows the NETStandard.Library check box border at #7e7e7e against #3c3c3c on the other unselected rows. That value is disabledForeground (#cccccc at 0.5 over the #313131 fill), which the Design System's Check box row sets for the disabled state and which primitives.css applies through .nuiget-row-check--off ('its line in disabledForeground as the workbench's disabled check box', DS-COLOR-6). The difference is therefore declared, and the hard measurement 'DS-HEIGHT-9@main-readme-loading: 18×18 ×17 (target 18×18)' passes."
+        }
+      ]
+    }
+  ]
+}
