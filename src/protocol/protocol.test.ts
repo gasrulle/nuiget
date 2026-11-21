@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resourceKeys, type ExtensionConfig, type InstalledResult } from './domain';
+import { resourceKeys, type ExtensionConfig, type InstalledResult, type PackageDeprecation, type PackageMetadataLite, type PackageSearchResult } from './domain';
 import {
     makeCancel,
     makeError,
@@ -23,6 +23,7 @@ import {
     parseOutbound,
     REQUEST_TYPES,
 } from './guards';
+import type { RequestChunk, RequestResult } from './messages';
 
 describe('envelope factories', () => {
     it('produces unique request ids', () => {
@@ -149,5 +150,41 @@ describe('shapes changed by plan item P2.9', () => {
         const config = { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'modern', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false } satisfies ExtensionConfig;
         expect(Object.keys(config).sort()).toEqual(['alwaysShowHeaderActions', 'confirmUninstall', 'density', 'enablePerformanceLogging', 'isWindows', 'look', 'quickSearchResultsPerSource', 'searchDebounceMode', 'searchResultLimit', 'treeIndent', 'uppercaseViewHeaders']);
         expect('recentSearchesLimit' in config).toBe(false);
+    });
+});
+
+describe('shapes changed by plan item UX-P5.0', () => {
+    const row: PackageSearchResult = { id: 'Serilog', version: '4.1.0', description: 'Structured logging.', authors: 'Serilog Contributors', versions: ['4.1.0', '4.0.0'] };
+
+    it('search/query streams a found chunk of bare rows beside the metadata chunk', () => {
+        const lite: PackageMetadataLite = { id: 'Serilog', version: '4.1.0' };
+        const chunks: Array<RequestChunk<'search/query'>> = [{ kind: 'found', results: [row] }, { kind: 'metadata', packages: [lite] }];
+        // A consumer narrows on kind: the found chunk carries rows, the metadata chunk lite metadata (ADR-009 d.2).
+        const rows = chunks.flatMap(chunk => (chunk.kind === 'found' ? chunk.results : []));
+        const packages = chunks.flatMap(chunk => (chunk.kind === 'metadata' ? chunk.packages : []));
+        expect(rows).toEqual([row]);
+        expect(packages).toEqual([lite]);
+    });
+
+    it('package/versions carries vulnerableVersions absent, empty or listed', () => {
+        const unknown: RequestResult<'package/versions'> = { packageId: 'Serilog', versions: ['4.1.0', '4.0.0'] };
+        const none: RequestResult<'package/versions'> = { ...unknown, vulnerableVersions: [] };
+        const listed: RequestResult<'package/versions'> = { ...unknown, vulnerableVersions: ['4.0.0'] };
+        // Absent is unknown, never an empty list (D38): the three states stay apart.
+        expect('vulnerableVersions' in unknown).toBe(false);
+        expect(none.vulnerableVersions).toEqual([]);
+        expect(listed.vulnerableVersions).toEqual(['4.0.0']);
+    });
+
+    it('a deprecation names its reasons and, when the source says so, a message and an alternate package', () => {
+        const bare: PackageDeprecation = { reasons: ['Legacy'] };
+        const full: PackageDeprecation = { reasons: ['Legacy', 'CriticalBugs'], message: 'Use the new package.', alternatePackage: { id: 'Serilog.Core', range: '*' } };
+        const withRow: PackageSearchResult = { ...row, deprecation: full };
+        const lite: PackageMetadataLite = { id: 'Serilog', version: '4.1.0', deprecation: bare };
+        expect(Object.keys(bare)).toEqual(['reasons']);
+        expect(withRow.deprecation?.alternatePackage).toEqual({ id: 'Serilog.Core', range: '*' });
+        expect(lite.deprecation?.reasons).toEqual(['Legacy']);
+        // Absent means not deprecated or not known.
+        expect('deprecation' in row).toBe(false);
     });
 });

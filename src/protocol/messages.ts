@@ -108,7 +108,7 @@ export interface RequestMap {
     'projects/list': { payload: Record<string, never>; result: ProjectListing };
 
     // Single-project resources
-    /** The provisional list, streamed before the evaluated one when an evaluation runs; a cached list is answered without a chunk (ADR-009 d.2, d.3). */
+    /** The provisional list may precede the answer as the one chunk; a cached list is answered without a chunk, and the answer is the evaluated list, or a provisional one when no evaluation ran or it failed (ADR-009 d.2, d.3). */
     'installed/get': { payload: { projectPath: string }; result: InstalledResult; chunk: { kind: 'provisional'; result: InstalledResult } };
     'updates/get': { payload: { projectPath: string; includePrerelease: boolean }; result: { projectPath: string; updates: PackageUpdate[]; sourcesUnavailable?: boolean }; chunk: { kind: 'found'; update: PackageUpdate } };
     'transitive/get': { payload: { projectPath: string }; result: TransitiveResult };
@@ -120,11 +120,13 @@ export interface RequestMap {
     'allProjects/transitive': { payload: Record<string, never>; result: { projectPaths: string[]; errored: Array<{ projectPath: string; errorKind: TransitiveErrorKind }> }; chunk: { kind: 'start'; projects: Project[] } | { kind: 'project'; chunk: ProjectTransitiveChunk } };
 
     // Search
-    'search/query': { payload: { query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean }; result: { query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean }; chunk: { kind: 'metadata'; packages: PackageMetadataLite[] } };
+    /** `found` carries the answer's rows before enrichment, at most once and before any `metadata` chunk; the answer carries every row again (ADR-009 d.2). */
+    'search/query': { payload: { query: string; sourceUrls?: string[]; includePrerelease: boolean; take?: number; exactMatch?: boolean }; result: { query: string; results: PackageSearchResult[]; sourcesUnavailable?: boolean }; chunk: { kind: 'found'; results: PackageSearchResult[] } | { kind: 'metadata'; packages: PackageMetadataLite[] } };
     'search/autocomplete': { payload: { query: string; sources: Array<{ name: string; url: string }>; includePrerelease: boolean }; result: { query: string; groups: QuickSearchSourceResult[] } };
 
     // Package details
-    'package/versions': { payload: { packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number }; result: { packageId: string; versions: string[] } };
+    /** `vulnerableVersions` lists the answered versions that a known advisory covers; absent = unknown, `[]` = none known (D38). */
+    'package/versions': { payload: { packageId: string; sourceUrl?: string; includePrerelease: boolean; take?: number }; result: { packageId: string; versions: string[]; vulnerableVersions?: string[] } };
     'package/metadata': { payload: { packageId: string; version: string; sourceUrl?: string }; result: { metadata: PackageMetadata | null } };
     'package/readme': { payload: { packageId: string; version: string; sourceUrl?: string }; result: { readme: string | null } };
     /** Lazily fetches one README image host-side with the icon fetch's auth, size cap and policy (ADR-006). `dataUri` is `null` when the fetch failed or policy blocked it; the webview then renders a link. */

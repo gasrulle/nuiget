@@ -83,6 +83,21 @@ describe('search slice', () => {
         expect(text('unavailable')).toBe('false');
     });
 
+    it('a found chunk changes nothing before the answer (UX-P5.0; UX-P5.9a rewrites this case)', async () => {
+        const host = mount();
+        await withSession(host);
+        await act(async () => slice.search('json'));
+        const [request] = queries(host);
+
+        await hostSays(() => host.chunk(request, { kind: 'found', results: [result('Newtonsoft.Json')] }));
+        expect(text('status')).not.toBe('ready');
+        expect(text('results')).toBe('none');
+        await hostSays(() => host.respond(request, { query: 'json', results: [result('Newtonsoft.Json')] }));
+
+        expect(text('status')).toBe('ready');
+        expect(text('results')).toBe('Newtonsoft.Json');
+    });
+
     it('the latest text wins: the earlier request is cancelled and its answer never shows', async () => {
         const host = mount();
         await withSession(host);

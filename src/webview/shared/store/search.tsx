@@ -137,7 +137,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }): Rea
         }, {
             signal: controller.signal,
             onChunk: chunk => {
-                lite = [...lite, ...chunk.packages];
+                // A `found` chunk (bare rows before enrichment, UX-P5.0) is ignored until UX-P5.9a renders it.
+                if (chunk.kind === 'metadata') {
+                    lite = [...lite, ...chunk.packages];
+                }
             },
         }).then(
             ({ result }) => {

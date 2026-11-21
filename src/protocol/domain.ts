@@ -91,6 +91,8 @@ export interface PackageSearchResult {
     verified?: boolean;
     /** Source URL the entry came from (first source when merged). */
     sourceUrl?: string;
+    /** Deprecation of `version`. Absent = not deprecated or not known. */
+    deprecation?: PackageDeprecation;
 }
 
 export interface PackageUpdate {
@@ -131,6 +133,8 @@ export interface PackageMetadata {
     offline?: boolean;
     /** Source URL the metadata came from. */
     sourceUrl?: string;
+    /** Deprecation of `version`. Absent = not deprecated or not known. */
+    deprecation?: PackageDeprecation;
 }
 
 export type VulnerabilitySeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
@@ -138,6 +142,15 @@ export type VulnerabilitySeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
 export interface PackageVulnerability {
     advisoryUrl: string;
     severity: VulnerabilitySeverity;
+}
+
+/** Why a package version is deprecated, as its source reports it. */
+export interface PackageDeprecation {
+    /** The source's reason words, verbatim (`Legacy`, `CriticalBugs`, `Other`; a source may send others). Never empty. */
+    reasons: string[];
+    message?: string;
+    /** The package to use instead; `range` is a NuGet version range, absent or `*` for any version. */
+    alternatePackage?: { id: string; range?: string };
 }
 
 export interface NuGetSource {
@@ -194,6 +207,8 @@ export interface PackageMetadataLite {
     authors?: string;
     description?: string;
     vulnerabilities?: PackageVulnerability[];
+    /** Deprecation of `version`. Absent = not deprecated or not known. */
+    deprecation?: PackageDeprecation;
 }
 
 // ─── Session (shared, host-owned state) ─────────────────────────────────────

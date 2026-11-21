@@ -198,7 +198,10 @@ Everything the 2.0 core asks of a package feed goes through four layers ([ADR-00
 `updates` carry `sourcesUnavailable` (also when a selected source is excluded as unhealthy; a project whose authoritative installed
 list has no package answers an empty list without resolving a source, UX-P3.fix-23), `searchById` answers
 `failed` apart from `missing`, vulnerability data read in part is unknown (`vulnerabilities` stays absent), and
-`package/versions` with no versions from an unreachable source is a `failed` response.
+`package/versions` with no versions from an unreachable source is a `failed` response. Since the feature contract bundle
+(UX-P5.0, ADR-009 d.1) `package/versions` may answer `vulnerableVersions` (absent = unknown, `[]` = none known) and a
+search row, lite metadata and the details metadata may carry `deprecation` (absent = not deprecated or not known); the
+feature items fill them (P5.2a, P5.9a).
 
 **Caching.** Results the coordinator caches are only complete ones: a compute that ends with `sourcesUnavailable`,
 offline metadata or no metadata throws `IncompleteResultError(value)`, and `queryWithRetry` hands the value back with
@@ -572,7 +575,8 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
 - `search` (P5.6): one browse search per surface over the committed source (`sourceUrls` absent for `all`) and
   prerelease flag. A search is keyed by what the user typed, so it is not a coordinator resource: no generation, and
   a new text cancels the request before it. The `metadata` chunk precedes the answer and is merged onto its results
-  by `id@version` (`withMetadata`). A committed source or prerelease change asks the shown text again without
+  by `id@version` (`withMetadata`); a `found` chunk (the answer's bare rows before enrichment, UX-P5.0) is ignored until
+  UX-P5.9a renders it. A committed source or prerelease change asks the shown text again without
   blanking the list; `sourcesUnavailable` is a flag over the results. The slice also owns quick-search:
   `suggest(text)` sends `search/autocomplete` with the enabled sources (every one under `all`, else the selected
   one) and sends nothing while the list is unknown or names none; the latest suggestion wins. A new `suggest` keeps
