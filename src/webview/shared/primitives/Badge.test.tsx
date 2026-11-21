@@ -58,4 +58,36 @@ describe('Badge', () => {
         }
         remove();
     });
+
+    it('a severity badge draws its level\'s glyph before the label, takes the severity class over the tone and sets no inline style (UX-P5.1b)', () => {
+        const { container } = render(<Badge label="Critical (2)" title="2 known vulnerabilities, highest severity Critical" severity="error" tone="info" />);
+        const badge = container.firstElementChild as HTMLElement;
+        expect(badge).toHaveClass('nuiget-badge--label', 'nuiget-badge--severity-error');
+        expect(badge).not.toHaveClass('nuiget-badge--info');
+        const glyphs = badge.querySelectorAll('svg');
+        expect(glyphs).toHaveLength(1);
+        expect(glyphs[0]).toHaveAttribute('aria-hidden', 'true');
+        expect(glyphs[0]).toHaveAttribute('data-codicon', 'error');
+        expect(glyphs[0]).toHaveClass('nuiget-badge-icon');
+        expect(badge.querySelector('[aria-hidden="true"]')?.textContent).toBe('Critical (2)');
+        expect(container.querySelector('[style]')).toBeNull();
+        for (const [severity, codicon] of [['warning', 'warning'], ['info', 'info']] as const) {
+            const { container: other } = render(<Badge label="Moderate" severity={severity} />);
+            expect(other.querySelector('svg')).toHaveAttribute('data-codicon', codicon);
+            expect(other.firstElementChild).toHaveClass(`nuiget-badge--severity-${severity}`);
+        }
+    });
+
+    it('the severity border reads the problems icon colours and the glyph is a square of the badge font (UX-P5.1b)', () => {
+        const remove = installStylesheet();
+        const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]) as CSSStyleRule[];
+        const rule = (selector: string): string => rules.find(entry => entry.selectorText === selector)?.style.cssText ?? '';
+        expect(rule('.nuiget-badge--severity-error')).toBe('border-color: var(--nuiget-color-icon-error);');
+        expect(rule('.nuiget-badge--severity-warning')).toBe('border-color: var(--nuiget-color-icon-warning);');
+        expect(rule('.nuiget-badge--severity-info')).toBe('border-color: var(--nuiget-color-icon-info);');
+        for (const declared of ['inline-size: var(--nuiget-font-size-badge)', 'block-size: var(--nuiget-font-size-badge)', 'margin-inline-end: var(--nuiget-space-1)']) {
+            expect(rule('.nuiget-badge-icon')).toContain(declared);
+        }
+        remove();
+    });
 });

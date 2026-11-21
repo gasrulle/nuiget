@@ -6,6 +6,7 @@ import { groupCount, vulnerabilityOf } from '../../../shared/installed/rules';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 import { failure } from '../../../shared/updates/sentence';
+import { VulnerabilityBadge } from './VulnerabilityBadge';
 
 type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 
@@ -100,7 +101,7 @@ export function transitiveGroupContent(item: GroupItem, placement: GroupPlacemen
     );
 }
 
-/** A comfortable transitive row: icon, authors and Verified from the lite metadata, the Vulnerable badge; no description. */
+/** A comfortable transitive row: icon, authors and Verified from the lite metadata, the vulnerability badge; no description. */
 export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, lite: PackageMetadataLite | undefined, placement: RowPlacement, projectPath: string, badges?: React.ReactNode): React.JSX.Element {
     const src = packageIconSrc(lite?.iconUrl);
     return (
@@ -116,7 +117,7 @@ export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, 
             selectable={false}
             badges={<>
                 {badges}
-                {vulnerabilityOf(lite) === 'vulnerable' ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
+                <VulnerabilityBadge lite={lite} />
             </>}
         />
     );

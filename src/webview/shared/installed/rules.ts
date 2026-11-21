@@ -1,4 +1,4 @@
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult } from '../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult, type VulnerabilitySeverity } from '../../../protocol';
 import { directCount } from '../counts';
 import { busyKey, type OpsState } from '../store/ops';
 import { metadataKey } from '../store/transitive';
@@ -242,6 +242,25 @@ export function vulnerabilityOf(lite: PackageMetadataLite | undefined): Vulnerab
         return 'unknown';
     }
     return advisories.length > 0 ? 'vulnerable' : 'clear';
+}
+
+/** The severities from the lowest, so a later one is higher. */
+const SEVERITY_ORDER: readonly VulnerabilitySeverity[] = ['Low', 'Moderate', 'High', 'Critical'];
+
+/** The problems colour of each severity (UX-P5.1b): Critical and High are errors, Moderate a warning, Low information. */
+const SEVERITY_LEVEL: Record<VulnerabilitySeverity, 'error' | 'warning' | 'info'> = { Critical: 'error', High: 'error', Moderate: 'warning', Low: 'info' };
+
+/**
+ * What a vulnerable row's badge says (UX-P5.1b, MI7, DP8): the highest severity of its advisories, how many there are and
+ * the problems level of that severity; undefined unless `vulnerabilityOf` says vulnerable. The one mapping of both rows.
+ */
+export function vulnerabilitySeverity(lite: PackageMetadataLite | undefined): { highest: VulnerabilitySeverity; count: number; level: 'error' | 'warning' | 'info' } | undefined {
+    const advisories = lite?.vulnerabilities;
+    if (vulnerabilityOf(lite) !== 'vulnerable' || advisories === undefined) {
+        return undefined;
+    }
+    const highest = advisories.reduce<VulnerabilitySeverity>((top, advisory) => (SEVERITY_ORDER.indexOf(advisory.severity) > SEVERITY_ORDER.indexOf(top) ? advisory.severity : top), 'Low');
+    return { highest, count: advisories.length, level: SEVERITY_LEVEL[highest] };
 }
 
 /** A direct row's knowledge, by its lower-cased id in the installed slice's map. */

@@ -284,6 +284,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(sizes()).toContainEqual([19, 19]);
     });
 
+    it('reads a severity badge as toned and its glyph as a box (DS-HC-1, DS-HEIGHT-10, UX-P5.1b)', () => {
+        const bar = document.querySelector('[data-testid="tab-bar"]') as HTMLElement;
+        bar.insertAdjacentHTML('beforeend', '<span class="nuiget-badge nuiget-badge--label nuiget-badge--severity-error" data-rect="200,46,252,66"><span aria-hidden="true"><svg class="nuiget-badge-icon" data-rect="207,51,217,61"></svg>Critical</span></span>');
+        const severity = collect().heights.badges.find(badge => badge.glyph !== undefined);
+        expect(severity).toMatchObject({ count: false, toned: true, width: 52, height: 20, glyph: { width: 10, height: 10 } });
+        // Only the severity badge carries a glyph; the stub's other badges read without one.
+        expect(collect().heights.badges.filter(badge => badge.glyph !== undefined)).toHaveLength(1);
+    });
+
     it('reads a toolbar\'s cut buttons and control rows, and each line child of a row against its line (DS-OVERFLOW-3, DS-ROW-5, UX-P3.fix-14)', () => {
         const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
         const primary = toolbar.querySelector('[data-testid="uninstall-selected-button"]') as HTMLElement;

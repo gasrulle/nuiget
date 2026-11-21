@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your projects get through their references, for one project or All Projects, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
 
 ### Changed
+- **Vulnerable packages show their highest severity**
 - **Screen readers announce when the main panel's package lists, details or README start loading**
 - **Screen readers hear when the side bar's update check starts**
 - **Screen readers hear how an install, update, uninstall or restore ended once, in the view that started it**

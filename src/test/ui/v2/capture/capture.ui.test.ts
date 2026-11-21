@@ -78,6 +78,23 @@ const until = async (predicate: string, what: string, timeoutMs = 120_000): Prom
     await poll(async () => ((await script<boolean>(`return (${predicate});`)) ? true : undefined), what, timeoutMs);
 };
 
+/**
+ * One `[live] vulnerability <id> <label>` line per row of the Installed list that shows a vulnerability badge, so a later diff
+ * on a vulnerable cell can be put down to nuget.org's advisories (UX-P5.1b design ruling DO 6). Prints only; asserts nothing.
+ */
+async function printVulnerabilityBadges(): Promise<void> {
+    const rows = await script<Array<{ id: string; label: string }>>(`return [...document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option')].flatMap(option => {
+        const badge = option.querySelector('[data-testid="row-vulnerability"]');
+        if (badge === null) return [];
+        const shown = badge.querySelector('[aria-hidden="true"]');
+        const name = option.querySelector('.nuiget-row-name');
+        return [{ id: name === null ? '?' : name.textContent.trim(), label: (shown === null ? badge.textContent : shown.textContent).trim() }];
+    });`);
+    for (const row of rows) {
+        console.warn(`[live] vulnerability ${row.id} ${row.label}`);
+    }
+}
+
 const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('.nuiget-row-option'));
 
 /**
@@ -716,14 +733,16 @@ const REACH: Record<string, Reach> = {
             await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'the All Projects list', 'the Installed list');
             await typeInSearch('@vulnerable');
             await installedListAtTop();
-            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); const aggregate = document.querySelector(\'[data-testid="section-box-transitive"]\'); return document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') !== null && document.querySelector(\'[data-testid="installed-empty"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending") && options.length >= 1 && options.every(option => option.textContent.includes("Vulnerable")) && aggregate !== null && /[0-9]/.test(aggregate.textContent || ""); })()', 'the banner, the vulnerable rows, the aggregate count, the tab settled', 120_000);
+            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); const aggregate = document.querySelector(\'[data-testid="section-box-transitive"]\'); return document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') !== null && document.querySelector(\'[data-testid="installed-empty"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending") && options.length >= 1 && options.every(option => option.querySelector(\'[data-testid="row-vulnerability"]\') !== null) && aggregate !== null && /[0-9]/.test(aggregate.textContent || ""); })()', 'the banner, the vulnerable rows, the aggregate count, the tab settled', 120_000);
+            await printVulnerabilityBadges();
         },
     },
     'main-installed-vulnerable': {
         reach: async () => {
             await gatewayInstalled();
             await typeInSearch('@vulnerable');
-            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); return options.length >= 1 && options.every(option => option.textContent.includes("Vulnerable")) && document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending"); })()', 'the vulnerable rows, no banner, the tab settled', 120_000);
+            await until('(() => { const options = [...document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row-option\')].filter(option => !option.closest(\'[data-row-kind]\')); return options.length >= 1 && options.every(option => option.querySelector(\'[data-testid="row-vulnerability"]\') !== null) && document.querySelector(\'[data-testid="installed-vulnerable-unavailable-banner"]\') === null && !document.querySelector(\'[data-testid="installed-tab"]\').hasAttribute("data-pending"); })()', 'the vulnerable rows, no banner, the tab settled', 120_000);
+            await printVulnerabilityBadges();
         },
     },
     'main-installed-hover': {

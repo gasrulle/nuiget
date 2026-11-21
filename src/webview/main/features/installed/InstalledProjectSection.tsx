@@ -4,6 +4,7 @@ import { busyText, directVulnerability, filterById, versionCell, whyNotRemovable
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
+import { VulnerabilityBadge } from './VulnerabilityBadge';
 
 /** A package as a project's rows hold it. */
 export interface Item {
@@ -84,7 +85,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
                 {entry.versionType === 'floating'
                     ? <Badge label="Floating" title="Floating version pattern" />
                     : entry.versionType === 'range' ? <Badge label="Range" title="Version range" /> : null}
-                {directVulnerability(metadata, entry.id) === 'vulnerable' ? <Badge label="Vulnerable" tone="error" title="Has known vulnerabilities" /> : null}
+                <VulnerabilityBadge lite={lite} />
             </>}
             actions={readOnly ? null : (
                 <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => onUninstall(entry)}><TrashIcon /></IconButton>

@@ -742,7 +742,51 @@ describe('main panel: Installed tab', () => {
         const ask = host.requests('transitive/metadata')[0];
         await hostSays(() => host.respond(ask, { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [{ severity: 'High', advisoryUrl: 'https://github.com/advisories/x' }] }, { id: 'Serilog', version: '3.0.0' }] }));
         expect(names()).toEqual(['Moq']);
-        expect(optionOf('Moq')).toHaveAccessibleDescription(/Has known vulnerabilities/);
+        expect(optionOf('Moq')).toHaveAccessibleDescription(/1 known vulnerability, High severity/);
+    });
+
+    describe('the vulnerability badge (UX-P5.1b)', () => {
+        const advisory = (severity: 'Low' | 'Moderate' | 'High' | 'Critical', n: number) => ({ severity, advisoryUrl: `https://github.com/advisories/${severity}-${n}` });
+        async function badgeOf(vulnerabilities: Array<ReturnType<typeof advisory>>): Promise<HTMLElement> {
+            const host = await mountWith();
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities }, { id: 'Serilog', version: '3.0.0', vulnerabilities: [] }, { id: 'Newtonsoft.Json', version: '13.0.1', vulnerabilities: [] }] }));
+            return within(screen.getByTestId('package-row-moq')).getByTestId('row-vulnerability');
+        }
+
+        it.each([
+            ['Critical', 'error'],
+            ['High', 'error'],
+            ['Moderate', 'warning'],
+            ['Low', 'info'],
+        ] as const)('a %s advisory reads its word with the %s glyph and border', async (severity, level) => {
+            const badge = await badgeOf([advisory(severity, 1)]);
+            expect(badge).toHaveClass(`nuiget-badge--severity-${level}`);
+            expect(badge.querySelectorAll('svg')).toHaveLength(1);
+            expect(badge.querySelector('svg')).toHaveAttribute('data-codicon', level);
+            expect(badge.querySelector('[aria-hidden="true"]')?.textContent).toBe(severity);
+            expect(optionOf('Moq')).toHaveAccessibleDescription(new RegExp(`1 known vulnerability, ${severity} severity`));
+        });
+
+        it('several advisories show the highest with their count, said in full for assistive technology, and the row has no axe violation', async () => {
+            const badge = await badgeOf([advisory('Low', 1), advisory('Critical', 2), advisory('Moderate', 3)]);
+            expect(badge).toHaveClass('nuiget-badge--severity-error');
+            expect(badge.querySelector('[aria-hidden="true"]')?.textContent).toBe('Critical (3)');
+            expect(optionOf('Moq')).toHaveAccessibleDescription(/3 known vulnerabilities, highest severity Critical/);
+            expect(screen.queryByTestId('package-row-serilog')?.querySelector('[data-testid="row-vulnerability"]')).toBeFalsy();
+            const results = await axe(screen.getByTestId('installed-list'));
+            expect(results).toHaveNoViolations();
+        });
+
+        it('a vulnerable transitive row carries the same badge as a direct row', async () => {
+            const { host } = await mountVulnerable();
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [advisory('Moderate', 1)] }] }));
+            const [row] = transitiveRows();
+            const badge = within(row).getByTestId('row-vulnerability');
+            expect(badge).toHaveClass('nuiget-badge--severity-warning');
+            expect(badge.querySelector('svg')).toHaveAttribute('data-codicon', 'warning');
+            expect(row).toHaveAccessibleDescription(/1 known vulnerability, Moderate severity/);
+        });
     });
 
     it("has no axe violations with the dialog open, with All Projects group rows and an errored project's banner", async () => {

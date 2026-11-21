@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
 import type { Settling } from '../store/ops';
-import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, groupCount, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, whyNotDeletable } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, groupCount, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, vulnerabilitySeverity, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -217,5 +217,18 @@ describe('groupCount (UX-P5.1a design follow-up 4)', () => {
         expect(groupCount(3, 0, true, true, false)).toBe(3);
         expect(groupCount(3, 0, false, true, true)).toBe('0 of 3');
         expect(groupCount(68, 1, false, true, true)).toBe('1 of 68');
+    });
+});
+
+describe('vulnerabilitySeverity (UX-P5.1b)', () => {
+    const advisory = (severity: 'Low' | 'Moderate' | 'High' | 'Critical') => ({ severity, advisoryUrl: `https://github.com/advisories/${severity}` });
+    it('is nothing unless vulnerable, else the highest severity, the count and its problems level', () => {
+        expect(vulnerabilitySeverity(undefined)).toBeUndefined();
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0' })).toBeUndefined();
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [] })).toBeUndefined();
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('Low')] })).toEqual({ highest: 'Low', count: 1, level: 'info' });
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('Moderate'), advisory('Low')] })).toEqual({ highest: 'Moderate', count: 2, level: 'warning' });
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('High')] })).toEqual({ highest: 'High', count: 1, level: 'error' });
+        expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('Low'), advisory('Critical'), advisory('High')] })).toEqual({ highest: 'Critical', count: 3, level: 'error' });
     });
 });

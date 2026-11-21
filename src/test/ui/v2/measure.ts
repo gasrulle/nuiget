@@ -947,7 +947,7 @@ export interface Heights {
     checkBoxes: Array<{ width: number; height: number; radius: string; selected: { fill: string; border: string } | undefined; /** A mark that cannot join a bulk action, on a banded row: its line stays disabledForeground. */ off?: boolean }>;
     /** The theme's `checkbox.selectBackground` and `checkbox.selectBorder` as VS Code put them on the root (hex, or empty). */
     checkSelect: { fill: string; border: string };
-    badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string; borderWidth?: number; borderColor?: string; toned?: boolean }>;
+    badges: Array<{ count: boolean; width: number; height: number; fontSize: string; padding: string; radius: string; borderWidth?: number; borderColor?: string; toned?: boolean; glyph?: { width: number; height: number } }>;
     progress: number[];
 }
 
@@ -1753,7 +1753,9 @@ const heights = {
         return {
             count: el.classList.contains('nuiget-badge--count') || (!el.classList.contains('nuiget-badge--label') && /^[0-9]+$/.test(text)),
             width: round(rect.width), height: round(rect.height), fontSize: style.fontSize, padding: paddingOf(style), radius: style.borderTopLeftRadius,
-            borderWidth: px(style.borderTopWidth), borderColor: style.borderTopColor, toned: /nuiget-badge--(?:info|warning|error)/.test(el.className),
+            borderWidth: px(style.borderTopWidth), borderColor: style.borderTopColor, toned: /nuiget-badge--(?:severity-)?(?:info|warning|error)/.test(el.className),
+            // UX-P5.1b: a severity badge's glyph, read as DS-HEIGHT-10's glyph clause.
+            glyph: (() => { const svg = el.querySelector('svg'); if (!svg) return undefined; const box = rectOf(svg); return { width: round(box.width), height: round(box.height) }; })(),
         };
     }),
     progress: shown('.nuiget-progress').map(heightOf),
@@ -3008,6 +3010,18 @@ function evaluateHeights(definition: RuleDefinition, layout: Layout, look: 'mode
                     parts.push(`label radius ${tally(unround.map(badge => badge.radius))} (target pill)`);
                 }
                 pass = pass && off.length === 0 && unround.length === 0;
+                // UX-P5.1b: a severity glyph is a square of the badge's font size and leaves the pill as tall as a glyph-less one.
+                const glyphed = labels.filter(badge => badge.glyph !== undefined);
+                if (glyphed.length > 0) {
+                    const size = parseFloat(style.fontSize);
+                    const plain = labels.filter(badge => badge.glyph === undefined);
+                    const [top, , bottom] = style.padding.split(' ').map(parseFloat);
+                    const reference = plain.length > 0 ? Math.max(...plain.map(badge => badge.height)) : Math.round((size + top + bottom + 2 * (glyphed[0].borderWidth ?? 1)) * 10) / 10;
+                    const offGlyph = glyphed.filter(badge => Math.abs((badge.glyph?.width ?? 0) - size) > TOLERANCES.fontExact || Math.abs((badge.glyph?.height ?? 0) - size) > TOLERANCES.fontExact);
+                    const offHeight = glyphed.filter(badge => Math.abs(badge.height - reference) > tolerance);
+                    parts.push(`glyph ${tally(glyphed.map(badge => `${badge.glyph?.width}×${badge.glyph?.height}`))} (target ${size}×${size}), height ${tally(glyphed.map(badge => String(badge.height)))} (target ${reference})`);
+                    pass = pass && offGlyph.length === 0 && offHeight.length === 0;
+                }
             }
             return { value: parts.join('; '), pass };
         }

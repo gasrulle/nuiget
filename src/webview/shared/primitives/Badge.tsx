@@ -1,7 +1,11 @@
 import type React from 'react';
+import { ErrorIcon, InfoIcon, WarningIcon } from './icons';
 import './primitives.css';
 
 export type BadgeTone = 'neutral' | 'info' | 'warning' | 'error';
+
+/** A severity level of the workbench's problems colours (V40): its glyph before the label, its colour on the border. */
+export type BadgeSeverity = 'error' | 'warning' | 'info';
 
 export interface BadgeProps {
     /** The short visible text, for example "CPM" or a count. */
@@ -9,18 +13,28 @@ export interface BadgeProps {
     /** What the badge means, in words. When given, assistive technology reads this in place of the label. */
     title?: string;
     tone?: BadgeTone;
+    /**
+     * A severity badge (UX-P5.1b): the level's glyph before the label in the badge's foreground, the border in the level's
+     * `problems*Icon.foreground`; `tone` is ignored.
+     */
+    severity?: BadgeSeverity;
     /** A count badge is the workbench's count badge (DS-HEIGHT-10); a label badge carries words. Absent, a label of digits only is a count. */
     kind?: 'count' | 'label';
     'data-testid'?: string;
 }
 
+const GLYPHS = { error: ErrorIcon, warning: WarningIcon, info: InfoIcon } as const;
+
 /** A small label next to a name. No role and no `aria-label`: a span may not carry one; the words are text. */
-export function Badge({ label, title, tone = 'neutral', kind, 'data-testid': testId }: BadgeProps): React.JSX.Element {
+export function Badge({ label, title, tone = 'neutral', severity, kind, 'data-testid': testId }: BadgeProps): React.JSX.Element {
+    const Glyph = severity === undefined ? undefined : GLYPHS[severity];
+    const shown = Glyph === undefined ? label : <><Glyph className="nuiget-badge-icon" />{label}</>;
+    const look = severity === undefined ? `nuiget-badge--${tone}` : `nuiget-badge--severity-${severity}`;
     return (
-        <span className={`nuiget-badge nuiget-badge--${kind ?? (/^\d+$/.test(label) ? 'count' : 'label')} nuiget-badge--${tone}`} data-testid={testId}>
-            {title === undefined ? label : (
+        <span className={`nuiget-badge nuiget-badge--${kind ?? (/^\d+$/.test(label) ? 'count' : 'label')} ${look}`} data-testid={testId}>
+            {title === undefined ? shown : (
                 <>
-                    <span aria-hidden="true">{label}</span>
+                    <span aria-hidden="true">{shown}</span>
                     <span className="nuiget-visually-hidden">{title}</span>
                 </>
             )}

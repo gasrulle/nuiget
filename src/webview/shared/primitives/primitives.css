@@ -706,6 +706,7 @@
 /*
  * A tone colours the border, as a banner does; the text keeps the badge's foreground. The info, warning and error
  * colours are made for an editor's background, not for the badge's, where they fall below 4.5:1 (theme.ui.test.ts).
+ * The tones read editorInfo/editorWarning/errorForeground; a severity badge reads the problems*Icon keys (V40, UX-P5.1b).
  */
 .nuiget-badge--info {
     border-color: var(--nuiget-color-info);
@@ -717,6 +718,27 @@
 
 .nuiget-badge--error {
     border-color: var(--nuiget-color-error);
+}
+
+/* A severity badge's glyph: a square of the badge's font size before the label, in the badge's foreground (UX-P5.1b). */
+.nuiget-badge-icon {
+    flex: none;
+    inline-size: var(--nuiget-font-size-badge);
+    block-size: var(--nuiget-font-size-badge);
+    margin-inline-end: var(--nuiget-space-1);
+    vertical-align: top;
+}
+
+.nuiget-badge--severity-error {
+    border-color: var(--nuiget-color-icon-error);
+}
+
+.nuiget-badge--severity-warning {
+    border-color: var(--nuiget-color-icon-warning);
+}
+
+.nuiget-badge--severity-info {
+    border-color: var(--nuiget-color-icon-info);
 }
 
 /* ── Spinner ── */

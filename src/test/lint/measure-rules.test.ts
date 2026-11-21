@@ -485,6 +485,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const modernBadges = layout({}, { badges: [{ count: true, width: 19, height: 19, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px' }, { count: false, width: 40, height: 18, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px' }] });
         expect(lineOf('main-installed-single', modernBadges, 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: true, value: 'count 19×19 (at least 19×19); label 1' });
         expect(lineOf('main-installed-single', badges, 'DS-HEIGHT-10@main-installed-single', 'classic')?.value).toContain('count fontSize 10px (target 11px)');
+        // UX-P5.1b: a severity glyph is a square of the badge font and leaves the pill as tall as a glyph-less label badge.
+        const label = { count: false, fontSize: '10px', padding: '4px 6px 4px 6px', radius: '9999px', borderWidth: 1 };
+        const glyphed = (glyph: { width: number; height: number }, height = 20) => layout({}, { badges: [{ ...label, width: 40, height: 20 }, { ...label, width: 52, height, glyph }] });
+        expect(lineOf('main-installed-single', glyphed({ width: 10, height: 10 }), 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: true, value: 'label 2; glyph 10×10 (target 10×10), height 20 (target 20)' });
+        expect(lineOf('main-installed-single', glyphed({ width: 16, height: 16 }, 26), 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: false, value: 'label 2; glyph 16×16 (target 10×10), height 26 (target 20)' });
+        // Without a glyph-less label badge the reference is the font plus the block padding and the border: 10 + 8 + 2.
+        expect(lineOf('main-installed-single', layout({}, { badges: [{ ...label, width: 52, height: 20, glyph: { width: 10, height: 10 } }] }), 'DS-HEIGHT-10@main-installed-single')).toMatchObject({ pass: true, value: 'label 1; glyph 10×10 (target 10×10), height 20 (target 20)' });
         // The progress bar only in a loading state.
         expect(lineOf('main-installed-loading', layout({}, { progress: [2] }), 'DS-HEIGHT-11@main-installed-loading')).toMatchObject({ pass: true, status: 'hard' });
         expect(lineOf('main-installed-single', layout({}, { progress: [2] }), 'DS-HEIGHT-11@main-installed-single')).toBeUndefined();
