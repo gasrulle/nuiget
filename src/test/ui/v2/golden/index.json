@@ -347,6 +347,18 @@
     "sha256": "a8d0e6c005d8bbd67b2d489edcbe3d79127d88584d694021efcb87caba5fbe4d",
     "sidecarSha256": "0603503de672f08b3d92f1b2dfef7ba462334e2dec040d97eabb6a064346ae88"
   },
+  "main-installed-vulnerable-unavailable.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "44873141329",
+    "sha256": "6a1c95b993060d7c363da476b8313511745643ff60f6bf1a66bdaea912253e3e",
+    "sidecarSha256": "57bd92e1a668dc36f66f6bba2ae0e4ee1c7f52543806262ef3458a10304d9ffd"
+  },
+  "main-installed-vulnerable.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "44873141329",
+    "sha256": "fce89ccb09dbddea5ab0e48d19e4676387b3177aa51ce9d4c8539e5129c0a43b",
+    "sidecarSha256": "58f248c4fd25520dee36df29ee87890e55886959f7985d20b865e63dbdfef57b"
+  },
   "main-quicksearch-error.dark-modern.1200.png": {
     "status": "approved",
     "run": "43726017923",

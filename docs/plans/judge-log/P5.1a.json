@@ -1,0 +1,92 @@
+{
+  "item": "P5.1a",
+  "runs": [
+    {
+      "runId": "44873141329",
+      "rubric": "4fc363ad5a7d0dd749f37df4c0271554c8e07f64",
+      "tree": "191f4c33 (push 2b)",
+      "look": "modern",
+      "workflow": "wf_a4181975-0c6",
+      "note": "The two new cells and the one moved cell judged in screen mode against main-installed-all.dark-modern.1200 (no artboard for them; design-advisor opening ruling of 2026-11-21, DO 9: compositions of ruled primitives; the UX-P4.fix-23 precedent). One standing finding, accepted as design; one single-judge finding, informational, handed to the planning session; one candidate refuted. No blocking finding (D37 not met: the judge is informational).",
+      "captures": {
+        "main-installed-vulnerable-unavailable": {
+          "png": "captures/44873141329/ui-screenshots/main-installed-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "6a1c95b993060d7c363da476b8313511745643ff60f6bf1a66bdaea912253e3e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode; no artboard for this state)"
+        },
+        "main-installed-vulnerable": {
+          "png": "captures/44873141329/ui-screenshots/main-installed-vulnerable.dark-modern.1200.png",
+          "sha256": "fce89ccb09dbddea5ab0e48d19e4676387b3177aa51ce9d4c8539e5129c0a43b",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode; no artboard for this state)"
+        },
+        "main-installed-cpm": {
+          "png": "captures/44873141329/ui-screenshots/main-installed-cpm.dark-modern.1200.png",
+          "sha256": "fc896d598e0841df3f167359a46385f89b24353316079b1c999778b1b13a9bfa",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png (screen mode; no artboard for this state)"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 5,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "findings": [
+        {
+          "id": "main-installed-vulnerable-unavailable#D1",
+          "state": "main-installed-vulnerable-unavailable",
+          "finding": "[native] The Direct Packages group header is drawn expanded (chevron down) with a count badge of 2, yet no row and no message leaf follow it before the Transitive Packages separator. A VS Code tree never shows an expanded node with a count and nothing under it. While the @vulnerable filter is active, DS-COPY-5 expects the count as 'N of M' text (here '0 of 2'), not the unfiltered badge used in the artboard's project headers (e.g. Unresolved.csproj '2' heading two rows). | [geometry] The Direct Packages group header is drawn expanded (down chevron) with a count badge of 2, but nothing follows it before the separator and the Transitive Packages header (y 215 to 219): no package rows and no message leaf. The artboard always puts content under an expanded group: rows, or for an empty group a message leaf at the title column, as in Empty.csproj's \"No packages installed.\" at x 36. So the group's body is missing and its count contradicts the empty list. | [states] Under the active @vulnerable filter the expanded Direct Packages group header shows a plain count badge \"2\" with no rows beneath it, so the header claims two packages the filtered list does not show; while filtering the count should read in the \"N of M\" form (\"0 of 2\"), not as the unfiltered total.",
+          "severity": "major",
+          "box": [
+            16,
+            193,
+            388,
+            24
+          ],
+          "rule": "DS-COPY-5, DS-STATE-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "reason": "The form the design-advisor opening ruling of 2026-11-21 ordered: DO 6c (under @vulnerable with an unknown part the banner stands alone, never an empty sentence beside it) and DO 6e (a group with an unknown entry keeps its total N); DS-COPY-5 forbids a badge and \"(N)\" together and its hard line is green (headers 2: count badges 1, \"(N)\" texts 0); a single project's sentence sits above the tree, never in it (gotcha \"A message inside a grouped list\"); DECISIONS 2026-11-21 \"Unknown vulnerability data in the Installed tab (UX-P5.1a)\". Design-advisor follow-up 2 of 2026-11-21, docs/plans/handoff/P5.1a.md."
+        }
+      ],
+      "singleJudge": [
+        {
+          "id": "main-installed-vulnerable-unavailable#D2",
+          "state": "main-installed-vulnerable-unavailable",
+          "finding": "[native] The banner's warning glyph (y 162-174) is centred on the two-line sentence block (y 154-181) rather than aligned with its first line (y 154-166). Workbench inline messages put the severity icon on the first line of the text.",
+          "severity": "minor",
+          "box": [
+            17,
+            154,
+            292,
+            28
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "disposition": "informational",
+          "reason": "A single-judge finding is informational (G-UI step 4). Handed to the planning session as a Banner item (design-advisor follow-up 2, DO 6: read the exemplar's two-line message container first; every banner cell moves with it); recorded on the tracker row of UX-P5.1a."
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "state": "main-installed-cpm",
+          "finding": "The search box placeholder reads \"Search or type @ to filter\" while the approved artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows design-system.md's overflow table (the main header's placeholder copy is \"Search or type @ to filter\", the side bar's, since UX-P3.fix-15), so the artboard's copy is stale rather than the capture wrong.",
+          "severity": "minor",
+          "rule": "spec-conflict",
+          "disposition": "refuted",
+          "reason": "The crop shows the capture's placeholder \"Search or type @ to filter\" and the artboard's older \"Search packages, or filter: @...\", but the capture follows the copy that design-system.md's main-header overflow row sets (since UX-P3.fix-15). The hard measurement confirms that copy fits: DS-OVERFLOW-2@main-installed-cpm/placeholder reads \"Search or type @ to filter\" 164 of 1136 px. The redline's spec.json says nothing about the placeholder, so this is not a §6 artboard-versus-spec conflict and there is no visible defect in the capture itself."
+        }
+      ]
+    }
+  ]
+}
