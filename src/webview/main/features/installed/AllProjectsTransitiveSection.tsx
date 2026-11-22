@@ -71,7 +71,8 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
                 {restoring ? <ProgressBar label="Restoring projects" data-testid="transitive-progress" /> : null}
                 {unrestored.length > 0 ? (
                     <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: () => restore(unrestored.map(chunk => chunk.projectPath)) }}>
-                        {`Not restored, so their transitive packages are not known: ${unrestored.map(chunk => chunk.projectName).join(', ')}.`}
+                        {/* The projects are the sentence's subject, then their names (DS-COPY-3, UX-P5.fix-4); one project reads as the single view's. */}
+                        {`${unrestored.length === 1 ? 'This project has' : 'These projects have'} not been restored, so ${unrestored.length === 1 ? 'its' : 'their'} transitive packages are not known: ${unrestored.map(chunk => chunk.projectName).join(', ')}.`}
                     </Banner>
                 ) : null}
                 {transitive.errored.length > 0 ? (

@@ -189,7 +189,7 @@ describe('main panel: All Projects', () => {
         const rows = screen.getByTestId('installed-list').querySelectorAll('[data-testid="group-row-transitive"] ~ .nuiget-row:not([data-row-kind="group"]) .nuiget-row-option');
         expect(rows).toHaveLength(1);
         expect(rows[0]).toHaveAccessibleDescription(/App: required by Serilog/);
-        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
+        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('This project has not been restored, so its transitive packages are not known: Lib.');
         expect(screen.getByTestId('installed-list').contains(screen.getByTestId('transitive-restore-banner'))).toBe(false);
         expect(screen.getByTestId('transitive-restore-banner').compareDocumentPosition(screen.getByTestId('installed-list')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(screen.queryByTestId('transitive-progress')).toBeNull();
@@ -217,6 +217,18 @@ describe('main panel: All Projects', () => {
         expect(host.requests('allProjects/transitive')).toHaveLength(2);
     });
 
+    it('the restore banner names several projects not restored as the sentence\'s subject before their names (DS-COPY-3, UX-P5.fix-4)', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll(PROJECTS);
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const stream = host.requests('allProjects/transitive')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', []) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], false) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(C, 'Tool', [], false) }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('These projects have not been restored, so their transitive packages are not known: Lib, Tool.');
+    });
+
     it('All Projects: Restore keeps the focus while a project is still not restored, and when the banner leaves the focus lands on the Transitive group row (UX-P4.fix-16, A6)', async () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));
@@ -236,7 +248,7 @@ describe('main panel: All Projects', () => {
         // App restored, Lib not yet: the banner stays, the same button keeps the focus.
         await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
         await answer(1, true, false);
-        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('Not restored, so their transitive packages are not known: Lib.');
+        expect(screen.getByTestId('transitive-restore-banner')).toHaveTextContent('This project has not been restored, so its transitive packages are not known: Lib.');
         expect(document.activeElement).toBe(button);
         // Lib restored: the banner leaves and the focus lands on the Transitive group row, the list's tab stop.
         await hostSays(() => host.invalidate([[resourceKeys.transitive(B), 3]]));
