@@ -293,7 +293,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -452,6 +452,11 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
  * 2026-11-15). Filled from the reaches, never from which states went red.
  */
 export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
+/**
+ * DS-FOCUS-3 `dialog-focus` (UX-P5.fix-2, design-advisor opening ruling of 2026-11-22, DO 2c): the main-panel dialog states, opened
+ * by a pointer click or a key; the side-bar dialogs keep the side bar's branch.
+ */
+export const MAIN_DIALOG_FOCUS_STATES: readonly string[] = ['main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'];
 /**
  * DS-INSET-4 `panel-top` (UX-P5.fix-3, design-advisor opening ruling of 2026-11-22, DO 2): the states whose details pane shows the
  * Details or README tab panel, loaded, loading or error; `main-transitive-details` has no tabs.
@@ -751,12 +756,14 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
-    // UX-P3.5 (design-advisor follow-up 2): a dialog opened by a pointer click shows no ring on Cancel under Modern UI, the
-    // DS-FOCUS-3 premise (run 42402701440: outline none); the dialog ring's form is read by the keyboard walk's bulk dialog.
+    // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22): a main-panel dialog's focused control rings on any focus, however
+    // the dialog was opened (DS-FOCUS-3 `dialog-focus`); it supersedes UX-P3.5 follow-up 2's pointer-open clause for the main
+    // panel (run 42402701440 read outline none on a click-opened Cancel). A side-bar dialog keeps the side bar's branch.
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
-    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'] }, states: ['main-installed-details', 'main-updates'] }),
+    // UX-P5.fix-2 (DO 2): clause `dialog-focus`, the focused control of a main-panel dialog, pending until the item's CSS lands.
+    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', 'dialog-focus': { pending: 'UX-P5.fix-2' } }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': MAIN_DIALOG_FOCUS_STATES }, states: ['main-installed-details', 'main-updates', ...MAIN_DIALOG_FOCUS_STATES] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
@@ -865,9 +872,10 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'dialogs':
             // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
             // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1b): a dialog list's items, DS-COPY-2.
-            return ['chrome', 'layers', 'labels', 'dialog-text', 'dialog-list'];
+            // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22, DO 2b): the focused control of a main-panel dialog.
+            return ['chrome', 'layers', 'labels', 'dialog-text', 'dialog-list', 'dialog-focus'];
         case 'sources':
-            return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text'];
+            return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text', 'dialog-focus'];
         // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
         // skeleton bars and compact message leaves.
         case 'sidebar':
@@ -1371,6 +1379,8 @@ export interface FocusFacts {
     box: Box;
     /** The row band (`.nuiget-row`) around a focused option; for a focused empty slot, its list's box (`.nuiget-listbox-root`, UX-P4.4). */
     band: Box | undefined;
+    /** The focused element is inside a layer (`LAYER_SELECTOR` of `a11y.ts`): DS-FOCUS-3 `dialog-focus` (UX-P5.fix-2). */
+    inLayer: boolean;
 }
 
 /** DS-LOOK-1: the look table's tokens as they compute under each look (design-system.md §6). */
@@ -2463,6 +2473,8 @@ if (activeEl) {
         kind: focusKind(activeEl), label: label(activeEl),
         outline: { width: px(style.outlineWidth), style: style.outlineStyle, colour: style.outlineColor, offset: px(style.outlineOffset) },
         variant: headerBox ? headerBox.dataset.variant || '' : '', box: edgesOf(activeEl), band: bandEl ? edgesOf(bandEl) : undefined,
+        // A layer's roots as LAYER_SELECTOR (a11y.ts) names them; a page script cannot import it.
+        inLayer: activeEl.closest('.nuiget-dialog, [role="dialog"], [role="alertdialog"]') !== null,
     };
 }
 const disabled = [...new Set([...scope.querySelectorAll('[aria-disabled="true"]'), ...scope.querySelectorAll('button:disabled')])].filter(visible).map(el => {
@@ -4000,6 +4012,19 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
             };
         }
         case 'DS-FOCUS-3': {
+            if (scope === 'dialog-focus') {
+                if (focus === undefined || !focus.inLayer) {
+                    return notMeasurable('no focused element inside the dialog');
+                }
+                const colour = focusColours.focusBorder;
+                const outside = focus.kind === 'button' || focus.kind === 'checkbox';
+                const ring = isRing(focus.outline, 'solid', colour, tolerance) && (!outside || near(focus.outline.offset, FOCUS.outside, tolerance));
+                const drawn = focus.outline.style !== 'none' && focus.outline.width > 0;
+                return {
+                    value: `${focus.kind} ${focus.label} in the dialog: ${drawn ? outlineText(focus.outline) : 'none'} (target 1 solid ${colour || 'unset'}${outside ? `, offset ${FOCUS.outside}` : ''}, main panel, ${look})`,
+                    pass: ring,
+                };
+            }
             const kind = scope === 'tabs' ? 'tab' : 'option';
             if (focus === undefined || focus.kind !== kind) {
                 return notMeasurable(`no focused ${scope === 'tabs' ? 'tab' : 'row'} after the click`);

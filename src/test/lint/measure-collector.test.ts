@@ -693,6 +693,14 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.stateCells.detailsPanelTop).toEqual({ first: 22, underStrip: 1 });
     });
 
+    it('marks a focused control inside a dialog as in the layer, and one outside as not (DS-FOCUS-3 dialog-focus, UX-P5.fix-2)', () => {
+        document.body.insertAdjacentHTML('beforeend', '<div class="nuiget-dialog-layer" data-rect="0,0,900,700"><div class="nuiget-dialog" data-rect="200,200,700,400"><button class="nuiget-button" data-testid="confirm-dialog-cancel" data-rect="600,360,680,386">Cancel</button></div></div>');
+        (document.querySelector('[data-testid="confirm-dialog-cancel"]') as HTMLButtonElement).focus();
+        expect(collect().endOfP0.focus).toMatchObject({ kind: 'button', label: '[confirm-dialog-cancel]', inLayer: true });
+        (document.querySelector('[data-testid="select-all-button"]') as HTMLButtonElement).focus();
+        expect(collect().endOfP0.focus).toMatchObject({ kind: 'button', inLayer: false });
+    });
+
     it('reads the topmost dialog\'s list items, never a lead or a covered dialog\'s (DS-COPY-2 dialog-list, UX-P4.fix-5)', () => {
         expect(collect().endOfP0.stateCells.dialogListItems).toBeUndefined();
         document.body.insertAdjacentHTML('beforeend', [
@@ -988,7 +996,7 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             select.removeAttribute('disabled');
             (document.querySelector('[data-testid="package-details-panel"] [data-testid="uninstall-button"]') as HTMLButtonElement).focus();
             const facts = collect().endOfP0;
-            expect(facts.focus).toMatchObject({ kind: 'button', label: '[uninstall-button]', outline: { width: 1, style: 'solid', colour: 'rgb(0, 120, 212)', offset: 2 }, band: undefined });
+            expect(facts.focus).toMatchObject({ kind: 'button', label: '[uninstall-button]', outline: { width: 1, style: 'solid', colour: 'rgb(0, 120, 212)', offset: 2 }, band: undefined, inLayer: false });
             expect(facts.focusColours).toEqual({ focusBorder: '#0078d4', listFocusOutline: '', contrastActiveBorder: '#f38518' });
             expect(facts.disabled).toEqual([{ label: '[select-all-button]', reason: '' }, { label: '[uninstall-selected-button]', reason: 'Select packages first.' }]);
             expect(facts.rows[0]).toMatchObject({ outline: { width: 1, style: 'dotted', colour: 'rgb(243, 133, 24)', offset: -1 }, focused: false });

@@ -72,6 +72,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             expect(definition(id)?.exceptStates, id).toEqual(definition('DS-ROW-4')?.exceptStates);
         }
         // UX-P3.5: no dialog state; a pointer-opened dialog shows no ring under Modern UI (DS-FOCUS-3, design-advisor follow-up 2).
+        // UX-P5.fix-2 supersedes that clause for the main panel: DS-FOCUS-3's `dialog-focus` reads a main-panel dialog's ring.
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
@@ -86,7 +87,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] });
         expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme']);
         expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'] });
+        // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22, DO 2): the main-panel dialogs' focused control.
+        expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': ['main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'] });
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
@@ -231,8 +233,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
-        expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: 'hard' });
-        expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates']);
+        expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: 'hard', 'dialog-focus': { pending: 'UX-P5.fix-2' } });
+        expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources']);
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
         expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -1376,6 +1378,19 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(at('main-installed-details', facts({ focus: focused('option', ring(3, 'none', blue, 0)) }), 'DS-FOCUS-3@main-installed-details/rows'))
             .toMatchObject({ pass: false, value: '[x] after a click: no ring (target a ring, main panel, modern)' });
         expect(at('main-installed-single', facts({ focus: focused('option', ring(1, 'solid', blue, -1)) }), 'DS-FOCUS-3@main-installed-single/rows')).toBeUndefined();
+        // DS-FOCUS-3 dialog-focus (UX-P5.fix-2): a main-panel dialog's focused control rings on any focus, +2 for a button or check box.
+        const inDialog = { inLayer: true };
+        expect(at('main-installed-uninstall-dialog', facts({ focus: focused('button', ring(1, 'solid', blue, 2), inDialog) }), 'DS-FOCUS-3@main-installed-uninstall-dialog/dialog-focus'))
+            .toMatchObject({ pass: true, status: { pending: 'UX-P5.fix-2' }, value: 'button [x] in the dialog: outline 1 solid rgb(0, 120, 212) offset 2 (target 1 solid #0078d4, offset 2, main panel, modern)' });
+        expect(at('main-installed-bulk-dialog', facts({ focus: focused('button', ring(0, 'none', blue, 0), inDialog) }), 'DS-FOCUS-3@main-installed-bulk-dialog/dialog-focus'))
+            .toMatchObject({ pass: false, value: 'button [x] in the dialog: none (target 1 solid #0078d4, offset 2, main panel, modern)' });
+        expect(at('main-sources', facts({ focus: focused('button', ring(1, 'solid', blue, -1), inDialog) }), 'DS-FOCUS-3@main-sources/dialog-focus')?.pass).toBe(false);
+        // An icon button's offset is not asserted.
+        expect(at('main-sources', facts({ focus: focused('icon-button', ring(1, 'solid', blue, -1), inDialog) }), 'DS-FOCUS-3@main-sources/dialog-focus')?.pass).toBe(true);
+        expect(at('main-browse-multi-install-dialog', facts({ focus: focused('button', ring(1, 'solid', blue, 2), { inLayer: false }) }), 'DS-FOCUS-3@main-browse-multi-install-dialog/dialog-focus'))
+            .toMatchObject({ pass: false, value: 'not measurable (no focused element inside the dialog)' });
+        // The side bar's dialogs are outside the clause.
+        expect(at('sidebar-uninstall-dialog', facts({ focus: focused('button', ring(0, 'none', blue, 0), inDialog) }), 'DS-FOCUS-3@sidebar-uninstall-dialog/dialog-focus')).toBeUndefined();
         // DS-FOCUS-4: high contrast only; the selected row dotted, the focused row solid, in contrastActiveBorder.
         const row = (state: string, outline: ReturnType<typeof ring>, isFocused = false) => ({ list: 'installed-list', compact: false, band, painted: undefined, state, icon: undefined, nameLeft: undefined, textCentre: undefined, lines: 2, actions: 0, outline, focused: isFocused });
         const hc = facts({ rows: [row('current', ring(1, 'dotted', orange, -1)), row('focus', ring(1, 'solid', orange, -1), true)] });
