@@ -333,11 +333,23 @@ describe('2.0 webview stylesheets', () => {
             expect(ringed, selector).toContain(selector);
         }
         const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
-        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent)'].includes(declaration))).toEqual([]);
+        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent)', 'outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus)'].includes(declaration))).toEqual([]);
         // A row rings in `list.focusOutline` through its carriers (DS-FOCUS-2).
         const rowRing = rules.find(rule => rule.declarations.includes('--nuiget-row-outline-color: var(--nuiget-color-list-focus-outline)'));
         expect(rowRing?.prelude.split(',').map(selector => selector.trim())).toEqual(['.nuiget-row-option--compact:focus-visible', '.nuiget-row-option--comfortable:focus', '.nuiget-row-group--compact:focus-visible', '.nuiget-row-group--comfortable:focus']);
         expect(rowRing?.declarations).toContain('--nuiget-row-outline-style: solid');
+    });
+
+    it('a main-panel dialog\'s control rings on any focus through the dialog\'s carrier, the side bar\'s does not (DS-FOCUS-3 dialog-focus, UX-P5.fix-2)', () => {
+        const ring = 'outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus)';
+        const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
+        const carried = primitives.filter(rule => rule.declarations.includes(ring));
+        expect(carried.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-icon-button:focus'], ['.nuiget-button:focus', '.nuiget-checkbox-input:focus']]);
+        expect(carried[0]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * -1)');
+        expect(carried[1]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * 2)');
+        expect(primitives.find(rule => rule.prelude === '.nuiget-dialog')?.declarations).toContain('--nuiget-control-outline-style: var(--nuiget-focus-after-click, none)');
+        expect(parseRules(readFileSync('src/webview/main/main.css', 'utf8')).find(rule => rule.prelude === 'body')?.declarations).toContain('--nuiget-focus-after-click: solid');
+        expect(readFileSync('src/webview/sidebar/sidebar.css', 'utf8')).not.toContain('--nuiget-focus-after-click');
     });
 
     it('the scan covers the 2.0 stylesheets and leaves tokens.css out', () => {

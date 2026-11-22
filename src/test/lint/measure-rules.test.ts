@@ -233,7 +233,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.14 (design-advisor ruling of 2026-10-24): the six of the research's 27 a ready state renders.
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
-        expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: 'hard', 'dialog-focus': { pending: 'UX-P5.fix-2' } });
+        expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: 'hard', 'dialog-focus': 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources']);
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
@@ -1381,7 +1381,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // DS-FOCUS-3 dialog-focus (UX-P5.fix-2): a main-panel dialog's focused control rings on any focus, +2 for a button or check box.
         const inDialog = { inLayer: true };
         expect(at('main-installed-uninstall-dialog', facts({ focus: focused('button', ring(1, 'solid', blue, 2), inDialog) }), 'DS-FOCUS-3@main-installed-uninstall-dialog/dialog-focus'))
-            .toMatchObject({ pass: true, status: { pending: 'UX-P5.fix-2' }, value: 'button [x] in the dialog: outline 1 solid rgb(0, 120, 212) offset 2 (target 1 solid #0078d4, offset 2, main panel, modern)' });
+            .toMatchObject({ pass: true, status: 'hard', value: 'button [x] in the dialog: outline 1 solid rgb(0, 120, 212) offset 2 (target 1 solid #0078d4, offset 2, main panel, modern)' });
         expect(at('main-installed-bulk-dialog', facts({ focus: focused('button', ring(0, 'none', blue, 0), inDialog) }), 'DS-FOCUS-3@main-installed-bulk-dialog/dialog-focus'))
             .toMatchObject({ pass: false, value: 'button [x] in the dialog: none (target 1 solid #0078d4, offset 2, main panel, modern)' });
         expect(at('main-sources', facts({ focus: focused('button', ring(1, 'solid', blue, -1), inDialog) }), 'DS-FOCUS-3@main-sources/dialog-focus')?.pass).toBe(false);

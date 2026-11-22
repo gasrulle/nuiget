@@ -599,6 +599,21 @@
 
 /* ── Focus ── */
 
+/*
+ * A focused control in a main-panel dialog rings on any focus, a pointer-opened dialog's Cancel included (DS-FOCUS-3 dialog-focus,
+ * UX-P5.fix-2): the dialog's carrier gives the style, `none` everywhere else, where the `:focus-visible` rules below decide.
+ */
+.nuiget-icon-button:focus {
+    outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * -1);
+}
+
+.nuiget-button:focus,
+.nuiget-checkbox-input:focus {
+    outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus);
+    outline-offset: calc(var(--nuiget-line-width) * 2);
+}
+
 /* An outline, not a shadow: it is still drawn in forced-colours mode, where the token is `Highlight`. */
 .nuiget-select-input:focus-visible,
 .nuiget-text-field:focus-visible,
@@ -1375,6 +1390,8 @@
 
 .nuiget-dialog {
     --nuiget-text-field-radius: var(--nuiget-radius-layer-input);
+    /* A dialog follows the surface it opens over: the main panel sets the style, the side bar leaves none (DS-FOCUS-3, UX-P5.fix-2). */
+    --nuiget-control-outline-style: var(--nuiget-focus-after-click, none);
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-block-gap-outer);

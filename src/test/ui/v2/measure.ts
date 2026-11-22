@@ -762,8 +762,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
     rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
-    // UX-P5.fix-2 (DO 2): clause `dialog-focus`, the focused control of a main-panel dialog, pending until the item's CSS lands.
-    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', 'dialog-focus': { pending: 'UX-P5.fix-2' } }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': MAIN_DIALOG_FOCUS_STATES }, states: ['main-installed-details', 'main-updates', ...MAIN_DIALOG_FOCUS_STATES] }),
+    // UX-P5.fix-2 (DO 2-3): clause `dialog-focus`, the focused control of a main-panel dialog, hard since the item's CSS (reading run
+    // 45039657035: uninstall-dialog ringed, the other five none).
+    rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', 'dialog-focus': 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': MAIN_DIALOG_FOCUS_STATES }, states: ['main-installed-details', 'main-updates', ...MAIN_DIALOG_FOCUS_STATES] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
