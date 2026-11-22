@@ -1,0 +1,95 @@
+{
+  "item": "P5.fix-4",
+  "runs": [
+    {
+      "runId": "45049321366",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "f633753a (push 1, the first wording; its golden rejected)",
+      "look": "modern",
+      "workflow": "wf_e601a10c-990",
+      "mode": "screen",
+      "note": "Push 1's cell against the main-installed-all artboard. The single-judge D1 is promoted by the design-advisor's GOLDEN ruling 1 (judge-rubric §9) and fixed by push 2's wording; the golden of this run is not adopted.",
+      "captures": {
+        "main-installed-all-vulnerable-unavailable": {
+          "png": "captures/45049321366/main-installed-all-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "724164b937f0e446e3b351e0421205af16f64dd27fd055313646711ccf42ffe3",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "candidates": 3,
+        "standing": 0,
+        "refuted": 2,
+        "singleJudge": 1,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [
+        "main-installed-all-vulnerable-unavailable#D1"
+      ],
+      "findings": [
+        {
+          "id": "main-installed-all-vulnerable-unavailable#D1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "[states] The transitive restore banner says \"This project has not been restored, so its transitive packages are not known: Unresolved.csproj.\" It refers to \"This project\" before saying which project it means and names it only after a trailing colon. The sentence is complete but reads backwards, where it should name the project first.",
+          "severity": "minor",
+          "box": [
+            16,
+            194,
+            388,
+            56
+          ],
+          "rule": "DS-COPY-3",
+          "lenses": [
+            "states"
+          ],
+          "promoted": "single judge promoted by the design-advisor (judge-rubric §9)",
+          "disposition": "fixed",
+          "evidence": "push 2 names the projects as the subject; the closing evidence is push 2's run",
+          "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "In the Transitive Packages row, the visible space between the truncated name 'SQLitePCLRaw.lib.e_...' (ellipsis ink ends at about x 258) and the first badge '1 project' (starts at about x 274) is about 16 px. The Newtonsoft.Json row above uses about 8 px between its name and its 'High' badge, and DS-ROW-1 sets 8 px from the name to the first badge. The likely cause is slack after the ellipsis: once the name ellipsizes, the free space at the end of its box shows up as a wider gap.",
+          "severity": "minor",
+          "box": [
+            98,
+            623,
+            233,
+            20
+          ],
+          "rule": "DS-ROW-1",
+          "lens": "geometry",
+          "verdict": "refuted",
+          "reason": "The crop shows 'SQLitePCLRaw.lib.e_...' with the '1 project' pill a few pixels further right than the name-to-pill gap in the Newtonsoft row, which is the ellipsis's own end slack; the hard measurement reads 'DS-ROW-1@main-installed-all-vulnerable-unavailable: ... badges: name gap 8 ×2, pill gap 4 (hard)', so both rows meet the 8 px rule.",
+          "disposition": "refuted-by-measurement",
+          "evidence": "run 45049321366: DS-ROW-1@main-installed-all-vulnerable-unavailable: badges: name gap 8 ×2, pill gap 4 (hard)",
+          "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
+        },
+        {
+          "id": "states-2",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "Under the @vulnerable filter, Catalog.csproj (0 of 13), Empty.csproj (0 of 0), Unresolved.csproj (0 of 2) and Utility.csproj (0 of 13) are drawn with an open chevron and nothing under them: no row and no message leaf. Empty.csproj also loses the \"No packages installed.\" leaf that the artboard draws under it, so an expanded group shows no content and no sentence saying why.",
+          "severity": "minor",
+          "box": [
+            16,
+            286,
+            390,
+            288
+          ],
+          "rule": "judge-only",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop shows expanded groups with no rows, and their headers read '0 of 13', '0 of 0', '0 of 2' and '0 of 13'. That 'N of M' text is the designed filtering signal (DS-COPY-5). The artboard and spec cover the unfiltered 'main-installed-all' state, so its 'No packages installed.' leaf is not a redline for this @vulnerable view, and the finding cites no rule.",
+          "disposition": "refuted",
+          "evidence": "the 0 of N count is the filter signal (DS-COPY-5); the artboard is the unfiltered state",
+          "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
+        }
+      ]
+    }
+  ]
+}

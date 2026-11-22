@@ -64,6 +64,9 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
         });
     }
     const unrestored = chunks.filter(chunk => !chunk.dataSourceAvailable);
+    // "A", "A and B", "A, B and C": the names the restore banner opens with (UX-P5.fix-4).
+    const names = unrestored.map(chunk => chunk.projectName);
+    const unrestoredNames = names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
     return {
         items,
         message: (
@@ -71,8 +74,8 @@ export function allProjectsTransitiveTree(all: AllProjectsState, expanded: boole
                 {restoring ? <ProgressBar label="Restoring projects" data-testid="transitive-progress" /> : null}
                 {unrestored.length > 0 ? (
                     <Banner severity="warning" data-testid="transitive-restore-banner" action={{ label: 'Restore', onClick: () => restore(unrestored.map(chunk => chunk.projectPath)) }}>
-                        {/* The projects are the sentence's subject, then their names (DS-COPY-3, UX-P5.fix-4); one project reads as the single view's. */}
-                        {`${unrestored.length === 1 ? 'This project has' : 'These projects have'} not been restored, so ${unrestored.length === 1 ? 'its' : 'their'} transitive packages are not known: ${unrestored.map(chunk => chunk.projectName).join(', ')}.`}
+                        {/* The names are the sentence's subject (DS-COPY-3, UX-P5.fix-4). */}
+                        {`${unrestoredNames} ${unrestored.length === 1 ? 'has' : 'have'} not been restored, so ${unrestored.length === 1 ? 'its' : 'their'} transitive packages are not known.`}
                     </Banner>
                 ) : null}
                 {transitive.errored.length > 0 ? (
