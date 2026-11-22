@@ -1,0 +1,113 @@
+{
+  "item": "P5.fix-3",
+  "runs": [
+    {
+      "runId": "45030863810",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "240d74e5 (commit 3, the CSS and the flip; the proving run)",
+      "look": "modern",
+      "workflow": "wf_0712d6bc-dfb",
+      "mode": "screen",
+      "note": "The proving run's four loading and error cells (Details and README) against the loaded details tab panel's artboard main-installed-details (the 20 px reference); no artboard of their own. The two UX-P5.1b findings this item owns no longer stand. `findings` is empty (no standing finding); `refuted` holds the run's one refuted candidate with its disposition; `carried` holds the two UX-P5.1b findings this item owned, disposed `fixed` here (not this run's findings).",
+      "captures": {
+        "main-details-loading": {
+          "png": "captures/45030863810/main-details-loading.dark-modern.1200.png",
+          "sha256": "9cf2b9a3b3bbb2db7f0bf6b70b21cb1a3e329e7f04b482c6fee9ac4ca5a9d634",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-details-error": {
+          "png": "captures/45030863810/main-details-error.dark-modern.1200.png",
+          "sha256": "e0b9cf2a5e5c9f09bd38daa5586aadce7d8a542b46b0f3bda84c538bfd8787a8",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-readme-loading": {
+          "png": "captures/45030863810/main-readme-loading.dark-modern.1200.png",
+          "sha256": "2d9b084c3ad76ce0b2ad617ab7f13e10580e26407311243cf2f0ae42e11394b7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-readme-error": {
+          "png": "captures/45030863810/main-readme-error.dark-modern.1200.png",
+          "sha256": "68c41d38d6e7aef7ce4f4d7ccf9426a96a520c01e7c4982fc9679cdbc18552ce",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 1,
+        "standing": 0,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "main-details-error#states-1",
+          "state": "main-details-error",
+          "finding": "The inline error message capitalises the word after its colon ('The details could not be loaded: The package source could not be read.'), so the details pane's error reads as two sentences joined by a colon. Messages are sentence case (DS-COPY-1), and DS-STATE-4 asks for one sentence.",
+          "severity": "minor",
+          "box": [
+            465,
+            266,
+            467,
+            16
+          ],
+          "rule": "DS-COPY-1",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "run 45030863810: [measure] DS-STATE-4@main-details-error: 1 glyph (error), 1 buttons, ends with a full stop (1) (hard); failure() (src/webview/shared/updates/sentence.ts) keeps the host's reason as written",
+          "ruling": "docs/plans/handoff/P5.fix-3.md, Advisor decisions, 2026-11-22 UX-P5.fix-3 design-advisor follow-up 1"
+        }
+      ],
+      "carried": [
+        {
+          "id": "main-details-error#D1",
+          "state": "main-details-error",
+          "finding": "[native] The inline error block is squeezed against the Details/README strip: the Retry button's top border is 4 px below the strip's bottom line (y 241 to 246) and the error sentence sits about 10 px under it, while the pane keeps a 20 px start and end inset (title and glyph at 441, Retry ending at 1180) and the artboard's details-empty block pads 20 px on every side. Native editor content under the Extensions navbar does not touch the strip, so this reads as squeezed.",
+          "severity": "major",
+          "box": [
+            441,
+            241,
+            740,
+            31
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "native"
+          ],
+          "origin": "UX-P5.1b (docs/plans/judge-log/P5.1b.json), routed here",
+          "disposition": "fixed",
+          "evidence": "run 45030863810: [measure] DS-INSET-4@main-details-error/panel-top: first block 20 (target 20); panel under strip 0 (target 0) (hard); no longer standing in wf_0712d6bc-dfb",
+          "ruling": "docs/plans/handoff/P5.fix-3.md, Advisor decisions, 2026-11-22 UX-P5.fix-3 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-details-loading#D1",
+          "state": "main-details-loading",
+          "finding": "[geometry] In the details tab panel the skeleton facts sit too close under the tab strip. The divider is at y 241, the progress bar at y 242-243 and the first skeleton bar at y 251-258, so the block starts about 9 px below the divider. In the loaded state (main-installed-details artboard and this run's capture, same divider at y 241) the first content line box starts at about y 262, 20 px below the divider, and the spec's details-empty pads 20 on all sides. Horizontally the skeleton is correct: it starts at x 441, the 20 px inset. The defect is the top inset only, and it is layout, not masked live metadata: the facts jump down about 11 px when the content arrives.",
+          "severity": "minor",
+          "box": [
+            421,
+            241,
+            487,
+            18
+          ],
+          "rule": "DS-INSET-4",
+          "lenses": [
+            "geometry"
+          ],
+          "origin": "UX-P5.1b (docs/plans/judge-log/P5.1b.json), routed here",
+          "disposition": "fixed",
+          "evidence": "run 45030863810: [measure] DS-INSET-4@main-details-loading/panel-top: first block 20 (target 20); panel under strip 0 (target 0) (hard); no longer standing in wf_0712d6bc-dfb",
+          "ruling": "docs/plans/handoff/P5.fix-3.md, Advisor decisions, 2026-11-22 UX-P5.fix-3 design-advisor follow-up 1"
+        }
+      ]
+    }
+  ]
+}

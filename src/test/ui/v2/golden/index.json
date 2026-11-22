@@ -61,15 +61,15 @@
   },
   "main-details-error.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "fc842b34179c28ff6ecceea86e9ad84957942f053e7798c873bb1cc7715ff8c7",
-    "sidecarSha256": "b96714396e82b6ebb94d9d1f3ffb735e8314919d55fb91d18dd9112ec710a629"
+    "run": "45030863810",
+    "sha256": "e0b9cf2a5e5c9f09bd38daa5586aadce7d8a542b46b0f3bda84c538bfd8787a8",
+    "sidecarSha256": "9bc7a13dbed8d4d607858626dc13769ada751ec289ac638a9f8d6464a488046d"
   },
   "main-details-loading.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "6e1a75fecac4d7ff5a39f44fe22c42004e11813e663fdc5902e844a33d324b8e",
-    "sidecarSha256": "7cb1c6f64867581ba6977a4177a7bdf9783c6b3db4b2467080ce7ff6f0c7ebc4"
+    "run": "45030863810",
+    "sha256": "9cf2b9a3b3bbb2db7f0bf6b70b21cb1a3e329e7f04b482c6fee9ac4ca5a9d634",
+    "sidecarSha256": "4af25fc46db557d79f4713740b03f05f9b5c43923bbc8f51d43972a19da98fcb"
   },
   "main-details-readme.dark-modern-classic.932.png": {
     "status": "approved",
@@ -397,15 +397,15 @@
   },
   "main-readme-error.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "f062f99ed99df2ef4159394d120b138205bdc6e5a9b1eedf8baf70d49964ca06",
-    "sidecarSha256": "91f4c9e8e85c017c2162153081757205e87f31d93c246eb061a24a9172490088"
+    "run": "45030863810",
+    "sha256": "68c41d38d6e7aef7ce4f4d7ccf9426a96a520c01e7c4982fc9679cdbc18552ce",
+    "sidecarSha256": "15a89ce3c6b18b7944cea3e82e580b77a7226f87728376a182e489596bd5db22"
   },
   "main-readme-loading.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "b2cb882b5e3938ada2ca686970a34bfd3a07835900f640dc989ffd633a7a084a",
-    "sidecarSha256": "e96218edd38a5c8c6110c3bd7253f5ccb7300a8255f25cb5c1a234d44a4026c8"
+    "run": "45030863810",
+    "sha256": "2d9b084c3ad76ce0b2ad617ab7f13e10580e26407311243cf2f0ae42e11394b7",
+    "sidecarSha256": "f0259d73f783deb51d89260201a9d116256e7db6c1e57800599b1376e8a24601"
   },
   "main-sources-add-invalid.dark-modern.1200.png": {
     "status": "approved",
