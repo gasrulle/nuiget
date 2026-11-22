@@ -293,7 +293,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -452,6 +452,11 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
  * 2026-11-15). Filled from the reaches, never from which states went red.
  */
 export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
+/**
+ * DS-INSET-4 `panel-top` (UX-P5.fix-3, design-advisor opening ruling of 2026-11-22, DO 2): the states whose details pane shows the
+ * Details or README tab panel, loaded, loading or error; `main-transitive-details` has no tabs.
+ */
+export const PANEL_TOP_STATES: readonly string[] = ['main-installed-details', 'main-details-readme', 'main-browse-details', 'main-details-readonly', 'main-details-unsupported', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error'];
 
 /**
  * The main states whose search box is empty, where DS-OVERFLOW-2's `placeholder` scope reads the main box (UX-P3.fix-15); the
@@ -667,7 +672,9 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     // UX-P3.3b: the header's computed padding, or the empty state's top inset where the pane shows no package.
-    rule('DS-INSET-4', { helper: 2, scopes: inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), tolerance: TOLERANCES.coincide }),
+    // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): clause `panel-top`, the details tab panel's first block at
+    // the details content inset below the strip's line, pending until the item's CSS lands; the transitive details have no tabs.
+    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': { pending: 'UX-P5.fix-3' } }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES } }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
@@ -852,7 +859,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
         case 'details':
             // UX-P3.10 push D (design-advisor fix ruling of 2026-11-14, DEFECTS 1): the details and README skeleton's first mark.
             // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
-            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split'];
+            // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): the first block of the details tab panel (DS-INSET-4 `panel-top`).
+            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split', 'panel-top'];
         case 'dialogs':
             // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
             // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1b): a dialog list's items, DS-COPY-2.
@@ -1319,6 +1327,12 @@ export interface StateCells {
     placeholderFit?: { text: string; width: number; room: number; main?: boolean; empty?: boolean };
     /** Each skeleton row's first painted mark in the details pane's tab panel (a comfortable row's tile, a compact row's bar), from the pane's left edge. */
     detailsSkeletonMarks?: number[];
+    /**
+     * The details tab panel's first block (DS-INSET-4 `panel-top`, UX-P5.fix-3): the content-box top of the panel's first visible
+     * in-flow child that is not a `.nuiget-progress`, from the panel's top; and the panel's top from the tab strip's border-box bottom.
+     * Boxes only, never a painted mark; absent where the details pane shows no tab panel.
+     */
+    detailsPanelTop?: { first: number; underStrip: number };
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
     /** The topmost dialog's title and text containers, each with its computed line height as the page gives it (`normal` kept; UX-P4.fix-3). */
@@ -2304,6 +2318,17 @@ const stateCells = {
                 detailsSkeletonMarks: (() => {
                     const pane = document.querySelector('[data-testid="package-details-panel"]');
                     return cellArea && pane ? inCell('.nuiget-skeleton-row').map(el => round(rectOf(el).left + px(getComputedStyle(el, el.classList.contains('nuiget-skeleton-row--compact') ? '::after' : '::before').left) - rectOf(pane).left)) : [];
+                })(),
+                // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): the details tab panel's first block, on boxes.
+                detailsPanelTop: (() => {
+                    const panel = document.querySelector('[data-testid="package-details-panel"] [role="tabpanel"]');
+                    const strip = document.querySelector('[data-testid="package-details-panel"] [role="tablist"]');
+                    if (!panel || !strip || !visible(panel)) return undefined;
+                    const first = [...panel.children].find(el => visible(el) && getComputedStyle(el).position !== 'absolute' && !el.classList.contains('nuiget-progress'));
+                    if (!first) return undefined;
+                    const style = getComputedStyle(first);
+                    const panelTop = rectOf(panel).top;
+                    return { first: round(rectOf(first).top + px(style.borderTopWidth) + px(style.paddingTop) - panelTop), underStrip: round(panelTop - rectOf(strip).bottom) };
                 })(),
                 // UX-P4.fix-3 (DO 2a): the topmost dialog's title and text containers, the raw computed line height (px() reads normal as 0).
                 dialogText: dialog ? [['title', '.nuiget-dialog-title'], ['description', '.nuiget-dialog-description'], ['body', '.nuiget-dialog-body'], ['option', '.nuiget-dialog-option']].flatMap(([part, selector]) => [...dialog.querySelectorAll(selector)].filter(el => el.closest('.nuiget-dialog') === dialog && visible(el)).map(el => ({ part, lineHeight: getComputedStyle(el).lineHeight }))) : undefined,
@@ -4432,13 +4457,16 @@ const SIDEBAR_NAME_X = { modern: 28, classic: 20 } as const;
 const PLACEHOLDER_WIDTH = 300;
 /** The details pane's content inset, where its title and tab label start in both looks (DS-INSET-4; UX-P3.10 fix ruling, DEFECTS 1). */
 const DETAILS_CONTENT_X = 20;
+/** DS-INSET-4 `panel-top` (UX-P5.fix-3): the tab panel's first block at the details content inset, the panel flush under the strip. */
+const PANEL_TOP_FIRST = 20;
+const PANEL_TOP_UNDER_STRIP = 0;
 
 /** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`; `dialog-text` since UX-P4.fix-3), or undefined for another. */
 function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && scope === 'panel-top');
     if (!own) {
         return undefined;
     }
@@ -4473,6 +4501,16 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         // Asserted at the side bar's 300 px; the narrower cells print the reading (P3.7b DO 9a binds the primary width).
         const asserted = layout.width >= PLACEHOLDER_WIDTH;
         return { value: `placeholder "${fit.text}" ${fit.width} of ${fit.room} px${asserted ? '' : ` (printed at ${layout.width})`}`, pass: !asserted || fit.width <= fit.room };
+    }
+    if (definition.id === 'DS-INSET-4') {
+        const top = cells.detailsPanelTop;
+        if (top === undefined) {
+            return notMeasurable('no details tab panel');
+        }
+        return {
+            value: `first block ${top.first} (target ${PANEL_TOP_FIRST}); panel under strip ${top.underStrip} (target ${PANEL_TOP_UNDER_STRIP})`,
+            pass: near(top.first, PANEL_TOP_FIRST, tolerance) && near(top.underStrip, PANEL_TOP_UNDER_STRIP, tolerance),
+        };
     }
     if (definition.id === 'DS-INSET-1' && scope === 'details-skeleton') {
         const marks = cells.detailsSkeletonMarks ?? [];

@@ -679,6 +679,20 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         ]);
     });
 
+    it('reads the details tab panel\'s first in-flow block on boxes, past the bar and an absolute layer (DS-INSET-4 panel-top, UX-P5.fix-3)', () => {
+        expect(collect().endOfP0.stateCells.detailsPanelTop).toBeUndefined();
+        // A hidden block, the in-flow bar and an absolute overlay are no block; the skeleton's content box starts at its padding.
+        document.querySelector('[data-testid="package-details-panel"] [role="tablist"]')?.insertAdjacentHTML('afterend', [
+            '<div role="tabpanel" data-rect="600,101,900,700">',
+            '<div style="display: none" data-rect="600,101,900,140"></div>',
+            '<div class="nuiget-progress" data-rect="600,101,900,103"></div>',
+            '<div style="position: absolute" data-rect="600,101,900,103"></div>',
+            '<div class="nuiget-skeleton" style="border-top: 2px solid; padding-top: 18px" data-rect="600,103,900,200"></div>',
+            '</div>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.detailsPanelTop).toEqual({ first: 22, underStrip: 1 });
+    });
+
     it('reads the topmost dialog\'s list items, never a lead or a covered dialog\'s (DS-COPY-2 dialog-list, UX-P4.fix-5)', () => {
         expect(collect().endOfP0.stateCells.dialogListItems).toBeUndefined();
         document.body.insertAdjacentHTML('beforeend', [
