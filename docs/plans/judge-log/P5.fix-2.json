@@ -1,0 +1,289 @@
+{
+  "item": "P5.fix-2",
+  "runs": [
+    {
+      "runId": "45042903058",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "fa506b95 (commit 3, the CSS and the flip; the proving run)",
+      "look": "modern",
+      "workflow": "wf_c7b24328-487",
+      "mode": "screen",
+      "note": "Six of the seven adopted cells (main-sources-revalidating not judged: its moved box is main-sources' own) against main-installed-details as the page beneath (DECISIONS 2026-11-07 Dialogs and layers, Sources dialog). No finding on the focus ring. The three standing findings are pre-existing add-source form defects routed to one planning-session row (follow-up 2). `carried` holds UX-P5.1b's bulk-dialog finding, fixed here.",
+      "captures": {
+        "main-installed-bulk-dialog": {
+          "png": "captures/45042903058/main-installed-bulk-dialog.dark-modern.1200.png",
+          "sha256": "73300c79a9e7190adf308e614190e915b6bf689cc5f63783bca414fbd8e2f09a",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources-remove-dialog": {
+          "png": "captures/45042903058/main-sources-remove-dialog.dark-modern.1200.png",
+          "sha256": "8a9dcd9e51f281de97c7f548b91540f27899ca35fca0eac599ab24561f500315",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources": {
+          "png": "captures/45042903058/main-sources.dark-modern.1200.png",
+          "sha256": "37a173117862c3920822577a38f3e1c4122cb64fe23d95f5e76c4169e917314a",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources-empty": {
+          "png": "captures/45042903058/main-sources-empty.dark-modern.1200.png",
+          "sha256": "7a476833128718694c6f5bd528d934d6e7cdf4667e23849ebf4c208a5fb7b01d",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources-error": {
+          "png": "captures/45042903058/main-sources-error.dark-modern.1200.png",
+          "sha256": "8053a99ed22db8425974dc7d2ec3e4a3a81f0f867c62ef1c32c6469478eba08c",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources-add-invalid": {
+          "png": "captures/45042903058/main-sources-add-invalid.dark-modern.1200.png",
+          "sha256": "14349ca155b74c17d272028cfe309eb74815f453903422aad39939632af18dcd",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 15,
+        "standing": 3,
+        "refuted": 5,
+        "singleJudge": 3,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-sources#D1",
+          "state": "main-sources",
+          "finding": "[states] The sources dialog's description opens with a noun-phrase fragment, \"Sources of the selected project's config files.\", where DS-COPY-3 asks for whole sentences in messages; the second sentence (\"Remove deletes a source ...\") is a whole sentence.",
+          "severity": "minor",
+          "box": [
+            392,
+            343,
+            290,
+            17
+          ],
+          "rule": "DS-COPY-3",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Single judge, pre-existing add-source form and sources dialog copy: routed to the same planning-session row (follow-up 2).",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        },
+        {
+          "id": "main-sources-error#D1",
+          "state": "main-sources-error",
+          "finding": "[geometry] The Sources dialog's single column of blocks has no consistent rhythm. Estimated from the ink and the line boxes, the gaps are about 8 px from the title to the description, about 12 px from the description to the inline error, about 16 px from the error to the nuget.org source item and about 14 px from that item to the Add Source footer. DS-GRID-2 (a) allows only 4 px inside a group and 8 px between groups, so same-role gaps between consecutive blocks differ and two of them are off that set.",
+          "severity": "major",
+          "box": [
+            392,
+            315,
+            416,
+            205
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "geometry"
+          ],
+          "disposition": "informational",
+          "reason": "Single judge; contradicted by DS-GRID-2a@main-sources-error: gaps 8 (hard) (follow-up 2).",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        },
+        {
+          "id": "main-sources-add-invalid#D4",
+          "state": "main-sources-add-invalid",
+          "finding": "[states] The label of the disabled clear-text check box is drawn in the foreground colour (about #cccccc, the same as the enabled 'Password' label above it) rather than in disabledForeground, which the rule requires for the text that names a disabled control.",
+          "severity": "major",
+          "box": [
+            392,
+            563,
+            385,
+            36
+          ],
+          "rule": "DS-COLOR-6",
+          "lenses": [
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Single judge, pre-existing add-source form and sources dialog copy: routed to the same planning-session row (follow-up 2).",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-sources-add-invalid#D1",
+          "state": "main-sources-add-invalid",
+          "finding": "[native] The Add source dialog's check box stands alone on its own line with its text wrapped on the lines below it, instead of the box and its label sitting on one line as the workbench's own check boxes do (Settings editor boolean, quick-input check box); it reads as an unlabelled browser-style box followed by a stray paragraph. | [geometry] The Store-password check box (18 x 18 at x 392, y 542-559) sits alone on its own line and its label text wraps below it, starting at the same x 392 at y 567. The label should run beside the box, as the header's Restore After Operations and Include Pre-Release check boxes draw theirs. | [states] The clear-text check box stands alone on its line and its label 'Stored in clear text: a %VAR% placeholder ...' wraps onto the two lines below it, so the box reads as unlabelled; the header's own check boxes in the same capture ('Restore After Operations', 'Include Pre-Release') and the workbench Settings check box draw the label on the box's line.",
+          "severity": "major",
+          "box": [
+            392,
+            541,
+            386,
+            58
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2).",
+          "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        },
+        {
+          "id": "main-sources-add-invalid#D2",
+          "state": "main-sources-add-invalid",
+          "finding": "[native] The check box's text 'Stored in clear text: a %VAR% placeholder is read from the environment when the source is used' is a sentence-case sentence that ends without a period. | [states] The clear-text sentence 'Stored in clear text: a %VAR% placeholder is read from the environment when the source is used' is a whole sentence but has no final period.",
+          "severity": "major",
+          "box": [
+            392,
+            563,
+            386,
+            36
+          ],
+          "rule": "DS-COPY-3",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2).",
+          "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        },
+        {
+          "id": "main-sources-add-invalid#D3",
+          "state": "main-sources-add-invalid",
+          "finding": "[native] The inline validation line under the URL field starts its error glyph about 17 px in from the field's and the labels' shared start edge (x 392), so the message does not align with the field it belongs to; the workbench's input validation message is attached at the input's own start edge. | [geometry] The URL field's inline error (glyph at x 408, text 'Enter the URL of the source.') starts 16 px right of the field and label start edge at x 392, which every other block in the dialog column shares. It also sits about 10 px below the field, where each label sits 4 px above its field, so the message reads detached from its field.",
+          "severity": "minor",
+          "box": [
+            392,
+            280,
+            416,
+            51
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "informational",
+          "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2). Its vertical clause is refuted by DS-GRID-2a@main-sources-add-invalid: gaps 8 (hard); the horizontal 16 px offset is what stands.",
+          "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "main-sources-remove-dialog",
+          "finding": "The confirmation is not drawn over the sources dialog: behind the Remove nuget.org? layer the scrim covers only the Installed list and the empty details pane, and the NuGet sources dialog (drawn at about 375,297 to 824,505 in the main-sources capture of the same run) is missing, so the confirm floats with no parent layer, unlike a workbench modal stacked on its opener.",
+          "severity": "major",
+          "box": [
+            375,
+            297,
+            450,
+            209
+          ],
+          "rule": "judge-only",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "The crop does show only the confirm over the scrimmed Installed page, but this is how the product is designed to work: primitives.css hides a covered layer ('.nuiget-dialog-layer[data-covered] { visibility: hidden }', 'one scrim, one box', UX-P3.6). DECISIONS 2026-11-07 judges this cell against main-installed-details as the page beneath, and that artboard draws no sources dialog. The measurements agree with one scrim: DS-DIVIDER-5 'scrim rgba(0, 0, 0, 0.5) over #1f1f1f → #101010' and '[aria] main-sources-remove-dialog: 64 nodes, equal'."
+        },
+        {
+          "id": "native-2",
+          "state": "main-sources-remove-dialog",
+          "finding": "The confirm layer has no close action in its top-end corner, while the product's own sources dialog draws a codicon close button there (about 787,311 in main-sources) and the workbench's modal dialog keeps its close action on every dialog.",
+          "severity": "minor",
+          "box": [
+            786,
+            337,
+            22,
+            22
+          ],
+          "rule": "judge-only",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "The crop at 770,321 54x54 shows plain dialog background, but no artboard, spec or rule gives a ConfirmDialog a close action: the interaction model specifies 'Remove / Cancel, focus on Cancel' with Escape closing (design-system row for Dialog, ConfirmDialog), so the missing close action is a design choice and not a defect (rubric §6, taste with no artboard element)."
+        },
+        {
+          "id": "states-1",
+          "state": "main-sources-remove-dialog",
+          "finding": "The Remove confirmation shows with no Sources dialog under it, though the interaction model specifies the ConfirmDialog \"over the sources dialog\". The sibling capture main-sources.dark-modern.1200.png draws the Sources dialog (title \"NuGet sources\", the nuget.org row with its Remove button, Add Source...) at about x 375–825, y 297–505. That dialog is taller than this confirm (y 328–474), so if it were mounted underneath, its top and bottom bands would show above and below the confirm. They do not: only the scrimmed Installed page shows. The opener the focus should return to, and the context of the destructive action, are missing from the state.",
+          "severity": "major",
+          "box": [
+            375,
+            297,
+            450,
+            209
+          ],
+          "rule": "judge-only",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The sources dialog is visibly absent above and below the confirm (y 328–474), but the product hides it on purpose: the covered layer is set to 'visibility: hidden' ('one scrim, one box', UX-P3.6). The ConfirmDialog is still stacked over the mounted sources dialog. The artboard this cell is judged against (main-installed-details as the page beneath, DECISIONS 2026-11-07) draws no sources dialog, so nothing is missing from it, and the ARIA snapshot reads '64 nodes, equal' to the adopted golden."
+        },
+        {
+          "id": "states-1",
+          "state": "main-sources-empty",
+          "finding": "The dialog's description still explains the Remove action (\"Remove deletes a source from the file that declares it.\") while the empty state has no source and no Remove control, so it describes a control this state does not draw. The empty message below it already names the condition.",
+          "severity": "minor",
+          "box": [
+            392,
+            362,
+            414,
+            34
+          ],
+          "rule": "judge-only",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop shows the dialog's fixed description, \"Sources of the selected project's config files. Remove deletes a source from the file that declares it.\", which is correct sentence-case copy ending in a period (DS-COPY-3 hard: \"1 end with a full stop\"). The empty state is present (DS-STATE-1 hard: \"present: source-settings-empty; missing: none\"), and the ARIA snapshot reads \"63 nodes, equal\". The artboard (main-installed-details) does not draw this dialog. The finding cites no rule, so under rubric §6 a correct description that also mentions a feature this state does not show is taste, not a defect."
+        },
+        {
+          "id": "native-1",
+          "state": "main-sources-error",
+          "finding": "Inside the sources dialog the inline error's text column starts at x≈415 while the source item's name and URL start at x≈418–419, though the error glyph (x≈393) and the item's check box (x≈392) share one start edge. The 16 px glyph and the 18 px check box each take the same gap, so the two text columns end up 3 px apart. A built-in dialog keeps message and list text on one column; the artboard draws no dialog to compare with.",
+          "severity": "minor",
+          "box": [
+            392,
+            366,
+            40,
+            92
+          ],
+          "rule": "judge-only",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "In the crop, the stems of the left-most letters start at x=417 for the error's 'N' (rows 390-395) and x=418 for the item's 'h' (rows 438-439), which is within 1 px. That gap is the same 1 px side-bearing spread that 'h' (418) and 'n' (419) show inside the item's own text, so the claimed 3 px offset is not visible."
+        }
+      ],
+      "carried": [
+        {
+          "id": "main-installed-bulk-dialog#D1",
+          "state": "main-installed-bulk-dialog",
+          "finding": "[states] The confirm dialog opens with focus on Cancel (Design System component table: ConfirmDialog opens on Cancel, visual state 'the focused control's ring'), but no control in the dialog draws a focus ring: the pixels around Cancel (x 669-731, y 427-456) and Uninstall are the plain #202020 dialog surface, with no 1 px focusBorder ring at the +2 text-button offset, so the dialog state shows no visible focus anywhere.",
+          "severity": "major",
+          "box": [
+            669,
+            427,
+            63,
+            30
+          ],
+          "rule": "DS-FOCUS-3",
+          "lenses": [
+            "states"
+          ],
+          "origin": "UX-P5.1b (docs/plans/judge-log/P5.1b.json), routed here",
+          "disposition": "fixed",
+          "evidence": "run 45042903058: [measure] DS-FOCUS-3@main-installed-bulk-dialog/dialog-focus: button [confirm-dialog-cancel] in the dialog: outline 1 solid rgb(0, 120, 212) offset 2 (hard); the golden adopted from it",
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 1"
+        }
+      ]
+    }
+  ]
+}
