@@ -68,7 +68,9 @@ export function ReadmeView({ announce, shownKey }: { announce: (message: string)
     if (loading) {
         return (
             <>
-                <ProgressBar label={LOADING_README} data-testid="readme-progress" />
+                <div className="nuiget-details-progress">
+                    <ProgressBar label={LOADING_README} data-testid="readme-progress" />
+                </div>
                 <Skeleton density="compact" />
             </>
         );

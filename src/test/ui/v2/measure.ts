@@ -672,9 +672,10 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P0.13 (design-advisor ruling of 2026-10-24, design trigger 6): every Appendix B rule of a P0 helper, pending on its
     // item per state group, and the five Appendix B calls hard at P0 ("pass on the probe"), pending on P0.18.
     // UX-P3.3b: the header's computed padding, or the empty state's top inset where the pane shows no package.
-    // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): clause `panel-top`, the details tab panel's first block at
-    // the details content inset below the strip's line, pending until the item's CSS lands; the transitive details have no tabs.
-    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': { pending: 'UX-P5.fix-3' } }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES } }),
+    // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): clause `panel-top`, the details tab panel's first block at
+    // the details content inset below the strip's line, hard since the item's CSS (reading run 45028134618: loaded 20, error 4,
+    // loading 2); the transitive details have no tabs.
+    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES } }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),

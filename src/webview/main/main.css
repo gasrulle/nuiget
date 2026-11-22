@@ -189,9 +189,24 @@ body {
     min-height: 0;
 }
 
-/* The title, the installed row and the version row stay in view; the Details and README content scroll under them. */
+/*
+ * The title, the installed row and the version row stay in view; the Details and README content scroll under them. A tab
+ * panel's first block starts at the content inset below the strip in every state (DS-INSET-4 panel-top, UX-P5.fix-3): the
+ * error banner and the skeleton read it from their carriers, and the loading bar lies over the panel's top edge.
+ */
 .nuiget-details .nuiget-tabpanel {
+    --nuiget-message-inset-block: var(--nuiget-inset-details);
+    --nuiget-skeleton-inset-block: var(--nuiget-inset-details);
+    position: relative;
     overflow: auto;
+}
+
+/* The details and README loading bar over the tab panel's top edge, as the Installed list's bar (DS-STATE-2, UX-P5.fix-3). */
+.nuiget-details-progress {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    z-index: 1;
 }
 
 .nuiget-details-header {
@@ -256,6 +271,8 @@ body {
 }
 
 .nuiget-details-info {
+    /* A banner inside the loaded facts (the offline warning) keeps its own block padding (UX-P5.fix-3). */
+    --nuiget-message-inset-block: var(--nuiget-space-2);
     padding: var(--nuiget-inset-details);
     overflow-wrap: anywhere;
 }

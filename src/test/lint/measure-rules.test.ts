@@ -168,8 +168,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-5')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
-        // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): the clause `panel-top`, pending on its item until the CSS lands.
-        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': { pending: 'UX-P5.fix-3' } });
+        // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): the clause `panel-top`, hard since the item's CSS.
+        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard' });
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -1939,7 +1939,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
     it('reads the details tab panel\'s first block at the 20 px content inset under the strip (DS-INSET-4 panel-top, UX-P5.fix-3)', () => {
         const name = 'DS-INSET-4@main-details-error/panel-top';
         expect(lineOf('main-details-error', withCells({ detailsPanelTop: { first: 4, underStrip: 0 } }), name))
-            .toMatchObject({ pass: false, status: { pending: 'UX-P5.fix-3' }, value: 'first block 4 (target 20); panel under strip 0 (target 0)' });
+            .toMatchObject({ pass: false, status: 'hard', value: 'first block 4 (target 20); panel under strip 0 (target 0)' });
         expect(lineOf('main-details-loading', withCells({ detailsPanelTop: { first: 20.5, underStrip: -0.5 } }), 'DS-INSET-4@main-details-loading/panel-top')?.pass).toBe(true);
         expect(lineOf('main-readme-error', withCells({ detailsPanelTop: { first: 20, underStrip: 2 } }), 'DS-INSET-4@main-readme-error/panel-top', 'classic')?.pass).toBe(false);
         expect(lineOf('main-installed-details', withCells({ detailsPanelTop: undefined }), 'DS-INSET-4@main-installed-details/panel-top'))

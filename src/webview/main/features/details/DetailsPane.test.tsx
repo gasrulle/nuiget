@@ -528,6 +528,26 @@ describe('main panel: details', () => {
         expect(host.requests('package/readme')).toHaveLength(3);
     });
 
+    it('lays the details and README loading bars over the tab panel and puts the skeleton and the error first in it (DS-INSET-4 panel-top, UX-P5.fix-3)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        // The bar sits in the overlay wrapper, out of the flow, so the skeleton is the panel's first block.
+        const overlay = screen.getByTestId('details-progress').parentElement;
+        expect(overlay).toHaveClass('nuiget-details-progress');
+        expect(overlay?.parentElement).toHaveAttribute('role', 'tabpanel');
+        expect(overlay?.nextElementSibling).toHaveClass('nuiget-skeleton');
+        await hostSays(() => host.fail(metadataOf(host)[0], 'failed', 'the feed is down'));
+        expect(screen.getByTestId('details-error').parentElement).toHaveAttribute('role', 'tabpanel');
+        await user.click(screen.getByTestId('details-tab-readme'));
+        const readmeOverlay = screen.getByTestId('readme-progress').parentElement;
+        expect(readmeOverlay).toHaveClass('nuiget-details-progress');
+        expect(readmeOverlay?.parentElement).toHaveAttribute('role', 'tabpanel');
+        expect(readmeOverlay?.nextElementSibling).toHaveClass('nuiget-skeleton');
+        await hostSays(() => host.fail(host.requests('package/readme')[0], 'failed', 'timeout.'));
+        expect(screen.getByTestId('readme-error').parentElement).toHaveAttribute('role', 'tabpanel');
+    });
+
     it('marks the details and README cells: their bars while loading, their errors with one full stop, the stale note (UX-P3.10)', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

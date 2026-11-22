@@ -1143,6 +1143,8 @@
 .nuiget-skeleton {
     display: flex;
     flex-direction: column;
+    /* A context's top and bottom inset, none by default: the details tab panel sets its content inset (DS-INSET-4 panel-top, UX-P5.fix-3). */
+    padding-block: var(--nuiget-skeleton-inset-block, 0);
 }
 
 /* A row that is not there yet: its anatomy at the row's own insets (DS-ROW-1). It breathes for as long as the duration tokens allow. */
@@ -1244,7 +1246,8 @@
     display: flex;
     align-items: center;
     gap: var(--nuiget-space-4);
-    padding: var(--nuiget-space-2) var(--nuiget-message-inset, var(--nuiget-inset));
+    /* The block inset is a carrier: the details tab panel sets its content inset (DS-INSET-4 panel-top, UX-P5.fix-3). */
+    padding: var(--nuiget-message-inset-block, var(--nuiget-space-2)) var(--nuiget-message-inset, var(--nuiget-inset));
     color: var(--nuiget-color-fg);
 }
 

@@ -120,7 +120,9 @@ export function DetailsInfo({ announce, shownKey }: { announce: (message: string
     if (loading) {
         return (
             <>
-                <ProgressBar label={LOADING_DETAILS} data-testid="details-progress" />
+                <div className="nuiget-details-progress">
+                    <ProgressBar label={LOADING_DETAILS} data-testid="details-progress" />
+                </div>
                 <Skeleton density="compact" />
             </>
         );
