@@ -1,0 +1,222 @@
+{
+  "item": "P5.fix-1",
+  "runs": [
+    {
+      "runId": "45020316676",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "dafff172 (commit 1, the reading run; product unchanged since 83c31457)",
+      "look": "modern",
+      "workflow": "wf_b9027d31-7a9",
+      "mode": "screen",
+      "note": "The reading run's product crops against the round-3 artboards and specs copied from that run's artifact (UX-P5.fix-1 DO 4-5). No finding on the severity pill, the placeholder's copy or the gear. Every standing and single-judge finding is the artboard lagging the product's ruled form: accepted-as-design under follow-up 1 and routed to one artboard row. The single-judge main-installed-all#D1 is a major and carries its disposition (follow-up 1, DO NOT).",
+      "captures": {
+        "main-installed-all": {
+          "png": "captures/45020316676/main-installed-all.dark-modern.1200.png",
+          "sha256": "399fa8723c39556b8403dca7f11213c2dfc69a6d76a18a0098a7296c64fe512e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-installed-details": {
+          "png": "captures/45020316676/main-installed-details.dark-modern.1200.png",
+          "sha256": "04083a5e853d99454cf2dabac7a61dee80db53497264120ab79b2e19bebc8e4f",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-transitive-details": {
+          "png": "captures/45020316676/main-transitive-details.dark-modern.1200.png",
+          "sha256": "ec5f6e2186f1b5bab13cd2769f84dae8b81628b7f4b71e468bf5fd063d895bc8",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png",
+          "artboardSha256": "c9f22ddd469e4c5b28bc8b1b071606090463a293d250dd1991a7d27348247aef"
+        },
+        "main-transitive-expanded": {
+          "png": "captures/45020316676/main-transitive-expanded.dark-modern.1200.png",
+          "sha256": "879ce7ec0b73d1fbb6b020bcd3100adbe9dacef8a5254ec1a9afb712343c16c4",
+          "artboard": "docs/design/artboards/main-transitive-expanded.dark-modern.1200.png",
+          "artboardSha256": "039207b6e6461e5bd76813b9ac5372e716c950e95a71554a3193ecc986f54c75"
+        },
+        "main-updates": {
+          "png": "captures/45020316676/main-updates.dark-modern.1200.png",
+          "sha256": "e0f02163e872cdcef0a35c89aec0335045fb5f571f3c3af15323888742b54a45",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "9b13678b307052ca7203e8aaf342239f50f701a6ffbdec7cf52d6dc38e5993ef"
+        }
+      },
+      "panel": {
+        "candidates": 10,
+        "standing": 1,
+        "refuted": 1,
+        "singleJudge": 6,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [
+        "main-installed-all#D1",
+        "main-installed-details#D2",
+        "main-installed-details#D3",
+        "main-installed-details#D4",
+        "main-installed-details#D5",
+        "main-transitive-expanded#D1"
+      ],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "state": "main-transitive-details",
+          "finding": "The NETStandard.Library row's Props pill starts 4 px after the SDK pill in the capture (SDK 259–293, Props from 298), while the approved artboard draws it 8 px after (Props from 302). The capture satisfies DS-ROW-1, which sets 4 px between consecutive pills; the artboard is what departs from the rule, so this is a drawing conflict and not a CSS defect.",
+          "severity": "minor",
+          "box": [
+            259,
+            260,
+            80,
+            20
+          ],
+          "rule": "DS-ROW-1",
+          "verdict": "refuted",
+          "reason": "The crop shows the SDK pill at x 259-293 in both images, with Props starting at x 298 in the capture and at x 302 on the artboard. The capture is the side that is right: the hard measurement 'DS-ROW-1@main-transitive-details: ... badges: name gap 8 ×2, pill gap 4 (hard)' matches DS-ROW-1's 4 px between pills, so the product has no defect and the 8 px gap is a drawing error in the artboard, which spec.json does not declare."
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The details facts block (Version to Report abuse) keeps a 24–25 px row pitch in the capture, as DS-ALIGN-2 requires (6 px apart, pitch at least 24). The artboard draws the same rows at a 22–23 px pitch, so in the capture the block, and the Vulnerabilities and Dependencies blocks below it, sit about 10 px lower than in the artboard. The artboard disagrees with the rule. | [geometry] The details pane's facts rows (Version to Report abuse) sit at a 24 px pitch in the capture (line tops 295, 320, 344, 368, 392, 416, 441), as DS-ALIGN-2 requires (6 px apart, pitch at least 24), while the approved artboard draws the same rows at about 22 px (295, 318, 342, 364, 386, 408, 431), so everything below them in the artboard sits 10 px higher; the rule wins and the capture is right, but the artboard drawing disagrees with it.",
+          "severity": "minor",
+          "box": [
+            441,
+            292,
+            330,
+            164
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "panel": "standing",
+          "disposition": "accepted-as-design",
+          "evidence": "DS-ALIGN-2 hard: [measure] DS-ALIGN-2@main-installed-details: gap 6 ×6; pitch 24.2 ×6 (run 45020316676); the artboard lags; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-all#D1",
+          "state": "main-installed-all",
+          "finding": "[native] The Empty.csproj message leaf \"No packages installed.\" is painted in the secondary-text role (descriptionForeground, measured 157,157,157) where the approved artboard draws it in the text role (foreground, measured 204,204,204), so the message reads as dimmed metadata rather than the workbench's tree message text. | [native] The Unsupported.csproj message leaf \"Unsupported project: requires .NET SDK 10 or newer.\" is painted in the secondary-text role (descriptionForeground, measured 157,157,157) where the approved artboard draws it in the text role (foreground, measured 204,204,204).",
+          "severity": "major",
+          "box": [
+            36,
+            208,
+            345,
+            246
+          ],
+          "rule": "DS-COLOR-1",
+          "lenses": [
+            "native"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": "[measure] DS-COLOR-1@main-installed-all: secondary text = --vscode-descriptionForeground (hard), captures/45020316676/ui-output.txt:571; the message leaf declares color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted)) at src/webview/shared/primitives/primitives.css:249 (fg-muted = descriptionForeground); the artboard draws foreground; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D2",
+          "state": "main-installed-details",
+          "finding": "[native] On the NETStandard.Library row, the SDK and Props label pills are 4 px apart in the capture (SDK ends at x 293, Props starts at x 298), as DS-ROW-1 requires ('4 px between pills'). The artboard draws them 8 px apart (Props at x 302). The artboard disagrees with the rule.",
+          "severity": "minor",
+          "box": [
+            259,
+            360,
+            80,
+            20
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": "DS-ROW-1 hard: pill gap 4 (run 45020316676); the artboard draws 8; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D3",
+          "state": "main-installed-details",
+          "finding": "[native] The vulnerable-count badge on the Installed tab ('1') has a ring in errorForeground red (about #e54e46), which is the badge tone border the Design System colour table names and the same red as the row's High pill. The artboard draws a darker ring (about #a21608, the inputValidation.errorBorder role). The artboard disagrees with the colour roles.",
+          "severity": "minor",
+          "box": [
+            113,
+            84,
+            23,
+            20
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": "the badge error tone is --nuiget-color-error = errorForeground (primitives.css .nuiget-badge--error, src/webview/shared/tokens.css:146); the page draws inputValidation.errorBorder on the tab count; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D4",
+          "state": "main-installed-details",
+          "finding": "[native] The search box placeholder 'Search or type @ to filter' is drawn at #989898 (input.placeholderForeground in Dark Modern, as the Design System colour table names for the search box). The artboard draws it at #757575, a dimmer role. The artboard disagrees with the colour roles.",
+          "severity": "minor",
+          "box": [
+            23,
+            50,
+            164,
+            13
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": ".nuiget-text-field::placeholder reads --nuiget-color-input-placeholder = input.placeholderForeground (primitives.css:1065-1066, tokens.css:224); the page draws #757575; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-installed-details#D5",
+          "state": "main-installed-details",
+          "finding": "[native] The search box's filter action is drawn as a 16 px codicon (glyph 14 × 13 px), as DS-ICON-2 requires for action glyphs and as the workbench's own search boxes draw it. The artboard draws it at about 12 px (glyph 12 × 10 px). The artboard disagrees with the rule.",
+          "severity": "minor",
+          "box": [
+            1164,
+            48,
+            14,
+            13
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": "[measure] DS-ICON-2@main-installed-details: glyph 16×16 ×4 (target 16×16) (hard), captures/45020316676/ui-output.txt:764; the artboard draws about 12 px; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        },
+        {
+          "id": "main-transitive-expanded#D1",
+          "state": "main-transitive-expanded",
+          "finding": "[geometry] In the NETStandard.Library row the capture puts the SDK and Props label badges 4 px apart (SDK right edge 293, Props left edge 298), which is what DS-ROW-1 asks for (4 px between pills). The artboard draws them 8 px apart (Props at 302-342). The artboard disagrees with the rule; the capture follows the rule, and nothing else in this state departs from the redline: insets, row heights, the Transitive Packages header rect and the toolbar all match to the pixel.",
+          "severity": "minor",
+          "box": [
+            259,
+            360,
+            84,
+            20
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "geometry"
+          ],
+          "panel": "singleJudge",
+          "disposition": "accepted-as-design",
+          "evidence": "DS-ROW-1 hard: pill gap 4 (run 45020316676); the artboard draws 8; routed to the planning row of docs/plans/handoff/P5.fix-1.md (For the planning session, row b: the artboards drawn in the product's ruled form)",
+          "ruling": "docs/plans/handoff/P5.fix-1.md, Advisor decisions, 2026-11-22 UX-P5.fix-1 design-advisor follow-up 1"
+        }
+      ]
+    }
+  ]
+}
