@@ -698,12 +698,18 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         // A hidden banner is no banner; a banner outside the facts (the header's) is not read.
         document.querySelector('[data-testid="package-details-panel"]')?.insertAdjacentHTML('beforeend', [
             '<div class="nuiget-banner" style="padding-left: 0px" data-rect="620,80,880,100"><span class="nuiget-banner-icon" data-rect="620,82,636,98"></span></div>',
-            '<div class="nuiget-details-info" data-rect="600,140,900,600">',
-            '<div class="nuiget-banner nuiget-banner--warning" style="padding-left: 20px; padding-right: 20px" data-rect="620,160,880,200"><span class="nuiget-banner-icon" data-rect="640,170,656,186"></span><span class="nuiget-banner-text">Offline.</span></div>',
+            '<div class="nuiget-details-info" style="padding-top: 20px" data-rect="600,140,900,600">',
+            '<div class="nuiget-details-notice" data-rect="620,160,880,200">',
+            '<div class="nuiget-banner nuiget-banner--warning" style="padding: 4px 20px" data-rect="620,164,880,200"><span class="nuiget-banner-icon" data-rect="640,170,656,186"></span><span class="nuiget-banner-text">Offline.</span></div>',
+            '</div>',
+            '<div style="display: none" data-rect="620,200,880,210"></div>',
+            '<p class="nuiget-details-description" data-rect="620,212,880,230">A description.</p>',
             '<div class="nuiget-banner" style="display: none" data-rect="620,210,880,230"><span class="nuiget-banner-icon" data-rect="620,212,636,228"></span></div>',
             '</div>',
         ].join(''));
-        expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20 }]);
+        // The wrapper's next visible sibling is the next block (the hidden one is skipped); the banner's top is read from the facts'
+        // content box (UX-P5.fix-7, GOLDEN ruling 1, DO 4).
+        expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20, top: 4, padTop: 4, padBottom: 4, below: 12 }]);
     });
 
     it('marks a focused control inside a dialog as in the layer, and one outside as not (DS-FOCUS-3 dialog-focus, UX-P5.fix-2)', () => {

@@ -1353,9 +1353,12 @@ export interface StateCells {
     detailsPanelTop?: { first: number; underStrip: number };
     /**
      * Each shown banner inside the details facts (DS-INSET-4 `facts-banner`, UX-P5.fix-7): its severity glyph's left from the
-     * details pane's left, and the banner's computed inline padding. Boxes only.
+     * details pane's left, the banner's computed inline padding; its top from the facts' content-box top, its computed block
+     * padding, and the next block's top below its bottom (the next visible element sibling of its wrapper). No next block is `null`
+     * from the page and an absent field once a layout is cloned (the rule tests' `layout()` drops null keys): both read as none.
+     * Boxes only.
      */
-    detailsFactsBanner?: Array<{ start: number; padStart: number; padEnd: number }>;
+    detailsFactsBanner?: Array<{ start: number; padStart: number; padEnd: number; top: number; padTop: number; padBottom: number; below?: number | null }>;
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
     /** The topmost dialog's title and text containers, each with its computed line height as the page gives it (`normal` kept; UX-P4.fix-3). */
@@ -2362,7 +2365,18 @@ const stateCells = {
                     return [...pane.querySelectorAll('.nuiget-details-info .nuiget-banner')].filter(visible).map(banner => {
                         const glyph = banner.querySelector('.nuiget-banner-icon');
                         const style = getComputedStyle(banner);
-                        return { start: round(rectOf(glyph ?? banner).left - rectOf(pane).left), padStart: px(style.paddingLeft), padEnd: px(style.paddingRight) };
+                        const info = banner.closest('.nuiget-details-info');
+                        const infoStyle = getComputedStyle(info);
+                        const contentTop = rectOf(info).top + px(infoStyle.borderTopWidth) + px(infoStyle.paddingTop);
+                        // UX-P5.fix-7 (GOLDEN ruling 1, DO 4): the next block after the banner's wrapper (the banner itself when it has none).
+                        const wrapper = banner.parentElement && banner.parentElement !== info ? banner.parentElement : banner;
+                        let next = wrapper.nextElementSibling;
+                        while (next && !visible(next)) next = next.nextElementSibling;
+                        return {
+                            start: round(rectOf(glyph ?? banner).left - rectOf(pane).left), padStart: px(style.paddingLeft), padEnd: px(style.paddingRight),
+                            top: round(rectOf(banner).top - contentTop), padTop: px(style.paddingTop), padBottom: px(style.paddingBottom),
+                            below: next ? round(rectOf(next).top - rectOf(banner).bottom) : null,
+                        };
                     });
                 })(),
                 // UX-P4.fix-3 (DO 2a): the topmost dialog's title and text containers, the raw computed line height (px() reads normal as 0).
@@ -4510,6 +4524,8 @@ const DETAILS_CONTENT_X = 20;
 /** DS-INSET-4 `panel-top` (UX-P5.fix-3): the tab panel's first block at the details content inset, the panel flush under the strip. */
 const PANEL_TOP_FIRST = 20;
 const PANEL_TOP_UNDER_STRIP = 0;
+/** DS-INSET-4 `facts-banner` (UX-P5.fix-7, GOLDEN ruling 1): the next block 12 below a banner of the facts, the description's step. */
+const FACTS_BANNER_BELOW = 12;
 
 /** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`; `dialog-text` since UX-P4.fix-3), or undefined for another. */
 function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
@@ -4558,8 +4574,9 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
             return notMeasurable('no banner in the details facts');
         }
         return {
-            value: `facts banner ${banners.length}: glyph at ${tally(banners.map(banner => banner.start))} from the pane (target ${DETAILS_CONTENT_X}, the details content inset); inline padding ${tally(banners.map(banner => banner.padStart))}/${tally(banners.map(banner => banner.padEnd))} (target 0)`,
-            pass: banners.every(banner => near(banner.start, DETAILS_CONTENT_X, tolerance) && near(banner.padStart, 0, tolerance) && near(banner.padEnd, 0, tolerance)),
+            value: `facts banner ${banners.length}: glyph at ${tally(banners.map(banner => banner.start))} from the pane (target ${DETAILS_CONTENT_X}, the details content inset); inline padding ${tally(banners.map(banner => banner.padStart))}/${tally(banners.map(banner => banner.padEnd))} (target 0); top ${tally(banners.map(banner => banner.top))} (target 0), block padding ${tally(banners.map(banner => banner.padTop))}/${tally(banners.map(banner => banner.padBottom))} (target 0); next block ${tally(banners.map(banner => banner.below ?? 'none'))} below (target ${FACTS_BANNER_BELOW})`,
+            pass: banners.every(banner => near(banner.start, DETAILS_CONTENT_X, tolerance) && near(banner.padStart, 0, tolerance) && near(banner.padEnd, 0, tolerance)
+                && near(banner.top, 0, tolerance) && near(banner.padTop, 0, tolerance) && near(banner.padBottom, 0, tolerance) && (banner.below === null || banner.below === undefined || near(banner.below, FACTS_BANNER_BELOW, tolerance))),
         };
     }
     if (definition.id === 'DS-INSET-4') {

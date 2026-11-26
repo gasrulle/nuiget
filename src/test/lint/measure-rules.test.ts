@@ -1967,13 +1967,19 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
 
     it('reads a banner of the details facts at the 20 px content inset with no inline padding (DS-INSET-4 facts-banner, UX-P5.fix-7)', () => {
         const name = 'DS-INSET-4@main-details-offline/facts-banner';
-        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 40, padStart: 20, padEnd: 20 }] }), name))
-            .toMatchObject({ pass: false, status: 'hard', value: 'facts banner 1: glyph at 40 from the pane (target 20, the details content inset); inline padding 20/20 (target 0)' });
-        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0 }] }), name)?.pass).toBe(true);
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 40, padStart: 20, padEnd: 20, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), name))
+            .toMatchObject({ pass: false, status: 'hard', value: 'facts banner 1: glyph at 40 from the pane (target 20, the details content inset); inline padding 20/20 (target 0); top 0 (target 0), block padding 0/0 (target 0); next block 12 below (target 12)' });
+        // UX-P5.fix-7 (GOLDEN ruling 1, DO 5): proving run 45906846647 (crop a2ccaf9e…, sidecar a14a308a…) read the banner's 4 px block
+        // padding and the description touching it; the extension fails it and passes the ruled 0/0 and 12.
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 4, padBottom: 4, below: 0 }] }), name))
+            .toMatchObject({ pass: false, value: 'facts banner 1: glyph at 20 from the pane (target 20, the details content inset); inline padding 0/0 (target 0); top 0 (target 0), block padding 4/4 (target 0); next block 0 below (target 12)' });
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), name)?.pass).toBe(true);
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: null }] }), name))
+            .toMatchObject({ pass: true, value: expect.stringContaining('next block none below') });
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [] }), name))
             .toMatchObject({ pass: false, value: 'not measurable (no banner in the details facts)' });
         // Only the offline cell reads the clause; it also reads panel-top.
-        expect(lineOf('main-details-error', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0 }] }), 'DS-INSET-4@main-details-error/facts-banner')).toBeUndefined();
+        expect(lineOf('main-details-error', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), 'DS-INSET-4@main-details-error/facts-banner')).toBeUndefined();
         expect(lineOf('main-details-offline', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-details-offline/panel-top')?.pass).toBe(true);
     });
 

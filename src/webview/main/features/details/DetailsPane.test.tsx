@@ -440,6 +440,8 @@ describe('main panel: details', () => {
         await selectInstalled(host);
         await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Serilog', '3.0.0', { offline: true }) }));
         expect(pane()).toHaveTextContent('Offline: no package source knows this version.');
+        // UX-P5.fix-7 (design-advisor GOLDEN ruling 1, DO 6): the banner is a block of the facts, set apart by its wrapper.
+        expect(pane().querySelector('.nuiget-details-info > .nuiget-details-notice > .nuiget-banner')).not.toBeNull();
 
         await hostSays(() => host.event('sources/health', { failed: [{ url: FEED, error: 'timeout' }] }));
         expect(pane()).toHaveTextContent('Offline: a package source could not be reached.');

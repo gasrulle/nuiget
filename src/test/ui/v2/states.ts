@@ -110,8 +110,8 @@ const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'n
 const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', reason: 'nuget.org metadata (downloads, versions) changes between runs' };
 /** The details header: the version select and the installed row follow nuget.org versions (UX-P5.fix-7; UX-P5.fix-8 reuses it). */
 const LIVE_DETAILS_HEADER: Mask = { selector: '[data-testid="package-details-panel"] [data-testid="details-header"]', reason: 'the version select and the installed row follow nuget.org versions' };
-/** The facts under a banner of the details facts: package content read per run (UX-P5.fix-7); the banner itself stays unmasked. */
-const LIVE_DETAILS_FACTS: Mask = { selector: '[data-testid="package-details-panel"] .nuiget-details-info > :not(.nuiget-banner)', reason: 'the facts under the banner are package content read per run' };
+/** The facts under a banner of the details facts: package content read per run (UX-P5.fix-7); the banner's wrapper stays unmasked. */
+const LIVE_DETAILS_FACTS: Mask = { selector: '[data-testid="package-details-panel"] .nuiget-details-info > :not(.nuiget-details-notice)', reason: 'the facts under the banner are package content read per run' };
 const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]', reason: 'nuget.org suggestions change between runs' };
 /** The search box of a state whose setup leaves the focus in it (UX-P0.15, design-advisor ruling). */
 const LIVE_CARET: Mask = { selector: '[data-testid="search-input"]', reason: 'the caret blinks and the selection differs between runs (H27)' };

@@ -148,11 +148,13 @@ export function DetailsInfo({ announce, shownKey }: { announce: (message: string
     return (
         <div className="nuiget-details-info">
             {value.offline ? (
-                <Banner severity="warning">
-                    {failed.length > 0
-                        ? 'Offline: a package source could not be reached. These details come from the package cache on this machine.'
-                        : 'Offline: no package source knows this version. These details come from the package cache on this machine.'}
-                </Banner>
+                <div className="nuiget-details-notice">
+                    <Banner severity="warning">
+                        {failed.length > 0
+                            ? 'Offline: a package source could not be reached. These details come from the package cache on this machine.'
+                            : 'Offline: no package source knows this version. These details come from the package cache on this machine.'}
+                    </Banner>
+                </div>
             ) : null}
             {value.description ? <p className="nuiget-details-description">{value.description}</p> : null}
             <Facts metadata={value} known={selection?.known} reportAbuse={reportAbuse} />
