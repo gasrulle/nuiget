@@ -70,7 +70,7 @@ function makeServices(options: { selectedProject?: string; workspaceFolder?: str
         transitiveMetadata: vi.fn(async () => []),
         search: vi.fn(async () => ({ results: [] })),
         quickSearch: vi.fn(async () => []),
-        versions: vi.fn(async (): Promise<{ versions: string[]; sourcesUnavailable: boolean }> => ({ versions: ['1.0.0'], sourcesUnavailable: false })),
+        versions: vi.fn(async (): Promise<{ versions: string[]; sourcesUnavailable: boolean; vulnerableVersions?: string[] }> => ({ versions: ['1.0.0'], sourcesUnavailable: false })),
         metadata: vi.fn(async () => undefined),
         readme: vi.fn(async () => undefined),
         readmeImage: vi.fn(async (): Promise<string | null> => 'data:image/png;base64,AAAA'),
@@ -309,6 +309,23 @@ describe('shared handlers: every request of the protocol', () => {
         expect(errorOf(host, 'down')).toEqual({ code: 'failed', message: 'No package source could be reached for this package' });
         expect(resultOf(host, 'unknown')).toEqual({ packageId: 'A', versions: [] });
         expect(resultOf(host, 'partial')).toEqual({ packageId: 'A', versions: ['2.0.0'] });
+    });
+
+    it('package/versions passes vulnerableVersions through absent, empty and listed', async () => {
+        const { services, catalog } = makeServices();
+        const host = new TestHost(services);
+        catalog.versions
+            .mockResolvedValueOnce({ versions: ['2.0.0', '1.0.0'], sourcesUnavailable: false })
+            .mockResolvedValueOnce({ versions: ['2.0.0', '1.0.0'], sourcesUnavailable: false, vulnerableVersions: [] })
+            .mockResolvedValueOnce({ versions: ['2.0.0', '1.0.0'], sourcesUnavailable: true, vulnerableVersions: ['1.0.0'] });
+        for (const id of ['unknown', 'none', 'listed']) {
+            await host.receiveRaw(makeRequest('package/versions', { packageId: 'A', includePrerelease: false }, id));
+        }
+        // Absent is unknown, never written as undefined; [] is none known (UX-P5.2a, D38).
+        expect(resultOf(host, 'unknown')).toEqual({ packageId: 'A', versions: ['2.0.0', '1.0.0'] });
+        expect(Object.keys(resultOf(host, 'unknown') as object)).toEqual(['packageId', 'versions']);
+        expect(resultOf(host, 'none')).toEqual({ packageId: 'A', versions: ['2.0.0', '1.0.0'], vulnerableVersions: [] });
+        expect(resultOf(host, 'listed')).toEqual({ packageId: 'A', versions: ['2.0.0', '1.0.0'], vulnerableVersions: ['1.0.0'] });
     });
 
     it('readme/image answers through Catalog.readmeImage and package/prewarm awaits Catalog.prewarm', async () => {

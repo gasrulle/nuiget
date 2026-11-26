@@ -3,7 +3,7 @@ import type { OutboundPolicy } from '../contracts';
 import type { PackageMetadataLite } from '../../protocol/domain';
 import { DefaultMetadataEnricher } from './enricher';
 import { silentLogger } from './testSupport';
-import type { IconResolver, ResolvedSource, VulnerabilityClient, VulnerabilityOutcome } from './types';
+import type { DeprecationFetch, IconResolver, RegistrationClient, ResolvedSource, VulnerabilityClient, VulnerabilityOutcome } from './types';
 
 const allowAll: OutboundPolicy = { allowedSourcesFor: (_id, candidates) => candidates };
 
@@ -239,5 +239,78 @@ describe('DefaultMetadataEnricher: the vulnerability leg is bounded once per cal
             process.off('unhandledRejection', record);
             vi.useRealTimers();
         }
+    });
+});
+
+describe('DefaultMetadataEnricher: the installed version\'s deprecation (UX-P5.2a, ADR-009 d.1)', () => {
+    const LEGACY = { reasons: ['Legacy'], alternatePackage: { id: 'Lib.Next', range: '*' } };
+    /** `deprecation` answers per `<source name>/<id>@<version>`; anything else is missing. */
+    function deprecations(answers: Record<string, DeprecationFetch | Error | 'never'>): Pick<RegistrationClient, 'deprecation'> & { deprecation: ReturnType<typeof vi.fn> } {
+        return {
+            deprecation: vi.fn(async (src: ResolvedSource, id: string, version: string): Promise<DeprecationFetch> => {
+                const answer = answers[`${src.source.name}/${id}@${version}`];
+                if (answer === 'never') {
+                    return new Promise<DeprecationFetch>(() => undefined);
+                }
+                if (answer instanceof Error) {
+                    throw answer;
+                }
+                return answer ?? { kind: 'missing' };
+            }),
+        };
+    }
+    const withLeg = (leg: Pick<RegistrationClient, 'deprecation'>, lookup = search({}), options: { vulnerabilityWaitMs?: number } = {}) =>
+        new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, lookup, icons(), vulnerabilities(), { ...options, deprecations: leg });
+
+    it('a lite entry carries the installed version\'s deprecation, not the latest version\'s', async () => {
+        // The search lookup answers the latest version (2.0.0), which is not deprecated; the installed 1.0.0 is.
+        const lookup = search({ 'a/Lib': { id: 'Lib', version: '2.0.0', authors: 'Ada' } });
+        const leg = deprecations({ 'a/Lib@2.0.0': { kind: 'found' }, 'a/Lib@1.0.0': { kind: 'missing' }, 'b/Lib@1.0.0': { kind: 'found', deprecation: LEGACY }, 'a/Current@1.0.0': { kind: 'found' } });
+
+        const entries = await withLeg(leg, lookup).enrich([source('a'), source('b')], [{ id: 'Lib', version: '1.0.0' }, { id: 'Current', version: '1.0.0' }]);
+
+        expect(entries[0]).toEqual({ id: 'Lib', version: '1.0.0', authors: 'Ada', vulnerabilities: [], deprecation: LEGACY });
+        expect(entries[1]).not.toHaveProperty('deprecation');
+        expect(leg.deprecation.mock.calls.map(call => `${(call[0] as ResolvedSource).source.name}/${call[1]}@${call[2]}`).sort()).toEqual(['a/Current@1.0.0', 'a/Lib@1.0.0', 'b/Lib@1.0.0']);
+    });
+
+    it('past the call\'s deadline deprecation stays absent and the icon and authors are kept', async () => {
+        vi.useFakeTimers();
+        try {
+            const lookup = search({ 'a/Lib': { id: 'Lib', version: '1.0.0', authors: 'Ada' } });
+            const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, lookup, icons({ Lib: 'data:image/png;base64,AAAA' }), vulnerabilities(), { vulnerabilityWaitMs: 5_000, deprecations: deprecations({ 'a/Lib@1.0.0': 'never' }) });
+            let entries: PackageMetadataLite[] | undefined;
+            const done = subject.enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]).then(result => { entries = result; });
+            await vi.advanceTimersByTimeAsync(4_999);
+            expect(entries).toBeUndefined();
+            await vi.advanceTimersByTimeAsync(2);
+            await done;
+            expect(entries).toEqual([{ id: 'Lib', version: '1.0.0', authors: 'Ada', iconUrl: 'data:image/png;base64,AAAA', vulnerabilities: [] }]);
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('a failed registration read leaves deprecation absent', async () => {
+        const failed = await withLeg(deprecations({ 'a/Lib@1.0.0': { kind: 'failed' } })).enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+        const thrown = await withLeg(deprecations({ 'a/Lib@1.0.0': new Error('boom') }), search({ 'a/Lib': { id: 'Lib', version: '1.0.0', authors: 'Ada' } })).enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+        // A failed source passes to the next one, which answers.
+        const next = await withLeg(deprecations({ 'a/Lib@1.0.0': { kind: 'failed' }, 'b/Lib@1.0.0': { kind: 'found', deprecation: LEGACY } })).enrich([source('a'), source('b')], [{ id: 'Lib', version: '1.0.0' }]);
+
+        expect(failed[0]).not.toHaveProperty('deprecation');
+        expect(thrown[0]).toEqual({ id: 'Lib', version: '1.0.0', authors: 'Ada', vulnerabilities: [] });
+        expect(next[0].deprecation).toEqual(LEGACY);
+    });
+
+    it('an enricher without a deprecation lookup reads no registration', async () => {
+        const leg = deprecations({ 'a/Lib@1.0.0': { kind: 'found', deprecation: LEGACY } });
+        const entries = await enricher().enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+        const denyAll: OutboundPolicy = { allowedSourcesFor: () => [] };
+        const denied = await new DefaultMetadataEnricher({ policy: denyAll, logger: silentLogger }, search({}), icons(), vulnerabilities(), { deprecations: leg }).enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
+
+        expect(entries[0]).not.toHaveProperty('deprecation');
+        expect(denied[0]).not.toHaveProperty('deprecation');
+        expect(leg.deprecation).not.toHaveBeenCalled();
     });
 });

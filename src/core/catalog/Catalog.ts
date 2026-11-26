@@ -485,9 +485,12 @@ export class Catalog {
 
     /**
      * Every version of a package (unlisted included) on the allowed sources of the directory, or on the one named. One
-     * resource per source (`resourceKeys.versions(id, source.url, …)`); the `'all'` key is never written (N70).
+     * resource per source (`resourceKeys.versions(id, source.url, …)`); the `'all'` key is never written (N70). The answer
+     * names the versions an advisory covers (`vulnerableVersions`) from the allowed sources' vulnerability data already loaded,
+     * composed after the merge and outside the per-source resources; absent while that data is unknown, never waited for
+     * (UX-P5.2a, ADR-009 d.1, D38).
      */
-    async versions(directory: string, packageId: string, sourceUrl: string | undefined, includePrerelease: boolean, signal: AbortSignal): Promise<{ versions: string[]; sourcesUnavailable: boolean }> {
+    async versions(directory: string, packageId: string, sourceUrl: string | undefined, includePrerelease: boolean, signal: AbortSignal): Promise<{ versions: string[]; sourcesUnavailable: boolean; vulnerableVersions?: string[] }> {
         const { context, allowed, excluded } = await this.allowedSources(directory, packageId, sourceUrl, signal);
         const answers = await Promise.all(allowed.map(source => queryWithRetry(() => this.deps.coordinator.query<{ versions: string[]; sourcesUnavailable: boolean }>(
             resourceKeys.versions(packageId, source.source.url, includePrerelease),
@@ -508,7 +511,13 @@ export class Catalog {
                 versions.push(version);
             }
         }
-        return { versions: sortDescending(versions), sourcesUnavailable: answers.some(answer => answer.value.sourcesUnavailable) || excluded.length > 0 };
+        const sorted = sortDescending(versions);
+        const answer: { versions: string[]; sourcesUnavailable: boolean; vulnerableVersions?: string[] } = { versions: sorted, sourcesUnavailable: answers.some(answer => answer.value.sourcesUnavailable) || excluded.length > 0 };
+        const vulnerableVersions = this.deps.feeds.vulnerabilities.vulnerableAmong(allowed, packageId, sorted);
+        if (vulnerableVersions !== undefined) {
+            answer.vulnerableVersions = vulnerableVersions;
+        }
+        return answer;
     }
 
     /**

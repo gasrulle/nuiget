@@ -27,6 +27,7 @@ import {
     type IconCache,
     type IconResolver,
     type MetadataEnricher,
+    type DeprecationFetch,
     type MetadataResolver,
     type RegistrationClient,
     type ResolvedSource,
@@ -110,6 +111,29 @@ export function liteLookup(search: Pick<SearchClient, 'searchById'>, cache: Pick
     };
 }
 
+/**
+ * The installed version's deprecation through the `metadata` cache kind (UX-P5.2a, architecture-advisor ruling of 2026-11-26,
+ * DO 6): an entry holds a `found` answer, with or without a deprecation, or a `missing` one, keyed by id, version and source,
+ * and is answered without a request for the kind's lifetime (memory only). A `failed` read, and anything read after the
+ * caller cancelled, is never stored, so a failure is asked again next time and never remembered as "not deprecated".
+ */
+export function deprecationLookup(registration: Pick<RegistrationClient, 'deprecation'>, cache: Pick<TieredCache, 'get' | 'set'>): Pick<RegistrationClient, 'deprecation'> {
+    return {
+        async deprecation(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<DeprecationFetch> {
+            const key = cacheKeys.metadata(packageId, version, source.source.url);
+            const cached = cache.get<DeprecationFetch>(key);
+            if (cached !== undefined) {
+                return cached;
+            }
+            const fetched = await registration.deprecation(source, packageId, version, signal);
+            if (fetched.kind !== 'failed' && !signal?.aborted) {
+                cache.set<DeprecationFetch>(key, fetched, 'metadata');
+            }
+            return fetched;
+        },
+    };
+}
+
 export function createFeedClients(options: FeedClientsOptions): FeedClients {
     const { transport, runner, serviceIndex, credentials, cache, logger } = options;
     const flat = new DefaultFlatContainerClient({ transport, logger });
@@ -139,7 +163,8 @@ export function createFeedClients(options: FeedClientsOptions): FeedClients {
                 updates: new DefaultUpdateChecker({ policy, logger }, registration),
                 icons,
                 resolver: new DefaultMetadataResolver({ policy, logger }, { registration, flat, search, readme, offline }),
-                enricher: new DefaultMetadataEnricher({ policy, logger }, lookup, icons, vulnerabilities),
+                // Only the installed views' enrichment reads the installed version's deprecation; Browse rows carry the search's.
+                enricher: new DefaultMetadataEnricher({ policy, logger }, lookup, icons, vulnerabilities, { deprecations: deprecationLookup(registration, cache) }),
                 searchEnricher: new DefaultMetadataEnricher({ policy, logger }, lookup, icons, NO_VULNERABILITY_DATA),
             };
         },

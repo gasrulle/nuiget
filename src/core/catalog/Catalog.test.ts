@@ -794,6 +794,43 @@ describe('Catalog feed reads', () => {
         expect(excludedRig.clients.resolver.versions).not.toHaveBeenCalled();
     });
 
+    it('versions answers vulnerableVersions from loaded data and an empty list when none is covered', async () => {
+        const rig = feedRig({ listings: { [appDir]: [s1, s2] } });
+        rig.clients.resolver.versions.mockImplementation(async sources => ({ versions: sources[0].source.url === s1.url ? ['2.0.0', '1.0.0'] : ['3.0.0'], sourcesUnavailable: false }));
+        rig.feeds.vulnerabilities.vulnerableAmong.mockImplementation((_sources, id) => (id === 'Lib' ? ['1.0.0'] : []));
+        const { catalog } = catalogWith(rig);
+        const signal = new AbortController().signal;
+
+        await expect(catalog.versions(appDir, 'Lib', undefined, false, signal)).resolves.toEqual({ versions: ['3.0.0', '2.0.0', '1.0.0'], sourcesUnavailable: false, vulnerableVersions: ['1.0.0'] });
+        await expect(catalog.versions(appDir, 'Safe', undefined, false, signal)).resolves.toEqual({ versions: ['3.0.0', '2.0.0', '1.0.0'], sourcesUnavailable: false, vulnerableVersions: [] });
+        // The data of the allowed sources (ADR-009 d.1), over the merged answer.
+        expect(rig.feeds.vulnerabilities.vulnerableAmong).toHaveBeenCalledWith([rig.resolvedOf(s1), rig.resolvedOf(s2)], 'Lib', ['3.0.0', '2.0.0', '1.0.0']);
+    });
+
+    it('versions leaves vulnerableVersions absent while the data is unknown and does not wait for it', async () => {
+        const rig = feedRig({ listings: { [appDir]: [s1] } });
+        rig.clients.resolver.versions.mockResolvedValue({ versions: ['1.0.0'], sourcesUnavailable: false });
+        rig.feeds.vulnerabilities.vulnerableAmong.mockReturnValue(undefined);
+        rig.feeds.vulnerabilities.forPackage.mockImplementation(() => new Promise(() => undefined));
+
+        const answer = await catalogWith(rig).catalog.versions(appDir, 'Lib', undefined, false, new AbortController().signal);
+
+        expect(answer).toEqual({ versions: ['1.0.0'], sourcesUnavailable: false });
+        expect(answer).not.toHaveProperty('vulnerableVersions');
+        expect(rig.feeds.vulnerabilities.forPackage).not.toHaveBeenCalled();
+    });
+
+    it('the per-source versions resources keep the plain lists', async () => {
+        const rig = feedRig({ listings: { [appDir]: [s1] } });
+        rig.clients.resolver.versions.mockResolvedValue({ versions: ['1.0.0'], sourcesUnavailable: false });
+        rig.feeds.vulnerabilities.vulnerableAmong.mockReturnValue(['1.0.0']);
+        const { catalog, coordinator } = catalogWith(rig);
+
+        await expect(catalog.versions(appDir, 'Lib', undefined, false, new AbortController().signal)).resolves.toMatchObject({ vulnerableVersions: ['1.0.0'] });
+
+        expect(coordinator.peek(resourceKeys.versions('Lib', s1.url, false))?.value).toEqual({ versions: ['1.0.0'], sourcesUnavailable: false });
+    });
+
     it('metadata: the first allowed source in order answers and is cached under its own key', async () => {
         const rig = feedRig({ listings: { [appDir]: [s1, s2] } });
         const fromS2: PackageMetadata = { id: 'Lib', version: '1.0.0', description: 'S2', authors: '', dependencies: [], sourceUrl: s2.url };
@@ -885,6 +922,18 @@ describe('Catalog feed reads', () => {
         await expect(catalogWith(rig).catalog.transitiveMetadata(appDir, packages)).resolves.toEqual(packages);
 
         expect(rig.clients.enricher.enrich).toHaveBeenCalledWith([rig.resolvedOf(remote('feed'))], packages, undefined);
+        expect(rig.clients.searchEnricher.enrich).not.toHaveBeenCalled();
+    });
+
+    it('transitive metadata carries the installed version\'s deprecation', async () => {
+        const rig = feedRig();
+        const legacy = { reasons: ['Legacy'], message: 'Use B.', alternatePackage: { id: 'B', range: '*' } };
+        rig.clients.enricher.enrich.mockImplementation(async (_sources, packages) => packages.map(({ id, version }) => (id === 'A' ? { id, version, deprecation: legacy } : { id, version })));
+
+        const entries = await catalogWith(rig).catalog.transitiveMetadata(appDir, [{ id: 'A', version: '1.0.0' }, { id: 'C', version: '2.0.0' }]);
+
+        expect(entries).toEqual([{ id: 'A', version: '1.0.0', deprecation: legacy }, { id: 'C', version: '2.0.0' }]);
+        expect(entries[1]).not.toHaveProperty('deprecation');
         expect(rig.clients.searchEnricher.enrich).not.toHaveBeenCalled();
     });
 

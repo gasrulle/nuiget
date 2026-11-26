@@ -322,11 +322,12 @@ export function registerSharedHandlers(host: Registrar, services: HostServices):
     host.on('search/autocomplete', async (payload, ctx) => ({ query: payload.query, groups: await catalog.quickSearch(sourceDirectory(services), payload.sources.map(source => source.url), payload.query, payload.includePrerelease, services.config().quickSearchResultsPerSource, ctx.signal) }));
     // `package/versions` and `package/metadata` are fan-outs over per-source resources and carry no generation (N70).
     host.on('package/versions', async (payload, ctx) => {
-        const { versions, sourcesUnavailable } = await catalog.versions(sourceDirectory(services), payload.packageId, payload.sourceUrl, payload.includePrerelease, ctx.signal);
+        const { versions, sourcesUnavailable, vulnerableVersions } = await catalog.versions(sourceDirectory(services), payload.packageId, payload.sourceUrl, payload.includePrerelease, ctx.signal);
         if (versions.length === 0 && sourcesUnavailable) {
             throw new HostRequestError('failed', 'No package source could be reached for this package');
         }
-        return { packageId: payload.packageId, versions };
+        // Absent is unknown, `[]` none known (UX-P5.2a, D38): the key is written only when the Catalog knows.
+        return vulnerableVersions === undefined ? { packageId: payload.packageId, versions } : { packageId: payload.packageId, versions, vulnerableVersions };
     });
     host.on('package/metadata', async (payload, ctx) => ({ metadata: (await catalog.metadata(sourceDirectory(services), payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
     host.on('package/readme', async (payload, ctx) => ({ readme: (await catalog.readme(sourceDirectory(services), payload.packageId, payload.version, payload.sourceUrl, ctx.signal)) ?? null }));
