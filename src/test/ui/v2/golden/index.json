@@ -103,9 +103,9 @@
   },
   "main-installed-all-vulnerable-unavailable.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "07fdfe63501fd12fd06f15c9a31ffeca97947058b30f859758f85f63a89a343a",
-    "sidecarSha256": "bd4ea17d6ffe13e4d3101d1707f22eb99f4f30d2275a39ca701c4ab67d89df7a"
+    "run": "45052450868",
+    "sha256": "1ab960da69669150a838ea40602f0784562351f8cc8afb61f355e520fcff2a23",
+    "sidecarSha256": "7338467e2cdebebaaf56debd48c43994d0cada51eac6d5861a29d3a846f48962"
   },
   "main-installed-all.dark-high-contrast.1200.png": {
     "status": "approved",

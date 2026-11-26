@@ -46,7 +46,7 @@
           ],
           "promoted": "single judge promoted by the design-advisor (judge-rubric §9)",
           "disposition": "fixed",
-          "evidence": "push 2 names the projects as the subject; the closing evidence is push 2's run",
+          "evidence": "re-run 45052450868 (judge wf_7e6c8082-6c2): no longer standing, no DS-COPY-3 finding on the banner",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
         }
       ],
@@ -88,6 +88,73 @@
           "disposition": "refuted",
           "evidence": "the 0 of N count is the filter signal (DS-COPY-5); the artboard is the unfiltered state",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
+        }
+      ]
+    },
+    {
+      "runId": "45052450868",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "3af7da87 (push 2)",
+      "look": "modern",
+      "workflow": "wf_7e6c8082-6c2",
+      "mode": "screen",
+      "note": "Push 2's cell against the main-installed-all artboard; adopted as the golden under the design-advisor's GOLDEN ruling 2.",
+      "captures": {
+        "main-installed-all-vulnerable-unavailable": {
+          "png": "captures/45052450868/main-installed-all-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "1ab960da69669150a838ea40602f0784562351f8cc8afb61f355e520fcff2a23",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "candidates": 2,
+        "standing": 0,
+        "refuted": 2,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "The check box of the Transitive Packages row (SQLitePCLRaw) has a brighter border (about #7e7e7e, the disabled-foreground colour) than the enabled check box of the Newtonsoft.Json row above (#3c3c3c, checkbox.border). The control that cannot be used therefore looks stronger than the one that can, which is the opposite of how the workbench draws a disabled check box (dimmed). DS-HEIGHT-9 also requires every check box to use the checkbox.* colours.",
+          "severity": "minor",
+          "box": [
+            16,
+            615,
+            18,
+            18
+          ],
+          "rule": "DS-HEIGHT-9",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "The crop does show the SQLitePCLRaw check box with a #7e7e7e border on #313131, against #3c3c3c on the Newtonsoft.Json row. But the artboard draws its unusable check boxes (Unresolved Serilog at y 366, Unsupported read-only Newtonsoft.Json at y 494) with exactly the same #7e7e7e border, and its usable ones (CsvHelper at y 738) with #3c3c3c. So the capture follows the artboard's own colour for a check box that cannot be used, and DS-HEIGHT-9 measured 18x18 x4 (hard).",
+          "disposition": "accepted-as-design",
+          "evidence": "`src/webview/shared/primitives/primitives.css:347-349` (`.nuiget-row-check--off` sets the mark's line to `--nuiget-color-fg-disabled`, 'as the workbench's disabled check box', DS-COLOR-6, UX-P2.3); the artboard `docs/design/artboards/main-installed-all.dark-modern.1200.png` draws its unusable marks (Serilog at y 366, the read-only rows from y 494) the same way; DS-STATE-7 `1 unselectable (1 under Transitive), 0 without a reason` (hard)",
+          "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-26 UX-P5.fix-4 design-advisor GOLDEN ruling 2"
+        },
+        {
+          "id": "states-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "Under the filter, Empty.csproj (0 of 0) shows only its group row with an expanded chevron and no child: the artboard's message leaf 'No packages installed.' (installed-empty-empty.csproj, 30 px below the header) is missing, although Unsupported.csproj keeps its message leaf in the same filtered tree, so the per-project empty state of §9 is dropped for one project and kept for another.",
+          "severity": "major",
+          "box": [
+            16,
+            423,
+            390,
+            44
+          ],
+          "rule": "DS-STATE-1",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop shows Empty.csproj as '0 of 0' with no leaf under the @vulnerable filter. The other projects with no match under the filter (Catalog 0 of 13, Unresolved 0 of 2, Utility 0 of 13) also show no rows or leaf. The artboard's 'No packages installed.' leaf belongs to the unfiltered main-installed-all state, and Unsupported.csproj keeps its unsupported banner, not an empty state. The hard measurement reads 'DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none'.",
+          "disposition": "refuted-by-measurement",
+          "evidence": "run 45052450868: `DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none (hard)`; the '0 of N' count is the filter signal (DS-COPY-5: headers 9, hard); the artboard is the unfiltered state",
+          "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-26 UX-P5.fix-4 design-advisor GOLDEN ruling 2"
         }
       ]
     }
