@@ -1,0 +1,100 @@
+{
+  "item": "P5.fix-7",
+  "runs": [
+    {
+      "runId": "45906846647",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "ca297006 (push 2; its golden rejected)",
+      "look": "modern",
+      "workflow": "wf_a615ea3a-42a",
+      "mode": "screen",
+      "note": "Push 2's cell against the main-installed-details artboard (the state has none of its own, as UX-P5.fix-3 judged its details cells). D1 stood; the design-advisor's GOLDEN ruling 1 rejected the crop and ruled D1 fixed by push 3.",
+      "captures": {
+        "main-details-offline": {
+          "png": "captures/45906846647/main-details-offline.dark-modern.1200.png",
+          "sha256": "a2ccaf9ea9dd6ba014c69f53c4b1b2c6c07ebf23cfacac806cc1ba3cb9c925e7",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 4,
+        "standing": 1,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-details-offline#D1",
+          "state": "main-details-offline",
+          "finding": "[native] The offline banner has no space below it: its text (ink rows 268-281) is followed on the very next line by the description (ink from 291), so the warning and 'Simple .NET logging...' read as one paragraph. The description to Version gap below is visibly larger, and the artboard sets the description apart as its own block under the tab strip; the Extensions editor never runs a status line into the description. | [geometry] The offline banner in the Details tab has no gap of its own before the description. Its text line (glyph top 269) sits 4 px lower than the artboard's first block (glyph top 265 under the strip line at 241), so it starts about 24 px below the strip instead of the 20 px inset. The description then follows one line pitch plus about 4 px later (glyph top 291). Description to facts keeps the artboard's separation (about 19 px between glyphs, 18 in the artboard), so the banner reads as the first line of the description paragraph rather than as a separate block. | [states] The offline banner sits directly on the package description with no visible gap: the banner line (y ~274) and the description line (y ~296) share a plain 22 px text pitch, while the description is ~31 px above the first fact, so the warning reads as the first line of the description paragraph and not as a separate inline message block. The artboard starts the description alone at the panel's content inset, with clear space before the facts grid.",
+          "severity": "major",
+          "box": [
+            441,
+            262,
+            739,
+            45
+          ],
+          "rule": "DS-GRID-2, judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "push 3 a2cda206 (banner block padding 0, the .nuiget-details-notice wrapper 12 above the next block, DS-INSET-4 facts-banner extended); run 45910821055: facts banner 1: glyph at 20 … top 0 …, block padding 0/0 …; next block 12 below (target 12) (hard); re-run wf_a1acda3d-13e: 0 candidates",
+          "ruling": "docs/plans/handoff/P5.fix-7.md, Advisor decisions, 2026-11-27 UX-P5.fix-7 design-advisor GOLDEN ruling 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-2",
+          "state": "main-details-offline",
+          "finding": "The banner copy opens with a label-style lead, 'Offline:', followed by a lowercase clause, 'no package source knows this version.'. A message should be whole sentences in sentence case, and 'Offline' also misnames the condition the clause describes (no source knows this version).",
+          "severity": "minor",
+          "box": [
+            441,
+            264,
+            732,
+            20
+          ],
+          "rule": "DS-COPY-3",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop reads 'Offline: no package source knows this version. These details come from the package cache on this machine.', which is two sentence-case sentences each ending with a period, so DS-COPY-3 (whole sentences ending with '.') holds; the objection to the 'Offline:' lead and its wording is taste with no rule behind it (rubric §6)."
+        }
+      ]
+    },
+    {
+      "runId": "45910821055",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "a2cda206 (push 3)",
+      "look": "modern",
+      "workflow": "wf_a1acda3d-13e",
+      "mode": "screen",
+      "note": "Push 3's cell; each of the three judges answered no finding. Adopted as the golden under GOLDEN ruling 2.",
+      "captures": {
+        "main-details-offline": {
+          "png": "captures/45910821055/main-details-offline.dark-modern.1200.png",
+          "sha256": "ff78381553528e5677d43acfaa4e3b399fd6fb4335843c86592a01fa0a19e1c2",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 0,
+        "standing": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": []
+    }
+  ]
+}

@@ -71,6 +71,12 @@
     "sha256": "9cf2b9a3b3bbb2db7f0bf6b70b21cb1a3e329e7f04b482c6fee9ac4ca5a9d634",
     "sidecarSha256": "4af25fc46db557d79f4713740b03f05f9b5c43923bbc8f51d43972a19da98fcb"
   },
+  "main-details-offline.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "45910821055",
+    "sha256": "ff78381553528e5677d43acfaa4e3b399fd6fb4335843c86592a01fa0a19e1c2",
+    "sidecarSha256": "54bd417b477a3bbe848fa2bb98f877c79eece2782e507c84c4d4a05996707e47"
+  },
   "main-details-readme.dark-modern-classic.932.png": {
     "status": "approved",
     "run": "43776489839",
