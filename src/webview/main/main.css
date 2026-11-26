@@ -273,8 +273,12 @@ body {
 }
 
 .nuiget-details-info {
-    /* A banner inside the loaded facts (the offline warning) keeps its own block padding (UX-P5.fix-3). */
+    /*
+     * A banner inside the loaded facts (the offline warning) keeps its own block padding (UX-P5.fix-3); the facts' padding
+     * carries the inline inset once, so the banner adds none (DS-INSET-4 facts-banner, UX-P5.fix-7).
+     */
     --nuiget-message-inset-block: var(--nuiget-space-2);
+    --nuiget-message-inset: 0;
     padding: var(--nuiget-inset-details);
     overflow-wrap: anywhere;
 }

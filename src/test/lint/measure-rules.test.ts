@@ -171,8 +171,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
         // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): the clause `panel-top`, hard since the item's CSS.
-        // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): the clause `facts-banner`, pending on the item until its CSS.
-        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': { pending: 'P5.fix-7' } });
+        // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5, DO 11): the clause `facts-banner`, hard since the item's CSS.
+        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': 'hard' });
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -1968,7 +1968,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
     it('reads a banner of the details facts at the 20 px content inset with no inline padding (DS-INSET-4 facts-banner, UX-P5.fix-7)', () => {
         const name = 'DS-INSET-4@main-details-offline/facts-banner';
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 40, padStart: 20, padEnd: 20 }] }), name))
-            .toMatchObject({ pass: false, status: { pending: 'P5.fix-7' }, value: 'facts banner 1: glyph at 40 from the pane (target 20, the details content inset); inline padding 20/20 (target 0)' });
+            .toMatchObject({ pass: false, status: 'hard', value: 'facts banner 1: glyph at 40 from the pane (target 20, the details content inset); inline padding 20/20 (target 0)' });
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0 }] }), name)?.pass).toBe(true);
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [] }), name))
             .toMatchObject({ pass: false, value: 'not measurable (no banner in the details facts)' });
