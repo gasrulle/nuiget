@@ -164,12 +164,20 @@ describe('DefaultMetadataResolver.metadata', () => {
     it('maps a search row to metadata for the asked version', () => {
         expect(searchResultToMetadata({ id: 'X', version: '9.0.0', versions: [], description: 'd', authors: 'a' }, '1.0.0')).toEqual({ id: 'X', version: '1.0.0', description: 'd', authors: 'a', dependencies: [] });
     });
+
+    it('the search fallback never carries the latest version\'s deprecation', () => {
+        // The row's deprecation describes the latest version (ADR-009 d.1), not the asked one (UX-P5.2a).
+        const row = { id: 'X', version: '9.0.0', versions: [], description: 'd', authors: 'a', deprecation: { reasons: ['Legacy'] } };
+
+        expect(searchResultToMetadata(row, '1.0.0')).not.toHaveProperty('deprecation');
+        expect(searchResultToMetadata(row, '9.0.0')).not.toHaveProperty('deprecation');
+    });
 });
 
 describe('DefaultMetadataResolver.versions and readme', () => {
     it('versions unions the allowed sources, deduplicates by normalized version, sorts descending and flags an allowed source that failed', async () => {
         const answers: Record<string, string[] | undefined> = { a: ['2.0.0', '1.0'], b: ['3.0.0-beta', '1.0.0'], c: undefined };
-        const registration: RegistrationClient = { versions: vi.fn(async (src: ResolvedSource) => answers[src.source.name]), metadata: vi.fn() };
+        const registration: RegistrationClient = { versions: vi.fn(async (src: ResolvedSource) => answers[src.source.name]), metadata: vi.fn(), deprecation: vi.fn() };
         const options = { includePrerelease: true, listedOnly: true };
         const notC: OutboundPolicy = { allowedSourcesFor: (_id, candidates) => candidates.filter(candidate => candidate.name !== 'c') };
         const transport = new FakeTransport(() => fail('network'));

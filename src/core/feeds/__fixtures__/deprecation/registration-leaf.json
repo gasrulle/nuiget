@@ -1,0 +1,5 @@
+{
+  "@id": "https://feed.example/v3/registration/contoso.legacy/1.0.0.json",
+  "catalogEntry": "https://feed.example/catalog/contoso.legacy.1.0.0.json",
+  "listed": true
+}

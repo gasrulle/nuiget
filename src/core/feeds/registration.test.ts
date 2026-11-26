@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 import type { OutboundPolicy, TransportResult } from '../contracts';
 import { DefaultRegistrationClient, registrationToMetadata } from './registration';
@@ -215,5 +217,56 @@ describe('DefaultRegistrationClient.metadata', () => {
         expect(registrationToMetadata({ id: 'X', version: '1.0.0', dependencyGroups: 'nope' as never }, 'https://feed.example')).toEqual({
             id: 'X', version: '1.0.0', description: '', authors: '', dependencies: [], sourceUrl: 'https://feed.example',
         });
+    });
+});
+
+describe('DefaultRegistrationClient: deprecation (UX-P5.2a, ADR-009 d.1)', () => {
+    const fixtures = path.join(__dirname, '__fixtures__', 'deprecation');
+    const read = (...parts: string[]): Record<string, unknown> => JSON.parse(fs.readFileSync(path.join(fixtures, ...parts), 'utf8')) as Record<string, unknown>;
+    const LEAF = `${BASE}/contoso.legacy/1.0.0.json`;
+    const CATALOG = 'https://feed.example/catalog/contoso.legacy.1.0.0.json';
+    const legacyFeed = (catalog: () => ReturnType<typeof json> = () => json(read('catalog.json'))): FakeTransport => new FakeTransport(request => {
+        if (request.url === LEAF) {
+            return json(read('registration-leaf.json'));
+        }
+        return request.url === CATALOG ? catalog() : fail('http-error', 404);
+    });
+    const expected = { reasons: ['Other'], message: 'This version is no longer supported.', alternatePackage: { id: 'Contoso.Modern', range: '*' } };
+
+    it('metadata carries the catalog entry\'s deprecation, inline and behind the catalog URL', async () => {
+        const behindUrl = await client(legacyFeed()).metadata(source(), 'Contoso.Legacy', '1.0.0');
+        const inline = await client(new FakeTransport(request => request.url === LEAF
+            ? json({ catalogEntry: read('catalog.json') })
+            : fail('http-error', 404))).metadata(source(), 'Contoso.Legacy', '1.0.0');
+        const realCatalog = read('real', 'windowsazure.storage.9.3.3.catalog.json').document as Record<string, unknown>;
+
+        expect(behindUrl?.deprecation).toEqual(expected);
+        expect(inline?.deprecation).toEqual(expected);
+        expect(registrationToMetadata(realCatalog, 'https://api.nuget.org/v3/index.json')?.deprecation).toMatchObject({ reasons: ['Legacy'], alternatePackage: { id: 'Azure.Storage.Common', range: '*' } });
+        expect(registrationToMetadata({ id: 'X', version: '1.0.0' }, 'https://feed.example')).not.toHaveProperty('deprecation');
+    });
+
+    it('deprecation answers found with and without one, missing on a 404 and failed on a transport error', async () => {
+        const current = new FakeTransport(request => request.url === `${BASE}/contoso.lib/1.0.0.json` ? json({ catalogEntry: { id: 'Contoso.Lib', version: '1.0.0' } }) : fail('http-error', 404));
+        const denyAll: OutboundPolicy = { allowedSourcesFor: () => [] };
+
+        await expect(client(legacyFeed()).deprecation(source(), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'found', deprecation: expected });
+        await expect(client(current).deprecation(source(), 'Contoso.Lib', '1.0.0')).resolves.toEqual({ kind: 'found' });
+        await expect(client(legacyFeed()).deprecation(source(), 'Contoso.Legacy', '9.0.0')).resolves.toEqual({ kind: 'missing' });
+        await expect(client(legacyFeed()).deprecation(source({ searchQueryService: 'q' }), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'missing' });
+        await expect(client(noNetwork).deprecation(source(), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'failed' });
+        await expect(client(legacyFeed(() => fail('timeout'))).deprecation(source(), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'failed' });
+        await expect(client(legacyFeed(() => fail('http-error', 500))).deprecation(source(), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'failed' });
+        const denied = legacyFeed();
+        await expect(client(denied, undefined, undefined, denyAll).deprecation(source(), 'Contoso.Legacy', '1.0.0')).resolves.toEqual({ kind: 'missing' });
+        expect(denied.requests).toHaveLength(0);
+    });
+
+    it('deprecation reads the leaf only and never scans the index', async () => {
+        const transport = registrationFeed();
+
+        await expect(client(transport).deprecation(source(), 'Contoso.Lib', '4.0.0')).resolves.toEqual({ kind: 'missing' });
+        await expect(client(transport).deprecation(source(), 'Contoso.Lib', '1.0')).resolves.toEqual({ kind: 'missing' });
+        expect(transport.urls()).toEqual([`${BASE}/contoso.lib/4.0.0.json`, `${BASE}/contoso.lib/1.0.0.json`]);
     });
 });

@@ -8,6 +8,7 @@ import type {
     FailedSource,
     InstalledPackage,
     NuGetSource,
+    PackageDeprecation,
     PackageMetadata,
     PackageMetadataLite,
     PackageSearchResult,
@@ -94,7 +95,15 @@ export interface RegistrationClient {
     /** All versions for a package from one source (listed-only via search/registration, otherwise the flat-container index). Sorted descending. */
     versions(source: ResolvedSource, packageId: string, options: VersionListOptions): Promise<string[] | undefined>;
     metadata(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<PackageMetadata | undefined>;
+    /** The deprecation of one version from its registration leaf only (UX-P5.2a); never scans the registration index. */
+    deprecation(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<DeprecationFetch>;
 }
+
+/**
+ * A registration read of one version's deprecation: `found` (with the deprecation when the version has one), `missing` (no
+ * registration resource, not allowed, or the version is unknown there) or `failed` (the source could not answer).
+ */
+export type DeprecationFetch = { kind: 'found'; deprecation?: PackageDeprecation } | { kind: 'missing' } | { kind: 'failed' };
 
 export interface FlatContainerClient {
     versionIndex(source: ResolvedSource, packageId: string, signal?: AbortSignal): Promise<string[] | undefined>;
@@ -133,6 +142,11 @@ export interface VulnerabilityOutcome {
 export interface VulnerabilityClient {
     /** Known vulnerabilities for a package version across resolved sources (data kept per source for the policy's TTL). */
     forPackage(sources: ResolvedSource[], packageId: string, version: string, signal?: AbortSignal): Promise<VulnerabilityOutcome>;
+    /**
+     * The given versions an advisory covers, read synchronously from data already loaded (UX-P5.2a): `undefined` (unknown)
+     * when no source handed in offers the resource or any of them has no loaded data; never starts a download.
+     */
+    vulnerableAmong(sources: ResolvedSource[], packageId: string, versions: readonly string[]): string[] | undefined;
     clear(): void;
 }
 

@@ -105,6 +105,8 @@ async function exercise(policy: OutboundPolicy, sources: ResolvedSource[], cliSo
         await registration.versions(source, ID, { includePrerelease: false, listedOnly: true });
         await registration.versions(source, ID, { includePrerelease: false, listedOnly: false });
         await registration.metadata(source, ID, '1.0.0');
+        // UX-P5.2a: the leaf-only deprecation read asks the policy like every other read that sends an id.
+        await registration.deprecation(source, ID, '1.0.0');
     }
     await vulnerabilities.forPackage(sources, ID, '1.0.0');
     return { transport, runner };

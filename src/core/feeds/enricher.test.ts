@@ -31,6 +31,7 @@ function icons(map: Record<string, string> = {}): IconResolver & { icon: ReturnT
 function vulnerabilities(map: Record<string, VulnerabilityOutcome> = {}): VulnerabilityClient & { forPackage: ReturnType<typeof vi.fn> } {
     return {
         forPackage: vi.fn(async (_sources: ResolvedSource[], id: string) => map[id] ?? { vulnerabilities: [], sourcesUnavailable: false }),
+        vulnerableAmong: vi.fn(() => undefined),
         clear: vi.fn(),
     };
 }
@@ -138,7 +139,7 @@ describe('DefaultMetadataEnricher', () => {
 });
 
 describe('DefaultMetadataEnricher: the vulnerability leg is bounded once per call (X33, UX-P4.9)', () => {
-    const never = (): VulnerabilityClient & { forPackage: ReturnType<typeof vi.fn> } => ({ forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>(() => undefined)), clear: vi.fn() });
+    const never = (): VulnerabilityClient & { forPackage: ReturnType<typeof vi.fn> } => ({ forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>(() => undefined)), vulnerableAmong: vi.fn(() => undefined), clear: vi.fn() });
 
     it('a vulnerability read that never settles gives icons and authors at the bound, with vulnerabilities absent', async () => {
         vi.useFakeTimers();
@@ -203,6 +204,7 @@ describe('DefaultMetadataEnricher: the vulnerability leg is bounded once per cal
                     const [loaded] = await Promise.all([Promise.resolve(id === 'Second' ? [advisory] : [])]);
                     return { vulnerabilities: loaded, sourcesUnavailable: false };
                 }),
+                vulnerableAmong: vi.fn(() => undefined),
                 clear: vi.fn(),
             };
             const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, slow, icons(), known, { concurrency: 1, vulnerabilityWaitMs: 5_000 });
@@ -223,7 +225,7 @@ describe('DefaultMetadataEnricher: the vulnerability leg is bounded once per cal
         process.on('unhandledRejection', record);
         try {
             let fail!: (error: Error) => void;
-            const late: VulnerabilityClient = { forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>((_resolve, reject) => { fail = reject; })), clear: vi.fn() };
+            const late: VulnerabilityClient = { forPackage: vi.fn(() => new Promise<VulnerabilityOutcome>((_resolve, reject) => { fail = reject; })), vulnerableAmong: vi.fn(() => undefined), clear: vi.fn() };
             const subject = new DefaultMetadataEnricher({ policy: allowAll, logger: silentLogger }, search({}), icons(), late, { vulnerabilityWaitMs: 5_000 });
             const done = subject.enrich([source('a')], [{ id: 'Lib', version: '1.0.0' }]);
             await vi.advanceTimersByTimeAsync(5_001);

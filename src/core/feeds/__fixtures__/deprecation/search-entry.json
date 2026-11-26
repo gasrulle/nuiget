@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "Contoso.Legacy",
+      "version": "2.0.0",
+      "description": "An old package.",
+      "versions": [{ "version": "1.0.0" }, { "version": "2.0.0" }],
+      "verified": false,
+      "deprecation": {
+        "reasons": ["Legacy", "CriticalBugs"],
+        "message": "Use Contoso.Modern instead.",
+        "alternatePackage": { "id": "Contoso.Modern", "range": "[3.0.0, )" }
+      }
+    },
+    {
+      "id": "Contoso.Current",
+      "version": "1.0.0",
+      "versions": [{ "version": "1.0.0" }]
+    }
+  ]
+}

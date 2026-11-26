@@ -34,6 +34,7 @@ import {
     entryVersions,
     isRecord,
     readAutocompleteIds,
+    readDeprecation,
     readSearchEntries,
     redactUrl,
     type CliSearchOutput,
@@ -306,6 +307,11 @@ export class DefaultSearchClient implements SearchClient {
             const verified = entryVerified(entry);
             if (verified !== undefined) {
                 row.verified = verified;
+            }
+            // What the service reports for the row's version, the latest one under the request's prerelease flag (ADR-009 d.1).
+            const deprecation = readDeprecation(entry.deprecation);
+            if (deprecation) {
+                row.deprecation = deprecation;
             }
             rows.push(row);
         }

@@ -1,0 +1,16 @@
+{
+  "@id": "https://feed.example/catalog/contoso.legacy.1.0.0.json",
+  "id": "Contoso.Legacy",
+  "version": "1.0.0",
+  "description": "An old package.",
+  "deprecation": {
+    "@id": "https://feed.example/catalog/contoso.legacy.1.0.0.json#deprecation",
+    "reasons": ["Other"],
+    "message": "This version is no longer supported.",
+    "alternatePackage": {
+      "@id": "https://feed.example/catalog/contoso.legacy.1.0.0.json#deprecation/alternatePackage",
+      "id": "Contoso.Modern",
+      "range": "*"
+    }
+  }
+}

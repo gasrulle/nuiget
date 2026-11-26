@@ -77,6 +77,7 @@ export interface FeedClientsOptions {
 /** "Not consulted": an enricher handed this leaves `vulnerabilities` absent. */
 export const NO_VULNERABILITY_DATA: VulnerabilityClient = {
     forPackage: async () => ({ vulnerabilities: [], sourcesUnavailable: true }),
+    vulnerableAmong: () => undefined,
     clear() {
         // Holds nothing.
     },

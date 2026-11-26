@@ -12,6 +12,7 @@ import { normalize, parseVersion, sortDescending } from '../versioning';
 import { versionSegment } from './flatContainer';
 import {
     filterAllowedSources,
+    type DeprecationFetch,
     type FeedsDeps,
     type FlatContainerClient,
     type RegistrationClient,
@@ -26,6 +27,7 @@ import {
     isRecord,
     mapWithConcurrency,
     pathSegment,
+    readDeprecation,
     redactUrl,
     registrationAuthors,
     trimTrailingSlash,
@@ -103,6 +105,10 @@ export function registrationToMetadata(entry: NuGetRegistrationEntry, sourceUrl:
     if (published) {
         metadata.published = published;
     }
+    const deprecation = readDeprecation(entry.deprecation);
+    if (deprecation) {
+        metadata.deprecation = deprecation;
+    }
     return metadata;
 }
 
@@ -164,6 +170,29 @@ export class DefaultRegistrationClient implements RegistrationClient {
             })?.entry;
         }
         return entry ? registrationToMetadata(entry, source.source.url) : undefined;
+    }
+
+    /**
+     * The deprecation of one package version, from its registration leaf and the catalog entry the leaf names, never from the
+     * registration index (UX-P5.2a, architecture-advisor ruling of 2026-11-26): `missing` when the source has no registration
+     * resource, the policy does not allow asking it or the leaf is not found; `failed` when the leaf or its catalog entry
+     * could not be read; `found` otherwise, with the deprecation when the entry carries one.
+     */
+    async deprecation(source: ResolvedSource, packageId: string, version: string, signal?: AbortSignal): Promise<DeprecationFetch> {
+        const base = source.endpoints.registrationsBaseUrl;
+        if (!base || filterAllowedSources(this.deps.policy, packageId, [source]).length === 0) {
+            return { kind: 'missing' };
+        }
+        const leaf = await this.getJson(source, `${trimTrailingSlash(base.trim())}/${pathSegment(packageId)}/${versionSegment(version)}.json`, signal);
+        if (!leaf.ok) {
+            return leaf.notFound ? { kind: 'missing' } : { kind: 'failed' };
+        }
+        const entry = isRecord(leaf.data) ? await this.catalogEntry(source, leaf.data as NuGetRegistrationEntry, signal) : undefined;
+        if (entry === undefined) {
+            return { kind: 'failed' };
+        }
+        const deprecation = readDeprecation(entry.deprecation);
+        return deprecation ? { kind: 'found', deprecation } : { kind: 'found' };
     }
 
     /** Every leaf of the registration index with its catalog entry; `[]` for an unknown package, `undefined` on failure. */

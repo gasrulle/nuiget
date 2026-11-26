@@ -477,3 +477,70 @@ describe('DefaultSearchClient', () => {
         }, 90_000);
     });
 });
+
+describe('DefaultSearchClient: deprecation of a search row (UX-P5.2a, ADR-009 d.1)', () => {
+    const fixture = JSON.parse(readFileSync(path.join(__dirname, '__fixtures__', 'deprecation', 'search-entry.json'), 'utf8')) as { data: Array<Record<string, unknown>> };
+    const real = JSON.parse(readFileSync(path.join(__dirname, '__fixtures__', 'deprecation', 'real', 'windowsazure.storage.search.json'), 'utf8')) as { document: { data: Array<Record<string, unknown>> } };
+    const rowOf = async (data: unknown[], id: string) => {
+        const fetched = await client(new FakeTransport(() => json({ data }))).searchById(source('a'), id, true);
+        if (fetched.kind !== 'found') {
+            throw new Error(`no row ${id}`);
+        }
+        return fetched.result;
+    };
+
+    it('a search row carries the deprecation the service reports for its version', async () => {
+        const row = await rowOf(fixture.data, 'Contoso.Legacy');
+        const captured = await rowOf(real.document.data, 'WindowsAzure.Storage');
+
+        expect(row.version).toBe('2.0.0');
+        expect(row.deprecation).toEqual({ reasons: ['Legacy', 'CriticalBugs'], message: 'Use Contoso.Modern instead.', alternatePackage: { id: 'Contoso.Modern', range: '[3.0.0, )' } });
+        expect(captured.deprecation).toMatchObject({ reasons: ['Legacy'], alternatePackage: { id: 'Azure.Storage.Common', range: '*' } });
+        expect(captured.deprecation?.message).toMatch(/^Please note, this package is obsolete/);
+    });
+
+    it('a search row without a deprecation object has no deprecation field', async () => {
+        const row = await rowOf(fixture.data, 'Contoso.Current');
+        const notAnObject = await rowOf([entry('Odd', '1.0.0', { deprecation: 'Legacy' }), entry('Listed', '1.0.0', { deprecation: ['Legacy'] })], 'Odd');
+
+        expect(row).not.toHaveProperty('deprecation');
+        expect(notAnObject).not.toHaveProperty('deprecation');
+    });
+
+    it('reasons are kept as sent, and a deprecation without a usable reason reads Other', async () => {
+        const rows = await Promise.all([
+            rowOf([entry('Kept', '1.0.0', { deprecation: { reasons: ['legacy', 'HasCriticalBugs', 'SomethingNew'] } })], 'Kept'),
+            rowOf([entry('Empty', '1.0.0', { deprecation: { reasons: [] } })], 'Empty'),
+            rowOf([entry('Blank', '1.0.0', { deprecation: { reasons: ['', '  ', 7], message: '' } })], 'Blank'),
+            rowOf([entry('None', '1.0.0', { deprecation: { message: 'Gone.' } })], 'None'),
+        ]);
+
+        expect(rows.map(row => row.deprecation)).toEqual([
+            { reasons: ['legacy', 'HasCriticalBugs', 'SomethingNew'] },
+            { reasons: ['Other'] },
+            { reasons: ['Other'] },
+            { reasons: ['Other'], message: 'Gone.' },
+        ]);
+    });
+
+    it('an alternate package with an invalid id is dropped', async () => {
+        const rows = await Promise.all([
+            rowOf([entry('Bad', '1.0.0', { deprecation: { reasons: ['Legacy'], alternatePackage: { id: '../etc', range: '*' } } })], 'Bad'),
+            rowOf([entry('NoId', '1.0.0', { deprecation: { reasons: ['Legacy'], alternatePackage: { range: '*' } } })], 'NoId'),
+            rowOf([entry('NoRange', '1.0.0', { deprecation: { reasons: ['Legacy'], alternatePackage: { id: 'Good.Package', range: 5 } } })], 'NoRange'),
+        ]);
+
+        expect(rows.map(row => row.deprecation)).toEqual([
+            { reasons: ['Legacy'] },
+            { reasons: ['Legacy'] },
+            { reasons: ['Legacy'], alternatePackage: { id: 'Good.Package' } },
+        ]);
+    });
+
+    it('toLiteMetadata never carries a row\'s deprecation', async () => {
+        const lite = await client(new FakeTransport(() => json(fixture))).lookup(source('a'), 'Contoso.Legacy');
+
+        expect(lite).toEqual({ id: 'Contoso.Legacy', version: '2.0.0', authors: '', description: 'An old package.', verified: false });
+        expect(lite).not.toHaveProperty('deprecation');
+    });
+});

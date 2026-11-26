@@ -28,6 +28,7 @@ function registration(answers: Record<string, Answer>): RegistrationClient & { v
             return answer === undefined && !(`${src.source.name}/${id}` in answers) ? [] : answer;
         }),
         metadata: vi.fn(),
+        deprecation: vi.fn(),
     };
 }
 

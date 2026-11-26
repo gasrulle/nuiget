@@ -108,7 +108,7 @@ function feedRig(options: FeedRigOptions = {}) {
             searchById: vi.fn<PolicyClients['search']['searchById']>(async () => ({ kind: 'missing' })),
             lookup: vi.fn<PolicyClients['search']['lookup']>(async () => undefined),
         },
-        registration: { versions: vi.fn(), metadata: vi.fn() },
+        registration: { versions: vi.fn(), metadata: vi.fn(), deprecation: vi.fn() },
         updates: { check: vi.fn<PolicyClients['updates']['check']>(async () => ({ updates: [], sourcesUnavailable: false })) },
         icons: { icon: vi.fn(async () => undefined), reset: vi.fn() },
         resolver: {
@@ -125,7 +125,7 @@ function feedRig(options: FeedRigOptions = {}) {
         serviceIndex,
         credentials: { getAuthHeader: vi.fn(async () => undefined), prewarm: vi.fn(), clear: vi.fn() },
         flat: {} as FeedClients['flat'],
-        vulnerabilities: { forPackage: vi.fn<FeedClients['vulnerabilities']['forPackage']>(async () => ({ vulnerabilities: [], sourcesUnavailable: false })), clear: vi.fn() },
+        vulnerabilities: { forPackage: vi.fn<FeedClients['vulnerabilities']['forPackage']>(async () => ({ vulnerabilities: [], sourcesUnavailable: false })), vulnerableAmong: vi.fn<FeedClients['vulnerabilities']['vulnerableAmong']>(() => undefined), clear: vi.fn() },
         readme: { extract: vi.fn() },
         readmeImages: { fetch: vi.fn(async () => 'data:image/png;base64,AAAA'), clear: vi.fn() },
         offline: { metadata: vi.fn() },

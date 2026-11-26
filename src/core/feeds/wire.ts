@@ -7,6 +7,8 @@
  * known spelling so the clients can stay free of vendor branching.
  */
 
+import type { PackageDeprecation } from '../../protocol/domain';
+import { isValidPackageId } from '../cli/validate';
 import type { Logger } from '../contracts';
 import type { ResolvedSource } from './types';
 
@@ -60,6 +62,8 @@ export interface NuGetSearchEntry {
     LicenseUrl?: string;
     projectUrl?: string;
     ProjectUrl?: string;
+    /** The latest version's deprecation (`readDeprecation`). */
+    deprecation?: unknown;
 }
 
 /** NuGet search API response; nuget.org uses `data`, some servers `Data` or a root array. */
@@ -110,6 +114,8 @@ export interface NuGetRegistrationEntry {
     projectUrl?: string;
     iconUrl?: string;
     items?: NuGetRegistrationPage[];
+    /** The version's deprecation, on a catalog entry (`readDeprecation`). */
+    deprecation?: unknown;
 }
 
 /** A page in a registration index; pages may inline items or require a fetch via `@id`. */
@@ -329,4 +335,32 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function asString(value: unknown): string | undefined {
     return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
+/**
+ * A package version's deprecation as a search entry or a catalog entry sends it (the documented camelCase names only):
+ * `undefined` when there is none. The reason words are kept as sent, unknown ones included; a deprecation without a usable
+ * reason reads `Other`, as the NuGet documentation says, so `reasons` is never empty. An alternate package whose id is not
+ * a valid package id is dropped; its range is kept verbatim (UX-P5.2a, ADR-009 d.1).
+ */
+export function readDeprecation(value: unknown): PackageDeprecation | undefined {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+    const reasons = Array.isArray(value.reasons) ? value.reasons.filter((reason): reason is string => asString(reason) !== undefined) : [];
+    const deprecation: PackageDeprecation = { reasons: reasons.length > 0 ? reasons : ['Other'] };
+    const message = asString(value.message);
+    if (message) {
+        deprecation.message = message;
+    }
+    const alternate = value.alternatePackage;
+    const alternateId = isRecord(alternate) ? asString(alternate.id) : undefined;
+    if (isRecord(alternate) && alternateId && isValidPackageId(alternateId)) {
+        deprecation.alternatePackage = { id: alternateId };
+        const range = asString(alternate.range);
+        if (range) {
+            deprecation.alternatePackage.range = range;
+        }
+    }
+    return deprecation;
 }
