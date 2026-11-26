@@ -171,7 +171,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P0.13 (design-advisor ruling of 2026-10-24): every Appendix B rule of a P0 helper, and the five on P0.18.
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
         // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): the clause `panel-top`, hard since the item's CSS.
-        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard' });
+        // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): the clause `facts-banner`, pending on the item until its CSS.
+        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': { pending: 'P5.fix-7' } });
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -1223,8 +1224,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
         // UX-P3.10 push C: the details cells (follow-up 1, B), hard since UX-P3.10 push E.
         expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' });
-        // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only.
-        expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error'] });
+        // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only; UX-P5.fix-7 (design-advisor DO 6) adds the offline cell's warning.
+        expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error', 'main-details-offline'] });
         for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
             expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' });
         }
@@ -1962,6 +1963,18 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         // The transitive details have no tabs, and a list cell is outside the clause.
         expect(lineOf('main-transitive-details', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-transitive-details/panel-top')).toBeUndefined();
         expect(lineOf('main-installed-single', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-installed-single/panel-top')).toBeUndefined();
+    });
+
+    it('reads a banner of the details facts at the 20 px content inset with no inline padding (DS-INSET-4 facts-banner, UX-P5.fix-7)', () => {
+        const name = 'DS-INSET-4@main-details-offline/facts-banner';
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 40, padStart: 20, padEnd: 20 }] }), name))
+            .toMatchObject({ pass: false, status: { pending: 'P5.fix-7' }, value: 'facts banner 1: glyph at 40 from the pane (target 20, the details content inset); inline padding 20/20 (target 0)' });
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0 }] }), name)?.pass).toBe(true);
+        expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [] }), name))
+            .toMatchObject({ pass: false, value: 'not measurable (no banner in the details facts)' });
+        // Only the offline cell reads the clause; it also reads panel-top.
+        expect(lineOf('main-details-error', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0 }] }), 'DS-INSET-4@main-details-error/facts-banner')).toBeUndefined();
+        expect(lineOf('main-details-offline', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-details-offline/panel-top')?.pass).toBe(true);
     });
 
     it('reads a wrapped compact message leaf as body text, a one-line leaf at the row\'s 22 px (DS-TYPE-4 message-leaf)', () => {

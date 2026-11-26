@@ -192,6 +192,18 @@ hold.literals = {
         return { ...result, groups: [{ ...first, packageIds: first.packageIds.slice(0, half) },
             { ...first, sourceName: 'Fixture source', sourceUrl: 'https://fixture.invalid/v3/index.json', packageIds: first.packageIds.slice(half) }] };
     } },
+    // The host's package-cache answer when no allowed source produced metadata (Catalog.ts:548, offline.ts:83): the nuspec's
+    // fields alone, marked offline, vulnerabilities absent as when the data is unknown (UX-P5.fix-7, design-advisor DO 2,
+    // architecture-advisor ruling of 2026-11-26).
+    offline: { type: 'package/metadata', of: result => {
+        const live = result && result.metadata;
+        if (!live) return result;
+        const metadata = { id: live.id, version: live.version, description: live.description, authors: live.authors, dependencies: live.dependencies };
+        for (const key of ['license', 'licenseUrl', 'projectUrl']) {
+            if (live[key] !== undefined) metadata[key] = live[key];
+        }
+        return { ...result, metadata: { ...metadata, offline: true } };
+    } },
 };
 hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {
@@ -214,7 +226,7 @@ window.postMessage = function (data, ...rest) {
 
 type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
-type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty';
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline';
 
 /** Holds `type`'s envelopes; `'answer'` lets the provisional chunks of `installed/get` through and holds its answers (UX-P4.fix-23). */
 async function holdRequest(type: HeldType, hold: 'all' | 'answer' = 'all'): Promise<void> {
@@ -1218,6 +1230,23 @@ const REACH: Record<string, Reach> = {
             await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer', 60_000);
             await failHeld('main-details-error', 'The package source could not be read.');
             await until('document.querySelector(\'[data-testid="details-error"] button\') !== null', 'the inline error with Retry');
+        },
+        leave: endHold,
+    },
+    // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 3): Serilog's metadata answered as the package cache would.
+    'main-details-offline': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('package/metadata');
+            await selectRow('package-row-serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer', 60_000);
+            await rewriteHeld('main-details-offline', 'offline');
+            await until(`(() => {
+                const banners = [...document.querySelectorAll('[data-testid="package-details-panel"] .nuiget-details-info .nuiget-banner--warning')];
+                const text = banners.length === 1 ? (banners[0].querySelector('.nuiget-banner-text')?.textContent ?? '').trim() : '';
+                return text === 'Offline: no package source knows this version. These details come from the package cache on this machine.'
+                    && document.querySelector('[data-testid="details-progress"]') === null;
+            })()`, 'the offline warning over the cached facts');
         },
         leave: endHold,
     },

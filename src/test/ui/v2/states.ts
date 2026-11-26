@@ -108,6 +108,10 @@ export const pending = (name: string, surface: Surface, item: string, setup: str
 /** Live nuget.org content (download counts, newest versions, descriptions) that differs between runs. */
 const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs', liveList: true };
 const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', reason: 'nuget.org metadata (downloads, versions) changes between runs' };
+/** The details header: the version select and the installed row follow nuget.org versions (UX-P5.fix-7; UX-P5.fix-8 reuses it). */
+const LIVE_DETAILS_HEADER: Mask = { selector: '[data-testid="package-details-panel"] [data-testid="details-header"]', reason: 'the version select and the installed row follow nuget.org versions' };
+/** The facts under a banner of the details facts: package content read per run (UX-P5.fix-7); the banner itself stays unmasked. */
+const LIVE_DETAILS_FACTS: Mask = { selector: '[data-testid="package-details-panel"] .nuiget-details-info > :not(.nuiget-banner)', reason: 'the facts under the banner are package content read per run' };
 const LIVE_SUGGESTIONS: Mask = { selector: '[data-testid="search-suggestions"]', reason: 'nuget.org suggestions change between runs' };
 /** The search box of a state whose setup leaves the focus in it (UX-P0.15, design-advisor ruling). */
 const LIVE_CARET: Mask = { selector: '[data-testid="search-input"]', reason: 'the caret blinks and the selection differs between runs (H27)' };
@@ -332,6 +336,8 @@ export const STATES: readonly NamedState[] = [
         "Gateway listed, Serilog made current with its metadata held: the 2 px bar over the skeleton facts (marker details-progress); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-error', 'main', [primary('main')],
         "Serilog made current with its metadata released as a failure, one fixed sentence: the inline error with Retry (marker details-error).", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-details-offline', 'main', [primary('main')],
+        "Serilog made current with its metadata held and rewritten to the host's package-cache answer (offline, the nuspec's fields alone): the warning banner \"Offline: no package source knows this version. …\" first in the facts, at the details content inset; ended with the hold.", [LIVE_DETAILS_HEADER, LIVE_DETAILS_FACTS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-readonly', 'main', [primary('main')],
         "Serilog current on Gateway, then Utility chosen with its list held: the selection kept read-only under the stale note (marker details-readonly); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-unsupported', 'main', [primary('main')],
