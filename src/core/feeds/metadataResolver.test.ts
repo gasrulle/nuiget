@@ -107,6 +107,20 @@ describe('DefaultMetadataResolver.metadata', () => {
         expect(transport.requests.filter(request => request.method === 'HEAD').map(request => request.url)).toEqual(['https://b.example/flat/contoso.lib/1.0.0/contoso.lib.1.0.0.nupkg']);
     });
 
+    it('the details metadata keeps the catalog entry\'s deprecation beside the package size (UX-P5.2a)', async () => {
+        const transport = new FakeTransport(request => {
+            if (request.url === 'https://a.example/reg/contoso.lib/1.0.0.json') {
+                return json({ catalogEntry: { id: 'Contoso.Lib', version: '1.0.0', deprecation: { reasons: ['CriticalBugs'], alternatePackage: { id: 'Contoso.Next' } } } });
+            }
+            return request.method === 'HEAD' ? ok('', { 'content-length': '2048' }) : fail('http-error', 404);
+        });
+
+        await expect(resolver(transport).metadata([source('a')], 'Contoso.Lib', '1.0.0')).resolves.toMatchObject({
+            packageSize: 2048,
+            deprecation: { reasons: ['CriticalBugs'], alternatePackage: { id: 'Contoso.Next' } },
+        });
+    });
+
     it('fills packageSize from the flat container of the source that answered', async () => {
         const transport = new FakeTransport(request => {
             if (request.url === 'https://b.example/reg/contoso.lib/1.0.0.json') {

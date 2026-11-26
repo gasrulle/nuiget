@@ -875,6 +875,20 @@ describe('Catalog feed reads', () => {
         expect(rig.feeds.vulnerabilities.forPackage).toHaveBeenCalledWith([rig.resolvedOf(s1)], 'Lib', '1.0.0', signal);
     });
 
+    it('search and metadata answer the deprecation their clients report, unchanged (UX-P5.2a)', async () => {
+        const rig = feedRig({ listings: { [appDir]: [s1] } });
+        const legacy = { reasons: ['Legacy'], message: 'Use Next.', alternatePackage: { id: 'Next', range: '*' } };
+        rig.clients.search.search.mockResolvedValue({ results: [{ id: 'Lib', version: '2.0.0', versions: [], description: '', authors: '', deprecation: legacy }], sourcesUnavailable: false });
+        rig.clients.resolver.metadata.mockResolvedValue({ id: 'Lib', version: '1.0.0', description: '', authors: '', dependencies: [], sourceUrl: s1.url, deprecation: legacy });
+        rig.feeds.vulnerabilities.forPackage.mockResolvedValue({ vulnerabilities: [], sourcesUnavailable: false });
+        const { catalog } = catalogWith(rig);
+        const signal = new AbortController().signal;
+
+        const searched = await catalog.search(appDir, { query: 'lib', includePrerelease: false, take: 10 }, () => undefined, signal);
+        expect(searched.results[0].deprecation).toEqual(legacy);
+        await expect(catalog.metadata(appDir, 'Lib', '1.0.0', undefined, signal)).resolves.toMatchObject({ deprecation: legacy, vulnerabilities: [] });
+    });
+
     it('search: partitions the directory\'s sources into API, CLI fallback and excluded, runs the CLI in the directory and emits one metadata chunk before resolving', async () => {
         const plain = remote('plain');
         const down = remote('down');
