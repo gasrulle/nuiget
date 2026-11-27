@@ -560,7 +560,8 @@ become `skipped`; P5.0 bundles only the contracts of features still in scope.
 | P5.2a | ⚑ **F2: core deprecation and per-version flags** (G3, G4). The search response's latest-version deprecation; a registration read per enriched id for the installed version; per-version flags from the vulnerability resource; tests incl. "absent is unknown". (1 d) | core/feeds | backend tests green | — |
 | P5.2b | ⚑-design **F2: deprecation and remediation in the UI** (G3, G4, W5). Deprecated rows and details (reason, alternate), vulnerable versions marked in the version selector, update rows naming the advisory they fix. (1 d, UI) | rows, details, updates | G-UI | — |
 | P5.3a | **F3: Consolidate model** (G5). Version drift across projects under All Projects (central rows out, overrides in), through `ops/bulkUpdateAllProjects` with a version. (0.75 d) | store/allProjects | frontend tests green | — |
-| P5.3b | ⚑-design **F3: Consolidate view** (G5). The view (place decided by the design-advisor, closest to Visual Studio's Consolidate tab within the workbench look). (0.75 d, UI) | updates feature | G-UI | — |
+| P5.3b | ⚑-design **F3: Consolidate view** (G5). The view (place decided by the design-advisor, closest to Visual Studio's Consolidate tab within the workbench look). (0.75 d, UI; split 2026-11-27 by the planning session: the read-only tab and list here at 1 d, the pane and the write in P5.3c) | updates feature | G-UI | — |
+| P5.3c | ⚑-design **F3: Consolidate action** (G5). The details pane for a Consolidate row, the version choice, the "Consolidate..." button, the confirmation and the write through `ops/bulkUpdateAllProjects` (placed 2026-11-27 by the planning session from the design-advisor's UX-P5.3b ruling). (1 d, UI) | details, updates feature | G-UI | — |
 | P5.4 | **F7: sidebar vulnerability marks** (X19, X46, X57, X75, DP10). The sidebar renders the lite metadata it asks for (a vulnerability mark per row; no package icons in the 22 px compact rows of D47). (1 d, UI) | sidebar | G-UI | — |
 | P5.5 | **F8: precise navigation** (X17, X26). Folded into P4.2b by D49 (round 1: A): the sidebar's Enter needs the same route. | — | — | — |
 | P5.6 | **F4: promote a transitive package** (G6). A transitive row becomes a direct reference in a single project at its resolved version. (1 d, UI) | transitive, ops | G-UI; e2e on the e2e workspace | — |
@@ -729,7 +730,7 @@ Both are above 158 h.
 |---|---|---|---|---|
 | F1 Vulnerability truth | P5.1a, P5.1b | 1.5 | 3.0 | yes |
 | F2 Deprecation and remediation | P5.2a, P5.2b | 2 | 4.0 | yes |
-| F3 Consolidate | P5.3a, P5.3b | 1.5 | 3.0 | yes |
+| F3 Consolidate | P5.3a, P5.3b, P5.3c | 2.75 | 5.5 | yes (2026-11-27: P5.3c added by the planning session; the totals above are the 2026-10-23 figures) |
 | F7 Sidebar vulnerability marks | P5.4 | 1 | 2.0 | yes |
 | F4 Promote a transitive package | P5.6 | 1 | 2.0 | yes |
 | F5 Palette commands, category, keybinding | P5.7a, P5.7b | 1.5 | 3.0 | yes |
@@ -831,7 +832,7 @@ at P0.29.
 | P5.1a | G1, G2, H44 |
 | P5.1b | X24, V40 |
 | P5.2a, P5.2b | G3, G4, W5 |
-| P5.3a, P5.3b | G5 |
+| P5.3a, P5.3b, P5.3c | G5 |
 | P5.4 | X19, X46, X57, X75 |
 | P5.6 | G6 |
 | P5.7a | G7 |

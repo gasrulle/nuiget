@@ -184,6 +184,8 @@ Call the `Workflow` tool by name `design-judge` with `args`:
   never clean.** Zero `incomplete` states is required; zero `standing` findings of severity `blocking` is required once
   the plan's D37 date is recorded in the tracker; before that every `standing` finding is fixed or carries a pasted
   design-advisor ruling. `singleJudge` findings are informational.
+- The design-advisor may waive the judge step for an item that touched no named state (no cell moved, none added); its
+  waiver is pasted into the item's note before the closing commit, never after it (UX-P5.fix-10 closed first and asked after).
 - Write `docs/plans/judge-log/<ID>.json` in the format of `docs/design/judge-rubric.md` §9: every standing finding with
   a disposition (`fixed`, `refuted-by-measurement`, `accepted-as-design` with the ruling). Never edit the rubric.
 - If P0.1 recorded that the workflow does not resolve, use the fallback of plan §2.9: one `design-advisor`
