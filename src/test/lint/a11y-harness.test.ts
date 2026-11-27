@@ -3,7 +3,7 @@ import axe from 'axe-core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, FEEDBACK_STATUS, feedbackLines, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_BREATHE_MS, MOTION_ON, type MotionOnFacts, motionOnLines, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
+import { acceptedSelectors, acceptedTargetSelectors, ARIA_SNAPSHOT, CONTRAST_PENDING, CONTRAST_STATUS, type ContrastPair, type ContrastRun, LAYER_SELECTOR, momentLines, MOMENTS, pairContrast, type Resolved, RESOLVE_CONTRAST, resolvedLines, RUN_CONTRAST, TEXTS_UNDER, type AriaNode, ariaLine, ariaLineFor, ariaSnapshot, AXE_ACCEPTED, AXE_EXTRA_RULES, AXE_PENDING, type AxeRule, axeLines, compareAria, DESCRIBE_FOCUS, type FocusFacts, focusLine, FULL_AXE_RULE, FULL_AXE_STATUS, type FullAxe, KEYS_AWAITING_ARIA, KEYS_EXPECTED, KEYS_PENDING, KEYS_STATUS, KEYS_TREE_TAIL, FEEDBACK_STATUS, feedbackLines, FOCUS_CLICK_STATUS, focusClickLine, type FocusClickReading, ringPresent, keysLines, LIVE_EXPECTED, liveLines, maskDigits, MOTION_BREATHE_MS, MOTION_ON, type MotionOnFacts, motionOnLines, MOTION_STATUS, type MotionFacts, motionLines, motionRootLines, MOTION_STATES, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, showsRing, treeTail } from '../ui/v2/a11y';
 import type { Mask } from '../ui/v2/states';
 import { trackerStatuses } from '../../../scripts/check-design-tokens.mjs';
 
@@ -258,6 +258,31 @@ describe('the accessibility harness (UX-P0.23)', () => {
         expect(ariaLineFor('main-updates', snapshot, snapshot)).toBe('[aria] main-updates: 1 nodes, equal');
         expect(ariaLineFor('main-updates', snapshot, { state: 'main-updates', lines: ['listbox "Installed"'] }))
             .toBe('[aria] main-updates: 1 nodes, differs (-1 +1; first removed: listbox "Installed"; first added: listbox "Updates")');
+    });
+    it('reads DS-FOCUS-3 after a click as a ring present or absent against its target, failing only once hard (UX-P5.fix-10)', () => {
+        // Pending on the item until its CSS (design-advisor opening ruling and follow-up 1 of 2026-11-27).
+        expect(FOCUS_CLICK_STATUS).toEqual({ pending: 'P5.fix-10' });
+        const ring: FocusClickReading = { kind: 'button', testid: 'select-all-button', focusVisible: false, width: 1, style: 'solid', colour: 'rgb(0, 120, 212)', offset: 2 };
+        const none: FocusClickReading = { ...ring, width: 0, style: 'none' };
+        const target = { colour: '#0078d4', offset: 2, present: true };
+        expect(ringPresent(ring, target)).toBe(true);
+        expect(ringPresent(none, target)).toBe(false);
+        // A dotted selection line or another offset is not the ring.
+        expect(ringPresent({ ...ring, style: 'dotted' }, target)).toBe(false);
+        expect(ringPresent({ ...ring, offset: -1 }, target)).toBe(false);
+        expect(focusClickLine('main button classic', none, target)).toEqual({
+            line: '[probe] DS-FOCUS-3 main button classic: button {select-all-button}, focus-visible false, outline 0 none rgb(0, 120, 212) offset 2: ring absent (target present: 1 solid #0078d4 offset 2) (pending P5.fix-10)',
+            failure: undefined,
+        });
+        expect(focusClickLine('main button classic', none, target, 'hard').failure).toContain('ring absent (target present');
+        expect(focusClickLine('main button classic', ring, target, 'hard').failure).toBeUndefined();
+        // An absent target passes on no ring and fails on the ring; nothing focused reads as such.
+        expect(focusClickLine('sidebar row modern', ring, { ...target, present: false }, 'hard').failure).toBeDefined();
+        const body: FocusClickReading = { kind: 'body', testid: null, focusVisible: false, width: 0, style: 'none', colour: '', offset: 0 };
+        expect(focusClickLine('sidebar row modern', body, { ...target, present: false }, 'hard')).toEqual({
+            line: '[probe] DS-FOCUS-3 sidebar row modern: body, focus-visible false, no focused element: ring absent (target absent: 1 solid #0078d4 offset 2) (hard)',
+            failure: undefined,
+        });
     });
     it('holds the keyboard walks and the motion check hard, and never presses an Enter that writes (UX-P0.24, UX-P4.5)', () => {
         expect(KEYS_STATUS).toBe('hard');

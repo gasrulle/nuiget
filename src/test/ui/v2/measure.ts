@@ -782,6 +782,8 @@ export const RULES: readonly RuleDefinition[] = [
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     // UX-P5.fix-2 (DO 2-3): clause `dialog-focus`, the focused control of a main-panel dialog, hard since the item's CSS (reading run
     // 45039657035: uninstall-dialog ringed, the other five none).
+    // UX-P5.fix-10: clause `controls` and the side bar branch are read by the capture suite's probe `DS-FOCUS-3 after a click`
+    // (`FOCUS_CLICK_STATUS` in a11y.ts), not here: no reach ends on a clicked control that keeps the focus.
     rule('DS-FOCUS-3', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', 'dialog-focus': 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': MAIN_DIALOG_FOCUS_STATES }, states: ['main-installed-details', 'main-updates', ...MAIN_DIALOG_FOCUS_STATES] }),
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),

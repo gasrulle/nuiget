@@ -14,7 +14,7 @@ import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_PARTS, type MatrixPart, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, FOCUS_CLICK_STATUS, type FocusClickReading, type FocusClickTarget, focusClickLine, READ_FOCUS_CLICK, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -3303,6 +3303,99 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await read('sidebar right-click', enterSidebarWebview, async () => driverOf().actions().contextClick(await optionOf('package-row-serilog')).perform());
             }
             await leaveWebview();
+        });
+    }
+
+    // UX-P5.fix-10 (design-advisor opening ruling and follow-up 1 of 2026-11-27): DS-FOCUS-3 after a pointer click, read by a
+    // probe since no reach ends on a clicked control that keeps the focus. The main panel (an editor surface) rings after a click
+    // in both looks: Select All (a text button) and Sources (an icon button, after its dialog was opened and closed by pointer).
+    // The side bar rings after a click in the classic look only: a row, and a pointer-opened dialog's initial focus. After the
+    // walks and the row menu, since the side bar click makes Serilog its list's tab stop. No key before a reading (a key puts
+    // Chromium in keyboard modality), never Confirm, never Enter on a row.
+    if (LANE === 'ui' || LANE === 'floor') {
+        describe('DS-FOCUS-3 after a click (UX-P5.fix-10)', () => {
+            afterEach(async function () {
+                this.timeout(120_000);
+                await driverOf().actions().clear();
+                // What the probe opened is closed, the bulk set it made emptied, whichever step it stopped at.
+                const steps: Array<[string, () => Promise<void>]> = [
+                    ['the side bar dialog', async () => {
+                        await leaveWebview();
+                        await enterSidebarWebview();
+                        if ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length > 0) {
+                            await cancelDialog();
+                        }
+                    }],
+                    ['the main panel', async () => {
+                        await leaveWebview();
+                        await enterMainWebview();
+                        if ((await driverOf().findElements(By.css('[data-testid="source-settings-modal"]'))).length > 0) {
+                            await (await driverOf().findElement(By.css('[data-testid="source-settings-modal"] .nuiget-dialog-header .nuiget-icon-button'))).click();
+                            await waitForTestIdGone('source-settings-modal', 10_000);
+                        }
+                        if (await script<boolean>('const b = document.querySelector(\'[data-testid="select-all-button"]\'); return b !== null && b.getAttribute("aria-pressed") === "true";')) {
+                            await clickVisible('select-all-button');
+                        }
+                    }],
+                ];
+                for (const [what, step] of steps) {
+                    await step().catch(error => console.warn(`[probe] DS-FOCUS-3 restore of ${what}: ${error instanceof Error ? error.message : String(error)}`));
+                }
+                await leaveWebview();
+            });
+
+            it('DS-FOCUS-3 after a click (UX-P5.fix-10)', async function () {
+                this.timeout(300_000);
+                // VS Code 1.90 (the floor) has no Modern UI: its side bar is the classic look's.
+                const sidebarRings = LOOK === 'classic' || LANE === 'floor';
+                const failures: string[] = [];
+                const read = async (where: string, target: (colours: { focus: string; list: string }) => FocusClickTarget, testid?: string): Promise<void> => {
+                    const { reading, focus, list } = await script<{ reading: FocusClickReading; focus: string; list: string }>(READ_FOCUS_CLICK);
+                    if (reading.kind === 'body' || (testid !== undefined && reading.testid !== testid)) {
+                        notReachable(`${where}: the focus is on ${reading.kind}${reading.testid ? ` {${reading.testid}}` : ''}, not {${testid ?? 'a control'}}`);
+                    }
+                    const verdict = focusClickLine(`${where} ${LOOK}`, reading, target({ focus, list }));
+                    console.warn(verdict.line);
+                    if (verdict.failure !== undefined) {
+                        failures.push(verdict.failure);
+                    }
+                };
+                await driverOf().actions().clear();
+                await freshMainPanel();
+                await gatewayInstalled();
+                // a. A text button: Select All, pressed and released again.
+                if (await script<boolean>('return document.querySelector(\'[data-testid="select-all-button"]\').disabled;')) {
+                    notReachable('Select All is disabled on Gateway');
+                }
+                await clickVisible('select-all-button');
+                await until('document.querySelector(\'[data-testid="select-all-button"]\').getAttribute("aria-pressed") === "true"', 'Select All pressed', 10_000);
+                await read('main button', colours => ({ colour: colours.focus, offset: 2, present: true }), 'select-all-button');
+                await clickVisible('select-all-button');
+                await until('document.querySelector(\'[data-testid="select-all-button"]\').getAttribute("aria-pressed") === "false"', 'Select All released', 10_000);
+                // b. An icon button: Sources, its dialog opened and closed by pointer (the close returns the focus to it).
+                await clickVisible('source-settings');
+                await findByTestId('source-settings-modal', 10_000);
+                await (await driverOf().findElement(By.css('[data-testid="source-settings-modal"] .nuiget-dialog-header .nuiget-icon-button'))).click();
+                await waitForTestIdGone('source-settings-modal', 10_000);
+                await read('main icon-button', colours => ({ colour: colours.focus, offset: -1, present: true }), 'source-settings');
+                // b2. Refresh disables itself while it runs: where the focus goes, unasserted (follow-up 1, DO 5; a planning row).
+                await clickVisible('refresh-button');
+                await until('!document.querySelector(\'[data-testid="refresh-button"]\').disabled && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") !== "true"', 'Refresh enabled again and the list settled', 120_000);
+                const after = await script<{ reading: FocusClickReading }>(READ_FOCUS_CLICK);
+                console.warn(`[probe] focus after Refresh ${LOOK}: ${after.reading.kind}${after.reading.testid ? ` {${after.reading.testid}}` : ''}`);
+                // c. A side bar row, clicked.
+                await sidebarSections();
+                await (await driverOf().findElement(By.css('[data-testid="sidebar-installed-list"] [data-testid="package-row-serilog"] .nuiget-row-option'))).click();
+                await read('sidebar row', colours => ({ colour: colours.list, offset: -1, present: sidebarRings }), 'package-row-serilog');
+                // d. A side bar dialog opened by pointer (Update All); its initial focus follows the side bar's branch.
+                await REACH['sidebar-update-all-dialog'].reach();
+                await read('sidebar dialog', colours => ({ colour: colours.focus, offset: 2, present: sidebarRings }));
+                await cancelDialog();
+                await leaveWebview();
+                if (FOCUS_CLICK_STATUS === 'hard' && failures.length > 0) {
+                    throw new Error(failures.join('\n'));
+                }
+            });
         });
     }
 

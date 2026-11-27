@@ -1162,3 +1162,82 @@ export function momentLines(moment: Moment, theme: string, facts: MomentFacts, s
     }
     return { lines, failures };
 }
+
+// ---- UX-P5.fix-10: DS-FOCUS-3 after a pointer click, outside a dialog and in the side bar ------------------------------
+
+/**
+ * The probe's status (design-advisor opening ruling and follow-up 1 of 2026-11-27): the clause `controls` and the side bar
+ * branch of DS-FOCUS-3 are read by the capture suite's probe `DS-FOCUS-3 after a click`, not in a cell, since no reach ends on
+ * a clicked control that keeps the focus.
+ */
+export const FOCUS_CLICK_STATUS: RuleStatus = { pending: 'P5.fix-10' };
+
+/** What the probe reads from the active element of a webview after a WebDriver click. */
+export interface FocusClickReading {
+    /** The role, else the tag name, of the active element; `body` when nothing holds the focus. */
+    kind: string;
+    /** The nearest `data-testid` at or above the active element. */
+    testid: string | null;
+    focusVisible: boolean;
+    width: number;
+    style: string;
+    colour: string;
+    offset: number;
+}
+
+/** The ring the probe expects: 1 px solid in `colour` at `offset`, and whether it is to be present. */
+export interface FocusClickTarget {
+    colour: string;
+    offset: number;
+    present: boolean;
+}
+
+/** Reads the active element as a `FocusClickReading`, with the two ring colours the probe compares it with. */
+export const READ_FOCUS_CLICK = `
+const el = document.activeElement;
+const swatch = document.createElement('span');
+document.body.appendChild(swatch);
+swatch.style.color = 'var(--nuiget-color-focus)';
+const focus = getComputedStyle(swatch).color;
+swatch.style.color = 'var(--nuiget-color-list-focus-outline)';
+const list = getComputedStyle(swatch).color;
+swatch.remove();
+if (!el || el === document.body || el === document.documentElement) {
+    return { reading: { kind: 'body', testid: null, focusVisible: false, width: 0, style: 'none', colour: '', offset: 0 }, focus, list };
+}
+const style = getComputedStyle(el);
+const owner = el.closest('[data-testid]');
+return {
+    reading: {
+        kind: el.getAttribute('role') || el.tagName.toLowerCase(),
+        testid: owner ? owner.getAttribute('data-testid') : null,
+        focusVisible: el.matches(':focus-visible'),
+        width: Number.parseFloat(style.outlineWidth) || 0,
+        style: style.outlineStyle,
+        colour: style.outlineColor,
+        offset: Number.parseFloat(style.outlineOffset) || 0,
+    },
+    focus,
+    list,
+};
+`;
+
+const sameRgba = (a: string, b: string): boolean => {
+    const [x, y] = [parseCssColor(a), parseCssColor(b)];
+    return x !== null && y !== null && x.r === y.r && x.g === y.g && x.b === y.b && Math.abs(x.a - y.a) <= 0.01;
+};
+
+/** Whether the reading shows the target's ring: 1 px solid in its colour at its offset. */
+export const ringPresent = (reading: FocusClickReading, target: FocusClickTarget): boolean =>
+    reading.style === 'solid' && Math.abs(reading.width - 1) <= 0.25 && sameRgba(reading.colour, target.colour) && Math.abs(reading.offset - target.offset) <= 0.25;
+
+/**
+ * One `[probe] DS-FOCUS-3 <where>` line: the reading, whether the ring is present, and the target. A reading against its
+ * target fails only once `status` is `hard`.
+ */
+export function focusClickLine(where: string, reading: FocusClickReading, target: FocusClickTarget, status: RuleStatus = FOCUS_CLICK_STATUS): { line: string; failure: string | undefined } {
+    const present = ringPresent(reading, target);
+    const outline = reading.kind === 'body' ? 'no focused element' : `outline ${reading.width} ${reading.style} ${reading.colour} offset ${reading.offset}`;
+    const line = `[probe] DS-FOCUS-3 ${where}: ${reading.kind}${reading.testid ? ` {${reading.testid}}` : ''}, focus-visible ${reading.focusVisible}, ${outline}: ring ${present ? 'present' : 'absent'} (target ${target.present ? 'present' : 'absent'}: 1 solid ${target.colour} offset ${target.offset}) (${statusText(status)})`;
+    return { line, failure: status === 'hard' && present !== target.present ? line : undefined };
+}
