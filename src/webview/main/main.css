@@ -324,8 +324,16 @@ body {
 /* A Consolidate row's Projects section leads the Details tab panel at the content inset in every metadata state; the next block keeps its own 20 (UX-P5.3c, DS-INSET-4 lead). */
 .nuiget-details-lead {
     --nuiget-details-section-gap: 0;
+    /* "Not Changed" at the section's caption step: 8 to its list, 16 below the Projects list (UX-P5.3c, judge D2). */
+    --nuiget-details-block-gap: var(--nuiget-space-4);
+    --nuiget-details-block-start: var(--nuiget-space-4);
     padding: var(--nuiget-inset-details) var(--nuiget-inset-details) 0;
     overflow-wrap: anywhere;
+}
+
+/* A held reference's reason on its own line under its version (UX-P5.3c, judge D1). */
+.nuiget-details-lead .nuiget-details-note {
+    display: block;
 }
 
 /* The dependency groups stack at the compact row height. */
@@ -350,8 +358,8 @@ body {
 .nuiget-details-block {
     display: flex;
     flex-direction: column;
-    gap: var(--nuiget-space-2);
-    margin-top: var(--nuiget-space-2);
+    gap: var(--nuiget-details-block-gap, var(--nuiget-space-2));
+    margin-top: var(--nuiget-details-block-start, var(--nuiget-space-2));
 }
 
 .nuiget-details-list {
