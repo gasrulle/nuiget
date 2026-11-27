@@ -175,9 +175,9 @@
   },
   "main-installed-busy.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44428362148",
-    "sha256": "bc15346097e3a2b8385ef1053439cb0f04349c7c7066f6564704711b4dbb95fa",
-    "sidecarSha256": "1cfc12a863338f164a29bbc3f6668c5561ac8675ca081e8f00ac778fe1fc80ed"
+    "run": "46054996779",
+    "sha256": "ba888deca251c8a24807eaf292d1adad5b5c223a78766de7344f7ad489b8e7d1",
+    "sidecarSha256": "11285d5049b1246d2c09a0a6da066f9fc19cdf75933c9a736e53efac3dec1740"
   },
   "main-installed-cpm.dark-modern.1200.png": {
     "status": "approved",
@@ -563,6 +563,12 @@
     "sha256": "44549ae9f39ec920038a94a4d26943472bc92aaf2badbcd91e5c7877bcf1f7ef",
     "sidecarSha256": "8cc4638e5a11e2b0cbec1d951bc82102834ef36a7755ab4f536484cb543a1280"
   },
+  "main-updates-vulnerable.dark-modern.1200.png": {
+    "status": "approved",
+    "run": "46054996779",
+    "sha256": "58c09309c69756446f9891f65fefb4055802db63d1b40c35a8b6ff295b5363aa",
+    "sidecarSha256": "5549302170f17fe945d541bb99181aad078c682455d043d6ce68da479151aa51"
+  },
   "main-updates.dark-modern.1200.png": {
     "status": "approved",
     "run": "43776489839",
@@ -664,6 +670,18 @@
     "run": "44263173962",
     "sha256": "73ccbbcc4010c90bb06d034e6c6442c2943b5babe54ffffe51a70f6c227b999c",
     "sidecarSha256": "6e0c7ec48cb222df1897d04fef6ed4fb82875e86460642e976a90645b08aa80a"
+  },
+  "sidebar-installed-busy.dark-modern-classic.300.png": {
+    "status": "approved",
+    "run": "46054996779",
+    "sha256": "bf91973a9d3c1b28400ff3d3f44bf6f8b8a9f8b6cb6828a1657fccdc019aa2f6",
+    "sidecarSha256": "f25307ff9cbcde00c69100cd86161b7057c686a6ddb37adde41eed5fd76f6e70"
+  },
+  "sidebar-installed-busy.dark-modern.300.png": {
+    "status": "approved",
+    "run": "46054996779",
+    "sha256": "0ed382cfc74bbc87ee96021c1194f20b9aee3d634d9afffa41e340daa5f13f08",
+    "sidecarSha256": "b4e10166200f3004239b7d80893579a13bdbc85650de998f5a6e3be0620766af"
   },
   "sidebar-installed-loading.dark-modern.300.png": {
     "status": "approved",

@@ -1,0 +1,107 @@
+{
+  "item": "P5.fix-5",
+  "runs": [
+    {
+      "runId": "46054996779",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "537499e0 (push 1)",
+      "look": "modern",
+      "workflow": "wf_0faff3ab-fcb",
+      "mode": "screen",
+      "note": "The three cells against the references earlier judge logs used (none has an artboard): main-installed-busy and sidebar-installed-busy against main-installed-all.dark-modern.1200 (P3.10, P3.11), main-updates-vulnerable against main-updates.dark-modern.1200. The workflow refuses duplicate state names, so the classic side bar crop is its own run.",
+      "captures": {
+        "main-installed-busy": {
+          "png": "captures/46054996779/ui-screenshots/main-installed-busy.dark-modern.1200.png",
+          "sha256": "ba888deca251c8a24807eaf292d1adad5b5c223a78766de7344f7ad489b8e7d1",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-updates-vulnerable": {
+          "png": "captures/46054996779/ui-screenshots/main-updates-vulnerable.dark-modern.1200.png",
+          "sha256": "58c09309c69756446f9891f65fefb4055802db63d1b40c35a8b6ff295b5363aa",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "9b13678b307052ca7203e8aaf342239f50f701a6ffbdec7cf52d6dc38e5993ef"
+        },
+        "sidebar-installed-busy": {
+          "png": "captures/46054996779/ui-screenshots/sidebar-installed-busy.dark-modern.300.png",
+          "sha256": "0ed382cfc74bbc87ee96021c1194f20b9aee3d634d9afffa41e340daa5f13f08",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 1,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "geometry-1",
+          "state": "main-updates-vulnerable",
+          "finding": "In the Newtonsoft.Json row, which carries the High severity badge, the name line sits 1 px higher and the version line 1 px lower than in every other row. Pixel scan, offsets from each row's top: name cap 21 vs 22 and facts 42 vs 41 in the other eight rows (bands start at 155 + 72k). The 20 px badge makes line 1 taller than the 20 px name-and-badges box, so this row's two-line text block no longer matches the rhythm of its neighbours or the artboard's rows.",
+          "severity": "minor",
+          "rule": "DS-ROW-1",
+          "disposition": "refuted-by-measurement",
+          "reason": "DS-ROW-1@main-updates-vulnerable reads \"centre offsets 0 ×28; lines 2 ×14\" (hard, tolerance 1) in run 46054996779; the refuter reads the 1 px shift as within DS-ROW-1. docs/plans/handoff/P5.fix-5.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-27 (DO 4)."
+        }
+      ]
+    },
+    {
+      "runId": "46054996779",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "537499e0 (push 1)",
+      "look": "classic",
+      "workflow": "wf_a9e82b3d-c9e",
+      "mode": "screen",
+      "note": "The classic side bar busy crop against main-installed-all.dark-modern-classic.1200.",
+      "captures": {
+        "sidebar-installed-busy": {
+          "png": "captures/46054996779/ui-screenshots/sidebar-installed-busy.dark-modern-classic.300.png",
+          "sha256": "bf91973a9d3c1b28400ff3d3f44bf6f8b8a9f8b6cb6828a1657fccdc019aa2f6",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 3,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "sidebar-installed-busy#D1",
+          "state": "sidebar-installed-busy",
+          "finding": "[native] In the Installed pane the row Microsoft.Extensions.AI.Abstractions shows its version cut to a lone \"9\" with no ellipsis, while its neighbours either keep the whole version (Microsoft.Extensions.Http 8.0.1) or collapse it and ellipsize the name. The clipped digit reads as version 9, unlike the native tree's clean truncation and against DS-ROW-5 (in a compact row the version collapses or ellipsizes before the name). | [geometry] In the Installed row Microsoft.Extensions.AI.Abstractions, the version is cut to a lone \"9\" (x 262-268) with no ellipsis, although about 31 px of the row stays empty after it. DS-ROW-5 says a compact row's version either collapses behind the name or ellipsizes, and that no child of the line is sliced. The neighbouring rows collapse their versions correctly. The same row in the Updates list shows the same cut \"9\". | [states] In the Installed pane, the compact row Microsoft.Extensions.AI.Abstractions shows its version as a bare '9' cut off at the end of the text column with no ellipsis. A version string is never just '9', so the text is clipped, not collapsed or ellipsized. DS-ROW-5 says a compact row's version collapses or ellipsizes before the name, and the sibling rows (Microsoft.Extensions.Configuration..., Microsoft.Extensions.Options.Confi...) do ellipsize.",
+          "severity": "major",
+          "box": [
+            200,
+            144,
+            74,
+            16
+          ],
+          "rule": "DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "planning row before P5.4: DS-ROW-5 compact-version clause, then the primitives.css fix (GOLDEN ruling DO 5)",
+          "evidence": "Fixed by the planning row the GOLDEN ruling orders before P5.4: a DS-ROW-5 clause for compact rows (a shown compact version is whole, zero-wide, or cut with its ellipsis drawn) that fails on the current classic captures, then the CSS fix in primitives.css (`.nuiget-row--compact .nuiget-row-version`) by its own ⚑-design brief. Present in golden sidebar-hover.dark-modern-classic.300.png at 262,146; not introduced by UX-P5.fix-5.",
+          "ruling": "docs/plans/handoff/P5.fix-5.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-27 (DO 4 and 5)"
+        }
+      ]
+    }
+  ]
+}
