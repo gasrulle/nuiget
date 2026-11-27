@@ -293,7 +293,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner' | 'advisories';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner' | 'advisories' | 'check-labels' | 'form-message';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -472,6 +472,8 @@ export const FACTS_BANNER_STATES: readonly string[] = ['main-details-offline', '
  * advisories; an advisory line's glyph and colour role follow the row badge's severity mapping.
  */
 export const ADVISORY_STATES: readonly string[] = ['main-installed-details'];
+/** DS-COPY-3, DS-COLOR-6 `check-labels` and DS-INSET-1 `form-message` (UX-P5.fix-9): the add-source form after an invalid submit. */
+export const SOURCE_FORM_STATES: readonly string[] = ['main-sources-add-invalid'];
 
 /**
  * The main states whose search box is empty, where DS-OVERFLOW-2's `placeholder` scope reads the main box (UX-P3.fix-15); the
@@ -643,7 +645,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES] }),
     // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
     // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'] } }),
+    // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `form-message`, the add form's message at the field's edge.
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard', 'form-message': { pending: 'P5.fix-9' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'], 'form-message': SOURCE_FORM_STATES } }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -699,7 +702,8 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P2.3 and UX-P2.4 (design trigger 6): DS-RADIUS-1 reads the buttons and the inputs.
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `icon-buttons` read in the side bar too, and `labels`, the disabled-label clause (design trigger 6).
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'] } }),
+    // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `check-labels`, a disabled dialog check box's label.
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard', 'check-labels': { pending: 'P5.fix-9' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'], 'check-labels': SOURCE_FORM_STATES } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -757,10 +761,12 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-ROW-4', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' },
+        // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `check-labels`, a dialog check box's label and description.
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard', 'check-labels': { pending: 'P5.fix-9' } },
+        scopeStates: { 'check-labels': SOURCE_FORM_STATES },
         // UX-P3.10 (follow-up 1, F3): the side bar's All Projects trees read their message leaves, in their pinned cells only: the unpinned
         // sidebar-all-projects shows 0 to 2 leaves by window height and has no subject (UX-P3.fix-21).
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|offline|^main-details-deprecated$|nomatch|-all$|^sidebar-all-projects-(updates|tools)$/, exceptStates: POPUP_CELL_STATES,
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|offline|^main-details-deprecated$|^main-sources-add-invalid$|nomatch|-all$|^sidebar-all-projects-(updates|tools)$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
@@ -891,7 +897,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22, DO 2b): the focused control of a main-panel dialog.
             return ['chrome', 'layers', 'labels', 'dialog-text', 'dialog-list', 'dialog-focus'];
         case 'sources':
-            return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text', 'dialog-focus'];
+            // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): a dialog's check box labels and the add form's messages.
+            return ['chrome', 'controls', 'text-buttons', 'icon-buttons', 'dialog-text', 'dialog-focus', 'check-labels', 'form-message'];
         // UX-P3.10 push A (design-advisor opening ruling of 2026-11-14, DO 4): the side bar's icon buttons, disabled labels, compact
         // skeleton bars and compact message leaves.
         case 'sidebar':
@@ -1369,6 +1376,10 @@ export interface StateCells {
      * The details pane's advisory lines (DS-STATE-4 `advisories`, UX-P5.2b): each line's severity word, its glyph's codicon and
      * computed colour; and the computed colours of the three problems levels.
      */
+    /** Each visible check box of an open dialog outside a list row (UX-P5.fix-9): its label's text, its descriptions, whether it is disabled, the label's colour and opacity. */
+    dialogCheckLabels?: Array<{ label: string; described: string[]; disabled: boolean; colour: string; opacity: string }>;
+    /** Each visible banner of the add-source form (UX-P5.fix-9): its glyph's left from the URL field's left, and its computed padding. */
+    formMessages?: Array<{ start: number; pad: string }>;
     detailsAdvisories?: { lines: Array<{ word: string; codicon: string | null; colour: string }>; colours: { error: string; warning: string; info: string } };
     detailsFactsBanner?: Array<{ start: number; padStart: number; padEnd: number; top: number; padTop: number; padBottom: number; below?: number | null; inner?: number[] }>;
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
@@ -2369,6 +2380,20 @@ const stateCells = {
                     const style = getComputedStyle(first);
                     const panelTop = rectOf(panel).top;
                     return { first: round(rectOf(first).top + px(style.borderTopWidth) + px(style.paddingTop) - panelTop), underStrip: round(panelTop - rectOf(strip).bottom) };
+                })(),
+                // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): a dialog's check boxes and the add form's messages.
+                dialogCheckLabels: [...document.querySelectorAll('.nuiget-dialog input[type="checkbox"]')].filter(box => visible(box) && !box.closest('.nuiget-source-row, .nuiget-multi-install')).map(box => {
+                    const wrap = box.closest('label');
+                    const label = wrap || (box.id ? document.querySelector('label[for="' + CSS.escape(box.id) + '"]') : null);
+                    const described = (box.getAttribute('aria-describedby') || '').split(' ').filter(Boolean).map(id => document.getElementById(id)).filter(el => el !== null).map(el => el.textContent.trim());
+                    const style = label ? getComputedStyle(label) : null;
+                    return { label: label ? label.textContent.trim() : '', described, disabled: box.disabled, colour: style ? style.color : '', opacity: style ? style.opacity : '' };
+                }),
+                formMessages: (() => {
+                    const panel = document.querySelector('[data-testid="add-source-panel"]');
+                    const field = document.querySelector('[data-testid="add-source-url"]');
+                    if (!panel || !field) return [];
+                    return [...panel.querySelectorAll('.nuiget-banner')].filter(visible).map(banner => ({ start: round(rectOf(banner.querySelector('.nuiget-banner-icon') || banner).left - rectOf(field).left), pad: getComputedStyle(banner).padding }));
                 })(),
                 // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 9): the details pane's advisory lines.
                 detailsAdvisories: (() => {
@@ -4563,12 +4588,45 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner')) || (definition.id === 'DS-STATE-4' && scope === 'advisories');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner')) || (definition.id === 'DS-STATE-4' && scope === 'advisories') || ((definition.id === 'DS-COPY-3' || definition.id === 'DS-COLOR-6') && scope === 'check-labels') || (definition.id === 'DS-INSET-1' && scope === 'form-message');
     if (!own) {
         return undefined;
     }
     if (cells.clauseError !== undefined) {
         return notMeasurable(`collector: ${cells.clauseError}`);
+    }
+    // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1).
+    if (definition.id === 'DS-COPY-3' && scope === 'check-labels') {
+        const boxes = cells.dialogCheckLabels ?? [];
+        if (boxes.length === 0) {
+            return notMeasurable('no check box in a dialog');
+        }
+        const off = boxes.flatMap(box => [
+            ...(box.label.endsWith('.') || box.label.includes(':') ? [`label "${box.label}"`] : []),
+            ...box.described.filter(text => !text.endsWith('.')).map(text => `description "${text}"`),
+        ]);
+        return { value: `check box labels ${boxes.length}: ${off.length === 0 ? 'no period or colon; descriptions end with a full stop' : off.join('; ')}`, pass: off.length === 0 };
+    }
+    if (definition.id === 'DS-COLOR-6' && scope === 'check-labels') {
+        const disabled = (cells.dialogCheckLabels ?? []).filter(box => box.disabled);
+        if (disabled.length === 0) {
+            return notMeasurable('no disabled check box');
+        }
+        const target = layout.endOfP0.iconColours.disabled;
+        return {
+            value: `disabled check box labels ${disabled.length}: colour ${tally(disabled.map(box => box.colour))}, opacity ${tally(disabled.map(box => box.opacity))} (target ${target}, 1)`,
+            pass: disabled.every(box => box.colour === target && box.opacity === '1'),
+        };
+    }
+    if (definition.id === 'DS-INSET-1' && scope === 'form-message') {
+        const messages = cells.formMessages ?? [];
+        if (messages.length === 0) {
+            return notMeasurable('no form message');
+        }
+        return {
+            value: `form messages ${messages.length}: glyph ${tally(messages.map(message => message.start))} from the field edge (target 0); padding ${tally(messages.map(message => message.pad))} (target 0px)`,
+            pass: messages.every(message => near(message.start, 0, tolerance) && message.pad === '0px'),
+        };
     }
     if (definition.id === 'DS-COLOR-6') {
         const labels = cells.disabledLabels ?? [];

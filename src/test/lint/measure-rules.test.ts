@@ -96,7 +96,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const grid2b = Object.fromEntries(Object.entries(asGrid1).filter(([scope]) => scope !== 'browse' && scope !== 'dialogs' && scope !== 'sources'));
         expect(scopes('DS-GRID-2b')).toEqual({ 'main-installed': 'hard', ...grid2b });
         // UX-P3.10 push A (DO 4) and push D: the skeleton clauses, hard since UX-P3.10 push E.
-        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard' });
+        // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): the add form's message, pending on the item until its CSS.
+        expect(scopes('DS-INSET-1')).toEqual({ 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard', 'form-message': { pending: 'P5.fix-9' } });
         expect(scopes('DS-INSET-2')).toEqual({ toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' });
         // UX-P0.11: PF-3b and PF-5 hard where P9.fix-3 and P9.fix-5 measured; the heights pending on Appendix B's items.
         const mainHard = () => ({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -123,7 +124,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-HEIGHT-9')).toEqual({ ...mainHard(), dialogs: 'hard', sources: 'hard' });
         expect(scopes('DS-RADIUS-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' });
         // UX-P3.10 push A (DO 4): the disabled-label and icon-button scopes, hard since UX-P3.10 push E.
-        expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard' });
+        // UX-P5.fix-9 (DO 1): a disabled dialog check box's label, pending on the item until its CSS.
+        expect(scopes('DS-COLOR-6')).toEqual({ 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard', 'check-labels': { pending: 'P5.fix-9' } });
         expect(definition('DS-COLOR-6')?.scopeStates?.['icon-buttons']).toEqual(['sidebar-updates-nomatch']);
         expect(scopes('DS-HEIGHT-10')).toEqual({ ...mainHard(), sidebar: 'hard' });
         // A popup cell has no bar: its marker is DS-STATE-1's (UX-P3.2).
@@ -214,7 +216,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-TYPE-6')).toEqual(hard('main-installed', 'main-updates', 'details', 'sidebar', 'browse'));
         expect(scopes('DS-ROW-4')).toEqual(hard('main-installed', 'main-updates', 'browse', 'details', 'sidebar'));
         // UX-P3.10 push C: the details cells, hard since UX-P3.10 push E.
-        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' });
+        // UX-P5.fix-9 (DO 1): a dialog check box's label and description, pending on the item until its form change.
+        expect(scopes('DS-COPY-3')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard', 'check-labels': { pending: 'P5.fix-9' } });
         expect(RULES.find(rule => rule.id === 'DS-COPY-3')?.pendingStates).toBeUndefined();
         // The Browse list under the details pane is a details-group state; its description reads 13 since UX-P3.2 (run 42292613923).
         expect(RULES.find(rule => rule.id === 'DS-TYPE-6')?.pendingStates).toBeUndefined();
@@ -1990,6 +1993,26 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         // Only the offline cell reads the clause; it also reads panel-top.
         expect(lineOf('main-details-error', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), 'DS-INSET-4@main-details-error/facts-banner')).toBeUndefined();
         expect(lineOf('main-details-offline', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-details-offline/panel-top')?.pass).toBe(true);
+    });
+
+    it('reads a dialog check box\'s label and description, a disabled one\'s colour, and the add form\'s message inset (UX-P5.fix-9)', () => {
+        const today = { dialogCheckLabels: [{ label: 'Stored in clear text: a %VAR% placeholder is read from the environment when the source is used', described: [], disabled: true, colour: 'rgb(204, 204, 204)', opacity: '1' }], formMessages: [{ start: 16, pad: '4px 16px' }] };
+        const ruled = { dialogCheckLabels: [{ label: 'Store the password encrypted', described: ['A %VAR% placeholder is read from the environment and stored in clear text.'], disabled: true, colour: 'rgba(204, 204, 204, 0.5)', opacity: '1' }], formMessages: [{ start: 0, pad: '0px' }] };
+        const line = (cells: Record<string, unknown>, name: string) => lineOf('main-sources-add-invalid', withCells(cells), name);
+        // The reading of the committed form (local run, UX-P5.fix-9 push 1).
+        expect(line(today, 'DS-COPY-3@main-sources-add-invalid/check-labels')).toMatchObject({ pass: false, status: { pending: 'P5.fix-9' }, value: 'check box labels 1: label "Stored in clear text: a %VAR% placeholder is read from the environment when the source is used"' });
+        expect(line(today, 'DS-INSET-1@main-sources-add-invalid/form-message')).toMatchObject({ pass: false, value: 'form messages 1: glyph 16 from the field edge (target 0); padding 4px 16px (target 0px)' });
+        expect(line(ruled, 'DS-COPY-3@main-sources-add-invalid/check-labels')).toMatchObject({ pass: true, value: 'check box labels 1: no period or colon; descriptions end with a full stop' });
+        expect(line(ruled, 'DS-INSET-1@main-sources-add-invalid/form-message')?.pass).toBe(true);
+        expect(line({ dialogCheckLabels: [{ ...ruled.dialogCheckLabels[0], described: ['No period'] }] }, 'DS-COPY-3@main-sources-add-invalid/check-labels')).toMatchObject({ pass: false, value: 'check box labels 1: description "No period"' });
+        expect(line({ dialogCheckLabels: [] }, 'DS-COPY-3@main-sources-add-invalid/check-labels')).toMatchObject({ pass: false, value: 'not measurable (no check box in a dialog)' });
+        expect(line({ dialogCheckLabels: [{ ...ruled.dialogCheckLabels[0], disabled: false }] }, 'DS-COLOR-6@main-sources-add-invalid/check-labels')).toMatchObject({ pass: false, value: 'not measurable (no disabled check box)' });
+        // The disabled label against the layout's disabledForeground (rgb(90, 90, 90) in the test layout).
+        expect(line(today, 'DS-COLOR-6@main-sources-add-invalid/check-labels')).toMatchObject({ pass: false, status: { pending: 'P5.fix-9' }, value: 'disabled check box labels 1: colour rgb(204, 204, 204), opacity 1 (target rgb(90, 90, 90), 1)' });
+        expect(line({ dialogCheckLabels: [{ ...ruled.dialogCheckLabels[0], colour: 'rgb(90, 90, 90)' }] }, 'DS-COLOR-6@main-sources-add-invalid/check-labels')?.pass).toBe(true);
+        expect(line({ formMessages: [] }, 'DS-INSET-1@main-sources-add-invalid/form-message')).toMatchObject({ pass: false, value: 'not measurable (no form message)' });
+        // Only the add form's invalid cell reads the clauses.
+        expect(lineOf('main-sources', withCells(ruled), 'DS-COPY-3@main-sources/check-labels')).toBeUndefined();
     });
 
     it('reads each advisory line\'s glyph and colour against its severity\'s level (DS-STATE-4 advisories, UX-P5.2b)', () => {

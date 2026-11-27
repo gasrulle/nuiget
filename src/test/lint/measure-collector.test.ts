@@ -715,6 +715,26 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20, top: 4, padTop: 4, padBottom: 4, below: 4, inner: [4] }]);
     });
 
+    it('reads a dialog\'s check boxes outside list rows, and the add form\'s banner from the URL field\'s edge (UX-P5.fix-9)', () => {
+        expect(collect().endOfP0.stateCells.dialogCheckLabels).toEqual([]);
+        expect(collect().endOfP0.stateCells.formMessages).toEqual([]);
+        document.body.insertAdjacentHTML('beforeend', [
+            '<div class="nuiget-dialog" data-rect="200,100,700,600"><div data-testid="add-source-panel" data-rect="220,120,680,400">',
+            '<div data-testid="add-source-url" data-rect="240,140,660,166"></div>',
+            '<div class="nuiget-banner" style="padding: 4px 16px" data-rect="240,170,660,190"><span class="nuiget-banner-icon" data-rect="256,172,272,188"></span></div>',
+            '<label class="nuiget-dialog-option" style="color: rgb(1, 2, 3)" data-rect="240,200,660,218"><input type="checkbox" disabled aria-describedby="note" data-rect="240,200,258,218">Store the password encrypted</label>',
+            '<span id="note" data-rect="240,220,660,238">Stored in clear text.</span>',
+            '<div class="nuiget-source-row" data-rect="240,240,660,262"><input type="checkbox" data-rect="240,242,258,260"></div>',
+            '<div class="nuiget-multi-install" data-rect="240,264,660,286"><input type="checkbox" data-rect="240,266,258,284"></div>',
+            '<input type="checkbox" id="insecure" data-rect="240,290,258,308"><label for="insecure" data-rect="262,290,660,308">Allow an insecure connection</label>',
+            '</div></div>',
+        ].join(''));
+        // A list row's and the multi-install picker's boxes are left out; a box named by label[for] is read.
+        expect(collect().endOfP0.stateCells.dialogCheckLabels?.map(box => box.label)).toEqual(['Store the password encrypted', 'Allow an insecure connection']);
+        expect(collect().endOfP0.stateCells.dialogCheckLabels?.[0]).toEqual({ label: 'Store the password encrypted', described: ['Stored in clear text.'], disabled: true, colour: 'rgb(1, 2, 3)', opacity: '1' });
+        expect(collect().endOfP0.stateCells.formMessages).toEqual([{ start: 16, pad: '4px 16px' }]);
+    });
+
     it('reads each visible advisory line of the details pane: its severity word, its glyph\'s codicon and colour (DS-STATE-4 advisories, UX-P5.2b)', () => {
         expect(collect().endOfP0.stateCells.detailsAdvisories?.lines).toEqual([]);
         document.querySelector('[data-testid="package-details-panel"]')?.insertAdjacentHTML('beforeend', [
