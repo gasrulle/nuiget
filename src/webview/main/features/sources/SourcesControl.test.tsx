@@ -209,12 +209,50 @@ describe('main panel: sources', () => {
         await user.clear(within(panel).getByLabelText('Password'));
         // N82 (UX-P3.6): a placeholder anywhere in the value forces clear text.
         await user.type(within(panel).getByLabelText('Password'), 'pre%TOKEN%post');
-        const box = within(panel).getByRole('checkbox', { name: /Stored in clear text/ });
+        // UX-P5.fix-9 (b): the label stays short; why it cannot be ticked is its description.
+        const box = within(panel).getByRole('checkbox', { name: 'Store the password encrypted' });
+        expect(box).toHaveAccessibleDescription('A %VAR% placeholder is stored in clear text.');
         expect(box).not.toBeChecked();
         expect(box).toBeDisabled();
         await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
         expect(host.requests('sources/add')[0].payload.storeEncrypted).toBe(false);
         expect(host.requests('sources/add')[0].payload.password).toBe('pre%TOKEN%post');
+    });
+
+    it('an invalid submit moves the focus to the URL field, marked invalid, and the form stays accessible (UX-P5.fix-9)', async () => {
+        const user = userEvent.setup();
+        await mountReady();
+        await openDialog();
+        await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
+        const panel = screen.getByTestId('add-source-panel');
+        await user.type(within(panel).getByLabelText('URL'), 'not a url');
+        await user.click(within(panel).getByRole('button', { name: 'Credentials' }));
+        await user.type(within(panel).getByLabelText('Password'), '%TOKEN%');
+        await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
+
+        expect(document.activeElement).toBe(screen.getByTestId('add-source-url'));
+        expect(screen.getByTestId('add-source-url')).toHaveAttribute('aria-invalid', 'true');
+        expect(within(panel).getByRole('checkbox', { name: 'Store the password encrypted' })).toHaveAccessibleDescription(/stored in clear text\./);
+        expect(await axe(document.body)).toHaveNoViolations();
+    });
+
+    it('a password off Windows is stored in clear text: the encrypt box is off and disabled, and its description says why (UX-P5.fix-9)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await openDialog();
+        await waitFor(() => expect(host.requests('config/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('config/get')[0], { searchDebounceMode: 'quicksearch', quickSearchResultsPerSource: 5, searchResultLimit: 20, enablePerformanceLogging: false, confirmUninstall: true, treeIndent: 16, look: 'classic', density: 'default', uppercaseViewHeaders: false, alwaysShowHeaderActions: false, isWindows: false }));
+        await user.click(within(dialog()).getByRole('button', { name: 'Add Source...' }));
+        const panel = screen.getByTestId('add-source-panel');
+        await user.type(within(panel).getByLabelText('URL'), 'https://pkgs.example/v3/index.json');
+        await user.click(within(panel).getByRole('button', { name: 'Credentials' }));
+        await user.type(within(panel).getByLabelText('Password'), 'plain');
+        const box = within(panel).getByRole('checkbox', { name: 'Store the password encrypted' });
+        expect(box).toHaveAccessibleDescription('Encryption needs Windows; the password is stored in clear text.');
+        expect(box).not.toBeChecked();
+        expect(box).toBeDisabled();
+        await user.click(within(panel).getByRole('button', { name: 'Add Source' }));
+        expect(host.requests('sources/add')[0].payload.storeEncrypted).toBe(false);
     });
 
     it.each([['%TOKEN%', true], ['pre%TOKEN%post', true], ['a%b%c', true], ['100%', false], ['%%', false], ['% A %', false], ['', false]])('a %VAR% placeholder anywhere in %j is %s (N82, UX-P3.6)', (password, expected) => {
@@ -237,6 +275,8 @@ describe('main panel: sources', () => {
 
         await hostSays(() => host.fail(host.requests('sources/add')[0], 'failed', 'A source with this URL exists'));
         expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('A source with this URL exists');
+        // UX-P5.fix-9 (f): a refusal from the host moves no focus.
+        expect(within(panel).getByLabelText('URL')).not.toHaveFocus();
         expect(screen.getByTestId('add-source-panel')).toBeInTheDocument();
         expect(within(panel).getByLabelText('URL')).toHaveValue('http://feed.local/v3/index.json');
         await user.click(within(panel).getByRole('button', { name: 'Back' }));
@@ -256,9 +296,12 @@ describe('main panel: sources', () => {
         expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('Enter the URL of the source.');
         expect(url).toHaveAttribute('aria-invalid', 'true');
         expect(url).toHaveAccessibleDescription(/Enter the URL of the source\./);
+        // UX-P5.fix-9 (f): each client validation failure focuses the URL field.
+        expect(url).toHaveFocus();
         await user.type(url, 'not a url');
         await user.click(within(panel).getByTestId('add-source-submit'));
         expect(within(panel).getByTestId('add-source-error')).toHaveTextContent('Enter a valid URL, such as https://api.nuget.org/v3/index.json.');
+        expect(url).toHaveFocus();
         expect(host.requests('sources/add')).toHaveLength(0);
     });
 

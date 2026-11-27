@@ -991,7 +991,7 @@ const REACH: Record<string, Reach> = {
             await clickVisible('add-source-credentials');
             await (await findByTestId('add-source-password', 10_000)).sendKeys('%NUGET_TOKEN%');
             await clickVisible('add-source-submit');
-            await until('document.querySelector(\'[data-testid="add-source-error"]\') !== null && document.querySelector(\'[data-testid="add-source-url"]\')?.getAttribute("aria-invalid") === "true" && document.querySelector(\'[data-testid="add-source-clear-text"]\') !== null', 'the inline error, aria-invalid and the clear-text sentence', 30_000);
+            await until('document.querySelector(\'[data-testid="add-source-error"]\') !== null && document.querySelector(\'[data-testid="add-source-url"]\')?.getAttribute("aria-invalid") === "true" && document.querySelector(\'[data-testid="add-source-clear-text"]\') !== null && document.activeElement?.getAttribute("data-testid") === "add-source-url"', 'the inline error, aria-invalid, the clear-text note and the focus on the URL field (UX-P5.fix-9 (f))', 30_000);
         },
         leave: closeSources,
     },

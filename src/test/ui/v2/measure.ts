@@ -646,7 +646,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
     // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
     // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `form-message`, the add form's message at the field's edge.
-    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard', 'form-message': { pending: 'P5.fix-9' } }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'], 'form-message': SOURCE_FORM_STATES } }),
+    rule('DS-INSET-1', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', sidebar: 'hard', skeleton: 'hard', 'details-skeleton': 'hard', 'form-message': 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { skeleton: ['sidebar-installed-loading', 'sidebar-updates-loading'], 'details-skeleton': ['main-details-loading', 'main-readme-loading'], 'form-message': SOURCE_FORM_STATES } }),
     // UX-P3.5: a dialog's footer by its own padding's symmetry, never by its right-aligned content (design-advisor ruling).
     rule('DS-INSET-2', { helper: 2, scopes: { toolbars: 'hard', headers: 'hard', 'main-header': 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { dialogs: DIALOG_STATES } }),
     // UX-P0.11: P9.fix-3's centring and P9.fix-5's shared column, in the states their tests cover.
@@ -703,7 +703,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-RADIUS-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment }),
     // UX-P3.10 push A (DO 4): `icon-buttons` read in the side bar too, and `labels`, the disabled-label clause (design trigger 6).
     // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `check-labels`, a disabled dialog check box's label.
-    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard', 'check-labels': { pending: 'P5.fix-9' } }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'], 'check-labels': SOURCE_FORM_STATES } }),
+    rule('DS-COLOR-6', { helper: 3, scopes: { 'text-buttons': 'hard', 'icon-buttons': 'hard', labels: 'hard', 'check-labels': 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'text-buttons': DISABLED_BUTTON_STATES, 'icon-buttons': DISABLED_ICON_BUTTON_STATES, labels: ['main-browse-multi-install-dialog'], 'check-labels': SOURCE_FORM_STATES } }),
     // UX-P2.5 (design trigger 6). No named state disables an icon button until P3.10's sidebar Updates empty cell.
     rule('DS-ICON-2', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.containment }),
     rule('DS-COLOR-4', { helper: 6, scopes: { tabs: 'hard' }, tolerance: TOLERANCES.containment }),
@@ -762,7 +762,7 @@ export const RULES: readonly RuleDefinition[] = [
     // An empty state or a banner is rendered in these states only.
     rule('DS-COPY-3', {
         // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `check-labels`, a dialog check box's label and description.
-        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard', 'check-labels': { pending: 'P5.fix-9' } },
+        helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard', 'check-labels': 'hard' },
         scopeStates: { 'check-labels': SOURCE_FORM_STATES },
         // UX-P3.10 (follow-up 1, F3): the side bar's All Projects trees read their message leaves, in their pinned cells only: the unpinned
         // sidebar-all-projects shows 0 to 2 leaves by window height and has no subject (UX-P3.fix-21).

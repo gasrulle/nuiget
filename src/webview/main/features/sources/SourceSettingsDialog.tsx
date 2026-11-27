@@ -84,12 +84,15 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
         const trimmed = url.trim();
         if (trimmed.length === 0) {
             setError('Enter the URL of the source.');
+            // The focus goes to the field that failed (UX-P5.fix-9 (f), design-advisor opening ruling of 2026-11-27).
+            urlRef.current?.focus();
             return;
         }
         try {
             new URL(trimmed);
         } catch {
             setError('Enter a valid URL, such as https://api.nuget.org/v3/index.json.');
+            urlRef.current?.focus();
             return;
         }
         const payload: RequestPayload<'sources/add'> = { url: trimmed };
@@ -138,12 +141,11 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
             {insecure ? (
                 <>
                     <Banner severity="warning">This source uses HTTP, which is not encrypted.</Banner>
-                    <div className="nuiget-field">
-                        <label>
-                            <Checkbox checked={allowInsecure} onChange={checked => setAllowInsecure(checked)} />
-                            Allow an insecure (HTTP) connection to this source
-                        </label>
-                    </div>
+                    {/* The dialog check box form: box and label on one line (UX-P5.fix-9 (a)). */}
+                    <label className="nuiget-dialog-option">
+                        <Checkbox checked={allowInsecure} onChange={checked => setAllowInsecure(checked)} />
+                        Allow an insecure (HTTP) connection to this source
+                    </label>
                 </>
             ) : null}
             <div className="nuiget-field">
@@ -167,13 +169,19 @@ function AddSourcePanel({ onDone, announce }: { onDone: () => void; announce: (m
                         <label htmlFor={`${ids}-password`}>Password</label>
                         <TextField id={`${ids}-password`} data-testid="add-source-password" type="password" autoComplete="off" value={password} placeholder="Password, or %ENV_VAR% (stored in clear text and read from the environment)" onChange={setPassword} />
                     </div>
+                    {/* A short label; why it cannot be ticked is its description (UX-P5.fix-9 (a), (b); DS-COPY-3 check-labels). */}
                     {password ? (
-                        <label className="nuiget-field" data-testid="add-source-clear-text">
-                            <Checkbox checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} onChange={checked => setStoreEncrypted(checked)} />
-                            {placeholder
-                                ? 'Stored in clear text: a %VAR% placeholder is read from the environment when the source is used'
-                                : isWindows ? 'Store the password encrypted' : 'Store the password encrypted (Windows only); it is stored in clear text'}
-                        </label>
+                        <div className="nuiget-field">
+                            <label className="nuiget-dialog-option">
+                                <Checkbox checked={isWindows && storeEncrypted && !placeholder} disabled={!isWindows || placeholder} aria-describedby={!isWindows || placeholder ? `${ids}-clear-text` : undefined} onChange={checked => setStoreEncrypted(checked)} />
+                                Store the password encrypted
+                            </label>
+                            {!isWindows || placeholder ? (
+                                <span id={`${ids}-clear-text`} className="nuiget-field-note" data-testid="add-source-clear-text">
+                                    {placeholder ? 'A %VAR% placeholder is stored in clear text.' : 'Encryption needs Windows; the password is stored in clear text.'}
+                                </span>
+                            ) : null}
+                        </div>
                     ) : null}
                 </div>
             ) : null}
@@ -265,7 +273,7 @@ export function SourceSettingsDialog({ open, onClose, announce }: SourceSettings
             open={open}
             onClose={onClose}
             title={adding ? 'Add a NuGet source' : 'NuGet sources'}
-            description={adding ? undefined : 'Sources of the selected project\'s config files. Remove deletes a source from the file that declares it.'}
+            description={adding ? undefined : 'These are the sources of the selected project\'s config files. Remove deletes a source from the file that declares it.'}
             closeLabel="Close NuGet sources"
             data-testid="source-settings-modal"
             footer={adding ? undefined : <Button ref={addButton} data-testid="add-source-button" onClick={() => setAdding(true)}>Add Source...</Button>}

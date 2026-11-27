@@ -1436,6 +1436,11 @@
     min-height: var(--nuiget-target-min);
 }
 
+/* A disabled box's label is in disabledForeground, as the workbench's disabled check box (DS-COLOR-6 check-labels, UX-P5.fix-9). */
+.nuiget-dialog-option:has(:disabled) {
+    color: var(--nuiget-color-fg-disabled);
+}
+
 /* A confirmation's message (its words, then its lists) and DialogGroups' lists: 8 apart, a lead 4 above its list (UX-P3.5). */
 .nuiget-dialog-message,
 .nuiget-dialog-groups {

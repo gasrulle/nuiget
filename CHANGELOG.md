@@ -124,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The first-render timing is logged when All Projects is selected**
 - **A package can no longer be acted on twice while its list refreshes after an install, update or uninstall**
 - **A slow vulnerability feed no longer holds back package icons**
+- **Adding a source with an invalid URL returns the focus to the URL field, and the password option says why it cannot be ticked**
 
 ## [2.0.0] - 2026-10-17
 

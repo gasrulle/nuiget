@@ -664,6 +664,9 @@ a:focus {
 }
 
 .nuiget-add-source {
+    /* The form's messages sit at the field's edge, the form carries the inset (DS-INSET-1 form-message, UX-P5.fix-9). */
+    --nuiget-message-inset: 0;
+    --nuiget-message-inset-block: 0;
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-block-gap-outer);
@@ -728,4 +731,9 @@ a:focus {
     margin-inline-start: auto;
     color: var(--nuiget-color-fg-muted);
     font-size: var(--nuiget-font-size-sm);
+}
+
+/* A check box's description under its label, in the description colour (UX-P5.fix-9 (b)). */
+.nuiget-field-note {
+    color: var(--nuiget-color-fg-muted);
 }

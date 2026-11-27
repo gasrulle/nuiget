@@ -214,7 +214,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-sources-add', 'main', [primary('main')],
         'Add source pressed; the form with the config file select, the URL field focused, Name and the Credentials toggle; closed with Escape after the capture (UX-P3.6).', [LIVE_ICONS, LIVE_FIELD_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-sources-add-invalid', 'main', [primary('main')],
-        'Credentials expanded, %NUGET_TOKEN% typed as the password, Add source pressed with the URL empty: the inline error under the URL field, aria-invalid, the clear-text sentence with its disabled box; nothing is sent (UX-P3.6).', [LIVE_ICONS, LIVE_FIELD_CARET]), diffTolerance: DIFF_TOLERANCE_START },
+        'Credentials expanded, %NUGET_TOKEN% typed as the password, Add source pressed with the URL empty: the inline error at the URL field\'s edge, aria-invalid and the focus on the URL field, the disabled "Store the password encrypted" box with its clear-text description; nothing is sent (UX-P3.6, UX-P5.fix-9).', [LIVE_ICONS, LIVE_FIELD_CARET]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-sources-remove-dialog', 'main', [primary('main')],
         'Remove nuget.org pressed; the confirmation is open over the sources dialog and is cancelled after the capture, never confirmed (UX-P3.6).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-sources-revalidating', 'main', [primary('main')],
