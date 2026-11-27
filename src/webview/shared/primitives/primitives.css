@@ -551,8 +551,8 @@
 }
 
 /*
- * Compact: one line, name first. The version takes only the room the name leaves: it ellipsizes, then collapses to
- * nothing before the name loses a pixel (DS-ROW-5). Height, padding and border stay those of a compact row.
+ * Compact: one line, name first. The version takes only the room the name leaves: whole, cut with its first character and
+ * its ellipsis, or zero-wide, before the name loses a pixel (DS-ROW-5). Height, padding and border stay those of a compact row.
  */
 .nuiget-row--compact .nuiget-row-body {
     flex-direction: row;
@@ -566,9 +566,19 @@
     overflow: visible;
 }
 
-.nuiget-row--compact .nuiget-row-version {
+/* The facts line is the slot the name leaves (DS-ROW-5, UX-P5.fix-17): it grows into the room after the name, up to its version's width. */
+.nuiget-row--compact .nuiget-row-facts {
+    display: flex;
     flex: 1 1 0;
     max-width: max-content;
+}
+
+/*
+ * A step on the slot: below the floor the result is negative and the version is zero-wide; one layout unit above it the box is
+ * wider than any slot, so the version fills the slot and ellipsizes. The factor is the step's constant, not a length.
+ */
+.nuiget-row--compact .nuiget-row-version {
+    max-width: calc((100% - var(--nuiget-row-version-floor)) * 1000000);
 }
 
 .nuiget-row--compact .nuiget-row-badges {

@@ -114,7 +114,7 @@ export const Row = /* @__PURE__ */ React.memo(function Row(props: RowProps): Rea
     // A compact row shows the name, the version and the badges; the rest is still read out (D14, UX-P3.7a).
     const hidden = density === 'compact' ? ' nuiget-visually-hidden' : '';
     const factsLine = (authorsSpan: React.ReactNode): React.ReactNode => (
-        <span className="nuiget-row-line">
+        <span className="nuiget-row-line nuiget-row-facts">
             {version === undefined ? null : (
                 <span className="nuiget-row-version" id={ids.version} title={versionTitle}>
                     {version}

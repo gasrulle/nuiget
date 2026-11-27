@@ -384,20 +384,35 @@ describe('Row layout (P9.2, D46)', () => {
         const shown = option.querySelector('.nuiget-row-version') as HTMLElement;
         expect(follows(name, shown)).toBe(true);
         expect(name.textContent).toBe('Serilog');
-        // The version gives way first (DS-ROW-5, UX-P3.7a): it takes only the room the name leaves, at most its own width,
-        // and ellipsizes; the name grows to its content and is never capped.
+        // The version gives way first (DS-ROW-5, UX-P3.7a): its slot, the facts line, takes only the room the name leaves, at most
+        // the version's width; the name grows to its content and is never capped.
         expect(getComputedStyle(name).flexGrow).toBe('0');
         expect(getComputedStyle(name).flexBasis).toBe('auto');
         expect(getComputedStyle(name).maxWidth).not.toBe('70%');
-        expect(getComputedStyle(shown).flexBasis).toBe('0px');
-        expect(getComputedStyle(shown).flexGrow).toBe('1');
-        expect(getComputedStyle(shown).maxWidth).toBe('max-content');
+        const slot = shown.closest('.nuiget-row-facts') as HTMLElement;
+        expect(getComputedStyle(slot).display).toBe('flex');
+        expect(getComputedStyle(slot).flexGrow).toBe('1');
+        expect(getComputedStyle(slot).flexBasis).toBe('0px');
+        expect(getComputedStyle(slot).maxWidth).toBe('max-content');
+        // UX-P5.fix-17: in the slot the version is whole, cut with its first character and ellipsis, or zero-wide, by a step on the
+        // floor token (jsdom resolves no calc(): the declared value is read).
         expect(getComputedStyle(shown).minWidth).toBe('0px');
+        expect(getComputedStyle(shown).maxWidth).toBe('calc((100% - var(--nuiget-row-version-floor)) * 1000000)');
         // Authors and description are read out, not shown (D14): the visually hidden span (UX-P3.7a).
         for (const hidden of option.querySelectorAll('.nuiget-row-authors, .nuiget-row-description')) {
             expect(hidden).toHaveClass('nuiget-visually-hidden');
             expect(getComputedStyle(hidden).position).toBe('absolute');
         }
+    });
+
+    it('a comfortable row\'s facts line is no slot: the compact step does not reach it (DS-ROW-5, UX-P5.fix-17)', () => {
+        renderRow({ density: 'comfortable', version: '13.0.3', authors: 'James Newton-King' });
+        const shown = screen.getByRole('option').querySelector('.nuiget-row-version') as HTMLElement;
+        const line = shown.closest('.nuiget-row-facts') as HTMLElement;
+        expect(getComputedStyle(line).display).toBe('flex');
+        expect(getComputedStyle(line).maxWidth).not.toBe('max-content');
+        expect(getComputedStyle(line).flexGrow).not.toBe('1');
+        expect(getComputedStyle(shown).maxWidth).not.toContain('--nuiget-row-version-floor');
     });
 
     it('a comfortable row reads its meta in the description, a compact row hides it visually', () => {
