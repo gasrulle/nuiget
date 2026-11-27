@@ -709,7 +709,21 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         ].join(''));
         // The wrapper's next visible sibling is the next block (the hidden one is skipped); the banner's top is read from the facts'
         // content box (UX-P5.fix-7, GOLDEN ruling 1, DO 4).
-        expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20, top: 4, padTop: 4, padBottom: 4, below: 12 }]);
+        expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20, top: 4, padTop: 4, padBottom: 4, below: 12, inner: [] }]);
+        // UX-P5.2b (design-advisor follow-up 1): a message in the notice is read 4 below the banner, the next block from the notice's end.
+        document.querySelector('.nuiget-details-notice')?.insertAdjacentHTML('beforeend', '<p class="nuiget-details-note" data-rect="620,204,880,208">Moved.</p>');
+        expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([{ start: 40, padStart: 20, padEnd: 20, top: 4, padTop: 4, padBottom: 4, below: 4, inner: [4] }]);
+    });
+
+    it('reads each visible advisory line of the details pane: its severity word, its glyph\'s codicon and colour (DS-STATE-4 advisories, UX-P5.2b)', () => {
+        expect(collect().endOfP0.stateCells.detailsAdvisories?.lines).toEqual([]);
+        document.querySelector('[data-testid="package-details-panel"]')?.insertAdjacentHTML('beforeend', [
+            '<ul data-rect="600,300,900,360">',
+            '<li class="nuiget-details-vulnerability nuiget-details-vulnerability--error" data-rect="620,300,880,318"><svg data-codicon="error" style="color: rgb(241, 76, 76)" data-rect="620,301,636,317"></svg><span>High severity</span><a href="https://a.test/1">Advisory</a></li>',
+            '<li class="nuiget-details-vulnerability" style="display: none" data-rect="620,320,880,338"><svg data-codicon="info"></svg><span>Low severity</span></li>',
+            '</ul>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.detailsAdvisories?.lines).toEqual([{ word: 'High', codicon: 'error', colour: 'rgb(241, 76, 76)' }]);
     });
 
     it('marks a focused control inside a dialog as in the layer, and one outside as not (DS-FOCUS-3 dialog-focus, UX-P5.fix-2)', () => {

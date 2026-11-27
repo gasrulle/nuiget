@@ -296,8 +296,14 @@ body {
     margin: 0 0 var(--nuiget-space-5);
 }
 
-/* A banner of the facts, then the next block 12 below: the description's own step (DS-INSET-4 facts-banner, UX-P5.fix-7). */
+/*
+ * A banner of the facts, then the next block 12 below: the description's own step (DS-INSET-4 facts-banner, UX-P5.fix-7); a
+ * deprecation's message follows its banner 4 below (UX-P5.2b, design DO 4).
+ */
 .nuiget-details-notice {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nuiget-space-2);
     margin: 0 0 var(--nuiget-space-5);
 }
 
@@ -354,7 +360,25 @@ body {
     display: flex;
     align-items: center;
     gap: var(--nuiget-space-2);
-    color: var(--nuiget-color-warning);
+    color: var(--nuiget-color-fg);
+}
+
+/* An advisory line's glyph takes its severity's problems colour, as the row badge does (DS-STATE-4 advisories, UX-P5.2b). */
+.nuiget-details-advisory-glyph {
+    flex: none;
+    color: var(--nuiget-details-advisory-color, var(--nuiget-color-icon-warning));
+}
+
+.nuiget-details-vulnerability--error {
+    --nuiget-details-advisory-color: var(--nuiget-color-icon-error);
+}
+
+.nuiget-details-vulnerability--warning {
+    --nuiget-details-advisory-color: var(--nuiget-color-icon-warning);
+}
+
+.nuiget-details-vulnerability--info {
+    --nuiget-details-advisory-color: var(--nuiget-color-icon-info);
 }
 
 .nuiget-details a {

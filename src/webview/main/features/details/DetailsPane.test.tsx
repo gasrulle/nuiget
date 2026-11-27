@@ -447,6 +447,63 @@ describe('main panel: details', () => {
         expect(pane()).toHaveTextContent('Offline: a package source could not be reached.');
     });
 
+    it('a deprecated version shows its notice, the source message as text only, and Find Alternative searches Browse for the alternate (UX-P5.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await selectInstalled(host);
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Serilog', '3.0.0', { deprecation: { reasons: ['Legacy', 'CriticalBugs'], message: 'Moved: see https://example.test/next now.', alternatePackage: { id: 'Contoso.Next', range: '*' } } }) }));
+
+        expect(screen.getByTestId('details-deprecation')).toHaveTextContent('This version is deprecated: it is legacy and no longer maintained, and it has critical bugs. Use Contoso.Next instead.');
+        const message = screen.getByTestId('details-deprecation-message');
+        expect(message).toHaveTextContent('Moved: see https://example.test/next now.');
+        expect(message.querySelector('a')).toBeNull();
+        expect(pane().querySelector('.nuiget-details-info > .nuiget-details-notice > [data-testid="details-deprecation"]')).not.toBeNull();
+
+        const asked = host.requests('search/autocomplete').length;
+        await user.click(within(screen.getByTestId('details-deprecation')).getByRole('button', { name: 'Find Alternative' }));
+        expect(host.requests('search/query').at(-1)?.payload).toMatchObject({ query: 'Contoso.Next', exactMatch: true });
+        expect(host.requests('search/autocomplete')).toHaveLength(asked);
+        expect(screen.getByTestId('search-input')).toHaveValue('Contoso.Next');
+        expect(document.activeElement).toBe(screen.getByTestId('search-input'));
+    });
+
+    it('a deprecation without an alternate shows no Find Alternative, and none without a message shows no message (UX-P5.2b)', async () => {
+        const host = await mountReady();
+        await selectInstalled(host);
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Serilog', '3.0.0', { deprecation: { reasons: ['Other'] } }) }));
+
+        expect(screen.getByTestId('details-deprecation')).toHaveTextContent('This version is deprecated.');
+        expect(within(screen.getByTestId('details-deprecation')).queryByRole('button')).toBeNull();
+        expect(screen.queryByTestId('details-deprecation-message')).toBeNull();
+    });
+
+    it('an advisory line takes the glyph and colour role of its severity, as the row badge does (DS-STATE-4 advisories, UX-P5.2b)', async () => {
+        const host = await mountReady();
+        await selectInstalled(host);
+        const vulnerabilities = [{ severity: 'High' as const, advisoryUrl: 'https://a.test/1' }, { severity: 'Moderate' as const, advisoryUrl: 'https://a.test/2' }, { severity: 'Low' as const, advisoryUrl: 'https://a.test/3' }];
+        await hostSays(() => host.respond(metadataOf(host)[0], { metadata: metadata('Serilog', '3.0.0', { vulnerabilities }) }));
+
+        const lines = [...pane().querySelectorAll('.nuiget-details-vulnerability')];
+        expect(lines.map(line => [line.className, line.querySelector('svg')?.getAttribute('data-codicon'), line.textContent])).toEqual([
+            ['nuiget-details-vulnerability nuiget-details-vulnerability--error', 'error', 'High severityAdvisory'],
+            ['nuiget-details-vulnerability nuiget-details-vulnerability--warning', 'warning', 'Moderate severityAdvisory'],
+            ['nuiget-details-vulnerability nuiget-details-vulnerability--info', 'info', 'Low severityAdvisory'],
+        ]);
+    });
+
+    it('the version selector marks the versions the host names vulnerable, and nothing while it does not know (UX-P5.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady([pkg('Serilog', '3.0.0'), pkg('Dapper', '2.0.0')]);
+        await user.click(option('installed-list', 'Serilog'));
+        await hostSays(() => host.respond(versionsOf(host).at(-1) as never, { packageId: 'Serilog', versions: ['3.1.0', '3.0.0', '2.12.0'], vulnerableVersions: ['3.0.0', '2.12.0'] }));
+        const texts = () => [...screen.getByTestId('version-selector').querySelectorAll('option')].map(entry => entry.textContent);
+        expect(texts()).toEqual(['3.1.0', '3.0.0 (installed, vulnerable)', '2.12.0 (vulnerable)']);
+
+        await user.click(option('installed-list', 'Dapper'));
+        await hostSays(() => host.respond(versionsOf(host).at(-1) as never, { packageId: 'Dapper', versions: ['2.1.0', '2.0.0'] }));
+        expect(texts()).toEqual(['2.1.0', '2.0.0 (installed)']);
+    });
+
     it('the README tab renders the README, fetches its images through the host and copies code', async () => {
         const user = userEvent.setup();
         const host = await mountReady();

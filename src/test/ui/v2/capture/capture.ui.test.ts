@@ -178,6 +178,8 @@ window.__nuigetHold = hold;
 // an update check with no source answered or no update (Catalog.updates); a search one source could not answer, the rows of
 // the others kept (Catalog.ts:447); a quick search answered by two sources, the second unreachable by construction (RFC 2606
 // .invalid), so no request the product sends can reach it.
+// UX-P5.2b (architecture-advisor ruling of 2026-11-27): the one deprecation the capture literals add, an alternate under a fixture id.
+hold.deprecation = { reasons: ['Legacy', 'CriticalBugs'], message: 'This package is no longer maintained.', alternatePackage: { id: 'Fixture.Alternative', range: '*' } };
 hold.literals = {
     unavailable: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [], sourcesUnavailable: true }) },
     uptodate: { type: 'updates/get', of: result => ({ projectPath: result.projectPath, updates: [] }) },
@@ -204,6 +206,10 @@ hold.literals = {
         }
         return { ...result, metadata: { ...metadata, offline: true } };
     } },
+    // The host's answer for a deprecated version: the registration metadata with its catalog entry's deprecation (registration.ts:108,
+    // UX-P5.2b, architecture-advisor ruling of 2026-11-27); an offline or null answer carries none and passes through.
+    deprecated: { type: 'package/metadata', of: result => (!result || !result.metadata || result.metadata.offline === true ? result
+        : { ...result, metadata: { ...result.metadata, deprecation: hold.deprecation } }) },
 };
 hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {
@@ -226,7 +232,7 @@ window.postMessage = function (data, ...rest) {
 
 type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
-type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline';
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline' | 'deprecated';
 
 /** Holds `type`'s envelopes; `'answer'` lets the provisional chunks of `installed/get` through and holds its answers (UX-P4.fix-23). */
 async function holdRequest(type: HeldType, hold: 'all' | 'answer' = 'all'): Promise<void> {
@@ -1247,6 +1253,26 @@ const REACH: Record<string, Reach> = {
                 return text === 'Offline: no package source knows this version. These details come from the package cache on this machine.'
                     && document.querySelector('[data-testid="details-progress"]') === null;
             })()`, 'the offline warning over the cached facts');
+        },
+        leave: endHold,
+    },
+    // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 8): Serilog's metadata answered as a deprecated version's.
+    'main-details-deprecated': {
+        reach: async () => {
+            await gatewayInstalled();
+            await holdRequest('package/metadata');
+            await selectRow('package-row-serilog');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held answer', 60_000);
+            await rewriteHeld('main-details-deprecated', 'deprecated');
+            await until(`(() => {
+                const banner = document.querySelector('[data-testid="details-deprecation"]');
+                const text = (banner?.querySelector('.nuiget-banner-text')?.textContent ?? '').trim();
+                const message = (document.querySelector('[data-testid="details-deprecation-message"]')?.textContent ?? '').trim();
+                return text === 'This version is deprecated: it is legacy and no longer maintained, and it has critical bugs. Use Fixture.Alternative instead.'
+                    && [...(banner?.querySelectorAll('button') ?? [])].some(button => button.textContent.trim() === 'Find Alternative')
+                    && message === 'This package is no longer maintained.'
+                    && document.querySelector('[data-testid="details-progress"]') === null;
+            })()`, 'the deprecation notice over the facts');
         },
         leave: endHold,
     },

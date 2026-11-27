@@ -47,6 +47,8 @@ export interface SearchTyping {
     pickVersion: (suggestion: Suggestion, version: string) => void;
     /** Ctrl+Enter: installs the version, or the suggestion's newest one, into the selected project. */
     quickInstall: (suggestion: Suggestion, version?: string) => void;
+    /** Searches Browse for one id with an exact match, as `ui/navigateToPackage` does (Find Alternative, UX-P5.2b). */
+    find: (packageId: string) => void;
 }
 
 /** How many versions the versions level shows, newest first. */
@@ -196,5 +198,6 @@ export function useSearchTyping({ text, setText, browsing, focused, announce, in
         collapse,
         pickVersion,
         quickInstall,
+        find: (packageId: string): void => goTo(packageId),
     };
 }

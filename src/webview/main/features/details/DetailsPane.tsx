@@ -44,11 +44,20 @@ export function primaryAction(installedVersion: string | undefined, chosen: stri
 }
 
 /**
+ * A version option's text (UX-P5.2b, design DO 5): one trailing parenthetical, "(installed)", "(vulnerable)" or "(installed,
+ * vulnerable)". A version is marked vulnerable only when the host named it; an unknown list marks nothing and claims nothing.
+ */
+export function versionOption(version: string, installed: boolean, vulnerable: readonly string[] | undefined): string {
+    const marks = [installed ? 'installed' : undefined, vulnerable?.includes(version) ? 'vulnerable' : undefined].filter(mark => mark !== undefined);
+    return marks.length === 0 ? version : `${version} (${marks.join(', ')})`;
+}
+
+/**
  * The details pane of the main panel (interaction model §7): the selected package with its installed version and
  * Uninstall, the version selector with Install, Update or Downgrade, and the Details and README tabs. Without a single
  * project nothing is changed from here; a stale selection is shown read-only with the project it belongs to.
  */
-export function DetailsPane({ announce, install, central }: DetailsPaneProps): React.JSX.Element {
+export function DetailsPane({ announce, install, central, find }: DetailsPaneProps): React.JSX.Element {
     const details = useDetails();
     const { chooseVersion, showReadme, retryVersions } = useDetailsActions();
     const installed = useInstalled();
@@ -87,7 +96,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
         }
     }, [tab, readmeIdle, showReadme]);
 
-    const { selection, version, versions, stale } = details;
+    const { selection, version, versions, vulnerableVersions, stale } = details;
     if (selection === null) {
         return <EmptyState data-testid="details-empty" message="Select a package to see its details." />;
     }
@@ -200,7 +209,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                         onChange={chooseVersion}
                     >
                         {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions...)` : chosen}</option>}
-                        {list.map(candidate => <option key={candidate} value={candidate}>{candidate === installedVersion ? `${candidate} (installed)` : candidate}</option>)}
+                        {list.map(candidate => <option key={candidate} value={candidate}>{versionOption(candidate, candidate === installedVersion, vulnerableVersions)}</option>)}
                     </Select>
                     <Button
                         data-testid="install-update-button"
@@ -237,7 +246,7 @@ export function DetailsPane({ announce, install, central }: DetailsPaneProps): R
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{failure('The versions', 'listed', versions.error.message)}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections" data-testid="details-tab-bar">
-                {tab === 'details' ? <DetailsInfo key={shownKey} announce={announce} shownKey={shownKey} /> : <ReadmeView announce={announce} shownKey={shownKey} />}
+                {tab === 'details' ? <DetailsInfo key={shownKey} announce={announce} shownKey={shownKey} find={find} /> : <ReadmeView announce={announce} shownKey={shownKey} />}
             </Tabs>
             <MultiInstallDialog
                 open={picking}

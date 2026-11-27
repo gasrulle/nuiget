@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Deprecated Packages** — The details of a deprecated version say why it is deprecated, show the author's message and offer the suggested alternative, which you can find with one click.
+- **Vulnerable Versions in the Version List** — The version list marks the versions with a known vulnerability.
 - **Move between the search box and the lists by keyboard** — Ctrl+Down (Cmd+Down on macOS) in the search box moves to the package list, and Ctrl+Up (Cmd+Up) in a list returns to the box.
 - **Page and type-ahead keys in the package lists** — Page Up and Page Down move a page at a time, and typing the start of a name jumps to it.
 - **Sidebar packages open on their own tab** — Enter or View Package Details on a sidebar package opens the main panel on the Installed or Updates tab of its project with the package selected.

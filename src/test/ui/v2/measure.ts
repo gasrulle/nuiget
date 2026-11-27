@@ -293,7 +293,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner' | 'advisories';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -461,19 +461,24 @@ export const MAIN_DIALOG_FOCUS_STATES: readonly string[] = ['main-installed-bulk
  * DS-INSET-4 `panel-top` (UX-P5.fix-3, design-advisor opening ruling of 2026-11-22, DO 2): the states whose details pane shows the
  * Details or README tab panel, loaded, loading or error; `main-transitive-details` has no tabs.
  */
-export const PANEL_TOP_STATES: readonly string[] = ['main-installed-details', 'main-details-readme', 'main-browse-details', 'main-details-readonly', 'main-details-unsupported', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error', 'main-details-offline'];
+export const PANEL_TOP_STATES: readonly string[] = ['main-installed-details', 'main-details-readme', 'main-browse-details', 'main-details-readonly', 'main-details-unsupported', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'];
 /**
  * DS-INSET-4 `facts-banner` (UX-P5.fix-7, design-advisor opening ruling of 2026-11-26, DO 5): the states that show a banner inside
  * the details facts (the offline warning).
  */
-export const FACTS_BANNER_STATES: readonly string[] = ['main-details-offline'];
+export const FACTS_BANNER_STATES: readonly string[] = ['main-details-offline', 'main-details-deprecated'];
+/**
+ * DS-STATE-4 `advisories` (UX-P5.2b, design-advisor opening ruling of 2026-11-27, DO 9): the states whose details pane lists
+ * advisories; an advisory line's glyph and colour role follow the row badge's severity mapping.
+ */
+export const ADVISORY_STATES: readonly string[] = ['main-installed-details'];
 
 /**
  * The main states whose search box is empty, where DS-OVERFLOW-2's `placeholder` scope reads the main box (UX-P3.fix-15); the
  * Browse and filter states hold text in it.
  */
 export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
-    'main-details-empty', 'main-details-error', 'main-details-loading', 'main-details-offline', 'main-details-readme', 'main-details-readonly', 'main-details-unsupported',
+    'main-details-deprecated', 'main-details-empty', 'main-details-error', 'main-details-loading', 'main-details-offline', 'main-details-readme', 'main-details-readonly', 'main-details-unsupported',
     'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-empty', 'main-installed-error', 'main-installed-focus',
     'main-installed-hover', 'main-installed-hover-current', 'main-installed-loading', 'main-installed-provisional', 'main-installed-refresh-hover', 'main-installed-revalidating',
     'main-installed-single', 'main-installed-toolbar-hover', 'main-installed-unfocused', 'main-installed-unresolved', 'main-installed-unsupported',
@@ -755,7 +760,7 @@ export const RULES: readonly RuleDefinition[] = [
         helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard', sources: 'hard', details: 'hard' },
         // UX-P3.10 (follow-up 1, F3): the side bar's All Projects trees read their message leaves, in their pinned cells only: the unpinned
         // sidebar-all-projects shows 0 to 2 leaves by window height and has no subject (UX-P3.fix-21).
-        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|offline|nomatch|-all$|^sidebar-all-projects-(updates|tools)$/, exceptStates: POPUP_CELL_STATES,
+        tolerance: TOLERANCES.containment, statePattern: /empty|error|unavailable|unsupported|offline|^main-details-deprecated$|nomatch|-all$|^sidebar-all-projects-(updates|tools)$/, exceptStates: POPUP_CELL_STATES,
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
@@ -780,7 +785,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
     rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
-    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported|offline/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error', 'main-details-offline'] } }),
+    // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 9): the deprecated cell's notice, and the clause `advisories` on the
+    // loaded details cell (an advisory line's glyph and colour follow the row badge's severity mapping), hard since the item's code.
+    rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard', advisories: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported|offline|^main-details-deprecated$|^main-installed-details$/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'], advisories: ADVISORY_STATES } }),
     rule('DS-COLOR-1', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|provisional|empty|error|unsupported|nomatch|-all$/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.22 (V15): the token scrollbars, 10 px from P0.22; Modern UI's 8 px is P1.1's look token, the radius P3.9's; hard since UX-P3.9.
     rule('DS-SCROLL-1', { helper: 3, scopes: inGroups('hard', ...ALL), tolerance: TOLERANCES.containment }),
@@ -877,7 +884,7 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
             // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): the first block of the details tab panel (DS-INSET-4 `panel-top`).
             // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): a banner inside the details facts (DS-INSET-4 `facts-banner`).
-            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split', 'panel-top', 'facts-banner'];
+            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split', 'panel-top', 'facts-banner', 'advisories'];
         case 'dialogs':
             // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
             // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1b): a dialog list's items, DS-COPY-2.
@@ -1358,7 +1365,12 @@ export interface StateCells {
      * from the page and an absent field once a layout is cloned (the rule tests' `layout()` drops null keys): both read as none.
      * Boxes only.
      */
-    detailsFactsBanner?: Array<{ start: number; padStart: number; padEnd: number; top: number; padTop: number; padBottom: number; below?: number | null }>;
+    /**
+     * The details pane's advisory lines (DS-STATE-4 `advisories`, UX-P5.2b): each line's severity word, its glyph's codicon and
+     * computed colour; and the computed colours of the three problems levels.
+     */
+    detailsAdvisories?: { lines: Array<{ word: string; codicon: string | null; colour: string }>; colours: { error: string; warning: string; info: string } };
+    detailsFactsBanner?: Array<{ start: number; padStart: number; padEnd: number; top: number; padTop: number; padBottom: number; below?: number | null; inner?: number[] }>;
     /** Each compact message leaf: its computed line height, its row's height and its rendered lines. */
     messageLeaves?: Array<{ lineHeight: number; height: number; lines: number }>;
     /** The topmost dialog's title and text containers, each with its computed line height as the page gives it (`normal` kept; UX-P4.fix-3). */
@@ -2358,6 +2370,15 @@ const stateCells = {
                     const panelTop = rectOf(panel).top;
                     return { first: round(rectOf(first).top + px(style.borderTopWidth) + px(style.paddingTop) - panelTop), underStrip: round(panelTop - rectOf(strip).bottom) };
                 })(),
+                // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 9): the details pane's advisory lines.
+                detailsAdvisories: (() => {
+                    const pane = document.querySelector('[data-testid="package-details-panel"]');
+                    const lines = pane ? [...pane.querySelectorAll('.nuiget-details-vulnerability')].filter(visible).map(line => {
+                        const glyph = line.querySelector('svg');
+                        return { word: (line.textContent || '').trim().split(' ')[0], codicon: glyph ? glyph.getAttribute('data-codicon') : null, colour: glyph ? getComputedStyle(glyph).color : '' };
+                    }) : [];
+                    return { lines, colours: { error: computedColour('--nuiget-color-icon-error'), warning: computedColour('--nuiget-color-icon-warning'), info: computedColour('--nuiget-color-icon-info') } };
+                })(),
                 // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): each banner of the details facts, on boxes.
                 detailsFactsBanner: (() => {
                     const pane = document.querySelector('[data-testid="package-details-panel"]');
@@ -2369,13 +2390,19 @@ const stateCells = {
                         const infoStyle = getComputedStyle(info);
                         const contentTop = rectOf(info).top + px(infoStyle.borderTopWidth) + px(infoStyle.paddingTop);
                         // UX-P5.fix-7 (GOLDEN ruling 1, DO 4): the next block after the banner's wrapper (the banner itself when it has none).
+                        // UX-P5.2b (design-advisor follow-up 1): the notice is one block, read from its last visible child, and the gaps
+                        // inside it after the banner are inner.
                         const wrapper = banner.parentElement && banner.parentElement !== info ? banner.parentElement : banner;
                         let next = wrapper.nextElementSibling;
                         while (next && !visible(next)) next = next.nextElementSibling;
+                        const parts = wrapper === banner ? [banner] : [...wrapper.children].filter(visible);
+                        const from = parts.indexOf(banner);
+                        const inner = parts.slice(from + 1).map((part, index) => round(rectOf(part).top - rectOf(parts[from + index]).bottom));
+                        const last = parts[parts.length - 1] ?? banner;
                         return {
                             start: round(rectOf(glyph ?? banner).left - rectOf(pane).left), padStart: px(style.paddingLeft), padEnd: px(style.paddingRight),
                             top: round(rectOf(banner).top - contentTop), padTop: px(style.paddingTop), padBottom: px(style.paddingBottom),
-                            below: next ? round(rectOf(next).top - rectOf(banner).bottom) : null,
+                            below: next ? round(rectOf(next).top - rectOf(last).bottom) : null, inner,
                         };
                     });
                 })(),
@@ -4524,15 +4551,19 @@ const DETAILS_CONTENT_X = 20;
 /** DS-INSET-4 `panel-top` (UX-P5.fix-3): the tab panel's first block at the details content inset, the panel flush under the strip. */
 const PANEL_TOP_FIRST = 20;
 const PANEL_TOP_UNDER_STRIP = 0;
+/** DS-STATE-4 `advisories` (UX-P5.2b): the problems level of each severity word, as the row badge maps it. */
+const ADVISORY_LEVELS: Record<string, 'error' | 'warning' | 'info'> = { Critical: 'error', High: 'error', Moderate: 'warning', Low: 'info' };
 /** DS-INSET-4 `facts-banner` (UX-P5.fix-7, GOLDEN ruling 1): the next block 12 below a banner of the facts, the description's step. */
 const FACTS_BANNER_BELOW = 12;
+/** DS-INSET-4 `facts-banner` (UX-P5.2b, design-advisor follow-up 1): text attached under the banner in its notice, 4 below it. */
+const FACTS_NOTICE_INNER = 4;
 
 /** The verdict of a clause UX-P3.10 adds in its own scope (`labels`, `skeleton`, `details-skeleton`, `message-leaf`; `dialog-text` since UX-P4.fix-3), or undefined for another. */
 function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: Layout, look: 'modern' | 'classic'): { value: string; pass: boolean } | undefined {
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner'));
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner')) || (definition.id === 'DS-STATE-4' && scope === 'advisories');
     if (!own) {
         return undefined;
     }
@@ -4568,15 +4599,30 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
         const asserted = layout.width >= PLACEHOLDER_WIDTH;
         return { value: `placeholder "${fit.text}" ${fit.width} of ${fit.room} px${asserted ? '' : ` (printed at ${layout.width})`}`, pass: !asserted || fit.width <= fit.room };
     }
+    if (definition.id === 'DS-STATE-4' && scope === 'advisories') {
+        const advisories = cells.detailsAdvisories;
+        if (advisories === undefined || advisories.lines.length === 0) {
+            return notMeasurable('no advisory line');
+        }
+        const off = advisories.lines.filter(line => {
+            const level = ADVISORY_LEVELS[line.word];
+            return level === undefined || line.codicon !== level || line.colour !== advisories.colours[level];
+        });
+        return {
+            value: `advisory lines ${advisories.lines.length}: ${tally(advisories.lines.map(line => `${line.word} ${line.codicon ?? 'no glyph'}`))}${off.length === 0 ? '; glyph colours on their level' : `; off ${tally(off.map(line => `${line.word} ${line.codicon ?? 'no glyph'} ${line.colour}`))}`} (Critical and High error, Moderate warning, Low info)`,
+            pass: off.length === 0,
+        };
+    }
     if (definition.id === 'DS-INSET-4' && scope === 'facts-banner') {
         const banners = cells.detailsFactsBanner ?? [];
         if (banners.length === 0) {
             return notMeasurable('no banner in the details facts');
         }
         return {
-            value: `facts banner ${banners.length}: glyph at ${tally(banners.map(banner => banner.start))} from the pane (target ${DETAILS_CONTENT_X}, the details content inset); inline padding ${tally(banners.map(banner => banner.padStart))}/${tally(banners.map(banner => banner.padEnd))} (target 0); top ${tally(banners.map(banner => banner.top))} (target 0), block padding ${tally(banners.map(banner => banner.padTop))}/${tally(banners.map(banner => banner.padBottom))} (target 0); next block ${tally(banners.map(banner => banner.below ?? 'none'))} below (target ${FACTS_BANNER_BELOW})`,
+            value: `facts banner ${banners.length}: glyph at ${tally(banners.map(banner => banner.start))} from the pane (target ${DETAILS_CONTENT_X}, the details content inset); inline padding ${tally(banners.map(banner => banner.padStart))}/${tally(banners.map(banner => banner.padEnd))} (target 0); top ${tally(banners.map(banner => banner.top))} (target 0), block padding ${tally(banners.map(banner => banner.padTop))}/${tally(banners.map(banner => banner.padBottom))} (target 0); next block ${tally(banners.map(banner => banner.below ?? 'none'))} below (target ${FACTS_BANNER_BELOW})${banners.some(banner => (banner.inner ?? []).length > 0) ? `; in the notice ${tally(banners.flatMap(banner => banner.inner ?? []))} below the banner (target ${FACTS_NOTICE_INNER})` : ''}`,
             pass: banners.every(banner => near(banner.start, DETAILS_CONTENT_X, tolerance) && near(banner.padStart, 0, tolerance) && near(banner.padEnd, 0, tolerance)
-                && near(banner.top, 0, tolerance) && near(banner.padTop, 0, tolerance) && near(banner.padBottom, 0, tolerance) && (banner.below === null || banner.below === undefined || near(banner.below, FACTS_BANNER_BELOW, tolerance))),
+                && near(banner.top, 0, tolerance) && near(banner.padTop, 0, tolerance) && near(banner.padBottom, 0, tolerance) && (banner.below === null || banner.below === undefined || near(banner.below, FACTS_BANNER_BELOW, tolerance))
+                && (banner.inner ?? []).every(gap => near(gap, FACTS_NOTICE_INNER, tolerance))),
         };
     }
     if (definition.id === 'DS-INSET-4') {

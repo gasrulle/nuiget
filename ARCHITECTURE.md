@@ -722,7 +722,9 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   feature is added in `index.tsx` and the shell does not grow. The shell owns the panel's one central change
   (`features/updates/useCentralChange.ts`: the request, `ask`, `close`, `confirm`) and its one install action
   (`useInstallAction`), and hands them down in the views: `ListView.central` and the details view's `central` carry
-  `ask`, `BrowseView.install`, the details view's `install` and `useSearchTyping`'s `install` carry the install action.
+  `ask`, `BrowseView.install`, the details view's `install` and `useSearchTyping`'s `install` carry the install action;
+  the details view's `find` (UX-P5.2b) runs `useSearchTyping`'s `find` (the `goTo` of `ui/navigateToPackage`: an exact Browse
+  search for an id, no suggestions) and then moves the focus to the search box, since the pane's button unmounts.
   The one `CentralUpdateDialog` is mounted by the shell on `central.request`; its confirm runs `ops/install` or
   `ops/update` by the request's `kind` through the ops slice, and a change of the committed project closes it (X53,
   N77). The sidebar mounts its own one (`SidebarView.tsx`, UX-P4.2b). The shell also owns the Delete key's confirmation (`src/webview/shared/installed/uninstallConfirm.tsx`:
@@ -914,7 +916,9 @@ framework or per project, nothing asked of the feeds); the Installed, Updates an
 lists call `select()` when the user makes a row current (and the browse list after a navigation), never when a list
 resets its own row, so the stale-selection rule can keep the pane; the one exception is Browse, whose selection is never
 stale: a new text whose results lack the current row clears it. The header shows the installed version with
-Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`
+Uninstall (`whyNotRemovable` decides) and the version selector (`version-selector`, newest first, `(installed)`, and since
+UX-P5.2b `(vulnerable)` on a version `package/versions` names in `vulnerableVersions`, which the details slice exposes as
+`DetailsState.vulnerableVersions`; absent marks nothing, `versionOption` in `DetailsPane.tsx`
 marked) with one primary button (`install-update-button`), both rows one grid (`nuiget-details-actions`: label, value,
 action, so Uninstall and Update share their left edge; P9.fix-5): Install when the package is not installed in the target
 project, otherwise Update or Downgrade by the order of the host's list (no comparator in the webview; a version missing
@@ -923,7 +927,11 @@ without a single project, while stale, for a floating or ranged reference or an 
 disabled with the reason. Every install of the main panel goes through the shell's one `useInstallAction` (P9.6), and every `ops/install` of the main panel names its version: `useInstallAction` sends it, or `useCentralChange.confirm` for a request `useInstallAction` asked. It refuses without a single project, while the project's list has not answered (CPM unknown), for an installed package or a busy one, and while another preview is asked (one ask at a time, X53); into a CPM project it asks `cpm/preview` first (every install control waits): `null` installs at once, a preview or an error asks the shell's `CentralUpdateDialog` with `kind: 'install'`, and its confirm runs `ops/install` (N77). `install()` returns the cancel of its own ask: the pane keeps the one it started and cancels it when the selection changes or the pane goes away, never a Browse row's or the search box's ask. A centrally managed package asks the shell's `CentralUpdateDialog` (`central.ask`), which asks `cpm/preview`, lists the projects the central version applies to and runs `ops/update` on *Update central version*; a row with a `VersionOverride` updates in its project alone (no preview, N74); a central row uninstalls directly and the pane says that the central entry stays. Busy follows
 `isPackageBusy`.
 
-The Details tab (P9.8) shows the description, then Version, Author(s) with the Verified mark, License, Downloads,
+The Details tab (P9.8) opens, for a deprecated version, with the deprecation notice (`details-deprecation`, UX-P5.2b): the
+warning banner of `deprecationSentence` (`shared/installed/rules.ts`, the one mapping of the notice and the rows' Deprecated
+badge) with Find Alternative (the details view's `find`) when the source names an alternate, and the source's message as
+plain text; advisory lines draw their severity's glyph and problems colour (`severityLevel`, as the row badge). It then shows
+the description, then Version, Author(s) with the Verified mark, License, Downloads,
 Package size (the resolver's HEAD of the answering source's flat container), Date published, Project URL and Report
 abuse (a nuget.org source only); the Verified mark and Downloads come from the row through `DetailsSelection.known`
 when the registration does not say them. Vulnerabilities show their severity in words with an icon; dependencies are

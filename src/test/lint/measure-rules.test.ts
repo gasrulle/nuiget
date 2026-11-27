@@ -1225,8 +1225,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.10 push C: the details cells (follow-up 1, B), hard since UX-P3.10 push E.
         expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' });
         // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only; UX-P5.fix-7 (design-advisor DO 6) adds the offline cell's warning.
-        expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error', 'main-details-offline'] });
-        for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-STATE-4', 'DS-COLOR-1']) {
+        // UX-P5.2b (design-advisor DO 9): the deprecated cell's notice, and the clause `advisories` on the loaded details cell.
+        expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'], advisories: ['main-installed-details'] });
+        expect(scopesOf('DS-STATE-4')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard', advisories: 'hard' });
+        for (const id of ['DS-STATE-2', 'DS-STATE-3', 'DS-COLOR-1']) {
             expect(scopesOf(id), id).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' });
         }
     });
@@ -1974,6 +1976,13 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 4, padBottom: 4, below: 0 }] }), name))
             .toMatchObject({ pass: false, value: 'facts banner 1: glyph at 20 from the pane (target 20, the details content inset); inline padding 0/0 (target 0); top 0 (target 0), block padding 4/4 (target 0); next block 0 below (target 12)' });
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), name)?.pass).toBe(true);
+        // UX-P5.2b (design-advisor follow-up 1): a notice with a message reads the gap inside it and the next block from its end; the
+        // local 34.2 came from the collector's old origin (the banner's bottom, past the message).
+        const deprecated = 'DS-INSET-4@main-details-deprecated/facts-banner';
+        expect(lineOf('main-details-deprecated', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12, inner: [4] }] }), deprecated))
+            .toMatchObject({ pass: true, value: 'facts banner 1: glyph at 20 from the pane (target 20, the details content inset); inline padding 0/0 (target 0); top 0 (target 0), block padding 0/0 (target 0); next block 12 below (target 12); in the notice 4 below the banner (target 4)' });
+        expect(lineOf('main-details-deprecated', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12, inner: [0] }] }), deprecated)?.pass).toBe(false);
+        expect(lineOf('main-details-deprecated', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 34.2, inner: [4] }] }), deprecated)?.pass).toBe(false);
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: null }] }), name))
             .toMatchObject({ pass: true, value: expect.stringContaining('next block none below') });
         expect(lineOf('main-details-offline', withCells({ detailsFactsBanner: [] }), name))
@@ -1981,6 +1990,19 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         // Only the offline cell reads the clause; it also reads panel-top.
         expect(lineOf('main-details-error', withCells({ detailsFactsBanner: [{ start: 20, padStart: 0, padEnd: 0, top: 0, padTop: 0, padBottom: 0, below: 12 }] }), 'DS-INSET-4@main-details-error/facts-banner')).toBeUndefined();
         expect(lineOf('main-details-offline', withCells({ detailsPanelTop: { first: 20, underStrip: 0 } }), 'DS-INSET-4@main-details-offline/panel-top')?.pass).toBe(true);
+    });
+
+    it('reads each advisory line\'s glyph and colour against its severity\'s level (DS-STATE-4 advisories, UX-P5.2b)', () => {
+        const name = 'DS-STATE-4@main-installed-details/advisories';
+        const colours = { error: 'rgb(241, 76, 76)', warning: 'rgb(204, 167, 0)', info: 'rgb(55, 148, 255)' };
+        // Today's form before the item: a warning glyph in the warning colour on a High line.
+        expect(lineOf('main-installed-details', withCells({ detailsAdvisories: { lines: [{ word: 'High', codicon: 'warning', colour: colours.warning }], colours } }), name))
+            .toMatchObject({ pass: false, status: 'hard', value: 'advisory lines 1: High warning; off High warning rgb(204, 167, 0) (Critical and High error, Moderate warning, Low info)' });
+        expect(lineOf('main-installed-details', withCells({ detailsAdvisories: { lines: [{ word: 'High', codicon: 'error', colour: colours.error }, { word: 'Moderate', codicon: 'warning', colour: colours.warning }, { word: 'Low', codicon: 'info', colour: colours.info }], colours } }), name))
+            .toMatchObject({ pass: true, value: 'advisory lines 3: High error, Low info, Moderate warning; glyph colours on their level (Critical and High error, Moderate warning, Low info)' });
+        expect(lineOf('main-installed-details', withCells({ detailsAdvisories: { lines: [], colours } }), name)).toMatchObject({ pass: false, value: 'not measurable (no advisory line)' });
+        // The deprecated cell reads the notice's banner, not the clause.
+        expect(lineOf('main-details-deprecated', withCells({ detailsAdvisories: { lines: [], colours } }), 'DS-STATE-4@main-details-deprecated/advisories')).toBeUndefined();
     });
 
     it('reads a wrapped compact message leaf as body text, a one-line leaf at the row\'s 22 px (DS-TYPE-4 message-leaf)', () => {

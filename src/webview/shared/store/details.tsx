@@ -36,6 +36,11 @@ export interface DetailsState {
     version: string | null;
     /** Every version of the package on its source (or the allowed sources), newest first. */
     versions: Loadable<readonly string[]>;
+    /**
+     * The versions of that answer an advisory covers (UX-P5.2b): `undefined` while the vulnerability data is unknown (not loaded
+     * when the host answered), `[]` when none is known; never asked again when the data arrives (ADR-009 d.1).
+     */
+    vulnerableVersions: readonly string[] | undefined;
     /** The details of the chosen version; `null` when no source knows it. */
     metadata: Loadable<PackageMetadata | null>;
     /** The README of the chosen version, asked once `showReadme()` was called for the selection; `null` without one. */
@@ -250,6 +255,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
         value => sameId(value.packageId, packageId as string),
     );
     const versions = useMemo<Loadable<readonly string[]>>(() => ({ ...listed, value: listed.value?.versions }), [listed]);
+    const vulnerableVersions = listed.value?.vulnerableVersions;
 
     const metadataKey = packageId === undefined || version === null || !asksFeeds ? null : `${packageId.toLowerCase()}@${version.toLowerCase()}|${sourceUrl ?? 'all'}`;
     const metadata = useLoadable<PackageMetadata | null>(
@@ -278,8 +284,8 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     }), [select, showView]);
 
     const state = useMemo<DetailsState>(
-        () => ({ selection, version, versions, metadata, readme, stale, reveal }),
-        [selection, version, versions, metadata, readme, stale, reveal],
+        () => ({ selection, version, versions, vulnerableVersions, metadata, readme, stale, reveal }),
+        [selection, version, versions, vulnerableVersions, metadata, readme, stale, reveal],
     );
 
     return (

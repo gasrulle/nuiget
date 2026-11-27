@@ -246,10 +246,16 @@ otherwise. The split keeps the list at least 170 px and the details pane at leas
 Tabs (`role="tablist"`) sit in a 36 px strip whose labels start at the title's x: **Details** (the description, then a
 property list: Version, Authors with the Verified mark, License, Downloads, Package size, Date published, Project URL
 and, for a nuget.org package, Report Abuse; labels in one column, values in a second, aligned column, no colons;
-vulnerabilities with severity **text + icon**; dependencies per target framework, collapsed with their counts),
+vulnerabilities with severity **text + icon**, each line's glyph in its severity's problems colour as the row badge maps it
+(Critical and High error, Moderate warning, Low information); dependencies per target framework, collapsed with their counts),
 **README** (rendered Markdown, sanitized, in the Markdown preview's type scale; images fetched host-side; code blocks
 with a copy button that shows Copied for two seconds; "No README available." empty state; failure shows an inline
-Retry). Version dropdown (`version-selector`) lists versions with "(installed)" marker; the primary button reads
+Retry). A deprecated version opens its facts with a warning notice (`details-deprecation`): "This version is deprecated" with
+the source's reasons (legacy, critical bugs) and, when the source names one, "Use <id> instead." and **Find Alternative**, which
+searches Browse for that id with an exact match and moves the focus to the search box; the source's own message follows as plain
+text (`details-deprecation-message`), never a link. Version dropdown (`version-selector`) lists versions with "(installed)" marker,
+and "(vulnerable)" (or "(installed, vulnerable)") on a version the host knows an advisory covers; while that knowledge is
+missing it marks nothing; the primary button reads
 **Install** / **Update** / **Downgrade** / **Uninstall** depending on the selection vs installed version. Loading of
 versions/metadata/README is per selection and shows the 2 px bar at the top of the pane or the README; a response for
 a different package/version is ignored.
@@ -286,6 +292,8 @@ project has several and one block per project in All Projects; no version select
 | `details-empty` | The details pane's empty state, "Select a package to see its details." |
 | `details-progress`, `readme-progress` | The 2 px bar over the details facts' skeleton while the selection's metadata loads, and over the README's while it loads (UX-P3.10) |
 | `details-error`, `readme-error` | The inline error with Retry of the details facts and of the README (UX-P3.10) |
+| `details-deprecation` | The deprecation notice of the chosen version, first in the details facts, with Find Alternative when the source names an alternate (UX-P5.2b) |
+| `details-deprecation-message` | The source's own deprecation message under the notice, plain text (UX-P5.2b) |
 | `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |

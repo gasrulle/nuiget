@@ -1,7 +1,8 @@
 import { useEffect, useId, useState } from 'react';
 import type React from 'react';
 import type { PackageDependencyGroup as Group, PackageMetadata } from '../../../../protocol';
-import { Banner, EmptyState, GroupCaption, ProgressBar, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { Banner, EmptyState, ErrorIcon, GroupCaption, InfoIcon, ProgressBar, PropertyList, SectionHeader, Skeleton, VerifiedIcon, WarningIcon } from '../../../shared/primitives';
+import { deprecationSentence, severityLevel } from '../../../shared/installed/rules';
 import { failure } from '../../../shared/updates/sentence';
 import { useDetails, useDetailsActions, type DetailsSelection } from '../../../shared/store/details';
 import { useSession } from '../../../shared/store/session';
@@ -98,13 +99,31 @@ function DependencyGroup({ group, expanded, onToggle }: { group: Group; expanded
 }
 
 /**
+ * An advisory line takes the glyph and colour role of the row badge's severity mapping (UX-P5.2b, DS-STATE-4 `advisories`):
+ * Critical and High the error glyph, Moderate the warning glyph, Low the information glyph, each in its problems colour; the words
+ * keep the text colour.
+ */
+const ADVISORY_LEVEL = {
+    error: { className: 'nuiget-details-vulnerability nuiget-details-vulnerability--error' },
+    warning: { className: 'nuiget-details-vulnerability nuiget-details-vulnerability--warning' },
+    info: { className: 'nuiget-details-vulnerability nuiget-details-vulnerability--info' },
+} as const;
+
+function AdvisoryGlyph({ level }: { level: 'error' | 'warning' | 'info' }): React.JSX.Element {
+    if (level === 'error') {
+        return <ErrorIcon className="nuiget-details-advisory-glyph" />;
+    }
+    return level === 'warning' ? <WarningIcon className="nuiget-details-advisory-glyph" /> : <InfoIcon className="nuiget-details-advisory-glyph" />;
+}
+
+/**
  * The Details tab (interaction model §7): description, then a property list of Version, Authors with the Verified mark
  * the row knew, License, Downloads (the registration's, else the row's), Package size, Date published, Project URL and
  * Report abuse for a nuget.org package; vulnerabilities with their severity in words and an icon; dependencies per target
  * framework, collapsed, each with its count badge. Details read from the local package cache are marked offline, saying whether a source
  * is down or no source knows the version. The pane keys it by package and version, so another package starts collapsed.
  */
-export function DetailsInfo({ announce, shownKey }: { announce: (message: string) => void; shownKey: string | null }): React.JSX.Element {
+export function DetailsInfo({ announce, shownKey, find }: { announce: (message: string) => void; shownKey: string | null; find?: (packageId: string) => void }): React.JSX.Element {
     const { metadata, selection } = useDetails();
     const { retryMetadata } = useDetailsActions();
     const { sources, failed, enable } = useSources();
@@ -156,6 +175,19 @@ export function DetailsInfo({ announce, shownKey }: { announce: (message: string
                     </Banner>
                 </div>
             ) : null}
+            {value.deprecation ? (
+                <div className="nuiget-details-notice">
+                    <Banner
+                        severity="warning"
+                        data-testid="details-deprecation"
+                        action={value.deprecation.alternatePackage && find ? { label: 'Find Alternative', onClick: () => find((value.deprecation?.alternatePackage as { id: string }).id) } : undefined}
+                    >
+                        {deprecationSentence(value.deprecation)}
+                    </Banner>
+                    {/* The source's own words, text only: never HTML, never a link (UX-P5.2b, design DO 4). */}
+                    {value.deprecation.message ? <p className="nuiget-details-note" data-testid="details-deprecation-message">{value.deprecation.message}</p> : null}
+                </div>
+            ) : null}
             {value.description ? <p className="nuiget-details-description">{value.description}</p> : null}
             <Facts metadata={value} known={selection?.known} reportAbuse={reportAbuse} />
             {value.vulnerabilities !== undefined && value.vulnerabilities.length > 0 ? (
@@ -163,8 +195,8 @@ export function DetailsInfo({ announce, shownKey }: { announce: (message: string
                     <GroupCaption title="Vulnerabilities" />
                     <ul className="nuiget-details-list">
                         {value.vulnerabilities.map(vulnerability => (
-                            <li key={vulnerability.advisoryUrl} className="nuiget-details-vulnerability">
-                                <WarningIcon />
+                            <li key={vulnerability.advisoryUrl} className={ADVISORY_LEVEL[severityLevel(vulnerability.severity)].className}>
+                                <AdvisoryGlyph level={severityLevel(vulnerability.severity)} />
                                 <span>{`${vulnerability.severity} severity`}</span>
                                 {isWebLink(vulnerability.advisoryUrl) ? <a href={vulnerability.advisoryUrl}>Advisory</a> : null}
                             </li>

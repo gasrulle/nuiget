@@ -61,6 +61,8 @@ export interface DetailsView {
     install: InstallAction;
     /** Asks the panel's one central-change dialog for a centrally managed package's update. */
     central: Pick<CentralChange, 'ask'>;
+    /** Searches Browse for one id; the shell moves the focus to the box, as the button unmounts (Find Alternative, UX-P5.2b). */
+    find: (packageId: string) => void;
 }
 
 export interface MainShellProps {
@@ -286,7 +288,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                     }}
                 />
                 <section className="nuiget-main-details" data-testid="package-details-panel" aria-label="Package details">
-                    {details?.({ announce, install: installAction, central }) ?? <EmptyState data-testid="details-empty" message="Select a package to see its details." />}
+                    {details?.({ announce, install: installAction, central, find: packageId => { typing.find(packageId); focusSearch(); } }) ?? <EmptyState data-testid="details-empty" message="Select a package to see its details." />}
                 </section>
             </div>
             <CentralUpdateDialog request={central.request} onClose={central.close} onConfirm={central.confirm} />

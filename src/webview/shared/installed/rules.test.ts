@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InstalledPackage, InstalledResult, OperationProgress, PackageSearchResult, PackageUpdate } from '../../../protocol';
 import type { Settling } from '../store/ops';
-import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, directVulnerability, filterById, groupCount, projectNameOf, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, vulnerabilitySeverity, whyNotDeletable } from './rules';
+import { UNRESOLVED_HINT, browseRowContext, busyEntry, busyText, deprecationSentence, directVulnerability, filterById, groupCount, liteOfInstalled, projectNameOf, severityLevel, transitiveVulnerability, updateCandidates, updateRowContext, updatesInOrder, versionCell, vulnerabilityOf, vulnerabilitySeverity, whyNotDeletable } from './rules';
 
 const entry = (changes: Partial<InstalledPackage>): InstalledPackage => ({ id: 'Lib', version: '1.2.3', versionType: 'standard', declaration: 'project', ...changes });
 
@@ -230,5 +230,32 @@ describe('vulnerabilitySeverity (UX-P5.1b)', () => {
         expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('Moderate'), advisory('Low')] })).toEqual({ highest: 'Moderate', count: 2, level: 'warning' });
         expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('High')] })).toEqual({ highest: 'High', count: 1, level: 'error' });
         expect(vulnerabilitySeverity({ id: 'A', version: '1.0.0', vulnerabilities: [advisory('Low'), advisory('Critical'), advisory('High')] })).toEqual({ highest: 'Critical', count: 3, level: 'error' });
+    });
+});
+
+describe('deprecation and severity level (UX-P5.2b)', () => {
+    it('deprecationSentence names the known reasons as clauses, case-insensitively, and the alternate package', () => {
+        expect(deprecationSentence({ reasons: ['Legacy'] })).toBe('This version is deprecated: it is legacy and no longer maintained.');
+        expect(deprecationSentence({ reasons: ['criticalbugs'] })).toBe('This version is deprecated: it has critical bugs.');
+        expect(deprecationSentence({ reasons: ['CriticalBugs', 'LEGACY'] })).toBe('This version is deprecated: it is legacy and no longer maintained, and it has critical bugs.');
+        expect(deprecationSentence({ reasons: ['Legacy'], alternatePackage: { id: 'Contoso.Next', range: '[2.0.0, )' } }))
+            .toBe('This version is deprecated: it is legacy and no longer maintained. Use Contoso.Next instead.');
+    });
+
+    it('deprecationSentence reads Other and unknown reason words as no clause', () => {
+        expect(deprecationSentence({ reasons: ['Other'] })).toBe('This version is deprecated.');
+        expect(deprecationSentence({ reasons: ['HasCriticalBugs', 'SomethingNew'] })).toBe('This version is deprecated.');
+        expect(deprecationSentence({ reasons: ['Other'], message: 'Gone.', alternatePackage: { id: 'Next' } })).toBe('This version is deprecated. Use Next instead.');
+    });
+
+    it('liteOfInstalled keeps a lite entry only when it describes the update row\'s installed version', () => {
+        const lite = { id: 'Lib', version: '1.0.0', vulnerabilities: [] };
+        expect(liteOfInstalled(lite, { installedVersion: '1.0.0' })).toBe(lite);
+        expect(liteOfInstalled(lite, { installedVersion: '1.1.0' })).toBeUndefined();
+        expect(liteOfInstalled(undefined, { installedVersion: '1.0.0' })).toBeUndefined();
+    });
+
+    it('severityLevel maps Critical and High to error, Moderate to warning and Low to info, as the row badge does', () => {
+        expect((['Critical', 'High', 'Moderate', 'Low'] as const).map(severityLevel)).toEqual(['error', 'error', 'warning', 'info']);
     });
 });

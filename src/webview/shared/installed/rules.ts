@@ -1,4 +1,4 @@
-import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult, type VulnerabilitySeverity } from '../../../protocol';
+import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type OperationKind, type OperationProgress, type PackageDeprecation, type PackageMetadataLite, type PackageSearchResult, type PackageUpdate, type ProjectInstalledChunk, type TransitiveResult, type VulnerabilitySeverity } from '../../../protocol';
 import { directCount } from '../counts';
 import { busyKey, type OpsState } from '../store/ops';
 import { metadataKey } from '../store/transitive';
@@ -262,6 +262,31 @@ export function vulnerabilitySeverity(lite: PackageMetadataLite | undefined): { 
     const highest = advisories.reduce<VulnerabilitySeverity>((top, advisory) => (SEVERITY_ORDER.indexOf(advisory.severity) > SEVERITY_ORDER.indexOf(top) ? advisory.severity : top), 'Low');
     return { highest, count: advisories.length, level: SEVERITY_LEVEL[highest] };
 }
+
+/** The problems level of one severity (UX-P5.2b): the glyph and colour role of an advisory line, as of the row badge. */
+export const severityLevel = (severity: VulnerabilitySeverity): 'error' | 'warning' | 'info' => SEVERITY_LEVEL[severity];
+
+/** The clause of each known deprecation reason, matched case-insensitively; any other word reads as Other (UX-P5.2b). */
+const DEPRECATION_CLAUSE: Record<string, string> = { legacy: 'it is legacy and no longer maintained', criticalbugs: 'it has critical bugs' };
+
+/**
+ * What a deprecation says (UX-P5.2b, design-advisor opening ruling of 2026-11-27, DO 2): "This version is deprecated" with the
+ * known reasons as clauses (Legacy, then CriticalBugs), and "Use <id> instead." when the source names an alternate package; its
+ * range is not shown. Other or unknown reason words add no clause. The one mapping of the badge and the details notice.
+ */
+export function deprecationSentence(deprecation: PackageDeprecation): string {
+    const words = new Set(deprecation.reasons.map(reason => reason.toLowerCase()));
+    const clauses = ['legacy', 'criticalbugs'].filter(word => words.has(word)).map(word => DEPRECATION_CLAUSE[word]);
+    const first = clauses.length === 0 ? 'This version is deprecated.' : `This version is deprecated: ${clauses.length === 2 ? `${clauses[0]}, and ${clauses[1]}` : clauses[0]}.`;
+    return deprecation.alternatePackage ? `${first} Use ${deprecation.alternatePackage.id} instead.` : first;
+}
+
+/**
+ * An Updates row's lite entry, only when it describes the row's installed version (UX-P5.2b, architecture ruling DO 9): the lite
+ * entry is asked at the resolved version, the row's at the effective one; when they differ, nothing is known about the row.
+ */
+export const liteOfInstalled = (lite: PackageMetadataLite | undefined, update: Pick<PackageUpdate, 'installedVersion'>): PackageMetadataLite | undefined =>
+    lite !== undefined && lite.version === update.installedVersion ? lite : undefined;
 
 /** A direct row's knowledge, by its lower-cased id in the installed slice's map. */
 export const directVulnerability = (metadata: ReadonlyMap<string, PackageMetadataLite>, id: string): VulnerabilityKnowledge =>
