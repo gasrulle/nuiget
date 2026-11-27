@@ -108,7 +108,7 @@ export const pending = (name: string, surface: Surface, item: string, setup: str
 /** Live nuget.org content (download counts, newest versions, descriptions) that differs between runs. */
 const LIVE_RESULTS: Mask = { selector: '[data-testid="browse-list"]', reason: 'nuget.org search results change between runs', liveList: true };
 const LIVE_DETAILS: Mask = { selector: '[data-testid="package-details-panel"]', reason: 'nuget.org metadata (downloads, versions) changes between runs' };
-/** The details header: the version select and the installed row follow nuget.org versions (UX-P5.fix-7; UX-P5.fix-8 reuses it). */
+/** The details header: the version select and the installed row follow nuget.org versions (UX-P5.fix-7; used by the four loading and error cells since UX-P5.fix-8). */
 const LIVE_DETAILS_HEADER: Mask = { selector: '[data-testid="package-details-panel"] [data-testid="details-header"]', reason: 'the version select and the installed row follow nuget.org versions' };
 /** The facts under a banner of the details facts: package content read per run (UX-P5.fix-7); the banner's wrapper stays unmasked. */
 const LIVE_DETAILS_FACTS: Mask = { selector: '[data-testid="package-details-panel"] .nuiget-details-info > :not(.nuiget-details-notice)', reason: 'the facts under the banner are package content read per run' };
@@ -333,9 +333,9 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-details-empty', 'main', [primary('main')],
         "Gateway listed, no row current: the details pane's welcome-style \"Select a package to see its details.\" (marker details-empty; follow-up 1, B).", [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-loading', 'main', [primary('main')],
-        "Gateway listed, Serilog made current with its metadata held: the 2 px bar over the skeleton facts (marker details-progress); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+        "Gateway listed, Serilog made current with its metadata held: the 2 px bar over the skeleton facts (marker details-progress); released after the capture.", [LIVE_DETAILS_HEADER, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-error', 'main', [primary('main')],
-        "Serilog made current with its metadata released as a failure, one fixed sentence: the inline error with Retry (marker details-error).", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+        "Serilog made current with its metadata released as a failure, one fixed sentence: the inline error with Retry (marker details-error).", [LIVE_DETAILS_HEADER, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-offline', 'main', [primary('main')],
         "Serilog made current with its metadata held and rewritten to the host's package-cache answer (offline, the nuspec's fields alone): the warning banner \"Offline: no package source knows this version. …\" first in the facts, at the details content inset; ended with the hold.", [LIVE_DETAILS_HEADER, LIVE_DETAILS_FACTS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-readonly', 'main', [primary('main')],
@@ -343,9 +343,9 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-details-unsupported', 'main', [primary('main')],
         "Unsupported.csproj chosen, Polly made current: Update/Install disabled and described by the note \"Unsupported project: <reason>.\" (marker details-readonly; follow-up 3).", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-readme-loading', 'main', [primary('main')],
-        "Serilog current, its README held and the README tab chosen: the 2 px bar over the README skeleton (marker readme-progress); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+        "Serilog current, its README held and the README tab chosen: the 2 px bar over the README skeleton (marker readme-progress); released after the capture.", [LIVE_DETAILS_HEADER, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-readme-error', 'main', [primary('main')],
-        "Serilog current, its README released as a failure, one fixed sentence: the inline error with Retry (marker readme-error).", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+        "Serilog current, its README released as a failure, one fixed sentence: the inline error with Retry (marker readme-error).", [LIVE_DETAILS_HEADER, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     // UX-P4.10 (design-advisor ruling of 2026-11-20, DO 5): the one cell at a fractional device pixel ratio, Tier B only, in the
     // dark-high-contrast shard, where every boundary is a 1 px line; its readings land pending on UX-P4.10 until its closing commit.
     { name: 'main-installed-zoom2-800px', surface: 'main', tier: 'B', captures: [], zoomLevel: 2, status: 'ready', diffTolerance: DIFF_TOLERANCE_START,
