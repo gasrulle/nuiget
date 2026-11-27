@@ -1247,8 +1247,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
         // UX-P3.10 push C: the details cells (follow-up 1, B), hard since UX-P3.10 push E.
         expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' });
-        // UX-P5.3b (design-advisor follow-up 1, DO 8; follow-up 2, DO 3): the Consolidate cell's marker, pending until the item's closing flips it.
-        expect(RULES.find(rule => rule.id === 'DS-STATE-1')?.pendingStates).toEqual({ 'main-consolidate': 'P5.3b' });
+        // UX-P5.3b: the Consolidate cell's marker, flipped hard at the item's closing (GOLDEN CLASS ruling, DO 3).
+        expect(RULES.find(rule => rule.id === 'DS-STATE-1')?.pendingStates).toBeUndefined();
         // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only; UX-P5.fix-7 (design-advisor DO 6) adds the offline cell's warning.
         // UX-P5.2b (design-advisor DO 9): the deprecated cell's notice, and the clause `advisories` on the loaded details cell.
         expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'], advisories: ['main-installed-details'] });
@@ -1877,7 +1877,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
-        // A synthetic rule keeps the branch tested whatever product rule uses pendingStates (DS-STATE-1's Consolidate cell until UX-P5.3b's closing).
+        // No product rule uses pendingStates since UX-P4.fix-24 (DS-STATE-1's Consolidate cell, from UX-P5.3b's push 1 to its closing, aside); the mechanism stays, so a synthetic rule keeps its branch tested.
         const synthetic: RuleDefinition[] = [
             rule('X-PENDING-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingStates: { 'main-installed-single': 'P9.9' } }),
             rule('X-PENDING-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingStates: { 'main-installed-single': 'P9.9' } }),

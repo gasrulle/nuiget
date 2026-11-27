@@ -1,0 +1,93 @@
+{
+  "item": "P5.3b",
+  "runs": [
+    {
+      "runId": "45988940086",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "64ce24fe (push 1)",
+      "look": "modern",
+      "workflow": "wf_463b6dbe-39d",
+      "mode": "screen",
+      "note": "main-consolidate, its three All Projects neighbours that gained the tab; screen mode against main-installed-all.dark-modern.1200 (opening ruling DO 14). The single-judge findings are informational and predate this item (the message leaves' colour role and the @vulnerable Empty project, outside the strip band the item moved); they go to the planning session.",
+      "captures": {
+        "main-consolidate": {
+          "png": "captures/45988940086/main-consolidate.dark-modern.1200.png",
+          "sha256": "19473e48ffd539934e79865dd24ff7fbc5e0b287ef061d6ee4b93b0c5204989f",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-installed-all": {
+          "png": "captures/45988940086/main-installed-all.dark-modern.1200.png",
+          "sha256": "17afb66a3fc71ac5b78fa897b05933b01c9c28d2d0cfb9fa4f26cc2b52528a02",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-updates-all": {
+          "png": "captures/45988940086/main-updates-all.dark-modern.1200.png",
+          "sha256": "b8b26e83916f5249874118df0af76a1c805aa3132aaa835498b3275b81a06ea3",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-installed-all-vulnerable-unavailable": {
+          "png": "captures/45988940086/main-installed-all-vulnerable-unavailable.dark-modern.1200.png",
+          "sha256": "5542e37d983c0992fa770921ab2ab3d914583cffbbfc89c64af34ceda5feac4e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "candidates": 7,
+        "standing": 1,
+        "refuted": 1,
+        "singleJudge": 2,
+        "incomplete": 0,
+        "blocking": 1
+      },
+      "singleJudge": [
+        "main-installed-all#D1",
+        "main-installed-all-vulnerable-unavailable#D1"
+      ],
+      "findings": [
+        {
+          "id": "main-installed-all#D2",
+          "state": "main-installed-all",
+          "finding": "[native] The tab strip shows a third tab, CONSOLIDATE with a count badge, which the approved artboard and spec.json (tab-bar holds only installed-tab and updates-tab) do not draw; the design system's overflow table and states table do name a Consolidate tab under All Projects, and it is drawn like its Updates sibling (same label colour, badge and gap), so the artboard and redline lag the rules rather than the tab reading as non-native. | [geometry] The tab strip draws a third tab, 'CONSOLIDATE 2', right after the Updates tab (content at x 258-361, tab about 248-372), but the approved artboard and the redline's tab-bar elements have only Installed and Updates. Every other edge, inset, height and gap in the capture matches the spec's rects (headers at 147/178/234/406/678, rows at 259/331/459/531/603/703/775, controls at y 8/42/117), and the extra tab fits inside the 420 px tab bar without overflow. | [states] The tab strip shows a third tab, 'CONSOLIDATE' with a count badge of 2, after the Updates tab. The approved artboard draws only INSTALLED and UPDATES there, and the redline lists only installed-tab and updates-tab. design-system.md (overflow table row 'Tab strip (Installed/Updates, and Consolidate under All Projects)' and the Main · Consolidate states row) declares this tab under All Projects, so the artboard and redline look stale rather than the product being wrong. It is still an element the artboard lacks.",
+          "severity": "blocking",
+          "box": [
+            248,
+            77,
+            124,
+            35
+          ],
+          "rule": "DS-OVERFLOW-3, judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "design-system.md §8 \"Tab strip (Installed/Updates, and Consolidate under All Projects)\" and §9 \"Main · Consolidate (All Projects)\" (208536f5); the DECISIONS row of 2026-11-27 \"Consolidate tab (UX-P5.3b, G5)\": no artboard round; [diff] confined to the strip right of the Updates tab (GOLDEN CLASS ruling)",
+          "ruling": "docs/plans/handoff/P5.3b.md, Advisor decisions, design-advisor opening ruling of 2026-11-27, DO 14 (\"The same disposition applies to the third tab on the three existing All Projects cells\"), and the GOLDEN CLASS ruling of 2026-11-27"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "states-1",
+          "state": "main-installed-all-vulnerable-unavailable",
+          "finding": "Under the filter, Empty.csproj shows only its header with \"0 of 0\" and no message leaf. The artboard draws the leaf \"No packages installed.\" (installed-empty-empty.csproj, 30 px below the header). The same capture keeps Unsupported.csproj's message leaf under the same filter, so the empty project's own state is no longer shown while another project's is.",
+          "severity": "major",
+          "box": [
+            16,
+            423,
+            388,
+            40
+          ],
+          "rule": "DS-STATE-1",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop does show Empty.csproj as a header alone with '0 of 0'. The hard measurement contradicts the DS-STATE-1 claim, though: 'DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none'. The artboard's 'No packages installed.' leaf belongs to the unfiltered main-installed-all state, not to this @vulnerable state. The [aria] line differs from the adopted snapshot only by the added Consolidate tab, so the tree's leaves did not change."
+        }
+      ]
+    }
+  ]
+}

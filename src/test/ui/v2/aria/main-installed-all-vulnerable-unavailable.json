@@ -25,6 +25,7 @@
     "  tablist \"Package lists\" {tab-bar}",
     "    tab \"Installed # # packages with known vulnerabilities\" [selected] {installed-tab}",
     "    tab \"Updates #\" {updates-tab}",
+    "    tab \"Consolidate #\" {consolidate-tab}",
     "  tabpanel \"Installed #\"",
     "    toolbar \"Bulk actions\" {installed-toolbar}",
     "      button \"Select All\" [not pressed] {select-all-button}",
