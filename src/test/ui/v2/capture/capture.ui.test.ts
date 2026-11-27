@@ -14,7 +14,7 @@ import { artboardOf } from '../artboards';
 import { type Capture, captureFile, floorCaptures, isReady, type Lane, type Look, matrixCaptures, MATRIX_PARTS, type MatrixPart, MATRIX_THEMES, type NamedState, PANEL_WIDTH, SIDEBAR_WIDTH, STATES, type Theme, THEMES } from '../states';
 import { declaredTokens, DUMP_THEME, formatThemeDump, formatTokenDump, type ThemeDump, themeDumpFile, tokenDumpFile } from '../themeDump';
 import { CAPTURE_FACTS, type CropRect, type Sidecar, sidecarFile } from '../golden';
-import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, FOCUS_CLICK_STATUS, type FocusClickReading, type FocusClickTarget, focusClickLine, READ_FOCUS_CLICK, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
+import { acceptedSelectors, ARIA_SNAPSHOT, CONTRAST_STATUS, FOCUS_CLICK_PART2_STATUS, FOCUS_CLICK_STATUS, type FocusClickReading, type FocusClickTarget, focusClickLine, READ_FOCUS_CLICK, LAYER_SELECTOR, type Resolved, RESOLVE_CONTRAST, resolvedLines, type AriaNode, type AriaSnapshot, ariaLineFor, ariaSnapshot, AXE_EXTRA_RULES, AXE_NODES_PER_RULE, axeLines, DESCRIBE_FOCUS, type FocusFacts, FULL_AXE_STATUS, type FullAxe, type KeyOutcome, type KeyScreen, KEYS_STATUS, KEYS_TREE_TAIL, keysLines, MOTION_STATES, MOTION_STATUS, type MotionFacts, liveLines, MOTION_ON, type MotionOnFacts, motionOnLines, motionLines, motionRootLines, READ_LIVE, RUN_FULL_AXE, RUNNING_ANIMATIONS, treeTail } from '../a11y';
 
 /**
  * The capture suite of the named states (UX-P0.8), on the dense workspace (`npm run test:ui:capture`, and the classic
@@ -3399,6 +3399,8 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
     // Chromium in keyboard modality), never Confirm, never Enter on a row.
     if (LANE === 'ui' || LANE === 'floor') {
         describe('DS-FOCUS-3 after a click (UX-P5.fix-10)', () => {
+            // UX-P5.fix-11 (design-advisor opening ruling DO 4): the toggles the probe clicked, with the state each started in.
+            const toggled: Array<{ webview: 'main' | 'sidebar'; selector: string; expanded: string }> = [];
             afterEach(async function () {
                 this.timeout(120_000);
                 await driverOf().actions().clear();
@@ -3423,6 +3425,16 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                         }
                     }],
                 ];
+                // UX-P5.fix-11 (DO 4): a toggle left in another state than it started in is clicked back.
+                for (const toggle of toggled.splice(0)) {
+                    steps.push([`the toggle ${toggle.selector}`, async () => {
+                        await leaveWebview();
+                        await (toggle.webview === 'main' ? enterMainWebview() : enterSidebarWebview());
+                        if (await script<boolean>(`const t = document.querySelector('${toggle.selector}'); return t !== null && t.getAttribute("aria-expanded") !== ${JSON.stringify(toggle.expanded)};`)) {
+                            await (await driverOf().findElement(By.css(toggle.selector))).click();
+                        }
+                    }]);
+                }
                 for (const [what, step] of steps) {
                     await step().catch(error => console.warn(`[probe] DS-FOCUS-3 restore of ${what}: ${error instanceof Error ? error.message : String(error)}`));
                 }
@@ -3434,12 +3446,12 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 // VS Code 1.90 (the floor) has no Modern UI: its side bar is the classic look's.
                 const sidebarRings = LOOK === 'classic' || LANE === 'floor';
                 const failures: string[] = [];
-                const read = async (where: string, target: (colours: { focus: string; list: string }) => FocusClickTarget, testid?: string): Promise<void> => {
+                const read = async (where: string, target: (colours: { focus: string; list: string }) => FocusClickTarget, testid?: string, status = FOCUS_CLICK_STATUS): Promise<void> => {
                     const { reading, focus, list } = await script<{ reading: FocusClickReading; focus: string; list: string }>(READ_FOCUS_CLICK);
                     if (reading.kind === 'body' || (testid !== undefined && reading.testid !== testid)) {
                         notReachable(`${where}: the focus is on ${reading.kind}${reading.testid ? ` {${reading.testid}}` : ''}, not {${testid ?? 'a control'}}`);
                     }
-                    const verdict = focusClickLine(`${where} ${LOOK}`, reading, target({ focus, list }));
+                    const verdict = focusClickLine(`${where} ${LOOK}`, reading, target({ focus, list }), status);
                     console.warn(verdict.line);
                     if (verdict.failure !== undefined) {
                         failures.push(verdict.failure);
@@ -3465,9 +3477,30 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await read('main icon-button', colours => ({ colour: colours.focus, offset: -1, present: true }), 'source-settings');
                 // b2. Refresh disables itself while it runs: where the focus goes, unasserted (follow-up 1, DO 5; a planning row).
                 await clickVisible('refresh-button');
-                await until('!document.querySelector(\'[data-testid="refresh-button"]\').disabled && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") !== "true"', 'Refresh enabled again and the list settled', 120_000);
+                // UX-P5.fix-11 (DO 5): settled is the refresh glyph back, the button enabled and the list not busy.
+                await until('document.querySelector(\'[data-testid="refresh-button"] svg[data-codicon="loading"]\') === null && !document.querySelector(\'[data-testid="refresh-button"]\').disabled && document.querySelector(\'[data-testid="installed-list"]\').getAttribute("aria-busy") !== "true"', 'Refresh back and the list settled', 120_000);
                 const after = await script<{ reading: FocusClickReading }>(READ_FOCUS_CLICK);
                 console.warn(`[probe] focus after Refresh ${LOOK}: ${after.reading.kind}${after.reading.testid ? ` {${after.reading.testid}}` : ''}`);
+                // e. A details toggle (a dependency group, the main panel's one kind of button toggle), clicked and clicked back
+                // (UX-P5.fix-11, opening ruling DO 2). The pane's own scroller brings it into view; never scrollIntoView.
+                await scrollListTo('installed-list', 'package-row-newtonsoft.json');
+                await currentDetails('package-row-newtonsoft.json');
+                const TOGGLE = '[data-testid="package-details-panel"] button.nuiget-section-toggle';
+                try {
+                    await until(`document.querySelector('${TOGGLE}') !== null`, 'a details toggle', 60_000);
+                } catch {
+                    notReachable(`main toggle: no ${TOGGLE} (${await script<string>('return (document.querySelector(\'[data-testid="package-details-panel"]\')?.textContent ?? "").replace(/\\s+/g, " ").slice(0, 160);')})`);
+                }
+                const mainToggle = await script<{ testid: string; expanded: string }>(`const t = document.querySelector('${TOGGLE}');
+let s = t.parentElement; while (s && !/(auto|scroll)/.test(getComputedStyle(s).overflowY)) s = s.parentElement;
+if (s) { const d = t.getBoundingClientRect().top - s.getBoundingClientRect().top; if (d < 0 || d > s.clientHeight - 30) s.scrollTop += d - 40; }
+return { testid: t.dataset.testid ?? '', expanded: t.getAttribute('aria-expanded') ?? '' };`);
+                const mainSelector = `[data-testid="package-details-panel"] [data-testid="${mainToggle.testid}"]`;
+                toggled.push({ webview: 'main', selector: mainSelector, expanded: mainToggle.expanded });
+                await (await driverOf().findElement(By.css(mainSelector))).click();
+                await read('main toggle', colours => ({ colour: colours.focus, offset: -1, present: true }), mainToggle.testid, FOCUS_CLICK_PART2_STATUS);
+                await (await driverOf().findElement(By.css(mainSelector))).click();
+                await until(`document.querySelector('${mainSelector}')?.getAttribute("aria-expanded") === ${JSON.stringify(mainToggle.expanded)}`, 'the details toggle back', 10_000);
                 // c. A side bar row, clicked.
                 await sidebarSections();
                 await (await driverOf().findElement(By.css('[data-testid="sidebar-installed-list"] [data-testid="package-row-serilog"] .nuiget-row-option'))).click();
@@ -3476,6 +3509,17 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
                 await REACH['sidebar-update-all-dialog'].reach();
                 await read('sidebar dialog', colours => ({ colour: colours.focus, offset: 2, present: sidebarRings }));
                 await cancelDialog();
+                // f. The side bar's Installed pane header, clicked and clicked back (UX-P5.fix-11, opening ruling DO 3).
+                const PANES = 'return [...document.querySelectorAll(".nuiget-sidebar-section-content")].map(content => Math.round(content.parentElement.getBoundingClientRect().height)).join(", ");';
+                const panesBefore = await script<string>(PANES);
+                const SIDEBAR_TOGGLE = '[data-testid="section-header-installed"]';
+                const sidebarExpanded = await script<string>(`return document.querySelector('${SIDEBAR_TOGGLE}')?.getAttribute("aria-expanded") ?? "";`);
+                toggled.push({ webview: 'sidebar', selector: SIDEBAR_TOGGLE, expanded: sidebarExpanded });
+                await (await driverOf().findElement(By.css(SIDEBAR_TOGGLE))).click();
+                await read('sidebar toggle', colours => ({ colour: colours.focus, offset: -1, present: sidebarRings }), 'section-header-installed', FOCUS_CLICK_PART2_STATUS);
+                await (await driverOf().findElement(By.css(SIDEBAR_TOGGLE))).click();
+                await until(`document.querySelector('${SIDEBAR_TOGGLE}')?.getAttribute("aria-expanded") === "true"`, 'the Installed pane open again', 10_000);
+                console.warn(`[probe] DS-FOCUS-3 restore panes: ${panesBefore} → ${await script<string>(PANES)}`);
                 await leaveWebview();
                 if (FOCUS_CLICK_STATUS === 'hard' && failures.length > 0) {
                     throw new Error(failures.join('\n'));

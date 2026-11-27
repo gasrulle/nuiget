@@ -1175,6 +1175,8 @@ export function momentLines(moment: Moment, theme: string, facts: MomentFacts, s
  * a clicked control that keeps the focus. Hard since UX-P5.fix-10 push 2 (one surface carrier, the side bar's from the look token).
  */
 export const FOCUS_CLICK_STATUS: RuleStatus = 'hard';
+/** The probe's steps e and f (a clicked details toggle, a clicked side bar pane header), pending until UX-P5.fix-11's CSS. */
+export const FOCUS_CLICK_PART2_STATUS: RuleStatus = { pending: 'P5.fix-11' };
 
 /** What the probe reads from the active element of a webview after a WebDriver click. */
 export interface FocusClickReading {
