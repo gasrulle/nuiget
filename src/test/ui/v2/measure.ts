@@ -710,8 +710,8 @@ export const RULES: readonly RuleDefinition[] = [
     // loading 2); the transitive details have no tabs.
     // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): clause `facts-banner`, a banner inside the details facts at the
     // details content inset with no inline padding of its own; hard since the item's CSS (push 2).
-    // UX-P5.3c (design-advisor opening ruling DO 10): clause `lead`, the Consolidate pane's Projects section, pending until the item's closing.
-    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': 'hard', 'facts-banner': 'hard', lead: { pending: 'P5.3c' } }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES, 'facts-banner': FACTS_BANNER_STATES, lead: LEAD_STATES } }),
+    // UX-P5.3c (design-advisor opening ruling DO 10): clause `lead`, the Consolidate pane's Projects section, hard since the item's closing.
+    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': 'hard', 'facts-banner': 'hard', lead: 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES, 'facts-banner': FACTS_BANNER_STATES, lead: LEAD_STATES } }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),

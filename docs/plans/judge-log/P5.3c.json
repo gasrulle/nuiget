@@ -1,0 +1,209 @@
+{
+  "item": "P5.3c",
+  "runs": [
+    {
+      "runId": "46010950668",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "d165df0a (push 1)",
+      "look": "modern",
+      "workflow": "wf_5cc795d1-953",
+      "mode": "screen",
+      "note": "The two new cells against main-installed-details.dark-modern.1200 (opening ruling DO 11).",
+      "captures": {
+        "main-consolidate-details": {
+          "png": "captures/46010950668/main-consolidate-details.dark-modern.1200.png",
+          "sha256": "d3a2fa79e99da0524fda85183c264bf786da3cb3e9cbf6ca9338ab2905d125c1",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-consolidate-dialog": {
+          "png": "captures/46010950668/main-consolidate-dialog.dark-modern.1200.png",
+          "sha256": "81816dd64b8c08c264c551521930a335c34ff648a710f8b27dcf4c0264c7271e",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 10,
+        "standing": 3,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-consolidate-details#D1",
+          "state": "main-consolidate-details",
+          "finding": "[native] In the Not Changed block the version column starts at x≈546 while the Projects block above puts it at x≈569, and the reason sentence runs straight on after the version in the primary foreground. The row reads as one run-on line rather than a label–value table like the Projects rows and the metadata table below. | [geometry] The Not Changed row's version '13.0.3' starts at x 547, but the versions of the Projects table directly above start at x 570. The reason text then follows the version after only a word space (x 592) instead of in its own column. The two project/version lists do not share a value column, and the version and reason read as one run of text. | [states] In the Not Changed row the reason sentence runs straight on from the version with only a word space (version ink 547-586, sentence from 592), so the line reads 'Catalog.csproj 13.0.3 Newtonsoft.Json is set in the central package file of Catalog.csproj.' as one phrase; nothing separates the label-value pair from its reason, unlike the artboard's facts, where each value stands alone in its column. | [states] The value columns of the Consolidate details do not line up: the Projects versions start at x 570, the Not Changed version at x 547 and the facts values (Version, Authors, ...) at x 552, while the artboard's details draw one value column (x 552) for every label-value pair.",
+          "severity": "major",
+          "box": [
+            441,
+            258,
+            586,
+            118
+          ],
+          "rule": "judge-only, DS-ALIGN-1",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "the run-on reason: `.nuiget-details-lead .nuiget-details-note { display: block }` (3297724c), run 46016493577; the shared value column is accepted as design until its routed row (DECISIONS row of 2026-11-27 \"Consolidate pane's lists and Verified mark (UX-P5.3c)\")",
+          "ruling": "docs/plans/handoff/P5.3c.md, Advisor decisions, design-advisor judge ruling of 2026-11-27"
+        },
+        {
+          "id": "main-consolidate-details#D2",
+          "state": "main-consolidate-details",
+          "finding": "[native] The Not Changed heading sits 10 px above its row (text 352→362), but the Projects heading sits 14 px above its first row (247→261). Two same-role heading-to-row gaps differ, and the Not Changed block looks squeezed against the Projects block. | [geometry] In the Details tab the 'Not Changed' heading sits about 4 px above its row (cap tops 340 to 362 = 22 px). 'Projects' sits about 8 px above its first row (235 to 261 = 26 px), and 'Dependencies' also leaves 8 px, matching the artboard's Dependencies and Vulnerabilities headings. These are same-role heading-to-row gaps and they differ. | [states] Same-role heading-to-row gaps differ: the Projects caption sits 13 px above its first row (ink 248 to 261), while the Not Changed caption sits 9 px above its row (ink 353 to 362).",
+          "severity": "major",
+          "box": [
+            441,
+            235,
+            130,
+            140
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "fixed",
+          "evidence": "the lead sets `--nuiget-details-block-gap` and `--nuiget-details-block-start` to 8 (3297724c); run 46016493577 `DS-GRID-2a@main-consolidate-details: gaps 4, 8 (hard)`, and the re-run judge found no caption-step finding",
+          "ruling": "docs/plans/handoff/P5.3c.md, Advisor decisions, design-advisor judge ruling of 2026-11-27"
+        },
+        {
+          "id": "main-consolidate-details#D3",
+          "state": "main-consolidate-details",
+          "finding": "[native] The Authors value 'James Newton-King' is drawn without the 12 px verified-filled mark. The artboard's details table draws that mark before the same author, so the metadata table no longer matches the Extensions view's verified publisher treatment. | [states] The Authors fact 'James Newton-King' in the details facts has no Verified mark: the text starts at x 550 where the artboard's Authors row draws the 12 px verified-filled glyph (x 552) before the author name at x 567, so the publisher's verified status is not shown for Newtonsoft.Json in the Consolidate details.",
+          "severity": "major",
+          "box": [
+            550,
+            452,
+            128,
+            18
+          ],
+          "rule": "DS-ICON-4",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "the Verified mark needs JavaScript against 20 B of headroom; routed to a row for the planning session (DECISIONS row of 2026-11-27 \"Consolidate pane's lists and Verified mark (UX-P5.3c)\")",
+          "ruling": "docs/plans/handoff/P5.3c.md, Advisor decisions, design-advisor judge ruling of 2026-11-27"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "geometry-2",
+          "state": "main-consolidate-details",
+          "finding": "Section breaks in the Details tab are unequal. From the Projects table to 'Not Changed' is about 12 px (cap tops 310 to 340 = 30 px). From the Catalog.csproj row to the description is about 20 px (362 to 400 = 38 px). From the last property to 'Dependencies' is about 16 px (576 to 610 = 34 px), and 16 px is also the gap the artboard uses before Vulnerabilities and before Dependencies.",
+          "severity": "major",
+          "box": [
+            441,
+            306,
+            584,
+            110
+          ],
+          "rule": "DS-GRID-2",
+          "lens": "geometry",
+          "verdict": "refuted",
+          "reason": "The three gaps belong to different roles. The 38 px pitch from the Catalog row to the description is the designed lead gap, which DS-INSET-4/lead measures at 'next block 20 (target 20)'. The 34 px pitch before Dependencies equals the artboard's 34 px pitch before Vulnerabilities. The Projects to Not Changed break is a group break inside the lead section.",
+          "disposition": "refuted-by-measurement"
+        }
+      ]
+    },
+    {
+      "runId": "46016493577",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "3297724c (push 2, CSS)",
+      "look": "modern",
+      "workflow": "wf_84418945-d63",
+      "mode": "screen",
+      "note": "Re-run after the CSS fixes (judge ruling DO 5): the caption-step finding gone, the column finding refuted, the Verified mark standing as ruled; the cells adopted baseline from this run.",
+      "captures": {
+        "main-consolidate-details": {
+          "png": "captures/46016493577/main-consolidate-details.dark-modern.1200.png",
+          "sha256": "5a98a5ffb7e6bac1c1606d7770a68e8af63756e33ad0b6a5a5771a5ae86de5fe",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-consolidate-dialog": {
+          "png": "captures/46016493577/main-consolidate-dialog.dark-modern.1200.png",
+          "sha256": "1f1f8dc113349ee67526a2ab09c7bb9adf066bb42fce2c076259d7de6dce3310",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 4,
+        "standing": 1,
+        "refuted": 2,
+        "singleJudge": 0,
+        "incomplete": 0,
+        "blocking": 1
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-consolidate-details#D1",
+          "state": "main-consolidate-details",
+          "finding": "[geometry] The Authors fact of the Consolidate pane draws no Verified mark before \"James Newton-King\": the value starts at x 552 and ends at x 676. The artboard draws the 12 px verified-filled glyph there (the row ends at x 692), and the same run's main-installed-details capture draws it for the same package id. | [states] In the details pane's facts table, the Authors value 'James Newton-King' has no Verified mark. The artboard draws the 12 px verified-filled glyph in front of the same author of the same package id (artboard Authors row at x 552, y 324). The pane drops the mark, and the verification information with it.",
+          "severity": "blocking",
+          "box": [
+            551,
+            478,
+            128,
+            18
+          ],
+          "rule": "DS-ICON-4",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "the same finding as run 46010950668 main-consolidate-details#D3, routed (DECISIONS row of 2026-11-27 \"Consolidate pane's lists and Verified mark (UX-P5.3c)\")",
+          "ruling": "docs/plans/handoff/P5.3c.md, Advisor decisions, design-advisor judge ruling of 2026-11-27"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "main-consolidate-details",
+          "finding": "The details tab panel draws three value columns that do not line up: the Projects versions start at x 570, the Not Changed version at x 547 and the facts values (Version, Authors, License...) at x 552. Each block sizes its label column to its own longest label, so the version column shifts by 23 px between Projects and Not Changed. In the artboard, the details facts share one value column at x 552, like the Extensions editor's More Info table.",
+          "severity": "major",
+          "box": [
+            546,
+            258,
+            64,
+            240
+          ],
+          "rule": "DS-ALIGN-1",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "The crop shows the Projects values at x 570, the Not Changed value at x 547 and the facts values at x 552. DS-ALIGN-1 is defined per facts block, and the hard measurement 'DS-ALIGN-1@main-consolidate-details: value left spread 0 ×2 (2 blocks) (hard)' finds every block aligned. The artboard (main-installed-details) has no Projects or Not Changed section to compare with, and its facts column at x 552 matches the capture.",
+          "disposition": "refuted-by-measurement"
+        },
+        {
+          "id": "geometry-1",
+          "state": "main-consolidate-details",
+          "finding": "The Not Changed group's value (13.0.3 at x 547) sits 23 px left of the Projects group's value column (12.0.1/13.0.3/13.0.2 at x 570). Both groups belong to the one Projects section, so its label-value pairs do not share one value column the way the details facts table does (one column at x 552).",
+          "severity": "major",
+          "box": [
+            546,
+            260,
+            64,
+            124
+          ],
+          "rule": "DS-ALIGN-1",
+          "lens": "geometry",
+          "verdict": "refuted",
+          "reason": "The crop shows the Not Changed value at x 547 against the Projects column at x 570. These are two separately headed groups, and DS-ALIGN-1 measures within one block: the hard line reads 'value left spread 0 ×2 (2 blocks)'. No artboard element or rule asks the two groups to share a column.",
+          "disposition": "refuted-by-measurement"
+        }
+      ]
+    }
+  ]
+}

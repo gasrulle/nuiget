@@ -175,8 +175,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
         // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): the clause `panel-top`, hard since the item's CSS.
         // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5, DO 11): the clause `facts-banner`, hard since the item's CSS.
-        // UX-P5.3c (design-advisor opening ruling of 2026-11-27, DO 10): the clause `lead`, pending until the item's closing.
-        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': 'hard', lead: { pending: 'P5.3c' } });
+        // UX-P5.3c (design-advisor opening ruling of 2026-11-27, DO 10): the clause `lead`, hard since the item's closing (run 46016493577 read 20 and 20).
+        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': 'hard', lead: 'hard' });
         expect(definition('DS-INSET-4')?.scopeStates?.lead).toEqual(['main-consolidate-details']);
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
@@ -1989,7 +1989,7 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
     it('reads a Consolidate pane\'s Projects section 20 below the tab panel\'s top and 20 above the next block (DS-INSET-4 lead, UX-P5.3c)', () => {
         const name = 'DS-INSET-4@main-consolidate-details/lead';
         expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: 20 } }), name))
-            .toMatchObject({ pass: true, status: { pending: 'P5.3c' }, value: 'caption 20 (target 20); next block 20 (target 20)' });
+            .toMatchObject({ pass: true, status: 'hard', value: 'caption 20 (target 20); next block 20 (target 20)' });
         expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 36, below: 20 } }), name)?.pass).toBe(false);
         expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: 4 } }), name)?.pass).toBe(false);
         expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: null } }), name)).toMatchObject({ pass: true, value: 'caption 20 (target 20); no next block' });

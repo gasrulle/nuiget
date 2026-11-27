@@ -53,6 +53,18 @@
     "sha256": "74a1da6c7d680c4f4388d6a3fceb75d39f67e33a30b63e3bb1c2afa91c5def20",
     "sidecarSha256": "7b9b1bd1275ad12e79d1b0d2ba48ff4bae08104005a374611bba71377b43056c"
   },
+  "main-consolidate-details.dark-modern.1200.png": {
+    "status": "baseline",
+    "run": "46016493577",
+    "sha256": "5a98a5ffb7e6bac1c1606d7770a68e8af63756e33ad0b6a5a5771a5ae86de5fe",
+    "sidecarSha256": "c2bc63a18582fbfb1d51150f02cc47b1062e6fdd8acc6f0b97a725d3355bee8f"
+  },
+  "main-consolidate-dialog.dark-modern.1200.png": {
+    "status": "baseline",
+    "run": "46016493577",
+    "sha256": "1f1f8dc113349ee67526a2ab09c7bb9adf066bb42fce2c076259d7de6dce3310",
+    "sidecarSha256": "951d7bad44a0761bc410f5f2076ec4bee8bd08b60ea16d79be837ff8dc8e4ead"
+  },
   "main-consolidate.dark-modern.1200.png": {
     "status": "approved",
     "run": "45988940086",
