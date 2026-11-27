@@ -1,0 +1,97 @@
+{
+  "item": "UX-P5.fix-17",
+  "runs": [
+    {
+      "runId": "46075759480",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "6de126d1 (push 2, the proving push)",
+      "look": "classic",
+      "workflow": "wf_91655f0e-443",
+      "mode": "screen",
+      "note": "The four moved classic side bar cells against main-installed-all.dark-modern-classic.1200, the reference P5.fix-5 used (no side bar artboard); one look per run.",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/46075759480/ui-screenshots/sidebar-sections.dark-modern-classic.300.png",
+          "sha256": "03a9588cdbe7c7fa4cb9569ec4157dc878c800a3835d047f99c210621b6edb87",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        },
+        "sidebar-hover": {
+          "png": "captures/46075759480/ui-screenshots/sidebar-hover.dark-modern-classic.300.png",
+          "sha256": "4867e1d6d2a5a84f960380b21a84c23cd27c631ed961c992261e3fbb15d2c796",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        },
+        "sidebar-installed-busy": {
+          "png": "captures/46075759480/ui-screenshots/sidebar-installed-busy.dark-modern-classic.300.png",
+          "sha256": "3582546b27b9e43c91cf552ea089ca3fe0fdb437c0ce87834205695c6d4390d2",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        },
+        "sidebar-all-projects": {
+          "png": "captures/46075759480/ui-screenshots/sidebar-all-projects.dark-modern-classic.300.png",
+          "sha256": "4c70c17e58ee7d810af772184d5c5e549d5b2cf3e0c0b58d59c544756b238b90",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        }
+      },
+      "panel": {
+        "states": 4,
+        "candidates": 1,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-all-projects",
+          "finding": "The trailing CPM label badges of the package rows end at x 257, 26 px short of the group rows' count badges, which end at x 283 (Catalog.csproj 13, Gateway.csproj 15, Empty.csproj 0). A native tree (the SCM and Explorer decorations) ends a leaf's trailing decoration and a group's count on one end column at rest, so this column reads as a reserved gap rather than a built-in row.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            224,
+            100,
+            60,
+            41
+          ],
+          "reason": "The crop shows the CPM pills ending about 26 px left of the '13' count, but that gap is the Design System's declared action slot, not an accident. The compact row's end padding is 'the slot the row's one action overlays' (primitives.css, DS-ROW-3, DS-INSET-3 a). DS-INSET-3 puts a sidebar group row's count 6 px inside the band 'as a row's action', and the hard measurement confirms it: 'DS-INSET-3@sidebar-all-projects: … group rows 6 ×5 (target 6) (hard)'. So the count lines up with the action column on purpose and the label badges sit before it. The judge's SCM/Explorer claim cites no recorded exemplar reading. Measured: DS-INSET-3@sidebar-all-projects: … group rows 6 ×5 (target 6) (hard), run 46075759480; docs/plans/handoff/P5.fix-17.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-27 (DO 2).",
+          "verdict": "refuted"
+        }
+      ]
+    },
+    {
+      "runId": "46075759480",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "6de126d1 (push 2, the proving push)",
+      "look": "modern",
+      "workflow": "wf_cbea8aef-6c1",
+      "mode": "screen",
+      "note": "The moved Modern side bar cell sidebar-sections at 250 against main-installed-all.dark-modern.1200.",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/46075759480/ui-screenshots/sidebar-sections.dark-modern.250.png",
+          "sha256": "7990ad16bfabf3ccc0d8bd7141c9a0db6bea99593752d610139f73037a640162",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 0,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": []
+    }
+  ]
+}

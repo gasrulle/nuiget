@@ -78,10 +78,10 @@ export const ROW_LINE_STATUS: RuleStatus = 'hard';
 
 /**
  * DS-ROW-5's compact-version clause in the side bar (a shown compact version is whole, zero-wide, or cut with at least its
- * first character and its ellipsis drawn; UX-P5.fix-17, design-advisor opening ruling of 2026-11-27). Pending until the CSS
- * of that item lands.
+ * first character and its ellipsis drawn; UX-P5.fix-17, design-advisor opening ruling of 2026-11-27). Hard since that item's
+ * closing commit (GOLDEN ruling of 2026-11-27, proving run 46075759480: `slivers 0` in every side bar line of both looks).
  */
-export const COMPACT_VERSION_STATUS: RuleStatus = { pending: 'P5.fix-17' };
+export const COMPACT_VERSION_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
