@@ -452,6 +452,17 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
  * 2026-11-15). Filled from the reaches, never from which states went red.
  */
 export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
+/** The main-list states with no bulk toolbar: the Consolidate list (UX-P5.3b, opening ruling DO 3; design-advisor follow-up 3, DO 1). */
+export const NO_TOOLBAR_STATES: readonly string[] = ['main-consolidate'];
+/** The main lists with no group header, so no gap under one and no header badge (UX-P5.3b, opening ruling DO 3; follow-up 3, DO 2). */
+export const FLAT_LIST_STATES: readonly string[] = ['main-consolidate'];
+/** The main-list states with no text button in view (UX-P5.3b, opening ruling DO 3: no toolbar; follow-up 3, DO 3). */
+export const NO_TEXT_BUTTON_STATES: readonly string[] = ['main-consolidate'];
+/**
+ * The widths at which the Consolidate cell shows a badge: the tab badges at 1200; at 400 they leave the strip and a Consolidate
+ * row has none (UX-P5.3b, opening ruling DO 3; follow-up 3, DO 4).
+ */
+const CONSOLIDATE_BADGE_WIDTHS: Readonly<Record<string, readonly number[]>> = { 'main-consolidate': [1200] };
 /**
  * DS-FOCUS-3 `dialog-focus` (UX-P5.fix-2, design-advisor opening ruling of 2026-11-22, DO 2c): the main-panel dialog states, opened
  * by a pointer click or a key; the side-bar dialogs keep the side bar's branch.
@@ -563,6 +574,8 @@ const STATE_MARKERS: Readonly<Record<string, readonly string[]>> = {
     'main-installed-vulnerable-unavailable': ['installed-vulnerable-unavailable-banner'],
     'main-installed-all-vulnerable-unavailable': ['installed-vulnerable-unavailable-banner'],
     'main-installed-error': ['installed-error'],
+    // UX-P5.3b (design-advisor follow-up 1, DO 8): the Consolidate tab's Partial cell, the project not compared.
+    'main-consolidate': ['consolidate-incomplete-banner'],
     'main-installed-unsupported': ['installed-unsupported', 'installed-provisional'],
     'main-installed-unresolved': [],
     'main-installed-all': ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj'],
@@ -642,7 +655,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     // UX-P3.2 (design-advisor ruling): a flat Browse list or the popup has no group header, so DS-GRID-2b is registered apart
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
-    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES] }),
+    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES, ...FLAT_LIST_STATES] }),
     // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
     // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
     // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `form-message`, the add form's message at the field's edge.
@@ -663,12 +676,12 @@ export const RULES: readonly RuleDefinition[] = [
     // The strip is hidden while browsing (MS-8's exemption).
     rule('DS-HEIGHT-4', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-5', { helper: 3, scopes: { details: 'hard' }, tolerance: TOLERANCES.height, exceptStates: ['main-transitive-details', ...DETAILS_NO_HEADER_STATES] }),
-    rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height }),
+    rule('DS-HEIGHT-6', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', details: 'hard', dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, exceptStates: NO_TEXT_BUTTON_STATES }),
     rule('DS-HEIGHT-7', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { sources: ['main-sources-add', 'main-sources-add-invalid'] } }),
     rule('DS-HEIGHT-8', { helper: 3, scopes: { ...inGroups('hard', ...MAIN, 'sidebar'), sources: 'hard' }, tolerance: TOLERANCES.height }),
     rule('DS-HEIGHT-9', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), dialogs: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, scopeStates: { dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] } }),
     // The popup covers the strip and the list: no badge is shown.
-    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES] }),
+    rule('DS-HEIGHT-10', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), tolerance: TOLERANCES.height, exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], stateWidths: CONSOLIDATE_BADGE_WIDTHS }),
     rule('DS-HEIGHT-11', { helper: 3, scopes: { 'main-installed': 'hard', ...inGroups('hard', 'main-updates', 'browse', 'details', 'sidebar') }, tolerance: TOLERANCES.height, statePattern: /loading|revalidating|provisional/, exceptStates: POPUP_CELL_STATES }),
     // UX-P0.12: P9.fix-2, -3 (authors) and -4 at their own measures, in the states their tests cover; MS-8 for every state.
     rule('PF-2', { helper: 6, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-transitive-expanded'] }),
@@ -683,7 +696,7 @@ export const RULES: readonly RuleDefinition[] = [
     // DS-OVERFLOW-2 over the section headers, the tracker's `headers` and P2.6's files (SectionHeader, Badge).
     // UX-P3.11 (design-advisor opening ruling DO 7): `placeholder`, the side bar search box's placeholder fits its text room at
     // 300 in both looks (Chromium draws no ellipsis on `::placeholder`); printed, not asserted, at 250 and 170; hard since UX-P3.11 push B.
-    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES], scopeStates: { placeholder: ['sidebar-sections', ...MAIN_PLACEHOLDER_STATES] } }),
+    rule('DS-OVERFLOW-2', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'details', 'sidebar'), placeholder: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_LIST_STATES, ...SIDEBAR_BROWSE_STATES, ...FLAT_LIST_STATES], scopeStates: { placeholder: ['sidebar-sections', ...MAIN_PLACEHOLDER_STATES] } }),
     // A dialog list item wraps at spaces and after its id's dots (UX-P4.fix-14, design-advisor opening ruling of 2026-11-19, DO 2a).
     rule('DS-OVERFLOW-7', { helper: 6, scopes: { 'dialog-list': 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'dialog-list': DIALOG_LIST_STATES } }),
     rule('DS-ROW-5', { helper: 5, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
@@ -718,9 +731,9 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-TYPE-7', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard' }, tolerance: TOLERANCES.fontExact }),
     rule('DS-TYPE-9', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', dialogs: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: SIDEBAR_BROWSE_STATES }),
     rule('DS-DIVIDER-4', { helper: 6, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment }),
-    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.fontExact }),
+    rule('DS-TYPE-8', { helper: 3, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.fontExact, stateWidths: CONSOLIDATE_BADGE_WIDTHS }),
     // The tab's high-contrast lines (UX-P3.9) are asserted by the theme pass (`expectTabLines`, both HC themes).
-    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment }),
+    rule('DS-HC-1', { helper: 6, scopes: inGroups('hard', ...MAIN, 'sidebar'), exceptStates: [...POPUP_STATES, ...NO_LIST_STATES, ...NO_BADGE_STATES, ...SIDEBAR_NO_ROW_STATES], tolerance: TOLERANCES.containment, stateWidths: CONSOLIDATE_BADGE_WIDTHS }),
     rule('DS-COLOR-7', { helper: 3, scopes: { 'text-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-toolbar-hover'] }),
     rule('DS-COLOR-3', { helper: 3, scopes: { 'icon-buttons': 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-refresh-hover'] }),
     // UX-P2.2b (design trigger 6): the row parts of the four rules no helper asserted.
@@ -788,7 +801,8 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-FOCUS-4', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-details', 'main-installed-focus'], themes: ['dark-high-contrast', 'light-high-contrast'] }),
     rule('DS-STATE-7', { helper: 5, scopes: inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), tolerance: TOLERANCES.containment }),
     // UX-P2.8b: the Installed cells' markers, bar, welcome layout, inline messages and colour roles; UX-P3.1b the Updates cells; the other screens with their items.
-    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS) }),
+    // UX-P5.3b (design-advisor follow-up 1, DO 8; follow-up 2, DO 3): the Consolidate cell's marker, pending until the item's closing.
+    rule('DS-STATE-1', { helper: 6, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, states: Object.keys(STATE_MARKERS), pendingStates: { 'main-consolidate': 'P5.3b' } }),
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|provisional/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
@@ -846,7 +860,11 @@ export function stateGroup(state: string): StateGroup {
  * The list whose state cell the collector reads in a state (its `<list>-progress` bar and `<list>-list`): keyed by the state's
  * group, so a later screen adds its own prefix here (UX-P3.1b, architecture-advisor ruling of 2026-11-06).
  */
-export function cellList(state: string): 'installed' | 'updates' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' | 'sidebar-updates' | 'details' | 'readme' {
+export function cellList(state: string): 'installed' | 'updates' | 'consolidate' | 'browse' | 'source-settings' | 'sidebar-browse' | 'sidebar-installed' | 'sidebar-updates' | 'details' | 'readme' {
+    // UX-P5.3b (design-advisor follow-up 2, DO 2): the Consolidate tab's bar and list (`consolidate-progress`, `consolidate-list`).
+    if (state.startsWith('main-consolidate')) {
+        return 'consolidate';
+    }
     // The sidebar's Browse results and Installed pane carry their own hooks (UX-P3.8).
     if (state.startsWith('sidebar-browse-')) {
         return 'sidebar-browse';
@@ -884,7 +902,8 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
     switch (group) {
         case 'main-installed':
         case 'main-updates':
-            return ['toolbars', 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'placeholder', 'split', ...firstRow];
+            // UX-P5.3b (follow-up 3, DO 1): the Consolidate list has no bulk toolbar.
+            return [...(state !== undefined && NO_TOOLBAR_STATES.includes(state) ? [] : ['toolbars' as const]), 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'placeholder', 'split', ...firstRow];
         case 'browse':
             return ['main-header', 'rows', 'chrome', 'controls', 'text-buttons', 'icon-buttons', 'popup'];
         case 'details':

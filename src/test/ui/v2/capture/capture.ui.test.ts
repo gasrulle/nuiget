@@ -930,6 +930,18 @@ const REACH: Record<string, Reach> = {
         },
         settled: () => UPDATES_ALL_SETTLED(),
     },
+    'main-consolidate': {
+        // The tab is clicked, never a row (follow-up 1, DO 8): no row current and the details pane empty (UX-P5.3b).
+        reach: async () => {
+            await chooseFixtureProject(ALL_PROJECTS);
+            await holdTab('consolidate-tab', 'document.querySelector(\'[data-testid="consolidate-list"]\') !== null', 'main-consolidate', 'the Consolidate list');
+            // The list starts at its top (installedListAtTop's form); the settle only reads it.
+            await script<void>('document.querySelector(\'[data-testid="consolidate-list"]\').scrollTop = 0;');
+            await settleOrReport('main-consolidate', CONSOLIDATE_SETTLED(), CONSOLIDATE_FACTS);
+        },
+        settled: () => CONSOLIDATE_SETTLED(),
+        settledFacts: () => CONSOLIDATE_FACTS,
+    },
     'main-updates-loading': {
         reach: async () => {
             await gatewayUpdates();
@@ -2077,7 +2089,8 @@ for (const id of ['installed-tab', 'updates-tab']) {
     const tab = document.querySelector('[data-testid="' + id + '"]');
     if (tab && tab.offsetParent !== null && !/[0-9]/.test(tab.textContent || '')) clauses.push(id + ' without a count');
 }
-if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]'))) clauses.push('a comfortable row without authors');
+// A Consolidate row names no authors by design (UX-P5.3b, opening ruling DO 3).
+if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]') && row.closest('[data-testid="consolidate-list"]') === null)) clauses.push('a comfortable row without authors');
 // UX-P5.1a (design-advisor ruling DO 5): the Installed tab's vulnerability count has not settled yet.
 if (document.querySelector('[data-testid="installed-tab"][data-pending]')) clauses.push('installed-tab pending');
 return clauses.join('; ');
@@ -2106,6 +2119,29 @@ return unsettled === '';`;
 
 /** `STATE_MARKERS['main-installed-all']` of `measure.ts`: the markers DS-STATE-1 reads in this state. */
 const INSTALLED_ALL_SETTLED = (): string => allProjectsSettled('installed-list', ['installed-provisional-unsupported.csproj', 'installed-unsupported-unsupported.csproj', 'installed-empty-empty.csproj']);
+/**
+ * `STATE_MARKERS['main-consolidate']` of `measure.ts` (UX-P5.3b): the list at its top with the Newtonsoft.Json row, the tab's
+ * count, the banner of the project not compared, the empty details pane, no bar and nothing unsettled, on one probe.
+ */
+const CONSOLIDATE_SETTLED = (): string => `
+const list = document.querySelector('[data-testid="consolidate-list"]');
+if (list === null) return false;
+if (list.scrollTop !== 0) return false;
+if (list.querySelector('[data-testid="package-row-newtonsoft.json"]') === null) return false;
+if (!/[0-9]/.test(document.querySelector('[data-testid="consolidate-tab"]')?.textContent || '')) return false;
+if (!['consolidate-incomplete-banner', 'details-empty'].every(id => document.querySelector('[data-testid="' + id + '"]') !== null)) return false;
+if (document.querySelector('[data-testid="consolidate-progress"]') !== null) return false;
+const unsettled = (() => { ${UNSETTLED} })();
+return unsettled === '';`;
+/** What `CONSOLIDATE_SETTLED` did not find, printed when it times out. */
+const CONSOLIDATE_FACTS = `
+const list = document.querySelector('[data-testid="consolidate-list"]');
+const unsettled = (() => { ${UNSETTLED} })();
+return 'list ' + (list === null ? 'absent' : 'scrollTop ' + Math.round(list.scrollTop) + ', rows ' + list.querySelectorAll('[role="option"]').length)
+    + ', tab "' + (document.querySelector('[data-testid="consolidate-tab"]')?.textContent ?? 'absent') + '"'
+    + ', markers ' + ['consolidate-incomplete-banner', 'details-empty', 'consolidate-progress'].filter(id => document.querySelector('[data-testid="' + id + '"]') !== null).join(' ')
+    + ', unsettled "' + unsettled + '"';
+`;
 /** `STATE_MARKERS['main-updates-all']` of `measure.ts`. */
 const UPDATES_ALL_SETTLED = (): string => allProjectsSettled('updates-list', ['updates-unsupported-unsupported.csproj', 'updates-empty-empty.csproj']);
 /** What the sidebar's Updates tree shows when its settle times out: the scroll box, the pin row, the markers and what is unsettled (UX-P3.7d). */

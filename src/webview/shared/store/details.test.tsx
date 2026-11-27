@@ -200,6 +200,18 @@ describe('details slice', () => {
         expect(versionsAsked(host).length).toBeGreaterThan(0);
     });
 
+    it('the consolidate view shows no selection and leaves the Installed selection to come back (UX-P5.3b)', async () => {
+        const host = mount();
+        await ready(host);
+        await act(async () => actions.select(installedRow('Serilog', '3.0.0')));
+        const asked = versionsAsked(host).length;
+        await act(async () => actions.showView('consolidate'));
+        expect(text('selection')).toBe('none');
+        expect(versionsAsked(host)).toHaveLength(asked);
+        await act(async () => actions.showView('installed'));
+        expect(text('selection')).toBe('Serilog@3.0.0');
+    });
+
     it('a browse selection is never stale; All Projects clears an installed one', async () => {
         const host = mount();
         await ready(host);

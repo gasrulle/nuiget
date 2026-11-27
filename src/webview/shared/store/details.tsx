@@ -64,8 +64,12 @@ export interface DetailsReveal {
     packageId: string;
 }
 
-/** The views of the main panel that keep a selection of their own: the Installed tab (transitive rows too), Updates, Browse. */
-export type DetailsView = 'installed' | 'updates' | 'browse';
+/**
+ * The views of the main panel that keep a selection of their own: the Installed tab (transitive rows too), Updates, Browse, and
+ * Consolidate under All Projects, which nothing selects into until its pane lands (UX-P5.3b; UX-P5.3c adds its origin), so the
+ * pane shows no selection while it is shown.
+ */
+export type DetailsView = 'installed' | 'updates' | 'browse' | 'consolidate';
 
 export interface DetailsActions {
     /** Selects in the view of the selection's origin and shows that view; `null` clears the shown view's selection. */

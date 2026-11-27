@@ -54,7 +54,7 @@ sideways: each has a minimum width and a stated way to give way below it (wrap, 
 
 | Mode | Trigger | Main panel shows | Sidebar shows |
 |---|---|---|---|
-| `default` | empty box | Tabs **Installed** / **Updates** (with count badges; the Installed tab also shows how many packages have known vulnerabilities once the metadata is known) | Sections **Installed** / **Updates** (collapsible, draggable split) |
+| `default` | empty box | Tabs **Installed** / **Updates** (with count badges; the Installed tab also shows how many packages have known vulnerabilities once the metadata is known), and **Consolidate** under All Projects (§3) | Sections **Installed** / **Updates** (collapsible, draggable split) |
 | `browse` | plain text + Enter (quick-search suggestions while typing, grouped per source, with a loading row; ArrowRight lists versions and Ctrl+Enter installs, §5) | Browse results list + details; tab bar hidden | Flat browse results (Enter or 300 ms debounce, min 2 chars); Enter on a row opens it in the main panel, Ctrl+Enter installs it, or, for a package that has a central entry in a CPM project, opens the actions menu (§5) |
 | `installed` | `@installed <filter>` | Installed tab filtered client-side | Installed section filtered |
 | `updates` | `@updates <filter>` | Updates tab filtered | Updates section filtered |
@@ -97,6 +97,14 @@ In this mode:
   once they answered; under `@vulnerable` every group row reads `k of N` once the view has first settled, whatever is unknown, and the projects' and the
   aggregate's vulnerability data follow the single-project rules of §2 and §4 with one banner above the whole tree and
   "Vulnerability data is not available for these projects yet." before the first settle (UX-P5.1a).
+- The main panel adds a third tab, **Consolidate** (UX-P5.3b): one flat list of the packages that at least two projects
+  reference at at least two versions, a row per package reading "N versions in M projects". References a consolidation
+  leaves as they are (central, SDK, unresolved, a floating version or range, one conditioned on some target frameworks)
+  still count their known versions. The tab's count is the number of such packages once the projects' lists answered,
+  whatever could not be compared; a project not compared (failed, not read, unsupported) is one warning banner above the
+  list, and an incomplete comparison with no drift says only that banner, never "All projects use the same package
+  versions.". A Consolidate tab kept from an earlier visit shows Installed while one project is selected. The tab has no
+  filter prefix; a typed filter moves to its own tab.
 - With ≤ 1 project the mode is automatically downgraded to that project (host normalization).
 
 ## 4. State vocabulary (every list/detail area uses exactly these)
@@ -174,6 +182,9 @@ row; moving changes the active row, not the selection.
 | Space, Ctrl+click, Cmd+click, a click on the check mark | In a list with bulk actions: the package row joins or leaves the bulk set | *(no bulk set)* |
 
 A click on a group row toggles it, as Enter does.
+
+In the Consolidate list (All Projects) a row takes the focus only: Enter, Ctrl+Enter, Delete and Space do nothing until
+UX-P5.3c, when Enter selects the row and shows its details.
 
 ArrowLeft and ArrowRight belong to the group rows: in a list they never switch the details pane's tabs, so the 1.x
 binding that moved between Details and README with them (MB18) is not restored. A tab strip keeps its own arrow keys
@@ -267,7 +278,8 @@ Projects...** (`multi-install-button`), the picker of §3.
 The pane shows the selection of the active view: Installed (direct and transitive rows), Updates or Browse. Each tab
 keeps its own selection and gets it back when it is shown again; Browse starts without one and shows the empty state
 ("Select a package to see its details.") until a row is current, and a new search whose results lack that row clears
-it.
+it. The Consolidate tab has a view of its own that nothing selects into until UX-P5.3c, so the pane shows that empty
+state beside it, and the Installed selection comes back with the Installed tab.
 
 A transitive row (single project or the All Projects aggregate) opens a read-only view: the id with a Transitive badge,
 Version, Authors with the Verified mark, and Required by, the top-level ids, one block per target framework when the
@@ -282,8 +294,8 @@ project has several and one block per project in All Projects; no version select
 | `search-input` / `sidebar-search-input`, `search-suggestions` | Search boxes and the list of their prefixes, suggestions or versions |
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `refresh-button` | The header's Refresh button (main): a workspace rescan |
-| `tab-bar`, `installed-tab`, `updates-tab` | Main tabs |
-| `installed-list`, `updates-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list or a single project's Updates list, is a tree) |
+| `tab-bar`, `installed-tab`, `updates-tab`, `consolidate-tab` | Main tabs (`consolidate-tab` under All Projects only, UX-P5.3b) |
+| `installed-list`, `updates-list`, `consolidate-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list or a single project's Updates list, is a tree) |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
 | `row-action-<name>` | A pointer action button inside a row (`install`, `update`, `uninstall`); hidden from assistive technology, mirrored by the keys of §5 |
 | `section-header-<name>` | The toggle button of a collapsible section (`installed`, `updates`, the sidebar's two until their lists become trees); in a group row, the title inside the treeitem, with no button, named by the group's id |
@@ -317,6 +329,7 @@ project has several and one block per project in All Projects; no version select
 | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's 2 px progress bar (loading and revalidating, above the tree), empty state ("No packages installed." for a project without a package, whatever its sources answer, since nothing was checked; otherwise "No updates available.", never when a source could not be checked, which `updates-unavailable-banner` says) and inline error with Retry (UX-P3.1b) |
 | `updates-unsupported` | Banner of a single unsupported project above its read-only update rows on the Updates tab, the Installed tab's `installed-unsupported` form (UX-P3.10) |
 | `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
+| `consolidate-progress`, `consolidate-empty`, `consolidate-error`, `consolidate-incomplete-banner` | The Consolidate tab's 2 px progress bar (a first load with its three skeleton rows, and while the lists are asked again, the list `aria-busy`), empty state ("All projects use the same package versions.", only when every project was compared), inline error with Retry (alone when the lists failed, above the kept list after a failed refresh) and the warning banner naming the projects that were not compared, with no action (UX-P5.3b) |
 | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' 2 px progress bar (over the list area's top edge: alone on a first search, over the rows while it asks again), empty state ("No results for "x"."; never when a source could not be searched, which `browse-unavailable-banner` says) and inline error with Retry (UX-P3.2) |
 | `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching..." row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading, revalidating and while a restore of the project is queued or running, above the tree; UX-P4.fix-10), empty state ("No transitive dependencies.") and inline error |

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS } from '../../protocol';
 import { directVulnerability, transitiveVulnerability } from '../shared/installed/rules';
 import { type TabItem, Tabs } from '../shared/primitives';
-import { useAllProjects } from '../shared/store/allProjects';
+import { useAllProjects, versionDrift } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
 import { useSession } from '../shared/store/session';
 import { useTransitive } from '../shared/store/transitive';
@@ -11,13 +11,30 @@ import { useUpdates } from '../shared/store/updates';
 import { allProjectsKnowledge, singleKnowledge } from '../shared/updates/updateAll';
 import { aggregateVulnerability } from './features/installed/AllProjectsTransitiveSection';
 import type { MainTab } from './MainShell';
+import type { ViewStateStore } from '../shared/viewState';
 
 const TABS: ReadonlyArray<TabItem<MainTab>> = [
     { id: 'installed', label: 'Installed', 'data-testid': 'installed-tab' },
     { id: 'updates', label: 'Updates', 'data-testid': 'updates-tab' },
 ];
 
-/** The Installed and Updates tabs with their counts: the list slices leave the shell with them (X38). */
+/** The tab kept in the webview state; anything else, or a store that cannot be read, is Installed. */
+export function readMainTab(store: ViewStateStore | undefined): MainTab {
+    try {
+        const tab = (store?.getState() as { tab?: unknown } | undefined)?.tab;
+        return tab === 'updates' || tab === 'consolidate' ? tab : 'installed';
+    } catch {
+        return 'installed';
+    }
+}
+
+/** The third tab, appended only while All Projects is selected (UX-P5.3b). */
+const CONSOLIDATE_TAB: TabItem<MainTab> = { id: 'consolidate', label: 'Consolidate', 'data-testid': 'consolidate-tab' };
+
+/**
+ * The Installed and Updates tabs with their counts, and Consolidate under All Projects: the list slices leave the shell with them
+ * (X38).
+ */
 export function MainTabs({ selected, onSelect, children }: { selected: MainTab; onSelect: (next: MainTab) => void; children: React.ReactNode }): React.JSX.Element {
     const { session } = useSession();
     const updatesSlice = useUpdates();
@@ -37,7 +54,13 @@ export function MainTabs({ selected, onSelect, children }: { selected: MainTab; 
     const allInstalled = allListed ? [...allProjects.chunks.values()].reduce((count, chunk) => count + (chunk.result?.packages.length ?? 0), 0) : 0;
     const singleInstalled = installedSlice.status === 'ready' ? installedSlice.result?.packages.length ?? 0 : 0;
     const installedCount = (session?.selectedProject === ALL_PROJECTS ? allInstalled : singleInstalled) || undefined;
-    const counts: Partial<Record<string, number>> = { installed: installedCount, updates: updateCount };
+    // Consolidate counts the drifting packages once the fan-out is ready, whatever was not compared; no number at 0 (UX-P5.3b).
+    const { status: allStatus, projects: allProjectList, chunks: allChunks } = allProjects;
+    const driftCount = useMemo(
+        () => (allStatus === 'ready' ? versionDrift({ status: allStatus, projects: allProjectList, chunks: allChunks }).entries.length || undefined : undefined),
+        [allStatus, allProjectList, allChunks],
+    );
+    const counts: Partial<Record<string, number>> = { installed: installedCount, updates: updateCount, consolidate: driftCount };
     // The rows `@vulnerable` would show that are known vulnerable, direct plus transitive (UX-P5.1a): no number at 0 or while
     // nothing is known (empty is not unknown); an unknown part adds nothing and removes nothing.
     const singleDirect = installedSlice.result?.packages.filter(entry => directVulnerability(installedSlice.metadata, entry.id) === 'vulnerable').length ?? 0;
@@ -62,7 +85,7 @@ export function MainTabs({ selected, onSelect, children }: { selected: MainTab; 
         }
     }, [singlePath, bothSettled]);
     const installedPending = singlePath !== null && listAnswered && settledFor !== singlePath && !bothSettled;
-    const tabs = TABS.map(item => {
+    const tabs = (session?.selectedProject === ALL_PROJECTS ? [...TABS, CONSOLIDATE_TAB] : TABS).map(item => {
         const counted = counts[item.id] !== undefined ? { ...item, count: counts[item.id] } : item;
         const pending = item.id === 'installed' && installedPending ? { ...counted, pending: true } : counted;
         return item.id === 'installed' && vulnerableCount !== undefined

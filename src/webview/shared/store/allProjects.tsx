@@ -436,7 +436,10 @@ export interface DriftVersion {
     projects: ReadonlyArray<{ projectPath: string; projectName: string }>;
 }
 
-/** A reference a consolidation leaves as it is, with the sentence why (a central row, an SDK reference, an unresolved one). */
+/**
+ * A reference a consolidation leaves as it is, with the sentence why: a central row, an SDK reference, an unresolved one, a floating
+ * version or range, or one conditioned on some target frameworks.
+ */
 export interface DriftHeld {
     projectPath: string;
     projectName: string;
@@ -449,8 +452,12 @@ export interface DriftEntry {
     id: string;
     /** The versions a consolidation can change, in the order of the projects. */
     versions: readonly DriftVersion[];
-    /** The references it leaves; their versions count towards the drift. */
+    /** The references it leaves; their known versions count towards the drift. */
     held: readonly DriftHeld[];
+    /** How many distinct known versions the projects reference, held ones included (the row's "N versions"). */
+    versionCount: number;
+    /** How many projects reference the package, held ones included (the row's "in M projects"). */
+    projectCount: number;
 }
 
 export interface VersionDrift {
@@ -472,7 +479,10 @@ const versionKey = (version: string): string => version.toLowerCase().replace(/\
  * The packages whose version differs between projects under All Projects (F3 Consolidate, UX-P5.3a): from the lists the
  * fan-out streamed, each package that at least two projects reference at at least two versions. A row whose version is set
  * centrally (`central`) is held: a consolidation reaches it only through the central file; a `central-override` row joins
- * (N74). An SDK reference and a row `whyNotUpdatable` refuses are held with their reason.
+ * (N74). An SDK reference, a row `whyNotUpdatable` refuses, a floating version or range (a consolidation would replace the pattern
+ * with a fixed version) and a reference conditioned on some target frameworks (no SDK probe shows what an add does to it) are held
+ * with their reason (UX-P5.3b). A held row's known version counts towards the drift; a version that is not known (unresolved, or a
+ * pattern without a resolved version) is no version.
  */
 export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects' | 'chunks'>): VersionDrift {
     const unread: Array<{ projectPath: string; projectName: string; reason: string }> = [];
@@ -492,10 +502,16 @@ export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects'
             const item: Gathered = byId.get(lower) ?? { id: entry.id, versions: new Map(), held: [], projects: new Set<string>(), keys: new Set<string>() };
             byId.set(lower, item);
             item.projects.add(project.path);
-            item.keys.add(key);
+            const pattern = entry.versionType === 'floating' || entry.versionType === 'range';
+            const known = entry.declaration !== 'unresolved' && entry.versionType !== 'unresolved' && (!pattern || Boolean(entry.resolvedVersion));
+            if (known) {
+                item.keys.add(key);
+            }
             const reason = whyNotUpdatable(entry, result)
                 ?? (isCentral(entry) ? `${entry.id} is set in the central package file of ${project.name}` : undefined)
-                ?? (entry.isImplicit ? `${entry.id} is added by the .NET SDK` : undefined);
+                ?? (entry.isImplicit ? `${entry.id} is added by the .NET SDK` : undefined)
+                ?? (pattern ? `${entry.id} uses a floating version or range in ${project.name}` : undefined)
+                ?? (entry.targetFrameworks !== undefined ? `${entry.id} is referenced for some target frameworks only in ${project.name}` : undefined);
             if (reason !== undefined) {
                 item.held.push({ projectPath: project.path, projectName: project.name, version, reason });
                 continue;
@@ -509,7 +525,7 @@ export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects'
     }
     const entries = [...byId.values()]
         .filter(item => item.projects.size > 1 && item.keys.size > 1)
-        .map(item => ({ id: item.id, versions: [...item.versions.values()], held: item.held }))
+        .map(item => ({ id: item.id, versions: [...item.versions.values()], held: item.held, versionCount: item.keys.size, projectCount: item.projects.size }))
         .sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
     const complete = state.status === 'ready' && state.projects !== undefined && unread.length === 0;
     return { complete, unread, entries };

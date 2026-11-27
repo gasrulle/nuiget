@@ -10,6 +10,7 @@ import './main.css';
 import { DetailsPane } from './features/details/DetailsPane';
 import { InstalledTab } from './features/installed/InstalledTab';
 import { BrowseList } from './features/search/BrowseList';
+import { ConsolidateTab } from './features/updates/ConsolidateTab';
 import { UpdatesTab } from './features/updates/UpdatesTab';
 import { MainShell } from './MainShell';
 
@@ -38,7 +39,7 @@ if (rootElement) {
         <StrictMode>
             <ErrorBoundary onError={report}>
                 <StoreProvider bus={bus} surface="main">
-                    <MainShell viewState={api} installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} browse={view => <BrowseList {...view} />} details={view => <DetailsPane {...view} />} />
+                    <MainShell viewState={api} installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} consolidate={view => <ConsolidateTab {...view} />} browse={view => <BrowseList {...view} />} details={view => <DetailsPane {...view} />} />
                 </StoreProvider>
             </ErrorBoundary>
         </StrictMode>

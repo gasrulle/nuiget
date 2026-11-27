@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Works with the .NET 11 SDK** — Installing and updating packages in a Central Package Management project works on the .NET 11 SDK as it does on SDK 10.
 - **Update All stays visible when VS Code always shows header actions** — With VS Code's `workbench.view.alwaysShowHeaderActions` setting on, the Update All button of the sidebar's Updates section is shown without hovering.
 - **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your projects get through their references, for one project or All Projects, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
+- **Consolidate Tab** — With All Projects selected, a Consolidate tab lists the packages your projects reference at different versions, with how many versions and projects each one has.
 
 ### Changed
 - **Vulnerable packages show their highest severity**

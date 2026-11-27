@@ -17,12 +17,13 @@ import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { useCentralChange, type CentralChange } from './features/updates/useCentralChange';
 import { UninstallConfirmDialog, useUninstallConfirm, type UninstallConfirm } from '../shared/installed/uninstallConfirm';
 import { SourcesControl } from './features/sources/SourcesControl';
-import { MainTabs } from './MainTabs';
+import { MainTabs, readMainTab } from './MainTabs';
 import { clampTo, useSplitBounds } from './useSplitBounds';
 import { useHiddenDetailsFocus } from './useHiddenDetailsFocus';
 import { failure } from '../shared/updates/sentence';
 
-export type MainTab = 'installed' | 'updates';
+/** The main panel's tabs; Consolidate is shown only while All Projects is selected (UX-P5.3b). */
+export type MainTab = 'installed' | 'updates' | 'consolidate';
 
 /** The keys of the main search box that a reader cannot see (A18; design-advisor ruling of 2026-11-17, UX-P4.3). */
 const SEARCH_HINT = 'When no list is open under the box, Ctrl+Down (Cmd+Down) moves to the package list. In the suggestions, Right lists a package\'s versions, Left returns to the suggestions, and Ctrl+Enter (Cmd+Enter) installs the highlighted package or version into the selected project.';
@@ -70,6 +71,8 @@ export interface MainShellProps {
     installed?: (view: ListView) => React.ReactNode;
     /** The list of the Updates tab. */
     updates?: (view: ListView) => React.ReactNode;
+    /** The list of the Consolidate tab, under All Projects (UX-P5.3b). */
+    consolidate?: (view: ListView) => React.ReactNode;
     /** The browse results; they take the place of the tabs while the box holds a browse search. */
     browse?: (view: BrowseView) => React.ReactNode;
     /** The details of the selected package; without it, the details pane says how to get one. */
@@ -83,16 +86,6 @@ const TAB_OF_MODE: Partial<Record<SearchMode, MainTab>> = { installed: 'installe
 
 const SPLIT = { min: 25, max: 75, initial: 35 };
 
-/** The tab kept in the webview state; anything else, or a store that cannot be read, is Installed. */
-function readMainTab(store: ViewStateStore | undefined): MainTab {
-    try {
-        const tab = (store?.getState() as { tab?: unknown } | undefined)?.tab;
-        return tab === 'updates' ? 'updates' : 'installed';
-    } catch {
-        return 'installed';
-    }
-}
-
 /**
  * The 2.0 main panel around its features (interaction model §1 and §2): the header with the shared context
  * (project, source, prerelease) and refresh, the unified search box, the Installed and Updates tabs and the split
@@ -100,7 +93,7 @@ function readMainTab(store: ViewStateStore | undefined): MainTab {
  * `@vulnerable`) and hands its text to the list; plain text is a browse search: Enter runs it in the search slice and
  * the browse results take the place of the tabs; typing, suggestions and `ui/navigateToPackage` are the search feature's.
  */
-export function MainShell({ installed, updates, browse, details, viewState }: MainShellProps): React.JSX.Element {
+export function MainShell({ installed, updates, consolidate, browse, details, viewState }: MainShellProps): React.JSX.Element {
     const bus = useMessageBus();
     const { session } = useSession();
     const { set } = useSessionActions();
@@ -175,13 +168,15 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
         }
     }, [browsing, clearSearch]);
     const modeTab = TAB_OF_MODE[parsed.mode];
-    const tab = modeTab ?? chosenTab;
+    // A kept or chosen Consolidate tab shows only under All Projects; elsewhere Installed is shown, derived, the choice kept.
+    const shownChoice = chosenTab === 'consolidate' && session?.selectedProject !== ALL_PROJECTS ? 'installed' : chosenTab;
+    const tab = modeTab ?? shownChoice;
     // The details pane shows the active view's own selection; Browse starts without one.
     const { showView } = useDetailsActions();
     useEffect(() => showView(browsing ? 'browse' : tab), [browsing, tab, showView]);
     const view: ListView = { filter: modeTab ? parsed.filterText : '', vulnerableOnly: parsed.mode === 'vulnerable', announce, central, uninstall, focusSearch };
     // The list beside the details pane: Ctrl+DownArrow in the search box goes there, and so does the focus of a hidden pane.
-    const visibleListId = browsing ? 'browse-list' : tab === 'updates' ? 'updates-list' : 'installed-list';
+    const visibleListId = browsing ? 'browse-list' : tab === 'updates' ? 'updates-list' : tab === 'consolidate' ? 'consolidate-list' : 'installed-list';
     useHiddenDetailsFocus(splitRef, visibleListId, listPaneId);
 
     const selectTab = (next: MainTab): void => {
@@ -273,7 +268,7 @@ export function MainShell({ installed, updates, browse, details, viewState }: Ma
                 <div className="nuiget-main-list" id={listPaneId}>
                     {browsing ? browse?.({ text: query, announce, install: installAction, focusSearch }) : (
                         <MainTabs selected={tab} onSelect={selectTab}>
-                            {tab === 'installed' ? installed?.(view) : updates?.(view)}
+                            {tab === 'installed' ? installed?.(view) : tab === 'updates' ? updates?.(view) : consolidate?.(view)}
                         </MainTabs>
                     )}
                 </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
+import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -727,6 +727,23 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(elementGroups('details', 'main-transitive-details')).toContain('toolbars');
     });
 
+    it('leaves out of the Consolidate cell what its flat list has not: a toolbar, a group header, a text button, a badge at 400 (UX-P5.3b)', () => {
+        const ruleOf = (id: string): RuleDefinition => RULES.find(candidate => candidate.id === id) as RuleDefinition;
+        expect([NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES]).toEqual([['main-consolidate'], ['main-consolidate'], ['main-consolidate']]);
+        expect(elementGroups('main-installed', 'main-consolidate')).not.toContain('toolbars');
+        expect(elementGroups('main-installed', 'main-consolidate')).toContain('tabs');
+        expect(elementGroups('main-installed', 'main-installed-all')).toContain('toolbars');
+        for (const id of ['DS-GRID-2b', 'DS-OVERFLOW-2', 'DS-HEIGHT-6']) {
+            expect(appliesTo(ruleOf(id), 'main-consolidate', 1200), id).toBe(false);
+            expect(appliesTo(ruleOf(id), 'main-installed-all', 1200), id).toBe(true);
+        }
+        for (const id of ['DS-HEIGHT-10', 'DS-TYPE-8', 'DS-HC-1']) {
+            expect(appliesTo(ruleOf(id), 'main-consolidate', 1200), id).toBe(true);
+            expect(appliesTo(ruleOf(id), 'main-consolidate', 400), id).toBe(false);
+            expect(appliesTo(ruleOf(id), 'main-installed-single', 400), id).toBe(true);
+        }
+    });
+
     it('reads a list toolbar\'s fit and a comfortable row\'s lines: nothing cut, one line below 250, no text sliced by its line (DS-OVERFLOW-3, DS-ROW-5, UX-P3.fix-14)', () => {
         // Today's tree (16002046): at a 170 px pane the primary's label is cut and the toolbar takes two lines.
         const today = { pane: 170, cut: ['uninstall-selected-button'], lines: 2 };
@@ -1122,9 +1139,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-3@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-loading', cells({ skeletonRows: 3 }), 'DS-INSET-2@main-installed-loading/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
         expect(lineOf('main-installed-error', cells({ banners: [{ severity: 'error', glyphs: ['error'], buttons: 1, text: 'It failed.' }] }), 'DS-TYPE-5@main-installed-error/headers')).toMatchObject({ pass: true, value: 'no group header (no list)' });
-        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, ...sidebarBrowse]);
+        // UX-P5.3b (design-advisor follow-up 3, DO 2 and DO 6): and the Consolidate list, a main list with no group header.
+        expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, ...sidebarBrowse, 'main-consolidate']);
         // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
-        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse]);
+        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse, 'main-consolidate']);
         // UX-P3.8 follow-up 2: the remaining ruled lists, pinned so none widens (never sidebar-installed-loading where it has headers).
         const except = (id: string) => RULES.find(rule => rule.id === id)?.exceptStates;
         for (const id of ['DS-COPY-5', 'DS-HEIGHT-1', 'DS-TYPE-9']) {
@@ -1153,6 +1171,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(cellList('main-quicksearch-open')).toBe('browse');
         expect(cellList('main-updates-loading')).toBe('updates');
         expect(cellList('main-updates-all')).toBe('updates');
+        // UX-P5.3b: the Consolidate tab's own bar and list.
+        expect(cellList('main-consolidate')).toBe('consolidate');
         // UX-P3.10 push B: the side bar's Updates pane.
         expect(cellList('sidebar-updates-loading')).toBe('sidebar-updates');
         // UX-P3.10 push C: the details facts' and the README's own cells; a stale selection reads the Installed list.
@@ -1227,6 +1247,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.7d: the sidebar's All Projects Updates tree reads its two leaves (design-advisor ruling of 2026-11-08, DO 6).
         // UX-P3.10 push C: the details cells (follow-up 1, B), hard since UX-P3.10 push E.
         expect(scopesOf('DS-STATE-1')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', sources: 'hard', sidebar: 'hard', details: 'hard' });
+        // UX-P5.3b (design-advisor follow-up 1, DO 8; follow-up 2, DO 3): the Consolidate cell's marker, pending until the item's closing flips it.
+        expect(RULES.find(rule => rule.id === 'DS-STATE-1')?.pendingStates).toEqual({ 'main-consolidate': 'P5.3b' });
         // UX-P3.10 push C (follow-up 3, DO 7): DS-STATE-4 reads the details error cells only; UX-P5.fix-7 (design-advisor DO 6) adds the offline cell's warning.
         // UX-P5.2b (design-advisor DO 9): the deprecated cell's notice, and the clause `advisories` on the loaded details cell.
         expect(RULES.find(rule => rule.id === 'DS-STATE-4')?.scopeStates).toEqual({ details: ['main-details-error', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'], advisories: ['main-installed-details'] });
@@ -1855,7 +1877,7 @@ describe('UX-P3.9 push 1: the sash and the scroll shadow, read at rest (design-a
     });
 
     it('prints a hard scope as pending on the item a state names in pendingStates, for a layout rule and a pixel rule (UX-P3.fix-6 precommit-review)', () => {
-        // No product rule uses pendingStates since UX-P4.fix-24; the mechanism stays, so a synthetic rule keeps its branch tested.
+        // A synthetic rule keeps the branch tested whatever product rule uses pendingStates (DS-STATE-1's Consolidate cell until UX-P5.3b's closing).
         const synthetic: RuleDefinition[] = [
             rule('X-PENDING-LAYOUT', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pendingStates: { 'main-installed-single': 'P9.9' } }),
             rule('X-PENDING-PIXELS', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.containment, pixels: true, pendingStates: { 'main-installed-single': 'P9.9' } }),

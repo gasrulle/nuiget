@@ -200,6 +200,9 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, the Updates tab, no row in the bulk selection, Update All pressed in the toolbar; the confirmation "Update N packages?" lists every update as its row writes it and is cancelled after the capture, never confirmed (UX-P4.fix-19).', [LIVE_UPDATES, LIVE_BULK_LIST]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-updates-all', 'main', [primary('main')],
         'All Projects selected, the Updates tab: one tree with a group row per project under its workspace folder; scrolled to the Tools folder, whose Unsupported project says why it is read-only and whose Empty project says nothing is installed, as message leaves (UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
+    // UX-P5.3b (design-advisor opening ruling of 2026-11-27, DO 10; follow-up 1, DO 8): the Consolidate tab's Partial cell.
+    { ...ready('main-consolidate', 'main', [primary('main'), { theme: 'dark-modern', look: 'modern', width: 400 }],
+        'All Projects selected, the Consolidate tab: the flat list of the packages referenced at different versions at its top (package-row-newtonsoft.json present: Gateway 12.0.1, Utility 13.0.2), no row current, the details pane empty; the Unsupported project was not compared, so one warning banner names it (marker consolidate-incomplete-banner); the tab shows its count (UX-P5.3b).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-browse-results', 'main', [primary('main')],
         '"Newtonsoft.Json" searched with Enter; the Browse list shows package-row-newtonsoft.json.', [LIVE_RESULTS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-browse-hover', 'main', [primary('main')],

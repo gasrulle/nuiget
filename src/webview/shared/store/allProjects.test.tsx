@@ -398,16 +398,18 @@ describe('the Consolidate model (UX-P5.3a, F3)', () => {
                 { version: '4.0.0', projects: [{ projectPath: B, projectName: 'B' }] },
             ],
             held: [],
+            versionCount: 2,
+            projectCount: 3,
         }]);
     });
 
     it('compares the resolved version, without case or build metadata, and counts a project once per version', () => {
         const drift = versionDrift(ready([
-            listed(A, [pkg('Moq', '4.*', { versionType: 'floating', resolvedVersion: '4.20.0' })]),
+            listed(A, [pkg('Moq', '4.20', { resolvedVersion: '4.20.0' })]),
             listed(B, [pkg('Moq', '4.20.0+build.7')]),
             listed(C, [pkg('Moq', '1.0.0-Beta'), pkg('NUnit', '4.0.0'), pkg('NUnit', '3.14.0', { targetFrameworks: ['net48'] })]),
         ]));
-        // 4.* resolving to 4.20.0 and 4.20.0+build.7 are one version; 1.0.0-Beta is another. NUnit is in C alone: two versions of
+        // 4.20 resolving to 4.20.0 and 4.20.0+build.7 are one version; 1.0.0-Beta is another. NUnit is in C alone: two versions of
         // one project (per target framework) are no drift between projects.
         expect(drift.entries.map(entry => `${entry.id} ${entry.versions.map(at => `${at.version}:${at.projects.map(project => project.projectName).join('+')}`).join(' ')}`)).toEqual(['Moq 4.20.0:A+B 1.0.0-Beta:C']);
     });
@@ -427,6 +429,47 @@ describe('the Consolidate model (UX-P5.3a, F3)', () => {
             { projectPath: A, projectName: 'A', version: '3.1.0', reason: 'Serilog is set in the central package file of A' },
             { projectPath: C, projectName: 'C', version: '', reason: 'Serilog cannot be updated: its reference could not be resolved' },
         ]);
+        // The central 3.1.0 counts, the unresolved reference adds no version (UX-P5.3b).
+        expect(serilog.versionCount).toBe(2);
+        expect(serilog.projectCount).toBe(3);
+    });
+
+    it('holds a floating, a ranged and a conditioned reference with their reasons; a resolved one counts towards the drift', () => {
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.*', { versionType: 'floating', resolvedVersion: '3.1.1' }), pkg('Polly', '8.4.2')]),
+            listed(B, [pkg('Serilog', '[4.0.0,5.0.0)', { versionType: 'range', resolvedVersion: '4.0.0' }), pkg('Polly', '8.4.0', { targetFrameworks: ['net48'] })]),
+            listed(C, [pkg('Serilog', '3.1.0'), pkg('Polly', '8.4.2')]),
+        ]));
+        expect(drift.entries.map(entry => entry.id)).toEqual(['Polly', 'Serilog']);
+        const [polly, serilog] = drift.entries;
+        expect(serilog.versions).toEqual([{ version: '3.1.0', projects: [{ projectPath: C, projectName: 'C' }] }]);
+        expect(serilog.held).toEqual([
+            { projectPath: A, projectName: 'A', version: '3.1.1', reason: 'Serilog uses a floating version or range in A' },
+            { projectPath: B, projectName: 'B', version: '4.0.0', reason: 'Serilog uses a floating version or range in B' },
+        ]);
+        expect([serilog.versionCount, serilog.projectCount]).toEqual([3, 3]);
+        expect(polly.versions).toEqual([{ version: '8.4.2', projects: [{ projectPath: A, projectName: 'A' }, { projectPath: C, projectName: 'C' }] }]);
+        expect(polly.held).toEqual([{ projectPath: B, projectName: 'B', version: '8.4.0', reason: 'Polly is referenced for some target frameworks only in B' }]);
+        expect([polly.versionCount, polly.projectCount]).toEqual([2, 3]);
+        // A held reference is never written: the payload leaves it out.
+        expect(consolidationUpdates(serilog, '3.1.1')).toEqual([{ projectPath: C, projectName: 'C', packages: [{ id: 'Serilog', version: '3.1.1' }] }]);
+    });
+
+    it('a reference without a known version is held and adds no version', () => {
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.1.1'), pkg('Moq', '4.20.0')]),
+            listed(B, [pkg('Serilog', '', { versionType: 'unresolved', declaration: 'unresolved' }), pkg('Moq', '4.*', { versionType: 'floating' })]),
+            listed(C, [pkg('xunit', '2.9.0')]),
+        ]));
+        // One pinned version plus one unknown is no drift: the unresolved Serilog and the unrestored floating Moq add no version.
+        expect(drift.entries).toEqual([]);
+        const [moq] = versionDrift(ready([
+            listed(A, [pkg('Moq', '4.20.0')]),
+            listed(B, [pkg('Moq', '4.*', { versionType: 'floating' })]),
+            listed(C, [pkg('Moq', '4.18.0')]),
+        ])).entries;
+        expect(moq.held).toEqual([{ projectPath: B, projectName: 'B', version: '4.*', reason: 'Moq uses a floating version or range in B' }]);
+        expect([moq.versionCount, moq.projectCount]).toEqual([2, 3]);
     });
 
     it('is incomplete, never "no drift", while the lists load, or when a project failed, is unsupported or was not read', () => {
