@@ -499,7 +499,7 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
     'main-installed-single', 'main-installed-toolbar-hover', 'main-installed-unfocused', 'main-installed-unresolved', 'main-installed-unsupported',
     'main-readme-error', 'main-readme-loading', 'main-transitive-details', 'main-transitive-expanded', 'main-updates', 'main-updates-all',
     'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-hover', 'main-updates-loading', 'main-updates-revalidating',
-    'main-updates-unavailable', 'main-updates-unsupported',
+    'main-updates-unavailable', 'main-updates-unsupported', 'main-updates-vulnerable',
 ];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
@@ -638,7 +638,7 @@ const ROLE_ELEMENTS: ReadonlyArray<{ role: string; selector: string; pseudo?: st
     { role: 'skeleton', selector: '.nuiget-skeleton-row--compact', pseudo: '::after', property: 'backgroundColor', key: '--vscode-list-hoverBackground' },
 ];
 /** The states whose setup leaves focus on the clicked tab (run 41211547868's `tabs` lines, UX-P2.5); `main-details-readme` returns it to the current row (UX-P3.9 follow-up 3), and the theme pass reads the details tab's ring. */
-const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'];
+const FOCUSED_TAB_STATES: readonly string[] = ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported', 'main-updates-vulnerable'];
 /** The states that focus a control: today the search box (run 41207195990's DS-FOCUS-1 lines, UX-P2.4). */
 // UX-P4.4 (GOLDEN ruling DO 2): `main-details-readonly`, whose focus sits on the Installed list's empty slot at a first load.
 const FOCUSED_CONTROL_STATES: readonly string[] = ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'];
@@ -809,7 +809,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-STATE-2', { helper: 3, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /loading|revalidating|provisional/, exceptStates: POPUP_CELL_STATES }),
     rule('DS-STATE-3', { helper: 2, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard' }, tolerance: TOLERANCES.height, statePattern: /empty|nomatch/ }),
     // UX-P4.fix-13 (design-advisor opening ruling of 2026-11-18): a busy row's spinner in its action slot, one held cell.
-    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy'] }),
+    rule('DS-STATE-6', { helper: 3, scopes: { 'main-installed': 'hard', sidebar: { pending: 'P5.fix-5' } }, tolerance: TOLERANCES.coincide, states: ['main-installed-busy', 'sidebar-installed-busy'] }),
     // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 9): the deprecated cell's notice, and the clause `advisories` on the
     // loaded details cell (an advisory line's glyph and colour follow the row badge's severity mapping), hard since the item's code.
     rule('DS-STATE-4', { helper: 5, scopes: { 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard', sidebar: 'hard', sources: 'hard', advisories: 'hard' }, tolerance: TOLERANCES.containment, statePattern: /error|unsupported|offline|^main-details-deprecated$|^main-installed-details$/, exceptStates: POPUP_CELL_STATES, scopeStates: { details: ['main-details-error', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'], advisories: ADVISORY_STATES } }),
@@ -1423,8 +1423,8 @@ export interface StateCells {
     disabledLabels?: Array<{ label: string; colour: string; opacity: string }>;
     /**
      * Each shown busy row (`.nuiget-row--busy`, UX-P4.fix-13, DS-STATE-6): its option's `aria-busy`, the spinner glyph's box and
-     * computed colour, the action slot's end and the glyph's end from the row wrapper's right edge, the glyph's centre against
-     * the wrapper's, the buttons left in the slot and the status text; the slot's band and list state, read as `iconButtons`
+     * computed colour, the action slot's end and the glyph's end from the band's right edge (the option's box), the glyph's
+     * centre against the band's (UX-P5.fix-5), the buttons left in the slot and the status text; the slot's band and list state, read as `iconButtons`
      * reads them, for the colour role of the action the spinner replaced (UX-P4.fix-15).
      */
     busyRows?: Array<{ testId: string; ariaBusy: boolean; glyph?: { w: number; h: number }; colour?: string; slotEnd?: number; glyphEnd?: number; centreDy?: number; actions: number; status: string; band?: 'current' | 'selected'; listFocused?: boolean; multi?: boolean }>;
@@ -2369,7 +2369,8 @@ const stateCells = {
                 headerSpinnerColours: shown('[data-testid^="section-header-"] .nuiget-spinner svg').map(svg => getComputedStyle(svg).color),
                 headerChevronColours: shown('[data-testid^="section-header-"] .nuiget-section-chevron').map(el => getComputedStyle(el).color),
                 busyRows: shown('.nuiget-row--busy').map(row => {
-                    const rowRect = rectOf(row);
+                    // The band is the option's box, not the wrapper's: a compact row's band is inset in the wrapper (UX-P5.fix-5).
+                    const rowRect = rectOf(row.querySelector('.nuiget-row-option') || row);
                     const slot = row.querySelector('.nuiget-row-actions');
                     const glyph = row.querySelector('.nuiget-row-actions .nuiget-spinner svg');
                     const glyphRect = glyph ? rectOf(glyph) : undefined;
@@ -4188,7 +4189,7 @@ function evaluateFocusAndState(definition: RuleDefinition, scope: Scope, state: 
         case 'DS-COLOR-1':
             return evaluateStateCell(definition, state, facts);
         case 'DS-STATE-6':
-            return busyRowsVerdict(facts.stateCells.busyRows ?? [], facts.iconColours, definition.tolerance);
+            return busyRowsVerdict(facts.stateCells.busyRows ?? [], facts.iconColours, definition.tolerance, BUSY_EXPECTED[state]);
         case 'DS-STATE-7': {
             if (facts.fonts.root === '') {
                 return notMeasurable('no page');
@@ -4240,6 +4241,29 @@ export const ZOOM_STATUS: RuleStatus = 'hard';
 const BUSY_WORDS = ['Installing', 'Updating', 'Uninstalling', 'Restoring', 'Queued', 'Finishing'];
 
 /**
+ * The words each busy cell's rows read, in document order (UX-P5.fix-5, design-advisor opening ruling DO 4): a cell that reads any
+ * other word, or another number of rows, is red. The side bar cell's FluentValidation is busy in its Installed pane and, when the
+ * pane is shown, in its Updates pane (`isPackageBusy(…, true)`): one or two rows, each Uninstalling.
+ */
+export const BUSY_EXPECTED: Readonly<Record<string, { words: readonly string[]; upTo?: number }>> = {
+    'main-installed-busy': { words: ['Uninstalling', 'Queued'] },
+    'sidebar-installed-busy': { words: ['Uninstalling'], upTo: 2 },
+};
+
+/** Whether a cell's busy rows read the words it holds (`BUSY_EXPECTED`); a cell without an entry holds none. */
+export function busyWordsVerdict(statuses: readonly string[], expected: { words: readonly string[]; upTo?: number } | undefined): { text: string; pass: boolean } {
+    if (expected === undefined) {
+        return { text: '', pass: true };
+    }
+    const { words, upTo } = expected;
+    const pass = upTo === undefined
+        ? statuses.length === words.length && statuses.every((word, index) => word === words[index])
+        : statuses.length >= 1 && statuses.length <= upTo && statuses.every(word => word === words[0]);
+    const wanted = upTo === undefined ? words.join(', ') : `${words[0]} ×1–${upTo}`;
+    return { text: `words ${statuses.join(', ')} (target ${wanted})`, pass };
+}
+
+/**
  * The colour role of an action glyph (DS-ICON-2): disabled, the severity button, the current row of a focused list (or its
  * one selected row), else `icon.foreground`. `label` is DS-ICON-2's printed text, `role` the bare key. One function for the
  * icon buttons and for the spinner that stands in for one (DS-STATE-6, UX-P4.fix-15).
@@ -4263,7 +4287,7 @@ export function actionIconRole(entry: { disabled?: boolean; severity?: boolean; 
  * stood, and whose centre is the band's; the glyph in the colour role of the action it replaced (DS-ICON-2); no button left in
  * the slot, and its "-ing" word or Queued.
  */
-export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, colours: { icon: string; active: string; disabled: string; warning: string }, tolerance: number): { value: string; pass: boolean } {
+export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, colours: { icon: string; active: string; disabled: string; warning: string }, tolerance: number, expected?: { words: readonly string[]; upTo?: number }): { value: string; pass: boolean } {
     if (rows.length === 0) {
         return { value: `${NOT_MEASURABLE} (no busy row)`, pass: false };
     }
@@ -4304,7 +4328,8 @@ export function busyRowsVerdict(rows: NonNullable<StateCells['busyRows']>, colou
         const text = `${row.testId}${row.ariaBusy ? ' aria-busy' : ''}; ${glyph} in the action slot (end ${row.slotEnd ?? 'none'}, centre Δy ${row.centreDy ?? 'none'}; glyph end ${row.glyphEnd ?? 'none'}), colour ${row.colour === role.colour ? role.role : (row.colour ?? 'none')}; actions ${row.actions}; status "${row.status}"`;
         return { text: off.length === 0 ? text : `${text}; off: ${off.join(', ')}`, pass: off.length === 0 };
     });
-    return { value: `busy rows ${rows.length}: ${parts.map(part => part.text).join(' | ')}`, pass: parts.every(part => part.pass) };
+    const words = busyWordsVerdict(rows.map(row => row.status), expected);
+    return { value: `busy rows ${rows.length}: ${parts.map(part => part.text).join(' | ')}${words.text === '' ? '' : `; ${words.text}`}`, pass: parts.every(part => part.pass) && words.pass };
 }
 
 function evaluateStateCell(definition: RuleDefinition, state: string, facts: EndOfP0): { value: string; pass: boolean } {

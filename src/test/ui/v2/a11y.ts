@@ -633,7 +633,7 @@ export const MOTION_STATES: readonly string[] = [
     'main-sources-revalidating', 'main-installed-loading', 'main-installed-revalidating', 'main-updates-loading', 'main-updates-revalidating',
     'main-browse-loading', 'main-browse-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading',
     'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-readme-loading',
-    'main-installed-busy', 'main-installed-provisional', 'sidebar-installed-provisional',
+    'main-installed-busy', 'main-installed-provisional', 'sidebar-installed-provisional', 'sidebar-installed-busy',
 ];
 
 /** Four duration tokens in milliseconds, `null` when unset or not a time (UX-P4.5: parsed, never compared as strings). */

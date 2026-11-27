@@ -164,7 +164,7 @@ async function installedListAtTop(): Promise<void> {
 }
 
 /** The states whose answers are held while they are read: their list is busy by design, so the audit does not wait for it to settle. */
-const HELD_STATES = ['main-installed-busy', 'main-installed-loading', 'main-installed-revalidating', 'main-installed-provisional', 'sidebar-installed-provisional', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
+const HELD_STATES = ['main-installed-busy', 'sidebar-installed-busy', 'main-installed-loading', 'main-installed-revalidating', 'main-installed-provisional', 'sidebar-installed-provisional', 'main-updates-loading', 'main-updates-revalidating', 'main-browse-loading', 'main-browse-revalidating', 'main-quicksearch-loading', 'main-sources-revalidating', 'sidebar-browse-loading', 'sidebar-browse-revalidating', 'sidebar-installed-loading', 'sidebar-installed-revalidating', 'sidebar-updates-loading', 'sidebar-updates-revalidating', 'main-details-loading', 'main-details-readonly', 'main-readme-loading'];
 /** The cells whose tabs have no count by design (no list, or none in it): only the busy clause of the settle predicate can clear there. */
 const NO_COUNT_STATES = ['main-installed-empty', 'main-installed-error', 'main-updates-empty', 'main-updates-empty-uptodate', 'main-updates-error', 'main-updates-unavailable', 'sidebar-updates-unavailable', 'sidebar-updates-empty', 'sidebar-updates-nomatch', 'sidebar-updates-error', 'main-details-error', 'main-readme-error'];
 
@@ -304,44 +304,77 @@ async function endHold(): Promise<void> {
 }
 
 /**
- * A busy row without a write (UX-P4.fix-13, architecture-advisor ruling of 2026-11-18): the frame posts to its own window the
- * progress event the host sends for a running uninstall of one row, so the ops slice marks the row busy and no request leaves
- * the webview; `clearBusy` ends it with the terminal progress of the same operation id (cancelled), never an outcome, so the
- * id is not remembered as ended and the next reach can mark it again. The project path and the package id come verbatim from
- * the row wrapper's own menu context; a read-only or central row is refused (it has no action for the spinner to replace).
+ * A busy row without a write (UX-P4.fix-13, architecture-advisor ruling of 2026-11-18; UX-P5.fix-5, architecture-advisor opening
+ * ruling of 2026-11-27): the frame posts to its own window the progress events the host sends, one per listed row, so the ops
+ * slice marks the rows busy and no request leaves the webview. A row is `running` or `queued` (the payload `submitFromHost`
+ * sends for an operation waiting behind a running one; it reads Queued). Its operation id is `capture-busy:<state>:<index>`, so
+ * `clearBusy` ends every one with a terminal progress (cancelled), unconditionally, never an outcome: an id is not remembered as
+ * ended and the next reach can mark it again. The project path and the package id come verbatim from each row wrapper's own menu
+ * context; a read-only or central row, or one of All Projects, is refused (it has no action for the spinner to replace).
  */
 const BUSY_SOURCE = `
-const [state, rowTestId] = arguments;
-const row = document.querySelector('[data-testid="' + rowTestId + '"]');
-if (row === null) throw new Error('[busy] ' + state + ': no row ' + rowTestId);
-const context = JSON.parse(row.getAttribute('data-vscode-context') || '{}');
-if (!context.projectPath || !context.packageId) throw new Error('[busy] ' + state + ': the row context names no project or package');
-if (context['nuiget.readOnly'] === true || context['nuiget.central'] === true) throw new Error('[busy] ' + state + ': the row is read-only or central');
-const opId = 'capture-busy:' + state;
-window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId, status: 'running', kind: 'remove', projectPaths: [context.projectPath], packageIds: [context.packageId] } }, '*');
-window.__nuigetBusy = { opId, packageId: context.packageId };
-return context.packageId;`;
+const [state, rows] = arguments;
+const marked = [];
+rows.forEach((wanted, index) => {
+    const row = document.querySelector('[data-testid="' + wanted.rowTestId + '"]');
+    if (row === null) throw new Error('[busy] ' + state + ': no row ' + wanted.rowTestId);
+    const context = JSON.parse(row.getAttribute('data-vscode-context') || '{}');
+    if (!context.projectPath || !context.packageId) throw new Error('[busy] ' + state + ': the row context names no project or package');
+    if (context.projectPath === '__all_projects__' || context['nuiget.readOnly'] === true || context['nuiget.central'] === true) throw new Error('[busy] ' + state + ': the row is of All Projects, read-only or central');
+    const opId = 'capture-busy:' + state + ':' + index;
+    window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId, status: wanted.status, kind: wanted.kind, projectPaths: [context.projectPath], packageIds: [context.packageId] } }, '*');
+    marked.push(context.packageId);
+});
+return marked;`;
 
 const CLEAR_BUSY_SOURCE = `
-const busy = window.__nuigetBusy;
-if (!busy) return null;
-window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId: busy.opId, status: 'cancelled' } }, '*');
-delete window.__nuigetBusy;
-return busy;`;
+const [state, count] = arguments;
+for (let index = count - 1; index >= 0; index--) {
+    window.postMessage({ kind: 'event', type: 'ops/progress', payload: { opId: 'capture-busy:' + state + ':' + index, status: 'cancelled' } }, '*');
+}
+return count;`;
 
-async function markBusy(state: string, rowTestId: string): Promise<void> {
-    await script<string>(BUSY_SOURCE, state, rowTestId);
+/** One row a busy cell marks: its wrapper's test id, the reported status and kind, and the test id of the action the spinner replaces. */
+interface BusyRow {
+    rowTestId: string;
+    status: 'running' | 'queued';
+    kind: 'remove';
+    action: string;
 }
 
-/** Ends `markBusy`, waits until no row is busy and the row's own action is back, and prints what it ended. */
-async function clearBusy(state: string, rowTestId: string): Promise<void> {
-    const busy = await script<{ opId: string; packageId: string } | null>(CLEAR_BUSY_SOURCE);
-    if (busy === null) {
-        console.warn(`[busy] ${state}: none`);
-        return;
-    }
-    await until(`document.querySelectorAll('.nuiget-row--busy, .nuiget-row-option[aria-busy="true"]').length === 0 && document.querySelector('[data-testid="${rowTestId}"] [data-testid="row-action-uninstall"]') !== null`, 'no row busy and the row\'s action back', 10_000);
-    console.warn(`[busy] ${state}: ${busy.packageId} busy 1 -> 0 (opId ${busy.opId})`);
+async function markBusy(state: string, rows: readonly BusyRow[]): Promise<void> {
+    await script<string[]>(BUSY_SOURCE, state, rows.map(({ rowTestId, status, kind }) => ({ rowTestId, status, kind })));
+}
+
+/** Ends `markBusy` for every row of the state, waits until no row is busy and each row's own action is back, and prints what it ended. */
+async function clearBusy(state: string, rows: readonly BusyRow[]): Promise<void> {
+    await script<number>(CLEAR_BUSY_SOURCE, state, rows.length);
+    const back = rows.map(row => `document.querySelector('[data-testid="${row.rowTestId}"] [data-testid="${row.action}"]') !== null`);
+    await until([`document.querySelectorAll('.nuiget-row--busy, .nuiget-row-option[aria-busy="true"]').length === 0`, ...back].join(' && '), 'no row busy and each row\'s action back', 10_000);
+    console.warn(`[busy] ${state}: ${rows.map(row => row.rowTestId.replace(/^package-row-/, '')).join(', ')} busy ${rows.length} -> 0`);
+}
+
+/** `main-installed-busy` (UX-P5.fix-5, design-advisor opening ruling DO 1): FluentValidation running, Humanizer.Core queued behind it. */
+const MAIN_BUSY_ROWS: readonly BusyRow[] = [
+    { rowTestId: 'package-row-fluentvalidation', status: 'running', kind: 'remove', action: 'row-action-uninstall' },
+    { rowTestId: 'package-row-humanizer.core', status: 'queued', kind: 'remove', action: 'row-action-uninstall' },
+];
+
+/** `sidebar-installed-busy` (UX-P5.fix-5, design-advisor opening ruling DO 6): FluentValidation running, in the side bar frame. */
+const SIDEBAR_BUSY_ROWS: readonly BusyRow[] = [
+    { rowTestId: 'package-row-fluentvalidation', status: 'running', kind: 'remove', action: 'row-action-uninstall' },
+];
+
+/** What a busy row shows (DS-STATE-6): the busy class, `aria-busy` on its option, the spinner in its action slot, no action left, its word. */
+function busyRowHolds(rowTestId: string, word: string, within = ''): string[] {
+    const row = `${within}[data-testid="${rowTestId}"]`;
+    return [
+        `document.querySelector('${row}').classList.contains("nuiget-row--busy")`,
+        `document.querySelector('${row} .nuiget-row-option').getAttribute("aria-busy") === "true"`,
+        `document.querySelector('${row} .nuiget-row-actions .nuiget-spinner svg[data-codicon="loading"]') !== null`,
+        `document.querySelector('${row} [data-testid="row-action-uninstall"]') === null`,
+        `document.querySelector('${row} .nuiget-row-status')?.textContent.trim() === "${word}"`,
+    ];
 }
 
 /**
@@ -798,19 +831,16 @@ const REACH: Record<string, Reach> = {
     'main-installed-busy': {
         reach: async () => {
             await gatewayInstalled();
-            await markBusy('main-installed-busy', 'package-row-fluentvalidation');
+            await markBusy('main-installed-busy', MAIN_BUSY_ROWS);
             await until([
-                'document.querySelector(\'[data-testid="package-row-fluentvalidation"]\').classList.contains("nuiget-row--busy")',
-                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-option\').getAttribute("aria-busy") === "true"',
-                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-actions .nuiget-spinner svg[data-codicon="loading"]\') !== null',
-                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] [data-testid="row-action-uninstall"]\') === null',
-                'document.querySelector(\'[data-testid="package-row-fluentvalidation"] .nuiget-row-status\')?.textContent.trim() === "Uninstalling"',
-                'document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row--busy\').length === 1',
+                ...busyRowHolds('package-row-fluentvalidation', 'Uninstalling'),
+                ...busyRowHolds('package-row-humanizer.core', 'Queued'),
+                'document.querySelectorAll(\'[data-testid="installed-list"] .nuiget-row--busy\').length === 2',
                 'document.querySelector(\'[data-testid="installed-list"] [aria-current="true"]\') === null',
                 'document.querySelector(\'[data-testid="installed-list"]\').scrollTop === 0',
-            ].join(' && '), 'the FluentValidation row busy: its spinner in the action slot, "Uninstalling", no row current, the list at its top');
+            ].join(' && '), 'the FluentValidation row Uninstalling and the Humanizer.Core row Queued, each with its spinner in the action slot, no row current, the list at its top');
         },
-        leave: () => clearBusy('main-installed-busy', 'package-row-fluentvalidation'),
+        leave: () => clearBusy('main-installed-busy', MAIN_BUSY_ROWS),
     },
     'main-installed-toolbar-hover': {
         reach: async () => {
@@ -897,6 +927,21 @@ const REACH: Record<string, Reach> = {
         },
     },
     'main-updates': { reach: gatewayUpdates },
+    // UX-P5.fix-5 (design-advisor opening ruling DO 8): the installed version's badge of an update row (UX-P5.2b). The label is
+    // the highest severity (UX-P5.1b); the title names the installed version the lite entry describes (`liteOfInstalled`).
+    'main-updates-vulnerable': {
+        reach: async () => {
+            await gatewayUpdates();
+            await scrollListTo('updates-list', 'package-row-newtonsoft.json');
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
+            await until([
+                '(() => { const badge = document.querySelector(\'[data-testid="updates-list"] [data-testid="package-row-newtonsoft.json"] [data-testid="row-vulnerability"]\'); return badge !== null && (badge.firstChild?.textContent || "").trim() !== "" && (badge.querySelector(".nuiget-visually-hidden")?.textContent || "").startsWith("Installed 12.0.1: "); })()',
+                'document.querySelector(\'[data-testid="updates-list"] [aria-current="true"]\') === null',
+                '!document.querySelector(\'[data-testid="updates-tab"]\').hasAttribute("data-pending")',
+            ].join(' && '), 'the Newtonsoft.Json update row with its installed 12.0.1 vulnerability badge, no row current, the Updates tab settled', 120_000);
+            await parkMainPointer();
+        },
+    },
     'main-updates-hover': {
         reach: async () => {
             await gatewayUpdates();
@@ -1465,6 +1510,21 @@ const REACH: Record<string, Reach> = {
             await search.sendKeys(Key.chord(MODIFIER, 'a'), Key.BACK_SPACE);
             await findByTestId('sidebar-updates-list', 30_000);
         },
+    },
+    // UX-P5.fix-5 (design-advisor opening ruling DO 6; architecture-advisor opening ruling DO 4 and 5): a compact busy row. The
+    // describe's `afterEach` ends the report again, since nothing else resets the side bar's document.
+    'sidebar-installed-busy': {
+        reach: async () => {
+            await sidebarSections();
+            await markBusy('sidebar-installed-busy', SIDEBAR_BUSY_ROWS);
+            await until([
+                ...busyRowHolds('package-row-fluentvalidation', 'Uninstalling', '[data-testid="sidebar-installed-list"] '),
+                'document.querySelectorAll(\'[data-testid="sidebar-installed-list"] .nuiget-row--busy\').length === 1',
+                '(() => { const busy = [...document.querySelectorAll(".nuiget-row--busy")]; return busy.length >= 1 && busy.length <= 2 && busy.every(row => row.getAttribute("data-testid") === "package-row-fluentvalidation" && (row.querySelector(".nuiget-row-status")?.textContent || "").trim() === "Uninstalling"); })()',
+            ].join(' && '), 'the FluentValidation rows busy and "Uninstalling" (Installed, and Updates when shown)');
+            await parkSidebarPointer();
+        },
+        leave: () => clearBusy('sidebar-installed-busy', SIDEBAR_BUSY_ROWS),
     },
     'sidebar-hover': {
         reach: async () => {
@@ -3060,7 +3120,18 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
         await optionFor('Unsupported.csproj');
     });
 
-    afterEach(async () => {
+    afterEach(async function () {
+        // UX-P5.fix-5 (architecture-advisor opening ruling DO 5): a side bar busy cell's report is ended here too, with its own
+        // time, since a case Mocha timed out never ran its `leave` and nothing else resets the side bar's document.
+        const title = this.currentTest?.title ?? '';
+        if (title.startsWith('sidebar-installed-busy.')) {
+            this.timeout(60_000);
+            await leaveWebview();
+            // Budgets inside the hook's: a side bar that cannot be entered fails with the poll's named error, not the hook's timeout.
+            await enterSidebarWebview(30_000);
+            await script<number>(CLEAR_BUSY_SOURCE, 'sidebar-installed-busy', SIDEBAR_BUSY_ROWS.length);
+            await until('document.querySelectorAll(\'.nuiget-row--busy, .nuiget-row-option[aria-busy="true"]\').length === 0', 'no side bar row busy after the busy cell', 10_000);
+        }
         await leaveWebview();
     });
 

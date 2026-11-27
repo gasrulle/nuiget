@@ -175,7 +175,7 @@ export const STATES: readonly NamedState[] = [
     { ...ready('main-installed-hover-current', 'main', [primary('main')],
         'Gateway selected, the list scrolled to its end, Newtonsoft.Json made current (the details show "Dependencies"), then the pointer on its row; the current row under :hover keeps the selection colour (DS-COLOR-2) (a details state: the pane shows Newtonsoft.Json).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-busy', 'main', [primary('main')],
-        'Gateway selected, the list at its top, no row current; one running Uninstall reported for the FluentValidation row (an ops/progress event posted in the frame, no request sent): the row is busy, a still 16 px spinner stands in its action slot and its status reads "Uninstalling"; the report is ended with a cancelled one after the capture (DS-STATE-6, UX-P4.fix-13).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+        'Gateway selected, the list at its top, no row current; one running Uninstall reported for the FluentValidation row and one queued behind it for the Humanizer.Core row (progress events posted in the frame, no request sent): both rows are busy, a still 16 px spinner stands in each action slot, FluentValidation\'s status reads "Uninstalling" and Humanizer.Core\'s "Queued"; both reports are ended with cancelled ones after the capture (DS-STATE-6, UX-P4.fix-13, UX-P5.fix-5).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-installed-toolbar-hover', 'main', [primary('main')],
         'Gateway selected, the Select all button under the pointer (DS-COLOR-7).', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-refresh-hover', 'main', [primary('main')],
@@ -194,6 +194,9 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, a transitive row made current; the details panel shows its id.', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-updates', 'main', [primary('main')],
         'Gateway selected, the Updates tab; its list has rows.', [LIVE_UPDATES]), diffTolerance: 0 },
+    // UX-P5.fix-5 (design-advisor opening ruling, DO 8): the installed-version badge of an update row (UX-P5.2b).
+    { ...ready('main-updates-vulnerable', 'main', [primary('main')],
+        'Gateway selected, the Updates tab, the list moved by its own scroll to the Newtonsoft.Json row (installed 12.0.1, a known-vulnerable version), no row current, the pointer parked: the row carries its installed version\'s vulnerability label badge, labelled with the highest severity and titled "Installed 12.0.1: …" (UX-P5.1b, UX-P5.2b, UX-P5.fix-5).', [LIVE_UPDATES]), diffTolerance: 0 },
     { ...ready('main-updates-hover', 'main', [primary('main')],
         'Gateway selected, the Updates tab, the pointer on its first update row; the row matches :hover (the band of DS-ROW-3, UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-updates-update-all-dialog', 'main', [primary('main')],
@@ -252,6 +255,9 @@ export const STATES: readonly NamedState[] = [
     ], 'The nUIget side bar view with Gateway selected; the Installed section lists package-row-serilog and the Updates section has a row.', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
     { ...ready('sidebar-hover', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
         'Gateway selected; the pointer rests on package-row-serilog in the Installed section: the hovered band and its action (DS-ROW-3, DS-INSET-3 a; UX-P3.7a).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: 0 },
+    // UX-P5.fix-5 (design-advisor opening ruling, DO 6; architecture-advisor opening ruling, DO 4 and 5): a compact busy row in both looks.
+    { ...ready('sidebar-installed-busy', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],
+        'Gateway selected; one running Uninstall reported for the FluentValidation row (a progress event posted in the side bar frame, no request sent): its Installed row, and its Updates row when shown, is busy, a still 16 px spinner in its action slot, the word "Uninstalling" read out only; the report is ended with a cancelled one after the capture, and again by the describe\'s afterEach (DS-STATE-6, DS-INSET-3 a, UX-P5.fix-5).', [LIVE_SIDEBAR_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('sidebar-filter', 'sidebar', [primary('sidebar')],
         '"@installed Seri" typed in the sidebar search box: the Installed section alone, open, its header reading "k of N" in the badge\'s place (DS-COPY-5), the Serilog rows; the box is cleared after the capture (UX-P3.7b).', [LIVE_SIDEBAR_CARET]), diffTolerance: 0 },
     { ...ready('sidebar-all-projects', 'sidebar', [primary('sidebar'), { ...primary('sidebar'), look: 'classic' }],

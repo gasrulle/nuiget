@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict } from '../ui/v2/measure';
+import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict, BUSY_EXPECTED, busyWordsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -75,7 +75,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P5.fix-2 supersedes that clause for the main panel: DS-FOCUS-3's `dialog-focus` reads a main-panel dialog's ring.
         // UX-P3.6: the add form's focused field joined after its reading run (run 42420897265: 1 solid focusBorder offset -1).
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
-        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
+        // UX-P5.fix-5 (design-advisor opening ruling DO 10): main-updates-vulnerable joins the focused-tab cells of its sibling main-updates.
+        expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported', 'main-updates-vulnerable'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
         // UX-P5.3c (design-advisor opening ruling DO 10): the Consolidate confirmation joins the dialog states.
         const dialogStates = ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
@@ -1344,6 +1345,26 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(off({ actions: 1 })).toMatchObject({ pass: false, value: expect.stringContaining('; off: 1 action beside the spinner') });
         expect(off({ status: 'In progress' })).toMatchObject({ pass: false, value: expect.stringContaining('; off: status "In progress"') });
         expect(busyRowsVerdict([], colours, 1)).toEqual({ value: 'not measurable (no busy row)', pass: false });
+    });
+
+    it('holds each busy cell to its own words, in document order: Uninstalling and Queued in the main panel, one or two Uninstalling in the side bar (DS-STATE-6, UX-P5.fix-5)', () => {
+        const colours = layout().endOfP0.iconColours;
+        const busy: NonNullable<Layout['endOfP0']['stateCells']['busyRows']>[number] = { testId: 'package-row-fluentvalidation', ariaBusy: true, glyph: { w: 16, h: 16 }, colour: colours.icon, slotEnd: 6, glyphEnd: 9, centreDy: 0, actions: 0, status: 'Uninstalling' };
+        const queued = { ...busy, testId: 'package-row-humanizer.core', status: 'Queued' };
+        const main = BUSY_EXPECTED['main-installed-busy'];
+        expect(busyRowsVerdict([busy, queued], colours, 1, main)).toMatchObject({ pass: true, value: expect.stringMatching(/^busy rows 2: .*; words Uninstalling, Queued \(target Uninstalling, Queued\)$/) });
+        // Two Uninstalling rows were green before UX-P5.fix-5: the words now name each row.
+        expect(busyRowsVerdict([busy, busy], colours, 1, main)).toMatchObject({ pass: false, value: expect.stringContaining('; words Uninstalling, Uninstalling (target Uninstalling, Queued)') });
+        expect(busyRowsVerdict([queued, busy], colours, 1, main).pass).toBe(false);
+        expect(busyRowsVerdict([busy], colours, 1, main).pass).toBe(false);
+        const side = BUSY_EXPECTED['sidebar-installed-busy'];
+        expect(busyRowsVerdict([busy], colours, 1, side)).toMatchObject({ pass: true, value: expect.stringContaining('; words Uninstalling (target Uninstalling ×1–2)') });
+        expect(busyRowsVerdict([busy, busy], colours, 1, side).pass).toBe(true);
+        expect(busyRowsVerdict([busy, busy, busy], colours, 1, side).pass).toBe(false);
+        expect(busyRowsVerdict([queued], colours, 1, side).pass).toBe(false);
+        // A cell without an entry holds no words.
+        expect(busyWordsVerdict(['Queued'], undefined)).toEqual({ text: '', pass: true });
+        expect(Object.keys(BUSY_EXPECTED)).toEqual(['main-installed-busy', 'sidebar-installed-busy']);
     });
 
     it('reads every empty state\'s block inset: 8/8 in a list, the sidebar and a dialog, 20/20 in the details pane (DS-STATE-3, UX-P4.fix-12)', () => {
