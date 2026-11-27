@@ -5,7 +5,7 @@
  */
 
 body {
-    /* The main panel is an editor surface: a control in a dialog over it rings after a click too (DS-FOCUS-3, UX-P5.fix-2). */
+    /* The main panel is an editor surface: every control, in a dialog or not, rings after a click too (DS-FOCUS-3, UX-P5.fix-10). */
     --nuiget-focus-after-click: solid;
     margin: 0;
     padding: 0;

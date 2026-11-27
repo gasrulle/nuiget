@@ -271,7 +271,7 @@ New tokens (88): `space-7`; `inset-details`, `inset-sidebar`, `block-gap-inner`,
 `-row`, `-popup-row`, `-section-header`, `-badge`, `-label-badge`, `-layer`, `-layer-input`, `-scrollbar`;
 `line-width`, `pane-header-height`, `control-height`, `input-height`, `action-size`, `action-size-compact`,
 `checkbox-size`, `badge-size`, `tab-strip-height`, `details-tab-strip-height`, `progress-height`, `sash-size`,
-`welcome-button-max`, `focus-pointer-width`; `opacity-disabled` (D51); `font-size-xs`, `-label`, `-badge`, `-section-title`,
+`welcome-button-max`, `focus-pointer-style`; `opacity-disabled` (D51); `font-size-xs`, `-label`, `-badge`, `-section-title`,
 `font-weight-regular`, `-semibold`, `-bold`, `-section-title`, `text-transform-section-title`, `line-height-button`;
 `duration-spin`, `easing-spin`, `duration-progress`, `delay-sash-hover`; `badge-padding-block`, `badge-padding-inline`,
 `label-badge-padding-block`, `label-badge-padding-inline`, `list-pane-min`; and 28 colour roles (§4). `--nuiget-z-sticky` and `--nuiget-z-toast` are removed (V64); every other name stays.
@@ -386,7 +386,7 @@ identical in both looks.
 | Field inside a layer | 4 | 6 | `quickinput[1] .borderRadius` | `radius-layer-input` |
 | Popup row | radius 4, padding 0 4 | radius 3, padding 0 6 | `quickinput[3] .borderRadius`, `quickinput[4] .padding` | `radius-popup-row`, `popup-row-padding-x` |
 | Scrollbar | 8 px, thumb radius 4 | 10 px, square | `modernUI.contribution.ts:22`, `roundedCorners.css` (TS/CSS-read) | `scrollbar-size`, `radius-scrollbar` |
-| Focus after a pointer click (sidebar) | none | 1 px ring | `extensions-states.json selected .outline` | `focus-pointer-width` |
+| Focus after a pointer click (sidebar) | none | 1 px ring | `extensions-states.json selected .outline` | `focus-pointer-style` |
 | Extensions search header padding | 4 8 4 8 | 5 12 6 20 | `extensions.json ext_search[0] .padding` | `inset-sidebar` (8 / 20, symmetric) |
 | Side-bar title (VS Code draws it) | 32, padding 0 4, label padding 8 | 35, padding 0 8, label padding 12 | `sidebar_title[0..1]` | none (host chrome) |
 | Editor tab strip (VS Code) | 29, tabs 28 radius 4 | 35, square tabs | `tabs[0..1]` | none (host chrome) |

@@ -344,7 +344,8 @@ describe('Row layout (P9.2, D46)', () => {
         const stylesheet = readFileSync('src/webview/shared/primitives/primitives.css', 'utf8');
         const optionRule = /(?:^|\n)\.nuiget-row-option \{([^}]*)\}/.exec(stylesheet)?.[1] ?? '';
         expect(optionRule).toContain('background: var(--nuiget-row-band-bg, transparent);');
-        expect(optionRule).toContain('outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);');
+        // The focus layer `--nuiget-row-ring` comes first; without it the state carriers paint (DS-FOCUS-3, UX-P5.fix-10).
+        expect(optionRule).toContain('outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent));');
         const actions = screen.getByTestId('package-row-serilog').querySelector('.nuiget-row-actions') as Element;
         expect(getComputedStyle(actions).position).toBe('absolute');
     });

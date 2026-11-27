@@ -260,8 +260,8 @@ describe('the accessibility harness (UX-P0.23)', () => {
             .toBe('[aria] main-updates: 1 nodes, differs (-1 +1; first removed: listbox "Installed"; first added: listbox "Updates")');
     });
     it('reads DS-FOCUS-3 after a click as a ring present or absent against its target, failing only once hard (UX-P5.fix-10)', () => {
-        // Pending on the item until its CSS (design-advisor opening ruling and follow-up 1 of 2026-11-27).
-        expect(FOCUS_CLICK_STATUS).toEqual({ pending: 'P5.fix-10' });
+        // Hard since UX-P5.fix-10 push 2 (design-advisor opening ruling and follow-ups 1 to 3 of 2026-11-27).
+        expect(FOCUS_CLICK_STATUS).toBe('hard');
         const ring: FocusClickReading = { kind: 'button', testid: 'select-all-button', focusVisible: false, width: 1, style: 'solid', colour: 'rgb(0, 120, 212)', offset: 2 };
         const none: FocusClickReading = { ...ring, width: 0, style: 'none' };
         const target = { colour: '#0078d4', offset: 2, present: true };
@@ -270,7 +270,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
         // A dotted selection line or another offset is not the ring.
         expect(ringPresent({ ...ring, style: 'dotted' }, target)).toBe(false);
         expect(ringPresent({ ...ring, offset: -1 }, target)).toBe(false);
-        expect(focusClickLine('main button classic', none, target)).toEqual({
+        expect(focusClickLine('main button classic', none, target, { pending: 'P5.fix-10' })).toEqual({
             line: '[probe] DS-FOCUS-3 main button classic: button {select-all-button}, focus-visible false, outline 0 none rgb(0, 120, 212) offset 2: ring absent (target present: 1 solid #0078d4 offset 2) (pending P5.fix-10)',
             failure: undefined,
         });

@@ -333,23 +333,34 @@ describe('2.0 webview stylesheets', () => {
             expect(ringed, selector).toContain(selector);
         }
         const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
-        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent)', 'outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus)'].includes(declaration))).toEqual([]);
+        expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent))', 'outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus)'].includes(declaration))).toEqual([]);
         // A row rings in `list.focusOutline` through its carriers (DS-FOCUS-2).
         const rowRing = rules.find(rule => rule.declarations.includes('--nuiget-row-outline-color: var(--nuiget-color-list-focus-outline)'));
         expect(rowRing?.prelude.split(',').map(selector => selector.trim())).toEqual(['.nuiget-row-option--compact:focus-visible', '.nuiget-row-option--comfortable:focus', '.nuiget-row-group--compact:focus-visible', '.nuiget-row-group--comfortable:focus']);
         expect(rowRing?.declarations).toContain('--nuiget-row-outline-style: solid');
     });
 
-    it('a main-panel dialog\'s control rings on any focus through the dialog\'s carrier, the side bar\'s does not (DS-FOCUS-3 dialog-focus, UX-P5.fix-2)', () => {
-        const ring = 'outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus)';
+    it('a control rings on any focus where its surface sets the carrier: the main panel, and the side bar in the classic look (DS-FOCUS-3, UX-P5.fix-2, UX-P5.fix-10)', () => {
+        const ring = 'outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus)';
         const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const carried = primitives.filter(rule => rule.declarations.includes(ring));
-        expect(carried.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-icon-button:focus'], ['.nuiget-button:focus', '.nuiget-checkbox-input:focus']]);
+        expect(carried.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-icon-button:focus', '.nuiget-select-input:focus'], ['.nuiget-button:focus', '.nuiget-checkbox-input:focus']]);
         expect(carried[0]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * -1)');
         expect(carried[1]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * 2)');
-        expect(primitives.find(rule => rule.prelude === '.nuiget-dialog')?.declarations).toContain('--nuiget-control-outline-style: var(--nuiget-focus-after-click, none)');
+        // One carrier set by the surface (design-advisor opening ruling of UX-P5.fix-10, DO 7): the dialog's own carrier is gone.
+        for (const file of [PRIMITIVES, 'src/webview/main/main.css', 'src/webview/sidebar/sidebar.css']) {
+            expect(readFileSync(file, 'utf8'), file).not.toContain('--nuiget-control-outline-style');
+        }
         expect(parseRules(readFileSync('src/webview/main/main.css', 'utf8')).find(rule => rule.prelude === 'body')?.declarations).toContain('--nuiget-focus-after-click: solid');
-        expect(readFileSync('src/webview/sidebar/sidebar.css', 'utf8')).not.toContain('--nuiget-focus-after-click');
+        // The side bar maps the look token onto its carrier, with no look selector (follow-up 2 and 3: ADR-011 Decision 3).
+        const sidebar = parseRules(readFileSync('src/webview/sidebar/sidebar.css', 'utf8')).filter(rule => rule.declarations.some(declaration => declaration.startsWith('--nuiget-focus-after-click')));
+        expect(sidebar.map(rule => [rule.prelude, rule.declarations.filter(declaration => declaration.startsWith('--nuiget-focus-after-click'))])).toEqual([['body', ['--nuiget-focus-after-click: var(--nuiget-focus-pointer-style)']]]);
+        const looks = parseRules(readFileSync(TOKENS, 'utf8')).flatMap(rule => rule.declarations.filter(declaration => declaration.startsWith('--nuiget-focus-pointer-style')).map(declaration => [rule.prelude, declaration]));
+        expect(looks).toEqual([[':root', '--nuiget-focus-pointer-style: solid'], [':root[data-look="modern"]', '--nuiget-focus-pointer-style: initial']]);
+        // A clicked compact row rings through a focus layer with no fallback, so the state carriers show where the surface sets none.
+        const layer = primitives.filter(rule => rule.declarations.some(declaration => declaration.startsWith('--nuiget-row-ring')));
+        expect(layer.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-row-option--compact:focus', '.nuiget-row-group--compact:focus', '.nuiget-row-message--compact:focus']]);
+        expect(layer[0]?.declarations).toEqual(['--nuiget-row-ring: var(--nuiget-focus-after-click) var(--nuiget-color-list-focus-outline)']);
     });
 
     it('the scan covers the 2.0 stylesheets and leaves tokens.css out', () => {

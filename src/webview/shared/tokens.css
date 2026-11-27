@@ -92,7 +92,8 @@
     --nuiget-sash-size: 4px;
     --nuiget-tree-indent: 8px;
     --nuiget-welcome-button-max: 300px;
-    --nuiget-focus-pointer-width: 1px;
+    /* ADR-011 Decision 3, DS-FOCUS-3: a side-bar surface rings after a pointer press in the classic look (UX-P5.fix-10). */
+    --nuiget-focus-pointer-style: solid;
 
     /* Typography in px: the workbench font ramp (`--vscode-fontSize-*`, `--vscode-fontWeight-*`, exported from 1.129.0) (DS-TYPE-*) */
     --nuiget-font-family: var(--vscode-font-family);
@@ -257,7 +258,9 @@
     --nuiget-pane-header-height: 28px;
     --nuiget-badge-size: 19px;
     --nuiget-scrollbar-size: 8px;
-    --nuiget-focus-pointer-width: 0px;
+    /* Under Modern UI the side bar rings for keys only. `initial`, not `none`: a guaranteed-invalid value lets the surface
+       carrier and a clicked row's focus layer fall back, so the high-contrast selection and hover lines stay (UX-P5.fix-10). */
+    --nuiget-focus-pointer-style: initial;
     --nuiget-font-size-badge: var(--nuiget-font-size-xs);
     --nuiget-font-size-section-title: var(--nuiget-font-size-label);
     --nuiget-font-weight-section-title: var(--nuiget-font-weight-semibold);

@@ -97,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Packages whose vulnerability data could not be read are no longer shown as having none**
 - **A dialog opened with the mouse in the main panel shows which control has the keyboard focus**
+- **A button clicked in the main panel shows that it has the keyboard focus, and so does a clicked side bar package in VS Code's classic look**
 - **Keyboard focus is no longer lost when the panel narrows and hides the package details**
 - **Keyboard focus stays in the list after a bulk update or uninstall**
 - **Links in the package details show the theme's focus ring**

@@ -5,6 +5,8 @@
  */
 
 body {
+    /* The side bar rings after a click in the classic look only: the look token is the switch (ADR-011 Decision 3, DS-FOCUS-3, UX-P5.fix-10). */
+    --nuiget-focus-after-click: var(--nuiget-focus-pointer-style);
     margin: 0;
     padding: 0;
 }

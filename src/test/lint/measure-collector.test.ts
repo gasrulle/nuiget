@@ -1020,7 +1020,8 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
             expect(facts.verifiedMarks).toEqual([{ w: 12, h: 12, colour: 'rgb(77, 170, 252)' }]);
             expect(facts.verifiedForeground).toBe('#4daafc');
             expect(facts.lookTokens['--nuiget-scrollbar-size']).toBe('8px');
-            expect(Object.keys(facts.lookTokens)).toHaveLength(16);
+            // UX-P5.fix-10 (design-advisor follow-up 2, DO 6): the look table gains --nuiget-focus-pointer-style.
+            expect(Object.keys(facts.lookTokens)).toHaveLength(17);
         } finally {
             document.getElementById('type-facts')?.remove();
             document.getElementById('verified-facts')?.remove();

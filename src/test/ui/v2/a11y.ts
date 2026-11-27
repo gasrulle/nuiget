@@ -1168,9 +1168,9 @@ export function momentLines(moment: Moment, theme: string, facts: MomentFacts, s
 /**
  * The probe's status (design-advisor opening ruling and follow-up 1 of 2026-11-27): the clause `controls` and the side bar
  * branch of DS-FOCUS-3 are read by the capture suite's probe `DS-FOCUS-3 after a click`, not in a cell, since no reach ends on
- * a clicked control that keeps the focus.
+ * a clicked control that keeps the focus. Hard since UX-P5.fix-10 push 2 (one surface carrier, the side bar's from the look token).
  */
-export const FOCUS_CLICK_STATUS: RuleStatus = { pending: 'P5.fix-10' };
+export const FOCUS_CLICK_STATUS: RuleStatus = 'hard';
 
 /** What the probe reads from the active element of a webview after a WebDriver click. */
 export interface FocusClickReading {

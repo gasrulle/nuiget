@@ -1443,6 +1443,9 @@ const LOOK_TABLE: Record<string, { modern: string; classic: string }> = {
     '--nuiget-badge-padding-inline': { modern: '6px', classic: '5px' },
     '--nuiget-label-badge-padding-block': { modern: '4px', classic: '2px' },
     '--nuiget-label-badge-padding-inline': { modern: '6px', classic: '4px' },
+    // UX-P5.fix-10 (design-advisor follow-up 2 and 3 of 2026-11-27): the side bar's ring after a pointer press; `initial`
+    // under Modern UI computes to the empty string (a guaranteed-invalid custom property).
+    '--nuiget-focus-pointer-style': { modern: '', classic: 'solid' },
 };
 const LOOK_TOKENS = Object.keys(LOOK_TABLE);
 /** DS-TYPE-2's font ramp, in px. */

@@ -129,7 +129,7 @@
     min-width: 0;
     min-height: inherit;
     padding: 0 var(--nuiget-space-4);
-    outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
+    outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent));
     outline-offset: calc(var(--nuiget-line-width) * -1);
     border-radius: var(--nuiget-radius-row);
     background: var(--nuiget-row-band-bg, transparent);
@@ -163,7 +163,7 @@
     min-height: inherit;
     padding: 0;
     border-radius: var(--nuiget-radius-section-header);
-    outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
+    outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent));
     outline-offset: calc(var(--nuiget-line-width) * -1);
     color: var(--nuiget-color-fg);
     cursor: default;
@@ -243,7 +243,7 @@
     min-width: 0;
     min-height: var(--nuiget-group-row-height, var(--nuiget-pane-header-height));
     padding-inline: calc(var(--nuiget-message-inset, var(--nuiget-inset)) + var(--nuiget-icon-size-md) + var(--nuiget-space-2) + var(--nuiget-row-indent)) var(--nuiget-message-inset, var(--nuiget-inset));
-    outline: var(--nuiget-line-width) var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent);
+    outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent));
     outline-offset: calc(var(--nuiget-line-width) * -1);
     /* On a hovered row's band the carrier gives list.hoverForeground (UX-P4.6, A14). */
     color: var(--nuiget-row-fg-secondary, var(--nuiget-color-fg-muted));
@@ -328,6 +328,17 @@
 .nuiget-row-message--comfortable:focus {
     --nuiget-row-outline-style: solid;
     --nuiget-row-outline-color: var(--nuiget-color-list-focus-outline);
+}
+
+/*
+ * A clicked compact row rings where its surface sets the carrier: the classic side bar (DS-FOCUS-3, UX-P5.fix-10). A focus layer
+ * over the state carriers, with no fallback: where the surface sets no carrier the layer is invalid and the selection, hover and
+ * high-contrast lines show as before.
+ */
+.nuiget-row-option--compact:focus,
+.nuiget-row-group--compact:focus,
+.nuiget-row-message--compact:focus {
+    --nuiget-row-ring: var(--nuiget-focus-after-click) var(--nuiget-color-list-focus-outline);
 }
 
 .nuiget-row-check {
@@ -600,17 +611,19 @@
 /* ── Focus ── */
 
 /*
- * A focused control in a main-panel dialog rings on any focus, a pointer-opened dialog's Cancel included (DS-FOCUS-3 dialog-focus,
- * UX-P5.fix-2): the dialog's carrier gives the style, `none` everywhere else, where the `:focus-visible` rules below decide.
+ * A control rings on any focus, a pointer click included, where its surface sets the carrier --nuiget-focus-after-click: the main
+ * panel always, the side bar in the classic look (DS-FOCUS-3, UX-P5.fix-2, UX-P5.fix-10). Elsewhere the style is `none` and the
+ * `:focus-visible` rules below decide.
  */
-.nuiget-icon-button:focus {
-    outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus);
+.nuiget-icon-button:focus,
+.nuiget-select-input:focus {
+    outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * -1);
 }
 
 .nuiget-button:focus,
 .nuiget-checkbox-input:focus {
-    outline: var(--nuiget-line-width) var(--nuiget-control-outline-style, none) var(--nuiget-color-focus);
+    outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * 2);
 }
 
@@ -1390,8 +1403,6 @@
 
 .nuiget-dialog {
     --nuiget-text-field-radius: var(--nuiget-radius-layer-input);
-    /* A dialog follows the surface it opens over: the main panel sets the style, the side bar leaves none (DS-FOCUS-3, UX-P5.fix-2). */
-    --nuiget-control-outline-style: var(--nuiget-focus-after-click, none);
     display: flex;
     flex-direction: column;
     gap: var(--nuiget-block-gap-outer);
