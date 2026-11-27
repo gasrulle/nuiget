@@ -6,11 +6,11 @@
   "tolerance": 0.5,
   "masks": [
     {
-      "selector": "[data-testid=\"package-details-panel\"]",
-      "reason": "nuget.org metadata (downloads, versions) changes between runs",
+      "selector": "[data-testid=\"package-details-panel\"] [data-testid=\"details-header\"]",
+      "reason": "the version select and the installed row follow nuget.org versions",
       "rects": [
         {
-          "h": 726,
+          "h": 130,
           "w": 779,
           "x": 421,
           "y": 77
@@ -99,5 +99,5 @@
     "chromium": "150",
     "image": "ubuntu26 20261116.202.1"
   },
-  "run": "45030863810"
+  "run": "45916669496"
 }
