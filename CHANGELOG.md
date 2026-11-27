@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Icons and authors under All Projects appear before the list is verified**
 
 ### Fixed
+- **Keyboard focus stays on Refresh while it runs, and clicked section headers show the focus ring**
 - **Packages whose vulnerability data could not be read are no longer shown as having none**
 - **A dialog opened with the mouse in the main panel shows which control has the keyboard focus**
 - **A button clicked in the main panel shows that it has the keyboard focus, and so does a clicked side bar package in VS Code's classic look**

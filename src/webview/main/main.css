@@ -568,7 +568,8 @@ a:focus {
     --nuiget-copy-icon-done: inline-flex;
 }
 
-.nuiget-readme-copy:focus-visible {
+/* The copy button rings on any focus, a click included: the main panel rings after a click (DS-FOCUS-3, UX-P5.fix-11). */
+.nuiget-readme-copy:focus {
     outline: var(--nuiget-line-width) solid var(--nuiget-color-focus);
 }
 

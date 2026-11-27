@@ -616,7 +616,8 @@
  * `:focus-visible` rules below decide.
  */
 .nuiget-icon-button:focus,
-.nuiget-select-input:focus {
+.nuiget-select-input:focus,
+.nuiget-section-toggle:focus {
     outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus);
     outline-offset: calc(var(--nuiget-line-width) * -1);
 }

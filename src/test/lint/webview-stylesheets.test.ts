@@ -328,10 +328,12 @@ describe('2.0 webview stylesheets', () => {
         for (const selector of [
             '.nuiget-button:focus-visible', '.nuiget-tab:focus', '.nuiget-icon-button:focus-visible',
             '.nuiget-section-toggle:focus-visible', '.nuiget-sash:focus-visible', '.nuiget-select-input:focus-visible', '.nuiget-text-field:focus-visible',
-            '.nuiget-readme-copy:focus-visible', '.nuiget-checkbox-input:focus-visible',
+            '.nuiget-readme-copy:focus', '.nuiget-checkbox-input:focus-visible',
         ]) {
             expect(ringed, selector).toContain(selector);
         }
+        // UX-P5.fix-11 (design-advisor opening ruling DO 12): the README copy button rings on any focus, a click included.
+        expect(ringed).not.toContain('.nuiget-readme-copy:focus-visible');
         const outlines = rules.flatMap(rule => rule.declarations).filter(declaration => /^outline:/.test(declaration));
         expect(outlines.filter(declaration => !['outline: none', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-focus)', 'outline: var(--nuiget-line-width) solid var(--nuiget-color-contrast-border)', 'outline: var(--nuiget-line-width) var(--nuiget-row-ring, var(--nuiget-row-outline-style, none) var(--nuiget-row-outline-color, transparent))', 'outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus)'].includes(declaration))).toEqual([]);
         // A row rings in `list.focusOutline` through its carriers (DS-FOCUS-2).
@@ -340,11 +342,11 @@ describe('2.0 webview stylesheets', () => {
         expect(rowRing?.declarations).toContain('--nuiget-row-outline-style: solid');
     });
 
-    it('a control rings on any focus where its surface sets the carrier: the main panel, and the side bar in the classic look (DS-FOCUS-3, UX-P5.fix-2, UX-P5.fix-10)', () => {
+    it('a control rings on any focus where its surface sets the carrier: the main panel, and the side bar in the classic look (DS-FOCUS-3, UX-P5.fix-2, UX-P5.fix-10, UX-P5.fix-11)', () => {
         const ring = 'outline: var(--nuiget-line-width) var(--nuiget-focus-after-click, none) var(--nuiget-color-focus)';
         const primitives = parseRules(readFileSync(PRIMITIVES, 'utf8'));
         const carried = primitives.filter(rule => rule.declarations.includes(ring));
-        expect(carried.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-icon-button:focus', '.nuiget-select-input:focus'], ['.nuiget-button:focus', '.nuiget-checkbox-input:focus']]);
+        expect(carried.map(rule => rule.prelude.split(',').map(selector => selector.trim()))).toEqual([['.nuiget-icon-button:focus', '.nuiget-select-input:focus', '.nuiget-section-toggle:focus'], ['.nuiget-button:focus', '.nuiget-checkbox-input:focus']]);
         expect(carried[0]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * -1)');
         expect(carried[1]?.declarations).toContain('outline-offset: calc(var(--nuiget-line-width) * 2)');
         // One carrier set by the surface (design-advisor opening ruling of UX-P5.fix-10, DO 7): the dialog's own carrier is gone.

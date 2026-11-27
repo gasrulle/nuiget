@@ -247,21 +247,28 @@ describe('main panel shell', () => {
         expect(screen.getByTestId('project-selector')).toBeDisabled();
     });
 
-    it('refresh is disabled while refresh/all is unanswered, and on Installed the header draws no bar', async () => {
+    it('Refresh keeps the focus and ignores a second press while refresh/all is unanswered, and on Installed the header draws no bar (UX-P5.fix-11)', async () => {
         const user = userEvent.setup();
         const { host } = await mountReady();
         expect(screen.queryByRole('progressbar')).toBeNull();
         await user.click(screen.getByRole('button', { name: 'Refresh' }));
-        expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+        const button = screen.getByRole('button', { name: 'Refresh' });
+        expect(button).toBeEnabled();
+        expect(button).toHaveFocus();
+        expect(button.querySelector('svg[data-codicon="loading"]')).not.toBeNull();
+        await user.click(button);
+        expect(host.requests('refresh/all')).toHaveLength(1);
         expect(screen.queryByRole('progressbar', { name: 'Refreshing' })).toBeNull();
         await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
         expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Refresh' })).toHaveFocus();
+        expect(screen.getByRole('button', { name: 'Refresh' }).querySelector('svg[data-codicon="loading"]')).toBeNull();
         expect(screen.queryByRole('progressbar')).toBeNull();
         await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Refreshed'));
         expect(host.requests('refresh/all')).toHaveLength(1);
     });
 
-    it('on Updates and under Browse the header draws no bar while refresh/all is unanswered; Refresh stays disabled until it answers (UX-P3.10)', async () => {
+    it('on Updates and under Browse the header draws no bar while refresh/all is unanswered; Refresh shows its loading glyph and keeps the focus until it answers (UX-P3.10, UX-P5.fix-11)', async () => {
         const user = userEvent.setup();
         const { host } = await mountReady();
         await user.click(screen.getByTestId('updates-tab'));
@@ -270,11 +277,13 @@ describe('main panel shell', () => {
         await hostSays(() => host.respond(host.requests('refresh/all')[0], {}));
         await user.type(search(), 'serilog');
         await user.click(screen.getByRole('button', { name: 'Refresh' }));
-        // Under Browse the Refresh button's busy state is the cue (design-advisor opening ruling of 2026-11-14, DO 16).
+        // Under Browse the Refresh button's busy state is the cue (design-advisor opening ruling of 2026-11-14, DO 16): its glyph.
         expect(screen.queryByRole('progressbar', { name: 'Refreshing' })).toBeNull();
-        expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
-        await hostSays(() => host.respond(host.requests('refresh/all')[1], {}));
         expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Refresh' })).toHaveFocus();
+        expect(screen.getByRole('button', { name: 'Refresh' }).querySelector('svg[data-codicon="loading"]')).not.toBeNull();
+        await hostSays(() => host.respond(host.requests('refresh/all')[1], {}));
+        expect(screen.getByRole('button', { name: 'Refresh' }).querySelector('svg[data-codicon="loading"]')).toBeNull();
     });
 
     it('marks firstUsefulRender once when the first installed list answers while Browse is shown, and not again after it (UX-P3.10)', async () => {
