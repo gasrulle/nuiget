@@ -1,0 +1,66 @@
+{
+  "item": "P5.fix-11",
+  "runs": [
+    {
+      "runId": "46039542956",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "4d59cc87 (push 2)",
+      "look": "modern",
+      "workflow": "wf_56112c54-213",
+      "mode": "screen",
+      "note": "The three cells that moved by the ring on Refresh (GOLDEN ruling DO 1). None has an artboard and the workflow refuses a null one in screen mode: provisional and installed-revalidating are judged against main-installed-all.dark-modern.1200 (as P4.fix-23 and P4.5), updates-revalidating against main-updates.dark-modern.1200 (as P3.1b).",
+      "captures": {
+        "main-installed-provisional": {
+          "png": "captures/46039542956/ui-screenshots/main-installed-provisional.dark-modern.1200.png",
+          "sha256": "0a04cfe41819d0019456274d044557c28d9978c885f8edc89972e97eb96a4aaa",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-installed-revalidating": {
+          "png": "captures/46039542956/ui-screenshots/main-installed-revalidating.dark-modern.1200.png",
+          "sha256": "e2d07afef3a3d860ba3b6db72541029b3bbeee698d68483b3dc32b77863c60f7",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "main-updates-revalidating": {
+          "png": "captures/46039542956/ui-screenshots/main-updates-revalidating.dark-modern.1200.png",
+          "sha256": "3d86951fffefd71b8a10cc3b738b6d9f05f41176a222b062e4e90645c3fb59e2",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "9b13678b307052ca7203e8aaf342239f50f701a6ffbdec7cf52d6dc38e5993ef"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 2,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-installed-provisional#D1",
+          "state": "main-installed-provisional",
+          "finding": "[native] The Installed tab has no count badge, although the Direct Packages group row below it shows 13 and the Updates tab beside it shows its badge. The artboard's installed-tab (x 6, w 138.6) draws the count badge after INSTALLED, and VS Code's pane and tab headers show a count wherever the view lists one. | [states] The Installed tab draws no count badge (the tab ends right after its label and Updates moves left to x≈95), whereas the artboard's installed-tab (spec rect 6,77,138.6×35) carries its count badge and the same run's revalidating and single cells keep it. The list's count is known here: the Direct Packages group row shows 13 and the Updates tab shows its 13.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "DS-COPY-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "refuted-by-measurement",
+          "evidence": "DS-COPY-5 reads 'tabs 2: count badges 1' and 'headers 2: count badges 1, \"(N)\" texts 0' (hard) on this cell in run 46039542956, so the surface has one count style. The Installed tab carries no number until its list is ready (MainTabs.tsx:55); a provisional first list is a loading state. The paired reference is the settled All Projects state, whose counts are live content. Same finding and disposition as docs/plans/judge-log/P4.fix-23.json native-1. Design-advisor ruling of 2026-11-27, UX-P5.fix-11.",
+          "ruling": "docs/plans/handoff/P5.fix-11.md, Advisor decisions, design-advisor judge disposition ruling of 2026-11-27"
+        }
+      ]
+    }
+  ]
+}
