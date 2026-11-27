@@ -30,7 +30,7 @@ None: not a UI item (the view is UX-P5.3b).
 
 ## Done (tested)
 
-None yet (the push's CI run pends).
+Everything below, on run 45958260827 (e117cbb4), green on every job; `[diff] summary: 126 compared, 126 at 0 px`.
 
 ## Done (untested)
 
@@ -43,7 +43,7 @@ bullet; matrix R365. No CHANGELOG entry: nothing a user can notice until UX-P5.3
 
 ## Not started
 
-The closing (this item's CI run).
+None.
 
 ## Deviations from contract/ADR/decision (file:line each)
 
@@ -64,4 +64,4 @@ None: the item is not ⚑ and raised no stop-and-ask. The host applies the given
 
 ## Exact next step (one item ID)
 
-UX-P5.3a: push, watch the run green, then the tracker row `done`. Next row in table order: P5.3b (⚑-design).
+UX-P5.3a is done (e117cbb4, run 45958260827). Next row in table order: P5.3b (⚑-design).
