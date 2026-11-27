@@ -5,6 +5,7 @@ import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
 import { VulnerabilityBadge } from './VulnerabilityBadge';
+import { DeprecationBadge } from './DeprecationBadge';
 
 /** A package as a project's rows hold it. */
 export interface Item {
@@ -86,6 +87,7 @@ export function InstalledRow({ placement, projectPath, entry, result, metadata, 
                     ? <Badge label="Floating" title="Floating version pattern" />
                     : entry.versionType === 'range' ? <Badge label="Range" title="Version range" /> : null}
                 <VulnerabilityBadge lite={lite} />
+                <DeprecationBadge deprecation={lite?.deprecation} />
             </>}
             actions={readOnly ? null : (
                 <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => onUninstall(entry)}><TrashIcon /></IconButton>

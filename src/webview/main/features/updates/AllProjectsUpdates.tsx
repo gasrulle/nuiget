@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledResult, type PackageUpdate, type ProjectUpdatesChunk } from '../../../../protocol';
-import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable, liteOfInstalled } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
@@ -17,6 +17,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
 import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
+import { VulnerabilityBadge } from '../installed/VulnerabilityBadge';
 
 const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 
@@ -380,7 +381,10 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
                                 // An unsupported project's rows are read-only: muted check, and the row says so (DS-STATE-7).
                                 selectable={section.installed?.unsupported === undefined}
                                 status={busy ? busyText(ops, section.projectPath, update.id) : section.installed?.unsupported ? 'Read-only' : undefined}
-                                badges={isCentralIn(section.installed, update.id) ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
+                                badges={<>
+                                    {isCentralIn(section.installed, update.id) ? <Badge label="CPM" title={entryIn(section.installed, update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
+                                    <VulnerabilityBadge lite={liteOfInstalled(all.metadata.get(section.projectPath)?.get(update.id.toLowerCase()), update)} installedVersion={update.installedVersion} />
+                                </>}
                                 actions={section.installed?.unsupported ? undefined : (
                                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(section, update)}><ArrowUpIcon /></IconButton>
                                 )}

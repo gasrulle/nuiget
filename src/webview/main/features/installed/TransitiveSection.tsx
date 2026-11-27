@@ -7,6 +7,7 @@ import { metadataKey, type TransitiveState } from '../../../shared/store/transit
 import { rowId, type TreeItem } from './installedTree';
 import { failure } from '../../../shared/updates/sentence';
 import { VulnerabilityBadge } from './VulnerabilityBadge';
+import { DeprecationBadge } from './DeprecationBadge';
 
 type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 
@@ -118,6 +119,7 @@ export function transitiveRow(entry: Pick<TransitivePackage, 'id' | 'version'>, 
             badges={<>
                 {badges}
                 <VulnerabilityBadge lite={lite} />
+                <DeprecationBadge deprecation={lite?.deprecation} />
             </>}
         />
     );

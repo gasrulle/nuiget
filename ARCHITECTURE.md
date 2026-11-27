@@ -954,6 +954,12 @@ The README's typography (headings on the type ramp, underlined links, inline cod
 host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `COPIED_MS` and the live region says so
 (P9.8).
 
+he main
+panel's Installed, Transitive and Browse rows carry `DeprecationBadge` (`features/installed/DeprecationBadge.tsx`) from their lite
+entry or search row, and an Updates row (single project and All Projects) carries `VulnerabilityBadge` for its installed version
+from the slices' lite metadata, only when the entry's version equals the row's `installedVersion` (`liteOfInstalled`); no Updates
+file asks a request for it.
+
 ### Sources feature (main)
 
 `features/sources/SourcesControl.tsx` is the source part of the header: the selector (`source-selector`, All Sources

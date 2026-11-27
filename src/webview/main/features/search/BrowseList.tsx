@@ -12,6 +12,7 @@ import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import type { BrowseView } from '../../MainShell';
 import { failure } from '../../../shared/updates/sentence';
+import { DeprecationBadge } from '../installed/DeprecationBadge';
 
 interface Item {
     id: string;
@@ -151,7 +152,10 @@ export function BrowseList({ text, announce, install, focusSearch }: BrowseView)
                             description={result.description || undefined}
                             icon={src === undefined ? undefined : <img src={src} alt="" />}
                             busy={installed.projectPath !== null && isPackageBusy(installed.projectPath, result.id)}
-                            badges={installedVersion !== undefined ? <Badge label="Installed" title={`Installed: ${installedVersion}`} /> : undefined}
+                            badges={installedVersion === undefined && result.deprecation === undefined ? undefined : <>
+                                {installedVersion !== undefined ? <Badge label="Installed" title={`Installed: ${installedVersion}`} /> : null}
+                                <DeprecationBadge deprecation={result.deprecation} />
+                            </>}
                         />
                     );
                 }}

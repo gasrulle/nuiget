@@ -481,8 +481,42 @@ describe('main panel: Updates tab', () => {
         });
     });
 
+    it('an update row shows its installed version\'s Vulnerable badge only when the lite entry describes that version (UX-P5.2b)', async () => {
+        const host = await mountWith();
+        const high = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+        await hostSays(() => host.respond(host.requests('transitive/metadata').at(-1) as never, { metadata: [{ id: 'Serilog', version: '3.0.0', vulnerabilities: high }, { id: 'Moq', version: '4.19.0', vulnerabilities: high }] }));
+
+        const badge = within(screen.getByTestId('package-row-serilog')).getByTestId('row-vulnerability');
+        expect(badge.querySelector('.nuiget-visually-hidden')).toHaveTextContent('Installed 3.0.0: 1 known vulnerability, High severity');
+        expect(screen.getByTestId('package-row-moq').querySelector('[data-testid="row-vulnerability"]')).toBeNull();
+        expect(host.requests('package/versions')).toHaveLength(0);
+    });
+
     describe('All Projects', () => {
         const B = '/w/Lib/Lib.csproj';
+
+        it('All Projects: an update row shows the Vulnerable badge only for a lite entry of its installed version (UX-P5.2b)', async () => {
+            const host = createFakeHost();
+            render(<StoreProvider bus={host.bus}><MainShell installed={view => <InstalledTab {...view} />} updates={view => <UpdatesTab {...view} />} /></StoreProvider>);
+            await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+            await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+            const installedStream = host.requests('allProjects/installed')[0];
+            await hostSays(() => host.chunk(installedStream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed([pkg('Serilog', { version: '3.0.0' }), pkg('Moq', { version: '4.20.0' })]) } }));
+            const high = [{ severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' }];
+            await hostSays(() => host.chunk(installedStream, { kind: 'metadata', projectPath: A, packages: [{ id: 'Serilog', version: '3.0.0', vulnerabilities: high }, { id: 'Moq', version: '4.19.0', vulnerabilities: high }] }));
+            await hostSays(() => host.respond(installedStream, { projectPaths: [A], errored: [] }));
+            const stream = host.requests('allProjects/updates')[0];
+            await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }] }));
+            await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', updates: [update('Serilog', '3.0.0', '3.1.0'), update('Moq', '4.20.0', '4.20.72')] } }));
+            await hostSays(() => host.respond(stream, { projectPaths: [A] }));
+            await userEvent.setup().click(screen.getByTestId('updates-tab'));
+
+            const rows = [...document.querySelectorAll('[data-testid^="package-row-"]')];
+            const serilog = rows.find(row => row.getAttribute('data-testid') === 'package-row-serilog') as HTMLElement;
+            const moq = rows.find(row => row.getAttribute('data-testid') === 'package-row-moq') as HTMLElement;
+            expect(serilog.querySelector('[data-testid="row-vulnerability"]')).not.toBeNull();
+            expect(moq.querySelector('[data-testid="row-vulnerability"]')).toBeNull();
+        });
 
         async function mountAll(answer: { sourcesUnavailable?: boolean } = {}, lib: InstalledResult = { projectPath: B, fidelity: 'authoritative', isCpm: false, packages: [pkg('Moq', { version: '4.20.0' })] }, icons?: Record<string, string>, libChunk?: { updates: PackageUpdate[]; error?: string }): Promise<FakeHost> {
             const host = createFakeHost();

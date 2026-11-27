@@ -292,6 +292,7 @@ project has several and one block per project in All Projects; no version select
 | `details-empty` | The details pane's empty state, "Select a package to see its details." |
 | `details-progress`, `readme-progress` | The 2 px bar over the details facts' skeleton while the selection's metadata loads, and over the README's while it loads (UX-P3.10) |
 | `details-error`, `readme-error` | The inline error with Retry of the details facts and of the README (UX-P3.10) |
+| `row-deprecation` | The Deprecated label badge of a main-panel row whose version is known deprecated (Installed, Transitive, Browse; UX-P5.2b) |
 | `details-deprecation` | The deprecation notice of the chosen version, first in the details facts, with Find Alternative when the source names an alternate (UX-P5.2b) |
 | `details-deprecation-message` | The source's own deprecation message under the notice, plain text (UX-P5.2b) |
 | `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |

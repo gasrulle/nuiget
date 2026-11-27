@@ -93,6 +93,14 @@ async function printVulnerabilityBadges(): Promise<void> {
     for (const row of rows) {
         console.warn(`[live] vulnerability ${row.id} ${row.label}`);
     }
+    // UX-P5.2b (design-advisor opening ruling of 2026-11-27, DO 9): one line per row that shows the Deprecated badge.
+    const deprecated = await script<string[]>(`return [...document.querySelectorAll('[data-testid="installed-list"] .nuiget-row-option')].flatMap(option => {
+        const name = option.querySelector('.nuiget-row-name');
+        return option.querySelector('[data-testid="row-deprecation"]') === null ? [] : [name === null ? '?' : name.textContent.trim()];
+    });`);
+    for (const id of deprecated) {
+        console.warn(`[live] deprecation ${id}`);
+    }
 }
 
 const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('.nuiget-row-option'));
@@ -210,6 +218,10 @@ hold.literals = {
     // UX-P5.2b, architecture-advisor ruling of 2026-11-27); an offline or null answer carries none and passes through.
     deprecated: { type: 'package/metadata', of: result => (!result || !result.metadata || result.metadata.offline === true ? result
         : { ...result, metadata: { ...result.metadata, deprecation: hold.deprecation } }) },
+    // The host's lite entry of a deprecated installed version (enricher.ts:110, UX-P5.2b, architecture-advisor ruling of 2026-11-27):
+    // the same deprecation on Serilog's entry only; no entry is added and no other field or entry is touched.
+    'installed-deprecated': { type: 'transitive/metadata', of: result => (!result || !Array.isArray(result.metadata) ? result
+        : { ...result, metadata: result.metadata.map(entry => (String(entry.id).toLowerCase() === 'serilog' ? { ...entry, deprecation: hold.deprecation } : entry)) }) },
 };
 hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {
@@ -230,9 +242,9 @@ window.postMessage = function (data, ...rest) {
     return undefined;
 };`;
 
-type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme';
+type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme' | 'transitive/metadata';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
-type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline' | 'deprecated';
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline' | 'deprecated' | 'installed-deprecated';
 
 /** Holds `type`'s envelopes; `'answer'` lets the provisional chunks of `installed/get` through and holds its answers (UX-P4.fix-23). */
 async function holdRequest(type: HeldType, hold: 'all' | 'answer' = 'all'): Promise<void> {
@@ -1253,6 +1265,25 @@ const REACH: Record<string, Reach> = {
                 return text === 'Offline: no package source knows this version. These details come from the package cache on this machine.'
                     && document.querySelector('[data-testid="details-progress"]') === null;
             })()`, 'the offline warning over the cached facts');
+        },
+        leave: endHold,
+    },
+    // UX-P5.2b (design-advisor DO 8; architecture-advisor DO 6): Gateway's lite metadata answered with Serilog's installed version
+    // deprecated. The hold is armed on Utility, before Gateway is chosen, so Gateway's ask is held.
+    'main-installed-deprecated': {
+        reach: async () => {
+            await chooseFixtureProject('Utility.csproj');
+            await holdTab('installed-tab', 'document.querySelector(\'[data-testid="installed-list"]\') !== null', 'main-installed-deprecated', 'the Installed list');
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'Utility settled', 120_000);
+            await holdRequest('transitive/metadata');
+            await chooseFixtureProject('Gateway.csproj');
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held lite metadata', 60_000);
+            await rewriteHeld('main-installed-deprecated', 'installed-deprecated');
+            await installedListAtTop();
+            await scrollListTo('installed-list', 'package-row-serilog');
+            await until('document.querySelectorAll(\'[data-testid="row-deprecation"]\').length === 1 && document.querySelector(\'[data-testid="package-row-serilog"] [data-testid="row-deprecation"]\') !== null', 'the Deprecated badge on the Serilog row');
+            await poll(async () => ((await script<string>(UNSETTLED)) === '' ? true : undefined), 'the rendered rows\' authors and the tab counts', 120_000);
+            await printVulnerabilityBadges();
         },
         leave: endHold,
     },

@@ -745,6 +745,17 @@ describe('main panel: Installed tab', () => {
         expect(optionOf('Moq')).toHaveAccessibleDescription(/1 known vulnerability, High severity/);
     });
 
+    it('a deprecated installed version shows the Deprecated label badge with its sentence, and none otherwise (UX-P5.2b)', async () => {
+        const host = await mountWith();
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', deprecation: { reasons: ['Legacy'], alternatePackage: { id: 'Moq.Next' } } }, { id: 'Serilog', version: '3.0.0' }] }));
+
+        const badge = within(screen.getByTestId('package-row-moq')).getByTestId('row-deprecation');
+        expect(badge).toHaveTextContent('Deprecated');
+        expect(badge.querySelectorAll('svg')).toHaveLength(0);
+        expect(optionOf('Moq')).toHaveAccessibleDescription(/This version is deprecated: it is legacy and no longer maintained\. Use Moq\.Next instead\./);
+        expect(screen.getByTestId('package-row-serilog').querySelector('[data-testid="row-deprecation"]')).toBeNull();
+    });
+
     describe('the vulnerability badge (UX-P5.1b)', () => {
         const advisory = (severity: 'Low' | 'Moderate' | 'High' | 'Critical', n: number) => ({ severity, advisoryUrl: `https://github.com/advisories/${severity}-${n}` });
         async function badgeOf(vulnerabilities: Array<ReturnType<typeof advisory>>): Promise<HTMLElement> {

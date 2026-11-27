@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type PackageUpdate } from '../../../../protocol';
-import { busyText, isCentral as isCentralRow, projectNameOf, updateCandidates, updateRowContext, updatesInOrder, whyNotDeletable, whyNotUpdatable } from '../../../shared/installed/rules';
+import { busyText, isCentral as isCentralRow, projectNameOf, updateCandidates, updateRowContext, updatesInOrder, whyNotDeletable, whyNotUpdatable, liteOfInstalled } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
@@ -19,6 +19,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { bulkUpdateButton, noCandidateWhy, singleKnowledge } from '../../../shared/updates/updateAll';
 import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
+import { VulnerabilityBadge } from '../installed/VulnerabilityBadge';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its
@@ -319,6 +320,7 @@ function ProjectUpdates({ filter, announce, central, uninstall, focusSearch }: L
                             status={busy ? busyText(ops, projectPath ?? '', update.id) : unsupported ? 'Read-only' : undefined}
                             badges={<>
                                 {centrallyManaged ? <Badge label="CPM" title={entryOf(update.id)?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
+                                <VulnerabilityBadge lite={liteOfInstalled(installed.metadata.get(update.id.toLowerCase()), update)} installedVersion={update.installedVersion} />
                             </>}
                             actions={unsupported ? undefined : (
                                 <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(update)}><ArrowUpIcon /></IconButton>

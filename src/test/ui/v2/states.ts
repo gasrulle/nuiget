@@ -340,6 +340,8 @@ export const STATES: readonly NamedState[] = [
         "Serilog made current with its metadata held and rewritten to the host's package-cache answer (offline, the nuspec's fields alone): the warning banner \"Offline: no package source knows this version. …\" first in the facts, at the details content inset; ended with the hold.", [LIVE_DETAILS_HEADER, LIVE_DETAILS_FACTS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-deprecated', 'main', [primary('main')],
         "Serilog made current with its metadata held and rewritten to a deprecated version's answer (Legacy and CriticalBugs, a message, the alternate Fixture.Alternative): the warning notice \"This version is deprecated: …\" with Find Alternative and the message first in the facts; ended with the hold (UX-P5.2b).", [LIVE_DETAILS_HEADER, LIVE_DETAILS_FACTS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-installed-deprecated', 'main', [primary('main')],
+        "Gateway chosen from Utility with its lite metadata held and rewritten so Serilog's installed version is deprecated: the Serilog row shows the Deprecated label badge (warning tone, no glyph), no other row; ended with the hold (UX-P5.2b).", [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-readonly', 'main', [primary('main')],
         "Serilog current on Gateway, then Utility chosen with its list held: the selection kept read-only under the stale note (marker details-readonly); released after the capture.", [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-details-unsupported', 'main', [primary('main')],

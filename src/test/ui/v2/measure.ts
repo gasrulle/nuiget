@@ -479,7 +479,7 @@ export const ADVISORY_STATES: readonly string[] = ['main-installed-details'];
  */
 export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
     'main-details-deprecated', 'main-details-empty', 'main-details-error', 'main-details-loading', 'main-details-offline', 'main-details-readme', 'main-details-readonly', 'main-details-unsupported',
-    'main-installed-all', 'main-installed-cpm', 'main-installed-details', 'main-installed-empty', 'main-installed-error', 'main-installed-focus',
+    'main-installed-all', 'main-installed-cpm', 'main-installed-deprecated', 'main-installed-details', 'main-installed-empty', 'main-installed-error', 'main-installed-focus',
     'main-installed-hover', 'main-installed-hover-current', 'main-installed-loading', 'main-installed-provisional', 'main-installed-refresh-hover', 'main-installed-revalidating',
     'main-installed-single', 'main-installed-toolbar-hover', 'main-installed-unfocused', 'main-installed-unresolved', 'main-installed-unsupported',
     'main-readme-error', 'main-readme-loading', 'main-transitive-details', 'main-transitive-expanded', 'main-updates', 'main-updates-all',
