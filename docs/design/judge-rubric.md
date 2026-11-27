@@ -97,6 +97,9 @@ capture, and the state shows the content its name promises.
   capture (VS Code under xvfb): compare geometry and colour roles, not glyph outlines.
 - The theme's own colours: the capture resolves the real `--vscode-*` values of its theme; judge the role, not the
   hex value.
+- A count a state cannot have yet: a provisional or first-load list shows no tab count (DS-COPY-5 asks for one count
+  style, not for a number before the list has settled), so its absence on `main-installed-provisional` or a loading cell
+  judged against a settled reference is no finding (UX-P4.fix-23, UX-P5.fix-11; DECISIONS 2026-11-27).
 - Anything outside the webview crop, and the mouse pointer.
 - Taste with no rule, artboard element or exemplar to cite ("could look more modern"), and feature suggestions.
 

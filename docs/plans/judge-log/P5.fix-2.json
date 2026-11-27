@@ -91,7 +91,6 @@
           "lenses": [
             "geometry"
           ],
-          "disposition": "informational",
           "reason": "Single judge; contradicted by DS-GRID-2a@main-sources-error: gaps 8 (hard) (follow-up 2).",
           "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
         },

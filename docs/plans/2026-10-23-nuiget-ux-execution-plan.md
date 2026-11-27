@@ -576,7 +576,8 @@ become `skipped`; P5.0 bundles only the contracts of features still in scope.
 | P5.11b | **F11: the shared confirmation** (X9). `CentralUpdateDialog` and the host modal unified per the advisor's ruling; gotcha "Central row without the preview" updated. (0.5 d, UI) | updates, host | G-UI | — |
 
 **P5 gate (per feature):** its rows `done` or `skipped`; G-UI green; harness scenarios green; a CHANGELOG entry per
-D40. **P5 phase gate:** after the last kept feature; one Tier B dispatch and one `ui-macos` run green; phase review.
+D40; then RUN-ux §6 steps 2 to 4 (the mini-phase review, the `labs/ux-P5.x-done` tag, the artifact refresh), as the P5.3
+review ran them on 2026-11-27; P5.1 and P5.2 closed without them and are covered by that review's range. **P5 phase gate:** after the last kept feature; one Tier B dispatch and one `ui-macos` run green; phase review.
 
 ### P6 — Marketplace-facing documentation (≈ 6.25 d)
 

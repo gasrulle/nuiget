@@ -85,7 +85,7 @@
           "lens": "states",
           "verdict": "refuted",
           "reason": "The crop shows expanded groups with no rows, and their headers read '0 of 13', '0 of 0', '0 of 2' and '0 of 13'. That 'N of M' text is the designed filtering signal (DS-COPY-5). The artboard and spec cover the unfiltered 'main-installed-all' state, so its 'No packages installed.' leaf is not a redline for this @vulnerable view, and the finding cites no rule.",
-          "disposition": "refuted",
+          "disposition": "refuted-by-measurement",
           "evidence": "the 0 of N count is the filter signal (DS-COPY-5); the artboard is the unfiltered state",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
         }

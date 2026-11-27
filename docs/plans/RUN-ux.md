@@ -179,7 +179,11 @@ Call the `Workflow` tool by name `design-judge` with `args`:
   P0 (round 1's composition A, corrected, rendered and specified by P0.27a as
   `main-installed-single.dark-modern.932.png` and `main-installed-single.dark-modern-classic.932.png` with
   `main-installed-single.spec.json`, the same file names as their captures); the others are
-  recorded `pending artboard` and judged by the first item that commits their artboard.
+  recorded `pending artboard` and judged by the first item that commits their artboard. A state with no artboard of its own
+  is judged in screen mode against the reference its earlier judge logs used (grep the state name in `docs/plans/judge-log/`;
+  `main-installed-provisional` and `main-installed-revalidating` against `main-installed-all`, `main-updates-revalidating` against
+  `main-updates`, the Consolidate cells against `main-installed-details`), one look per call, the pairing written into the log's
+  `note`; a provisional list's missing tab count is no finding (rubric §6).
 - The result is `{ standing, refuted, singleJudge, incomplete, perState, counts }`. **An `incomplete` state is re-run,
   never clean.** Zero `incomplete` states is required; zero `standing` findings of severity `blocking` is required once
   the plan's D37 date is recorded in the tracker; before that every `standing` finding is fixed or carries a pasted
