@@ -1,9 +1,11 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ALL_PROJECTS, resourceKeys, type InstalledResult, type ProjectInstalledChunk, type SessionSnapshot } from '../../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type ProjectInstalledChunk, type SessionSnapshot } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
-import { AllProjectsProvider, useAllProjects, type AllProjectsState } from './allProjects';
+import { AllProjectsProvider, consolidationUpdates, useAllProjects, versionDrift, type AllProjectsState, type VersionDrift } from './allProjects';
+import { useOps, useOpsActions } from './ops';
+import { StoreProvider } from './StoreProvider';
 import { RECOVERY_DELAY_MS } from './updates';
 import { SessionProvider } from './session';
 
@@ -368,5 +370,118 @@ describe('allProjects slice', () => {
             await act(async () => { vi.advanceTimersByTime(RECOVERY_DELAY_MS); });
             expect(host.requests('allProjects/updates')).toHaveLength(2);
         });
+    });
+});
+
+describe('the Consolidate model (UX-P5.3a, F3)', () => {
+    const C = '/w/C/C.csproj';
+    const projects = [{ name: 'A', path: A }, { name: 'B', path: B }, { name: 'C', path: C }];
+    const pkg = (id: string, version: string, more: Partial<InstalledPackage> = {}): InstalledPackage => ({ id, version, versionType: 'standard', declaration: 'project', ...more });
+    const listed = (projectPath: string, packages: InstalledPackage[], more: Partial<InstalledResult> = {}): ProjectInstalledChunk => ({
+        projectPath, projectName: projectPath.split('/')[2], result: { projectPath, fidelity: 'authoritative', isCpm: false, packages, ...more },
+    });
+    const ready = (chunks: ProjectInstalledChunk[], status: AllProjectsState['status'] = 'ready') => ({ status, projects, chunks: new Map(chunks.map(chunk => [chunk.projectPath, chunk])) });
+
+    it('lists a package that two projects reference at two versions, by id, with each version\'s projects in project order', () => {
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.1.0'), pkg('Moq', '4.20.0')]),
+            listed(B, [pkg('serilog', '4.0.0'), pkg('Moq', '4.20.0')]),
+            listed(C, [pkg('Serilog', '3.1.0'), pkg('xunit', '2.9.0')]),
+        ]));
+        expect(drift.complete).toBe(true);
+        expect(drift.unread).toEqual([]);
+        // Moq agrees, xunit is in one project: neither drifts.
+        expect(drift.entries).toEqual([{
+            id: 'Serilog',
+            versions: [
+                { version: '3.1.0', projects: [{ projectPath: A, projectName: 'A' }, { projectPath: C, projectName: 'C' }] },
+                { version: '4.0.0', projects: [{ projectPath: B, projectName: 'B' }] },
+            ],
+            held: [],
+        }]);
+    });
+
+    it('compares the resolved version, without case or build metadata, and counts a project once per version', () => {
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Moq', '4.*', { versionType: 'floating', resolvedVersion: '4.20.0' })]),
+            listed(B, [pkg('Moq', '4.20.0+build.7')]),
+            listed(C, [pkg('Moq', '1.0.0-Beta'), pkg('NUnit', '4.0.0'), pkg('NUnit', '3.14.0', { targetFrameworks: ['net48'] })]),
+        ]));
+        // 4.* resolving to 4.20.0 and 4.20.0+build.7 are one version; 1.0.0-Beta is another. NUnit is in C alone: two versions of
+        // one project (per target framework) are no drift between projects.
+        expect(drift.entries.map(entry => `${entry.id} ${entry.versions.map(at => `${at.version}:${at.projects.map(project => project.projectName).join('+')}`).join(' ')}`)).toEqual(['Moq 4.20.0:A+B 1.0.0-Beta:C']);
+    });
+
+    it('holds a central row, an SDK reference and an unresolved one with their reasons; a central-override row joins (N74)', () => {
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.1.0', { declaration: 'central', definedIn: '/w/Directory.Packages.props' }), pkg('NETStandard.Library', '2.0.3', { isImplicit: true, declaration: 'props' })], { isCpm: true }),
+            listed(B, [pkg('Serilog', '4.0.0', { declaration: 'central-override' }), pkg('NETStandard.Library', '2.0.0', { isImplicit: true, declaration: 'props' })], { isCpm: true }),
+            listed(C, [pkg('Serilog', '', { versionType: 'unresolved', declaration: 'unresolved' })]),
+        ]));
+        expect(drift.entries.map(entry => entry.id)).toEqual(['NETStandard.Library', 'Serilog']);
+        const [sdk, serilog] = drift.entries;
+        expect(sdk.versions).toEqual([]);
+        expect(sdk.held.map(held => held.reason)).toEqual(['NETStandard.Library is added by the .NET SDK', 'NETStandard.Library is added by the .NET SDK']);
+        expect(serilog.versions).toEqual([{ version: '4.0.0', projects: [{ projectPath: B, projectName: 'B' }] }]);
+        expect(serilog.held).toEqual([
+            { projectPath: A, projectName: 'A', version: '3.1.0', reason: 'Serilog is set in the central package file of A' },
+            { projectPath: C, projectName: 'C', version: '', reason: 'Serilog cannot be updated: its reference could not be resolved' },
+        ]);
+    });
+
+    it('is incomplete, never "no drift", while the lists load, or when a project failed, is unsupported or was not read', () => {
+        expect(versionDrift(ready([listed(A, [pkg('Moq', '4.20.0')])], 'loading'))).toEqual({
+            complete: false,
+            unread: [{ projectPath: B, projectName: 'B', reason: 'Its packages were not read yet.' }, { projectPath: C, projectName: 'C', reason: 'Its packages were not read yet.' }],
+            entries: [],
+        });
+        const drift = versionDrift(ready([
+            listed(A, [pkg('Moq', '4.20.0')]),
+            { projectPath: B, projectName: 'B', error: 'The project could not be read.' },
+            listed(C, [], { unsupported: { reason: 'packages-config', message: 'packages.config projects are not supported.' } }),
+        ]));
+        expect(drift.complete).toBe(false);
+        expect(drift.unread.map(project => `${project.projectName}: ${project.reason}`)).toEqual(['B: The project could not be read.', 'C: packages.config projects are not supported.']);
+        expect(versionDrift({ status: 'idle', projects: undefined, chunks: new Map() })).toEqual({ complete: false, unread: [], entries: [] });
+    });
+
+    it('builds the bulk payload for the projects at another version, a lower target included, with the source when given', () => {
+        const [serilog] = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.1.0')]),
+            listed(B, [pkg('Serilog', '4.0.0')]),
+            listed(C, [pkg('Serilog', '3.1.0'), pkg('Moq', '4.20.0', { declaration: 'central' })]),
+        ])).entries;
+        expect(consolidationUpdates(serilog, '4.0.0')).toEqual([
+            { projectPath: A, projectName: 'A', packages: [{ id: 'Serilog', version: '4.0.0' }] },
+            { projectPath: C, projectName: 'C', packages: [{ id: 'Serilog', version: '4.0.0' }] },
+        ]);
+        expect(consolidationUpdates(serilog, '3.1.0', 'https://api.nuget.org/v3/index.json')).toEqual([
+            { projectPath: B, projectName: 'B', packages: [{ id: 'Serilog', version: '3.1.0', sourceUrl: 'https://api.nuget.org/v3/index.json' }] },
+        ]);
+    });
+
+    it('a consolidation goes through ops/bulkUpdateAllProjects with the chosen version, marking each project\'s package busy', async () => {
+        const host = createFakeHost();
+        let seen: { drift: VersionDrift; busy: boolean } | undefined;
+        function Consolidate() {
+            const all = useAllProjects();
+            const ops = useOps();
+            const { run } = useOpsActions();
+            const drift = versionDrift(all);
+            seen = { drift, busy: ops.isPackageBusy(A, 'Serilog') && !ops.isPackageBusy(B, 'Serilog') };
+            const entry = drift.entries[0];
+            return <button type="button" disabled={entry === undefined} onClick={() => { void run('ops/bulkUpdateAllProjects', { projectUpdates: consolidationUpdates(entry, '4.0.0') }).catch(() => undefined); }}>Consolidate</button>;
+        }
+        render(<StoreProvider bus={host.bus} prefetch={false}><Consolidate /></StoreProvider>);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+        const request = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(request, { kind: 'start', projects: [{ name: 'A', path: A }, { name: 'B', path: B }] }));
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: listed(A, [pkg('Serilog', '3.1.0')]) }));
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: listed(B, [pkg('Serilog', '4.0.0')]) }));
+        await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
+        expect(seen?.drift.complete).toBe(true);
+        await hostSays(() => screen.getByRole('button', { name: 'Consolidate' }).click());
+        expect(host.requests('ops/bulkUpdateAllProjects').map(sent => sent.payload)).toEqual([{ projectUpdates: [{ projectPath: A, projectName: 'A', packages: [{ id: 'Serilog', version: '4.0.0' }] }] }]);
+        expect(seen?.busy).toBe(true);
     });
 });

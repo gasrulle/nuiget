@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type React from 'react';
-import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectInstalledChunk, type ProjectTransitiveChunk, type ProjectUpdatesChunk, type RequestChunk, type RequestResult } from '../../../protocol';
+import { ALL_PROJECTS, ProtocolRequestError, resourceKeys, type PackageMetadataLite, type Project, type ProjectBulkUpdate, type ProjectInstalledChunk, type ProjectTransitiveChunk, type ProjectUpdatesChunk, type RequestChunk, type RequestResult } from '../../../protocol';
 import { useMessageBus } from '../bus/useMessageBus';
+import { isCentral, whyNotUpdatable } from '../installed/rules';
 import { useSession } from './session';
 import { metadataKey } from './transitive';
 import { RECOVERY_DELAY_MS } from './updates';
@@ -424,4 +425,104 @@ export function useAllProjects(): AllProjectsState {
         throw new Error('useAllProjects needs an AllProjectsProvider above it');
     }
     return state;
+}
+
+// ---- UX-P5.3a: the Consolidate model (F3, G5) -------------------------------------------------------------------------
+
+/** One version of a package under All Projects and the projects that reference it at that version. */
+export interface DriftVersion {
+    /** The version as the first project lists it: its resolved version, else the version as specified. */
+    version: string;
+    projects: ReadonlyArray<{ projectPath: string; projectName: string }>;
+}
+
+/** A reference a consolidation leaves as it is, with the sentence why (a central row, an SDK reference, an unresolved one). */
+export interface DriftHeld {
+    projectPath: string;
+    projectName: string;
+    version: string;
+    reason: string;
+}
+
+/** A package that more than one project references at more than one version. */
+export interface DriftEntry {
+    id: string;
+    /** The versions a consolidation can change, in the order of the projects. */
+    versions: readonly DriftVersion[];
+    /** The references it leaves; their versions count towards the drift. */
+    held: readonly DriftHeld[];
+}
+
+export interface VersionDrift {
+    /**
+     * Whether every project's list was read: false while the fan-out runs, after it failed, or when a project failed or is
+     * unsupported. An incomplete reading is unknown, never "no drift" (empty is not unknown).
+     */
+    complete: boolean;
+    /** The projects whose packages were not read, and why. */
+    unread: ReadonlyArray<{ projectPath: string; projectName: string; reason: string }>;
+    /** The drifting packages, by id. */
+    entries: readonly DriftEntry[];
+}
+
+/** The key two versions are equal by: NuGet compares versions without case; build metadata never orders. */
+const versionKey = (version: string): string => version.toLowerCase().replace(/\+.*$/, '');
+
+/**
+ * The packages whose version differs between projects under All Projects (F3 Consolidate, UX-P5.3a): from the lists the
+ * fan-out streamed, each package that at least two projects reference at at least two versions. A row whose version is set
+ * centrally (`central`) is held: a consolidation reaches it only through the central file; a `central-override` row joins
+ * (N74). An SDK reference and a row `whyNotUpdatable` refuses are held with their reason.
+ */
+export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects' | 'chunks'>): VersionDrift {
+    const unread: Array<{ projectPath: string; projectName: string; reason: string }> = [];
+    type Gathered = { id: string; versions: Map<string, { version: string; projects: Array<{ projectPath: string; projectName: string }> }>; held: DriftHeld[]; projects: Set<string>; keys: Set<string> };
+    const byId = new Map<string, Gathered>();
+    for (const project of state.projects ?? []) {
+        const chunk = state.chunks.get(project.path);
+        const result = chunk?.result;
+        if (result === undefined || result.unsupported !== undefined) {
+            unread.push({ projectPath: project.path, projectName: project.name, reason: chunk?.error ?? result?.unsupported?.message ?? 'Its packages were not read yet.' });
+            continue;
+        }
+        for (const entry of result.packages) {
+            const version = entry.resolvedVersion || entry.version;
+            const key = versionKey(version);
+            const lower = entry.id.toLowerCase();
+            const item: Gathered = byId.get(lower) ?? { id: entry.id, versions: new Map(), held: [], projects: new Set<string>(), keys: new Set<string>() };
+            byId.set(lower, item);
+            item.projects.add(project.path);
+            item.keys.add(key);
+            const reason = whyNotUpdatable(entry, result)
+                ?? (isCentral(entry) ? `${entry.id} is set in the central package file of ${project.name}` : undefined)
+                ?? (entry.isImplicit ? `${entry.id} is added by the .NET SDK` : undefined);
+            if (reason !== undefined) {
+                item.held.push({ projectPath: project.path, projectName: project.name, version, reason });
+                continue;
+            }
+            const at = item.versions.get(key) ?? { version, projects: [] };
+            item.versions.set(key, at);
+            if (!at.projects.some(listed => listed.projectPath === project.path)) {
+                at.projects.push({ projectPath: project.path, projectName: project.name });
+            }
+        }
+    }
+    const entries = [...byId.values()]
+        .filter(item => item.projects.size > 1 && item.keys.size > 1)
+        .map(item => ({ id: item.id, versions: [...item.versions.values()], held: item.held }))
+        .sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+    const complete = state.status === 'ready' && state.projects !== undefined && unread.length === 0;
+    return { complete, unread, entries };
+}
+
+/**
+ * The `ops/bulkUpdateAllProjects` payload that brings a drifting package to `version` (UX-P5.3a): one entry per project
+ * whose version differs, the held references left out. The version is sent as chosen: the host applies it verbatim, a lower
+ * one included.
+ */
+export function consolidationUpdates(entry: DriftEntry, version: string, sourceUrl?: string): ProjectBulkUpdate[] {
+    const target = versionKey(version);
+    return entry.versions
+        .filter(at => versionKey(at.version) !== target)
+        .flatMap(at => at.projects.map(project => ({ projectPath: project.projectPath, projectName: project.projectName, packages: [{ id: entry.id, version, ...(sourceUrl === undefined ? {} : { sourceUrl }) }] })));
 }

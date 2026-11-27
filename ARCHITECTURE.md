@@ -572,6 +572,12 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   lists no package, or the metadata ask for that answer ended (never by a cancelled ask), and its metadata is kept and
   merged by key across newer answers until All Projects is left. With `prefetchTransitive` (opt-in; the main panel's
   provider passes it from UX-P5.1a push 3b) the slice enables the stream itself once the fan-out answered.
+  The Consolidate model (F3, UX-P5.3a) is two pure functions of the slice's state, `versionDrift` and
+  `consolidationUpdates`: the packages that at least two projects reference at at least two versions (compared by the
+  resolved version, without case or build metadata), each version with its projects; a `central` row, an SDK reference
+  and a row `whyNotUpdatable` refuses are held with their reason, a `central-override` row joins (N74); a project that
+  failed, is unsupported or was not read makes the reading incomplete, never "no drift". The payload of
+  `ops/bulkUpdateAllProjects` carries the chosen version for every project at another one, a lower version included.
 - `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
   prerelease flag; another flag is another resource, so a toggle asks again. Nothing is asked without a single
   project. Before the answer the rows are the bare `found` chunks of the latest request; the answer replaces them
