@@ -171,8 +171,8 @@
           "finding": "Empty.csproj's group row reads \"0 of 0\" with no message leaf below it, where the redline declares the message leaf installed-empty-empty.csproj (\"No packages installed.\") under that header; the filter keeps the Unsupported.csproj leaf in this same capture, so the per-project empty state is the only per-project state that drops out.",
           "severity": "major",
           "rule": "DS-STATE-1",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop does show Empty.csproj at '0 of 0' with no leaf under it. But the leaf the finding cites, installed-empty-empty.csproj, is declared in the redline of the unfiltered main-installed-all artboard, not for this @vulnerable state. Under the filter, every project with zero matches renders no leaf: Catalog (0 of 13) and Utility (0 of 13) show none either, so Empty.csproj is treated like its siblings. The Unsupported leaf stays because it gives a reason the data cannot be read, not a filter result. No spec or state description for this capture declares the empty leaf."
+          "reason": "The crop does show Empty.csproj at '0 of 0' with no leaf under it. But the leaf the finding cites, installed-empty-empty.csproj, is declared in the redline of the unfiltered main-installed-all artboard, not for this @vulnerable state. Under the filter, every project with zero matches renders no leaf: Catalog (0 of 13) and Utility (0 of 13) show none either, so Empty.csproj is treated like its siblings. The Unsupported leaf stays because it gives a reason the data cannot be read, not a filter result. No spec or state description for this capture declares the empty leaf.",
+          "verdict": "refuted"
         },
         {
           "id": "native-1",
@@ -180,8 +180,8 @@
           "finding": "The Details property list (Version through Report abuse) is drawn on a uniform 24-25 px row pitch where the artboard's list runs 22-24 px, so the block is about 10 px taller and pushes Vulnerabilities and Dependencies 10 px lower (Vulnerabilities heading at y 480 against the artboard's 470). Side by side the list looks slightly loose.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the seven property rows at about 24 px pitch against about 23 px on the artboard, but DS-ALIGN-2 requires a pitch of at least 24 with 6 px gaps, and the hard measurement passes (pitch 24.2 ×6, gap 6 ×6, spread 0). The looser rhythm is therefore the rule, not a defect."
+          "reason": "The crop shows the seven property rows at about 24 px pitch against about 23 px on the artboard, but DS-ALIGN-2 requires a pitch of at least 24 with 6 px gaps, and the hard measurement passes (pitch 24.2 ×6, gap 6 ×6, spread 0). The looser rhythm is therefore the rule, not a defect.",
+          "verdict": "refuted"
         },
         {
           "id": "native-2",
@@ -189,8 +189,8 @@
           "finding": "The same High-severity vulnerability uses two severity roles in one view. The current row's badge has an error glyph and an error-coloured border, while the Details pane's Vulnerabilities line has a yellow warning glyph and warning-coloured 'High severity' text. The badge's High maps to error, so a VS Code user reads them as two different severities. The artboard draws the details line with the warning glyph, but it predates the severity badge.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the row badge with an error glyph and border beside the details line's yellow warning glyph and 'High severity'. The artboard draws that details line the same way, and the design system's High-to-error mapping is scoped to a vulnerable row's badge, so no rule or artboard element backs the claimed role clash (rubric §6)."
+          "reason": "The crop shows the row badge with an error glyph and border beside the details line's yellow warning glyph and 'High severity'. The artboard draws that details line the same way, and the design system's High-to-error mapping is scoped to a vulnerable row's badge, so no rule or artboard element backs the claimed role clash (rubric §6).",
+          "verdict": "refuted"
         },
         {
           "id": "native-3",
@@ -198,8 +198,8 @@
           "finding": "In the details facts block the Authors row sits 2 px lower than in the artboard (its text spans y 157-167 against 155-165, so Version to Authors is 24 px instead of 22), which leaves the pair slightly looser than the artboard's facts grid while Required by stays put.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "Pixel rows confirm Authors text at y 157-167 in the capture against 155-165 in the artboard. The hard DS-ALIGN-2 measurement requires this pitch: it reads 'gap 6; pitch 24.2' and the rule asks for a pitch of at least 24, so the capture follows the rule and the artboard's 22 px pitch predates it."
+          "reason": "Pixel rows confirm Authors text at y 157-167 in the capture against 155-165 in the artboard. The hard DS-ALIGN-2 measurement requires this pitch: it reads 'gap 6; pitch 24.2' and the rule asks for a pitch of at least 24, so the capture follows the rule and the artboard's 22 px pitch predates it.",
+          "verdict": "refuted"
         }
       ]
     },
@@ -332,8 +332,8 @@
           "finding": "The state shows no current row drawn in inactive selection. The only banded row, Serilog, is the checked bulk-selection row: 'Uninstall Selected (1)' counts it, and the details pane still reads 'Select a package to see its details.', so no row is current. The artboard draws a current row (the Unresolved Newtonsoft.Json band with its details row), and DS-COLOR-2 says that row takes list.inactiveSelectionBackground once focus leaves the list. Here the inactive colour appears only as the bulk-selection colour, which a multi-select row shows whether the list has focus or not, so the capture never shows selection following list focus, which is what the state's name promises.",
           "severity": "major",
           "rule": "DS-COLOR-2",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the checked Serilog row in the grey inactive band while the focus is in the search box. The hard measurement reads 'DS-COLOR-2@main-installed-unfocused/rows: selected rgb(55, 55, 61) (target rgb(55, 55, 61), list not focused)', so list.inactiveSelectionBackground is drawn with focus outside the list. The artboard's current Newtonsoft.Json band is declared in the spec as only a colour sample ('the state itself has no current row and its details pane shows the empty sentence'), so a missing current row is not a defect."
+          "reason": "The crop shows the checked Serilog row in the grey inactive band while the focus is in the search box. The hard measurement reads 'DS-COLOR-2@main-installed-unfocused/rows: selected rgb(55, 55, 61) (target rgb(55, 55, 61), list not focused)', so list.inactiveSelectionBackground is drawn with focus outside the list. The artboard's current Newtonsoft.Json band is declared in the spec as only a colour sample ('the state itself has no current row and its details pane shows the empty sentence'), so a missing current row is not a defect.",
+          "verdict": "refuted"
         }
       ]
     },
@@ -419,8 +419,8 @@
           "finding": "The error message capitalises the clause after the colon ('could not be loaded: The package source could not be read.'). That is two sentence-case sentences joined into one, not one sentence in sentence case as Extensions-view messages are written.",
           "severity": "major",
           "rule": "DS-COPY-1",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop does show 'could not be loaded: The package source could not be read.', but the capitalised clause is the failure reason the capture fakes for this state (failHeld('main-details-error', 'The package source could not be read.') in capture.ui.test.ts:1219), and the product passes that reason through unchanged. The product's own text starts in sentence case and ends with a period (DS-COPY-3 hard: '1 end with a full stop'). DS-COPY-1 covers the casing of labels, not a reason supplied at runtime."
+          "reason": "The crop does show 'could not be loaded: The package source could not be read.', but the capitalised clause is the failure reason the capture fakes for this state (failHeld('main-details-error', 'The package source could not be read.') in capture.ui.test.ts:1219), and the product passes that reason through unchanged. The product's own text starts in sentence case and ends with a period (DS-COPY-3 hard: '1 end with a full stop'). DS-COPY-1 covers the casing of labels, not a reason supplied at runtime.",
+          "verdict": "refuted"
         },
         {
           "id": "states-1",
@@ -428,8 +428,8 @@
           "finding": "The search box placeholder reads \"Search or type @ to filter\", but the approved artboard's search-input (spec rect 16,42,1168×26) draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the capture's copy differs from the artboard element.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The capture's placeholder does read 'Search or type @ to filter' while the artboard draws the longer copy. The Design System sets that short copy for the main search box since UX-P3.fix-15 (design-system.md:437), and spec.json names no placeholder text for search-input. The hard DS-OVERFLOW-2 measurement reads 'placeholder \"Search or type @ to filter\" 164 of 1136 px', so the difference is declared and the artboard drawing is out of date."
+          "reason": "The capture's placeholder does read 'Search or type @ to filter' while the artboard draws the longer copy. The Design System sets that short copy for the main search box since UX-P3.fix-15 (design-system.md:437), and spec.json names no placeholder text for search-input. The hard DS-OVERFLOW-2 measurement reads 'placeholder \"Search or type @ to filter\" 164 of 1136 px', so the difference is declared and the artboard drawing is out of date.",
+          "verdict": "refuted"
         },
         {
           "id": "native-1",
@@ -437,8 +437,8 @@
           "finding": "The README error line (glyph, sentence and Retry) sits right under the Details/README strip's bottom line: the Retry button's top is 4 px below the line, but the line starts 21 px and ends 20 px from the pane edges. Everything else in the details pane uses the 20 px inset (the header's 20 on all sides), and the artboard's details message sits about 20 px below its strip line. The error reads squeezed against the tab strip instead of like an inline message in the README panel.",
           "severity": "major",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the inline error drawn as the shared banner row, with equal small block padding under the tab-strip line and a 20 px side inset (DS-INSET-1 measured 'content 20', hard). The installed-error and details-error captures of the same run use the same flush-under-strip form. The artboard draws no Details/README strip or README message at this box (it shows 'Select a package to see its details.' under the header line), so no rule, artboard element or exemplar supports a 20 px top inset (rubric §6)."
+          "reason": "The crop shows the inline error drawn as the shared banner row, with equal small block padding under the tab-strip line and a 20 px side inset (DS-INSET-1 measured 'content 20', hard). The installed-error and details-error captures of the same run use the same flush-under-strip form. The artboard draws no Details/README strip or README message at this box (it shows 'Select a package to see its details.' under the header line), so no rule, artboard element or exemplar supports a 20 px top inset (rubric §6).",
+          "verdict": "refuted"
         },
         {
           "id": "native-2",
@@ -446,8 +446,8 @@
           "finding": "The inline README error writes two sentences joined by a colon, with a capital letter after the colon ('The README could not be loaded: The package source could not be read.'). DS-STATE-4 asks for one sentence in an inline error, so this reads as two fused sentences, not one workbench-style message.",
           "severity": "minor",
           "rule": "DS-STATE-4",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop reads 'The README could not be loaded: The package source could not be read.' This is the one failure pattern in Design System §10 item 8, '<What> could not be <verb>: <reason>.'. DECISIONS 2026-11-15 (UX-P3.11) rules that the host's reason keeps its casing after the colon. DS-STATE-4 measured '1 glyph (error), 1 buttons, ends with a full stop' (hard)."
+          "reason": "The crop reads 'The README could not be loaded: The package source could not be read.' This is the one failure pattern in Design System §10 item 8, '<What> could not be <verb>: <reason>.'. DECISIONS 2026-11-15 (UX-P3.11) rules that the host's reason keeps its casing after the colon. DS-STATE-4 measured '1 glyph (error), 1 buttons, ends with a full stop' (hard).",
+          "verdict": "refuted"
         },
         {
           "id": "geometry-1",
@@ -455,8 +455,8 @@
           "finding": "The README error banner sits 4 px under the Details/README tab strip divider (divider y 241, Retry button top y 246, glyph and text from y 252), while its sides keep the details pane's 20 px inset (glyph x 441, Retry ends x 1179). The details pane's content inset is 20 px: the redline gives details-empty 20 px padding on all four sides, and the loaded README starts its content about 20 px below the same divider. So the error reads squeezed against the tab strip, and its top inset does not match its side insets.",
           "severity": "major",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "In the crop the divider is at y 241 and the Retry button top is about 246, inside a banner row with symmetric block padding. That row is the same inline-banner form as main-details-error and main-installed-error in this run. DS-INSET-4 covers the details header only, and DS-INSET-1 measured the side inset 20 (hard). The redline's details-empty 20 px padding belongs to the empty state, not to an inline error banner, so the finding cites no rule for the top inset (rubric §6)."
+          "reason": "In the crop the divider is at y 241 and the Retry button top is about 246, inside a banner row with symmetric block padding. That row is the same inline-banner form as main-details-error and main-installed-error in this run. DS-INSET-4 covers the details header only, and DS-INSET-1 measured the side inset 20 (hard). The redline's details-empty 20 px padding belongs to the empty state, not to an inline error banner, so the finding cites no rule for the top inset (rubric §6).",
+          "verdict": "refuted"
         },
         {
           "id": "states-1",
@@ -464,8 +464,8 @@
           "finding": "The inline README error reads as two sentences glued with a colon and a capital after it (\"The README could not be loaded: The package source could not be read.\"), where DS-STATE-4 allows one sentence beside the severity glyph and DS-COPY-3 wants whole sentences.",
           "severity": "major",
           "rule": "DS-STATE-4",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The text in the crop follows Design System §10 item 8's declared failure form '<What> could not be <verb>: <reason>.', with the host reason's casing kept by the DECISIONS 2026-11-15 ruling. The hard DS-STATE-4 line reads '1 glyph (error), 1 buttons, ends with a full stop' and DS-COPY-3 reads '1 end with a full stop'."
+          "reason": "The text in the crop follows Design System §10 item 8's declared failure form '<What> could not be <verb>: <reason>.', with the host reason's casing kept by the DECISIONS 2026-11-15 ruling. The hard DS-STATE-4 line reads '1 glyph (error), 1 buttons, ends with a full stop' and DS-COPY-3 reads '1 end with a full stop'.",
+          "verdict": "refuted"
         },
         {
           "id": "states-2",
@@ -473,8 +473,8 @@
           "finding": "The main search box's placeholder reads \"Search or type @ to filter\", but the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\", so the copy no longer matches the approved artboard element.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows 'Search or type @ to filter' against the artboard's longer hint. DECISIONS 2026-11-16 (UX-P3.fix-15) gives the main search box the side bar's hint, and 2026-11-19 records the placeholder against the older artboard as accepted-as-design. DS-OVERFLOW-2 placeholder measures '164 of 1136 px' (hard)."
+          "reason": "The crop shows 'Search or type @ to filter' against the artboard's longer hint. DECISIONS 2026-11-16 (UX-P3.fix-15) gives the main search box the side bar's hint, and 2026-11-19 records the placeholder against the older artboard as accepted-as-design. DS-OVERFLOW-2 placeholder measures '164 of 1136 px' (hard).",
+          "verdict": "refuted"
         },
         {
           "id": "native-1",
@@ -482,8 +482,8 @@
           "finding": "The row check box of the SDK-implicit NETStandard.Library row draws its border in a light grey (about #7e7e7e) instead of the checkbox.border #3c3c3c that every other unselected row's check box uses, so the one check box that cannot act stands out brighter than the enabled ones, the reverse of how a workbench disabled check box dims.",
           "severity": "minor",
           "rule": "DS-HEIGHT-9",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the NETStandard.Library check box border at #7e7e7e against #3c3c3c on the other unselected rows. That value is disabledForeground (#cccccc at 0.5 over the #313131 fill), which the Design System's Check box row sets for the disabled state and which primitives.css applies through .nuiget-row-check--off ('its line in disabledForeground as the workbench's disabled check box', DS-COLOR-6). The difference is therefore declared, and the hard measurement 'DS-HEIGHT-9@main-readme-loading: 18×18 ×17 (target 18×18)' passes."
+          "reason": "The crop shows the NETStandard.Library check box border at #7e7e7e against #3c3c3c on the other unselected rows. That value is disabledForeground (#cccccc at 0.5 over the #313131 fill), which the Design System's Check box row sets for the disabled state and which primitives.css applies through .nuiget-row-check--off ('its line in disabledForeground as the workbench's disabled check box', DS-COLOR-6). The difference is therefore declared, and the hard measurement 'DS-HEIGHT-9@main-readme-loading: 18×18 ×17 (target 18×18)' passes.",
+          "verdict": "refuted"
         }
       ]
     }

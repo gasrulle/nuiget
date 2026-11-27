@@ -47,8 +47,8 @@
           "finding": "In the Newtonsoft.Json row, which carries the High severity badge, the name line sits 1 px higher and the version line 1 px lower than in every other row. Pixel scan, offsets from each row's top: name cap 21 vs 22 and facts 42 vs 41 in the other eight rows (bands start at 155 + 72k). The 20 px badge makes line 1 taller than the 20 px name-and-badges box, so this row's two-line text block no longer matches the rhythm of its neighbours or the artboard's rows.",
           "severity": "minor",
           "rule": "DS-ROW-1",
-          "disposition": "refuted-by-measurement",
-          "reason": "DS-ROW-1@main-updates-vulnerable reads \"centre offsets 0 ×28; lines 2 ×14\" (hard, tolerance 1) in run 46054996779; the refuter reads the 1 px shift as within DS-ROW-1. docs/plans/handoff/P5.fix-5.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-27 (DO 4)."
+          "reason": "DS-ROW-1@main-updates-vulnerable reads \"centre offsets 0 ×28; lines 2 ×14\" (hard, tolerance 1) in run 46054996779; the refuter reads the 1 px shift as within DS-ROW-1. docs/plans/handoff/P5.fix-5.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-27 (DO 4).",
+          "verdict": "refuted"
         }
       ]
     },

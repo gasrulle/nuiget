@@ -61,9 +61,9 @@
           "lenses": [
             "states"
           ],
-          "disposition": "refuted-by-measurement",
           "evidence": "run 45030863810: [measure] DS-STATE-4@main-details-error: 1 glyph (error), 1 buttons, ends with a full stop (1) (hard); failure() (src/webview/shared/updates/sentence.ts) keeps the host's reason as written",
-          "ruling": "docs/plans/handoff/P5.fix-3.md, Advisor decisions, 2026-11-22 UX-P5.fix-3 design-advisor follow-up 1"
+          "verdict": "refuted",
+          "reason": "docs/plans/handoff/P5.fix-3.md, Advisor decisions, 2026-11-22 UX-P5.fix-3 design-advisor follow-up 1"
         }
       ],
       "carried": [

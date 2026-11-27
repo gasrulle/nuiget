@@ -66,7 +66,6 @@
           "lens": "geometry",
           "verdict": "refuted",
           "reason": "The crop shows 'SQLitePCLRaw.lib.e_...' with the '1 project' pill a few pixels further right than the name-to-pill gap in the Newtonsoft row, which is the ellipsis's own end slack; the hard measurement reads 'DS-ROW-1@main-installed-all-vulnerable-unavailable: ... badges: name gap 8 ×2, pill gap 4 (hard)', so both rows meet the 8 px rule.",
-          "disposition": "refuted-by-measurement",
           "evidence": "run 45049321366: DS-ROW-1@main-installed-all-vulnerable-unavailable: badges: name gap 8 ×2, pill gap 4 (hard)",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
         },
@@ -85,7 +84,6 @@
           "lens": "states",
           "verdict": "refuted",
           "reason": "The crop shows expanded groups with no rows, and their headers read '0 of 13', '0 of 0', '0 of 2' and '0 of 13'. That 'N of M' text is the designed filtering signal (DS-COPY-5). The artboard and spec cover the unfiltered 'main-installed-all' state, so its 'No packages installed.' leaf is not a redline for this @vulnerable view, and the finding cites no rule.",
-          "disposition": "refuted-by-measurement",
           "evidence": "the 0 of N count is the filter signal (DS-COPY-5); the artboard is the unfiltered state",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-22 UX-P5.fix-4 design-advisor GOLDEN ruling 1"
         }
@@ -133,7 +131,6 @@
           "lens": "native",
           "verdict": "refuted",
           "reason": "The crop does show the SQLitePCLRaw check box with a #7e7e7e border on #313131, against #3c3c3c on the Newtonsoft.Json row. But the artboard draws its unusable check boxes (Unresolved Serilog at y 366, Unsupported read-only Newtonsoft.Json at y 494) with exactly the same #7e7e7e border, and its usable ones (CsvHelper at y 738) with #3c3c3c. So the capture follows the artboard's own colour for a check box that cannot be used, and DS-HEIGHT-9 measured 18x18 x4 (hard).",
-          "disposition": "accepted-as-design",
           "evidence": "`src/webview/shared/primitives/primitives.css:347-349` (`.nuiget-row-check--off` sets the mark's line to `--nuiget-color-fg-disabled`, 'as the workbench's disabled check box', DS-COLOR-6, UX-P2.3); the artboard `docs/design/artboards/main-installed-all.dark-modern.1200.png` draws its unusable marks (Serilog at y 366, the read-only rows from y 494) the same way; DS-STATE-7 `1 unselectable (1 under Transitive), 0 without a reason` (hard)",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-26 UX-P5.fix-4 design-advisor GOLDEN ruling 2"
         },
@@ -152,7 +149,6 @@
           "lens": "states",
           "verdict": "refuted",
           "reason": "The crop shows Empty.csproj as '0 of 0' with no leaf under the @vulnerable filter. The other projects with no match under the filter (Catalog 0 of 13, Unresolved 0 of 2, Utility 0 of 13) also show no rows or leaf. The artboard's 'No packages installed.' leaf belongs to the unfiltered main-installed-all state, and Unsupported.csproj keeps its unsupported banner, not an empty state. The hard measurement reads 'DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none'.",
-          "disposition": "refuted-by-measurement",
           "evidence": "run 45052450868: `DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none (hard)`; the '0 of N' count is the filter signal (DS-COPY-5: headers 9, hard); the artboard is the unfiltered state",
           "ruling": "docs/plans/handoff/P5.fix-4.md, Advisor decisions, 2026-11-26 UX-P5.fix-4 design-advisor GOLDEN ruling 2"
         }

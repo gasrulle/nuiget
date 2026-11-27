@@ -143,7 +143,9 @@ CSS px of the rendered page PNG, origin top-left.
 
 The implementing session writes the workflow's result into `docs/plans/judge-log/<item>.json` (the directory is
 created by P0). Every standing finding gets a disposition; the disposition rate (refuted-by-measurement over all
-dispositions) is what the hardness rule and the phase reviews compute.
+dispositions) is what the hardness rule and the phase reviews compute. An entry of the panel's `refuted` array is no
+standing finding: it carries the refuter's `verdict` and `reason` and no disposition; a single-judge entry carries a
+disposition only when a ruling or a tracker row disposes of it (planning session, 2026-11-27).
 
 ```json
 {

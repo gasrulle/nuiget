@@ -182,7 +182,8 @@ Call the `Workflow` tool by name `design-judge` with `args`:
   recorded `pending artboard` and judged by the first item that commits their artboard. A state with no artboard of its own
   is judged in screen mode against the reference its earlier judge logs used (grep the state name in `docs/plans/judge-log/`;
   `main-installed-provisional` and `main-installed-revalidating` against `main-installed-all`, `main-updates-revalidating` against
-  `main-updates`, the Consolidate cells against `main-installed-details`), one look per call, the pairing written into the log's
+  `main-updates`, the Consolidate list cells against `main-installed-all` and the Consolidate pane and dialog cells against
+  `main-installed-details`), one look per call, the pairing written into the log's
   `note`; a provisional list's missing tab count is no finding (rubric §6).
 - The result is `{ standing, refuted, singleJudge, incomplete, perState, counts }`. **An `incomplete` state is re-run,
   never clean.** Zero `incomplete` states is required; zero `standing` findings of severity `blocking` is required once

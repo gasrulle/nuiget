@@ -110,8 +110,7 @@
           "rule": "DS-GRID-2",
           "lens": "geometry",
           "verdict": "refuted",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The three gaps belong to different roles. The 38 px pitch from the Catalog row to the description is the designed lead gap, which DS-INSET-4/lead measures at 'next block 20 (target 20)'. The 34 px pitch before Dependencies equals the artboard's 34 px pitch before Vulnerabilities. The Projects to Not Changed break is a group break inside the lead section."
+          "reason": "The three gaps belong to different roles. The 38 px pitch from the Catalog row to the description is the designed lead gap, which DS-INSET-4/lead measures at 'next block 20 (target 20)'. The 34 px pitch before Dependencies equals the artboard's 34 px pitch before Vulnerabilities. The Projects to Not Changed break is a group break inside the lead section."
         }
       ]
     },
@@ -183,8 +182,7 @@
           "rule": "DS-ALIGN-1",
           "lens": "native",
           "verdict": "refuted",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the Projects values at x 570, the Not Changed value at x 547 and the facts values at x 552. DS-ALIGN-1 is defined per facts block, and the hard measurement 'DS-ALIGN-1@main-consolidate-details: value left spread 0 ×2 (2 blocks) (hard)' finds every block aligned. The artboard (main-installed-details) has no Projects or Not Changed section to compare with, and its facts column at x 552 matches the capture."
+          "reason": "The crop shows the Projects values at x 570, the Not Changed value at x 547 and the facts values at x 552. DS-ALIGN-1 is defined per facts block, and the hard measurement 'DS-ALIGN-1@main-consolidate-details: value left spread 0 ×2 (2 blocks) (hard)' finds every block aligned. The artboard (main-installed-details) has no Projects or Not Changed section to compare with, and its facts column at x 552 matches the capture."
         },
         {
           "id": "geometry-1",
@@ -200,8 +198,7 @@
           "rule": "DS-ALIGN-1",
           "lens": "geometry",
           "verdict": "refuted",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the Not Changed value at x 547 against the Projects column at x 570. These are two separately headed groups, and DS-ALIGN-1 measures within one block: the hard line reads 'value left spread 0 ×2 (2 blocks)'. No artboard element or rule asks the two groups to share a column."
+          "reason": "The crop shows the Not Changed value at x 547 against the Projects column at x 570. These are two separately headed groups, and DS-ALIGN-1 measures within one block: the hard line reads 'value left spread 0 ×2 (2 blocks)'. No artboard element or rule asks the two groups to share a column."
         }
       ]
     }

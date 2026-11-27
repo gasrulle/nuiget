@@ -82,8 +82,8 @@
           "finding": "The search box placeholder reads \"Search or type @ to filter\" while the approved artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows design-system.md's overflow table (the main header's placeholder copy is \"Search or type @ to filter\", the side bar's, since UX-P3.fix-15), so the artboard's copy is stale rather than the capture wrong.",
           "severity": "minor",
           "rule": "spec-conflict",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the capture's placeholder \"Search or type @ to filter\" and the artboard's older \"Search packages, or filter: @...\", but the capture follows the copy that design-system.md's main-header overflow row sets (since UX-P3.fix-15). The hard measurement confirms that copy fits: DS-OVERFLOW-2@main-installed-cpm/placeholder reads \"Search or type @ to filter\" 164 of 1136 px. The redline's spec.json says nothing about the placeholder, so this is not a §6 artboard-versus-spec conflict and there is no visible defect in the capture itself."
+          "reason": "The crop shows the capture's placeholder \"Search or type @ to filter\" and the artboard's older \"Search packages, or filter: @...\", but the capture follows the copy that design-system.md's main-header overflow row sets (since UX-P3.fix-15). The hard measurement confirms that copy fits: DS-OVERFLOW-2@main-installed-cpm/placeholder reads \"Search or type @ to filter\" 164 of 1136 px. The redline's spec.json says nothing about the placeholder, so this is not a §6 artboard-versus-spec conflict and there is no visible defect in the capture itself.",
+          "verdict": "refuted"
         }
       ]
     },
@@ -186,8 +186,8 @@
           "finding": "The first Transitive Packages row (SQLitePCLRaw, icon top at y 605) sits about 1 px inside the bottom of its 28 px group header (divider at y 560, so the header runs to 588; the row's top is at 587). Every other header-to-first-child gap is 3 px: the artboard's Tools folder header ends at 175 and Empty.csproj starts at 178, the capture's Tools (392 to 420) is followed by Empty.csproj at 423, and Gateway.csproj's header is followed by its Newtonsoft.Json row 3 px below.",
           "severity": "major",
           "rule": "DS-GRID-2",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the SQLitePCLRaw row cleanly below the Transitive Packages header, with no overlap. The hard DS-GRID-2b reads \"transitive 0/0\", the same as the folder headers \"folder-app 0/0\" and \"folder-tools 0/0\". This contradicts the judge's claim that Tools is followed by a 3 px gap."
+          "reason": "The crop shows the SQLitePCLRaw row cleanly below the Transitive Packages header, with no overlap. The hard DS-GRID-2b reads \"transitive 0/0\", the same as the folder headers \"folder-app 0/0\" and \"folder-tools 0/0\". This contradicts the judge's claim that Tools is followed by a 3 px gap.",
+          "verdict": "refuted"
         },
         {
           "id": "geometry-2",
@@ -195,8 +195,8 @@
           "finding": "Adjacent project group headers that have no matching rows (Empty.csproj, Unresolved.csproj, Unsupported.csproj, and Catalog.csproj with Gateway.csproj above) are pitched 28 px for a 22 px header, a 6 px gap. Every other gap between consecutive tree items is 3 px: the spec's Tools header to Empty.csproj is 175 to 178, the Serilog row to Unsupported.csproj is 403 to 406 and the rows to Utility.csproj are 675 to 678.",
           "severity": "major",
           "rule": "DS-GRID-2",
-          "disposition": "refuted-by-measurement",
-          "ruling": "Empty, Unresolved and Unsupported headers sit on a 28 px pitch (433, 461, 489). The artboard draws headers on the same pitch: Tools 160, Empty 188, and the message 216 to Unresolved 244. The hard DS-GRID-2b reads 3/3 for every project header."
+          "reason": "Empty, Unresolved and Unsupported headers sit on a 28 px pitch (433, 461, 489). The artboard draws headers on the same pitch: Tools 160, Empty 188, and the message 216 to Unresolved 244. The hard DS-GRID-2b reads 3/3 for every project header.",
+          "verdict": "refuted"
         },
         {
           "id": "states-1",
@@ -204,8 +204,8 @@
           "finding": "The search box placeholder reads \"Search or type @ to filter\", where the artboard's search-input element reads \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's wording does not name the filters the box accepts.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard crop shows \"Search packages, or filter: @installed, @updates, @vulnerable\", but the spec.json's search-input entry declares no text, and docs/design/design-system.md line 437 makes this shorter copy the deliberate placeholder (the side bar's copy, chosen so it fits from 228 px since UX-P3.fix-15). The field's accessible label still names the filters, so the artboard text is stale and the capture follows the rule."
+          "reason": "The crop shows the placeholder \"Search or type @ to filter\" where the artboard crop shows \"Search packages, or filter: @installed, @updates, @vulnerable\", but the spec.json's search-input entry declares no text, and docs/design/design-system.md line 437 makes this shorter copy the deliberate placeholder (the side bar's copy, chosen so it fits from 228 px since UX-P3.fix-15). The field's accessible label still names the filters, so the artboard text is stale and the capture follows the rule.",
+          "verdict": "refuted"
         }
       ]
     },
@@ -246,8 +246,8 @@
           "finding": "Groups with no matching package under @vulnerable (Catalog.csproj 0 of 13, and likewise Empty.csproj, Unresolved.csproj and Utility.csproj) keep an expanded down-chevron with nothing under it. A VS Code tree shows no expanded twistie on a node with no children. In the artboard, every expanded project group has content under it: rows, or a message leaf such as Empty.csproj's 'No packages installed.'",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop does show Catalog.csproj expanded with '0 of 13' and nothing under it, but this is a design decision: DECISIONS 2026-11-21 (push 3b) rules that under @vulnerable the project groups 'stay as the @installed filter leaves them', with 'no per-project leaf, banner or sentence for the filter's result', and the artboard it was compared against is the unfiltered main-installed-all state, not this one."
+          "reason": "The crop does show Catalog.csproj expanded with '0 of 13' and nothing under it, but this is a design decision: DECISIONS 2026-11-21 (push 3b) rules that under @vulnerable the project groups 'stay as the @installed filter leaves them', with 'no per-project leaf, banner or sentence for the filter's result', and the artboard it was compared against is the unfiltered main-installed-all state, not this one.",
+          "verdict": "refuted"
         },
         {
           "id": "states-1",
@@ -255,8 +255,8 @@
           "finding": "Under the filter, Empty.csproj's group shows only the count \"0 of 0\" and drops the empty-project message leaf (\"No packages installed.\", installed-empty-<name>) that the artboard draws under that header. Unsupported.csproj's message leaf is kept in the same capture, so the empty condition goes unnamed and the count reads as meaningless.",
           "severity": "major",
           "rule": "DS-STATE-1",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows Empty.csproj '0 of 0' with no leaf, which is ruled behaviour: DECISIONS 2026-11-21 (push 3b) gives no per-project leaf for the filter's result. The code drops 'No packages installed.' under any filter while keeping the unsupported leaf. The hard measurement 'DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none' is green, and the artboard shows the unfiltered state."
+          "reason": "The crop shows Empty.csproj '0 of 0' with no leaf, which is ruled behaviour: DECISIONS 2026-11-21 (push 3b) gives no per-project leaf for the filter's result. The code drops 'No packages installed.' under any filter while keeping the unsupported leaf. The hard measurement 'DS-STATE-1@main-installed-all-vulnerable-unavailable: present: installed-vulnerable-unavailable-banner; missing: none' is green, and the artboard shows the unfiltered state.",
+          "verdict": "refuted"
         },
         {
           "id": "states-2",
@@ -264,8 +264,8 @@
           "finding": "The restore banner above the tree reads \"Not restored, so their transitive packages are not known: Unresolved.csproj.\". It has no subject, and \"their\" has no antecedent before the colon, so it is not the whole sentence that banner copy requires.",
           "severity": "minor",
           "rule": "DS-COPY-3",
-          "disposition": "refuted-by-measurement",
-          "ruling": "The crop shows the long-standing restore banner 'Not restored, so their transitive packages are not known: Unresolved.csproj.', a sentence that ends in a period, and the hard measurement 'DS-COPY-3@main-installed-all-vulnerable-unavailable: 4 end with a full stop (hard)' is green. 'their' points forward to the project list, so no rule, artboard element or exemplar is broken; calling it ungrammatical is taste (rubric §6)."
+          "reason": "The crop shows the long-standing restore banner 'Not restored, so their transitive packages are not known: Unresolved.csproj.', a sentence that ends in a period, and the hard measurement 'DS-COPY-3@main-installed-all-vulnerable-unavailable: 4 end with a full stop (hard)' is green. 'their' points forward to the project list, so no rule, artboard element or exemplar is broken; calling it ungrammatical is taste (rubric §6).",
+          "verdict": "refuted"
         },
         {
           "id": "geometry-1",
@@ -273,8 +273,8 @@
           "finding": "The banner sentence starts at x 40, while the Direct Packages and Transitive Packages group titles below it start at x 36. In the artboard, every text block in the list column (group titles at 36, and the message leaves 'No packages installed.' and 'Unsupported project: ...' at 36 per the spec) shares one text column, so here two stacked text edges miss each other by 4 px.",
           "severity": "minor",
           "rule": "judge-only",
-          "disposition": "refuted-by-measurement",
-          "ruling": "In the crop the banner's warning icon and the Direct Packages chevron start in the same column at x about 20, and the sentence (x about 40) sits about 4 px right of the group title (x about 36) only because the banner icon is wider than the chevron. Neither the artboard nor main-installed-all.spec.json draws a banner. The spec's 36 px insets belong to tree rows and message leaves, not to a Banner, and the finding cites no rule ('judge-only'). The hard measurements say nothing against this layout: DS-INSET-1 reads 'section 16' and DS-INSET-2 reads 'direct 16/16', with every inset at 16. Rubric §6 excludes a difference with no rule, artboard element or exemplar to cite."
+          "reason": "In the crop the banner's warning icon and the Direct Packages chevron start in the same column at x about 20, and the sentence (x about 40) sits about 4 px right of the group title (x about 36) only because the banner icon is wider than the chevron. Neither the artboard nor main-installed-all.spec.json draws a banner. The spec's 36 px insets belong to tree rows and message leaves, not to a Banner, and the finding cites no rule ('judge-only'). The hard measurements say nothing against this layout: DS-INSET-1 reads 'section 16' and DS-INSET-2 reads 'direct 16/16', with every inset at 16. Rubric §6 excludes a difference with no rule, artboard element or exemplar to cite.",
+          "verdict": "refuted"
         }
       ]
     }
