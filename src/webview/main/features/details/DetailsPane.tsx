@@ -10,6 +10,7 @@ import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { useSources } from '../../../shared/store/sources';
+import { ConsolidateAction, ConsolidateProjects, consolidateWhy, isInUse, useConsolidation } from './ConsolidateDetails';
 import { DetailsInfo } from './DetailsInfo';
 import { MultiInstallDialog } from './MultiInstallDialog';
 import { ReadmeView } from './ReadmeView';
@@ -45,10 +46,11 @@ export function primaryAction(installedVersion: string | undefined, chosen: stri
 
 /**
  * A version option's text (UX-P5.2b, design DO 5): one trailing parenthetical, "(installed)", "(vulnerable)" or "(installed,
- * vulnerable)". A version is marked vulnerable only when the host named it; an unknown list marks nothing and claims nothing.
+ * vulnerable)"; in a Consolidate pane "(in use)" and "(in use, vulnerable)" (UX-P5.3c). A version is marked vulnerable only when
+ * the host named it; an unknown list marks nothing and claims nothing.
  */
-export function versionOption(version: string, installed: boolean, vulnerable: readonly string[] | undefined): string {
-    const marks = [installed ? 'installed' : undefined, vulnerable?.includes(version) ? 'vulnerable' : undefined].filter(mark => mark !== undefined);
+export function versionOption(version: string, mark: 'installed' | 'in use' | undefined, vulnerable: readonly string[] | undefined): string {
+    const marks = [mark, vulnerable?.includes(version) ? 'vulnerable' : undefined].filter(word => word !== undefined);
     return marks.length === 0 ? version : `${version} (${marks.join(', ')})`;
 }
 
@@ -74,6 +76,8 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
     // The cancel of the preview this pane asked; a Browse row's or the search box's ask is not the pane's to stop.
     const ownAsk = useRef(NOTHING_TO_CANCEL);
     const noteId = useId();
+    // The Consolidate part (UX-P5.3c): undefined for any other selection.
+    const consolidation = useConsolidation();
 
     // Another package or version starts on the Details tab; the same one made current again, or confirmed for another
     // project, keeps the tab.
@@ -107,7 +111,7 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
     const committedProject = installed.projectPath;
     // A row found by a search goes to the committed project (in All Projects, to the projects picked for it); an
     // installed or update row to its own project, also in All Projects (interaction model §3).
-    const target = selection.origin === 'browse' ? committedProject : selection.projectPath;
+    const target = selection.origin === 'browse' || consolidation !== undefined ? committedProject : selection.projectPath;
     const pickProjects = allMode && selection.origin === 'browse' && !stale;
     const canChange = !stale && target !== null && (target === committedProject || allMode);
     const ownResult = target !== null && target !== committedProject ? all.chunks.get(target)?.result : installed.result;
@@ -124,7 +128,10 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
     const offerPicker = !allMode && selection.origin === 'browse' && !stale && entry === undefined && (projects?.length ?? 0) > 1;
 
     let primaryWhy: string | undefined;
-    if (pickProjects) {
+    // A Consolidate selection has its own reasons (consolidateWhy); the chain below is not reached for it.
+    const listedVersions = { status: versions.status, listed: list.length > 0, failed: versions.error !== undefined && versions.value === undefined };
+    const consolidateReason = consolidation === undefined ? undefined : consolidateWhy(consolidation, chosen, listedVersions);
+    if (consolidation !== undefined || pickProjects) {
         primaryWhy = undefined;
     } else if (!canChange) {
         primaryWhy = stale ? 'Checking the selected project' : 'Select a single project to install or change this package';
@@ -182,10 +189,10 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
         <div className="nuiget-details">
             <div className="nuiget-details-header" data-testid="details-header">
                 <h2 className="nuiget-details-title"><span className="nuiget-details-name" title={selection.packageId}>{selection.packageId}</span></h2>
-                {stale ? <Banner severity="info" data-testid="details-readonly">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
+                {stale && consolidation === undefined ? <Banner severity="info" data-testid="details-readonly">{`Showing ${selection.packageId} of ${ownerName} until the packages of the selected project are listed.`}</Banner> : null}
                 {/* One grid for the installed and the version rows: label, value, action (P9.fix-5). */}
                 <div className="nuiget-details-actions">
-                    {entry !== undefined ? (
+                    {entry !== undefined && consolidation === undefined ? (
                         <>
                             <span className="nuiget-details-label">Installed</span>
                             <span className="nuiget-details-value">{fixedVersion ? `${entry.version} → ${installedVersion}` : installedVersion}</span>
@@ -205,13 +212,14 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
                         id="nuiget-details-version"
                         data-testid="version-selector"
                         value={chosen}
-                        disabled={versions.status === 'loading' && list.length === 0}
+                        disabled={(versions.status === 'loading' && list.length === 0) || consolidation?.read === false}
                         onChange={chooseVersion}
                     >
-                        {list.includes(chosen) ? null : <option value={chosen}>{versions.status === 'loading' ? `${chosen} (loading versions...)` : chosen}</option>}
-                        {list.map(candidate => <option key={candidate} value={candidate}>{versionOption(candidate, candidate === installedVersion, vulnerableVersions)}</option>)}
+                        {/* Until the projects are read a Consolidate pane shows its start version alone (design follow-up 1, DO 3). */}
+                        {list.includes(chosen) && consolidation?.read !== false ? null : <option value={chosen}>{versions.status === 'loading' || consolidation?.read === false ? `${chosen} (loading versions...)` : chosen}</option>}
+                        {consolidation?.read === false ? null : list.map(candidate => <option key={candidate} value={candidate}>{versionOption(candidate, consolidation?.entry !== undefined ? (isInUse(consolidation.entry, candidate) ? 'in use' : undefined) : candidate === installedVersion ? 'installed' : undefined, vulnerableVersions)}</option>)}
                     </Select>
-                    <Button
+                    {consolidation !== undefined ? <ConsolidateAction consolidation={consolidation} chosen={chosen} why={consolidateReason} noteId={noteId} announce={announce} /> : <Button
                         data-testid="install-update-button"
                         disabled={busy || asking || primaryWhy !== undefined}
                         title={busyWhy ?? (noteShown ? undefined : primaryWhy)}
@@ -219,7 +227,7 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
                         onClick={changeVersion}
                     >
                         {busy && !removing ? busyWord : pickProjects ? 'Install...' : action}
-                    </Button>
+                    </Button>}
                     {offerPicker ? (
                         <Button
                             variant="secondary"
@@ -232,8 +240,9 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
                         </Button>
                     ) : null}
                 </div>
+                {consolidateReason?.note !== undefined ? <p className="nuiget-details-note" id={noteId} data-testid={consolidateReason.note === 'empty' ? 'consolidate-details-empty' : undefined}>{consolidateReason.text}</p> : null}
                 {noteShown ? <p className="nuiget-details-note" id={noteId} data-testid={canChange && ownResult?.unsupported !== undefined ? 'details-readonly' : undefined}>{`${primaryWhy}.`}</p> : null}
-                {entry !== undefined && isCentral(entry) ? (
+                {entry !== undefined && consolidation === undefined && isCentral(entry) ? (
                     <p className="nuiget-details-note">Its version is set centrally in Directory.Packages.props: updating changes it for every project that uses it; uninstalling removes it from this project only.</p>
                 ) : null}
                 {versions.status === 'ready' && list.length === 0 ? (
@@ -246,7 +255,7 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
                 {versions.error ? <Banner severity="error" action={{ label: 'Retry', onClick: retryVersions }}>{failure('The versions', 'listed', versions.error.message)}</Banner> : null}
             </div>
             <Tabs tabs={TABS} selected={tab} onSelect={selectTab} label="Details sections" data-testid="details-tab-bar">
-                {tab === 'details' ? <DetailsInfo key={shownKey} announce={announce} shownKey={shownKey} find={find} /> : <ReadmeView announce={announce} shownKey={shownKey} />}
+                {tab === 'details' ? <DetailsInfo key={shownKey} announce={announce} shownKey={shownKey} find={find} lead={consolidation?.entry === undefined ? undefined : <ConsolidateProjects entry={consolidation.entry} />} /> : <ReadmeView announce={announce} shownKey={shownKey} />}
             </Tabs>
             <MultiInstallDialog
                 open={picking}

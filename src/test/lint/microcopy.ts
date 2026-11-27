@@ -14,7 +14,7 @@ export const PROPER_NOUNS = new Set(['nUIget', 'NuGet', 'README', 'CPM']);
 export const SLOT = '${}';
 
 /** Labels that open further UI (a form, a picker or a menu) and so end in "..." (DS-COPY-4). `${}` is an interpolation. */
-export const OPENS_UI: readonly string[] = ['Add Source...', 'Install in Projects...', 'Install...', 'Manage Package Sources...', 'Install ${} ${}...', 'Uninstall ${}...', 'Install Version...', 'Change Version...', 'Update to Version...'];
+export const OPENS_UI: readonly string[] = ['Add Source...', 'Consolidate...', 'Install in Projects...', 'Install...', 'Manage Package Sources...', 'Install ${} ${}...', 'Uninstall ${}...', 'Install Version...', 'Change Version...', 'Update to Version...'];
 
 export type Kind = 'label' | 'sentence' | 'name';
 

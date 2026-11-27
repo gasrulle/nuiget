@@ -15,6 +15,7 @@ const pkg = (id: string, version: string): InstalledPackage => ({ id, version, v
 const metadata = (id: string, version: string): PackageMetadata => ({ id, version, description: `About ${id}`, authors: 'Ada', dependencies: [] });
 const installedRow = (packageId: string, version: string, projectPath = A): DetailsSelection => ({ packageId, version, origin: 'installed', projectPath });
 const browseRow = (packageId: string, version: string): DetailsSelection => ({ packageId, version, sourceUrl: FEED, origin: 'browse', projectPath: null });
+const consolidateRow = (packageId: string, version: string): DetailsSelection => ({ packageId, version, origin: 'consolidate', projectPath: null });
 
 let actions: DetailsActions;
 function Details() {
@@ -200,7 +201,7 @@ describe('details slice', () => {
         expect(versionsAsked(host).length).toBeGreaterThan(0);
     });
 
-    it('the consolidate view shows no selection and leaves the Installed selection to come back (UX-P5.3b)', async () => {
+    it('the consolidate view holds a consolidate selection and leaves the Installed selection to come back (UX-P5.3c)', async () => {
         const host = mount();
         await ready(host);
         await act(async () => actions.select(installedRow('Serilog', '3.0.0')));
@@ -208,8 +209,98 @@ describe('details slice', () => {
         await act(async () => actions.showView('consolidate'));
         expect(text('selection')).toBe('none');
         expect(versionsAsked(host)).toHaveLength(asked);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        expect(text('selection')).toBe('Polly@null');
         await act(async () => actions.showView('installed'));
         expect(text('selection')).toBe('Serilog@3.0.0');
+        await act(async () => actions.showView('consolidate'));
+        expect(text('selection')).toBe('Polly@null');
+    });
+
+    it('a consolidate selection asks no package/metadata while its versions load, then exactly one, for the offered version', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        expect(versionsAsked(host).map(request => request.payload)).toEqual([{ packageId: 'Polly', sourceUrl: undefined, includePrerelease: false }]);
+        await hostSays(() => host.respond(versionsAsked(host)[0], { packageId: 'Polly', versions: ['8.5.0', '8.4.2', '8.4.0'] }));
+        expect(metadataAsked(host)).toHaveLength(0);
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+        expect(metadataAsked(host).map(request => request.payload)).toEqual([{ packageId: 'Polly', version: '8.4.2', sourceUrl: undefined }]);
+    });
+
+    it('the first offer for a selection is kept; a later offer for the same selection changes nothing; another selection object\'s offer is ignored', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        await act(async () => actions.offerVersion(row, '8.5.0'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+        await act(async () => actions.offerVersion(consolidateRow('Polly', '8.4.0'), '8.5.0'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+        expect(metadataAsked(host)).toHaveLength(1);
+    });
+
+    it('a chosen version outlives a later offer; a showView round trip shows the offer again, never the selection\'s version', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        await act(async () => actions.chooseVersion('8.5.0'));
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        expect(text('selection')).toBe('Polly@8.5.0');
+        await act(async () => actions.showView('installed'));
+        await act(async () => actions.showView('consolidate'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+    });
+
+    it('two consolidate selections with the same default each get their details asked', async () => {
+        const host = mount();
+        await ready(host);
+        const first = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(first));
+        await act(async () => actions.offerVersion(first, '8.4.2'));
+        const second = consolidateRow('Moq', '4.20.0');
+        await act(async () => actions.select(second));
+        await act(async () => actions.offerVersion(second, '8.4.2'));
+        expect(metadataAsked(host).map(request => request.payload.packageId)).toEqual(['Polly', 'Moq']);
+    });
+
+    it('versions failed: the details of the selection\'s version are asked; an empty answer shows the selection\'s version', async () => {
+        const host = mount();
+        await ready(host);
+        await act(async () => actions.select(consolidateRow('Polly', '8.4.0')));
+        await hostSays(() => host.fail(versionsAsked(host)[0], 'failed', 'The feed did not answer'));
+        expect(text('selection')).toBe('Polly@8.4.0');
+        expect(metadataAsked(host).map(request => request.payload.version)).toEqual(['8.4.0']);
+        await act(async () => actions.select(consolidateRow('Moq', '4.20.0')));
+        await hostSays(() => host.respond(versionsAsked(host)[1], { packageId: 'Moq', versions: [] }));
+        expect(text('selection')).toBe('Moq@4.20.0');
+    });
+
+    it('versions failed, then Retry: the first ready answer applies the offer', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        await hostSays(() => host.fail(versionsAsked(host)[0], 'failed', 'The feed did not answer'));
+        await act(async () => actions.retryVersions());
+        await hostSays(() => host.respond(versionsAsked(host)[1], { packageId: 'Polly', versions: ['8.4.2', '8.4.0'] }));
+        expect(text('selection')).toBe('Polly@null');
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+    });
+
+    it('a consolidate selection is never stale: a committed project change neither clears it nor rewrites its project', async () => {
+        const host = mount();
+        await ready(host);
+        await act(async () => actions.select(consolidateRow('Polly', '8.4.0')));
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(text('stale')).toBe('false');
+        expect(text('selection')).toBe('Polly@null');
     });
 
     it('a browse selection is never stale; All Projects clears an installed one', async () => {

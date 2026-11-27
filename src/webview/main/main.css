@@ -321,6 +321,13 @@ body {
     padding-block-start: 0;
 }
 
+/* A Consolidate row's Projects section leads the Details tab panel at the content inset in every metadata state; the next block keeps its own 20 (UX-P5.3c, DS-INSET-4 lead). */
+.nuiget-details-lead {
+    --nuiget-details-section-gap: 0;
+    padding: var(--nuiget-inset-details) var(--nuiget-inset-details) 0;
+    overflow-wrap: anywhere;
+}
+
 /* The dependency groups stack at the compact row height. */
 .nuiget-details-groups {
     display: flex;

@@ -155,8 +155,9 @@ Terminology: UI says **Install / Update / Uninstall / Restore**. Protocol uses `
 Shift+F10 or the ContextMenu key opens it at the row. Its items follow the row: a Browse row offers Install Latest
 Version and Install Version..., or, when the package is installed in the project, Uninstall and Change Version...; an
 Installed row offers Change Version... and Uninstall; an Updates row offers Update to Latest Version (not for a
-floating or range version), Update to Version... and Uninstall; every package row offers Copy Package ID; a sidebar row
-also offers View Package Details. Items act on the row's project (under All Projects, the project of the row's
+floating or range version), Update to Version... and Uninstall; every package row offers Copy Package ID and View Package
+Details (from the sidebar it opens the main panel at the row; on a main-panel transitive or Consolidate row, which carry the
+read-only transitive context, it searches Browse for the id). Items act on the row's project (under All Projects, the project of the row's
 group). A command started from the menu marks its row busy on both surfaces from the moment it is queued.
 
 Keyboard: every pointer action is reachable by keyboard, and each list names its keys in a visually hidden sentence
@@ -171,7 +172,7 @@ row; moving changes the active row, not the selection.
 |---|---|---|
 | ArrowRight | On a collapsed group row: expands it; on an expanded one: moves to its first row; on a package row: nothing | The same |
 | ArrowLeft | On an expanded group row: collapses it; on a package row or a collapsed group row: moves to its parent group row | The same |
-| Enter | Package row: selects it and shows its details (Installed, Updates, Browse and transitive rows); group row: expands or collapses it | Package row: opens it in the main panel (round 1, §6), never a write; group row: expands or collapses it |
+| Enter | Package row: selects it and shows its details (Installed, Updates, Browse, transitive and Consolidate rows); group row: expands or collapses it | Package row: opens it in the main panel (round 1, §6), never a write; group row: expands or collapses it |
 | Ctrl+Enter (Cmd+Enter on macOS) | Browse: installs the row's version (below); Updates: updates to the row's new version, or opens the preview dialog for a `central` row; Installed and transitive: nothing | Browse: installs the newest version; Updates: updates to the row's new version; on a `central` row it opens the actions menu instead; Installed: nothing |
 | Delete (Cmd+Backspace on macOS) | Installed and Updates rows: uninstall, after the confirmation above | The same, and an installed Browse row of one project: uninstall (UX-P3.8) |
 | Shift+F10, the ContextMenu key, right-click | The actions menu of the row | The same |
@@ -183,8 +184,8 @@ row; moving changes the active row, not the selection.
 
 A click on a group row toggles it, as Enter does.
 
-In the Consolidate list (All Projects) a row takes the focus only: Enter, Ctrl+Enter, Delete and Space do nothing until
-UX-P5.3c, when Enter selects the row and shows its details.
+In the Consolidate list (All Projects) Ctrl+Enter, Delete and Space do nothing: the one write is Consolidate... in the
+details pane, after its confirmation.
 
 ArrowLeft and ArrowRight belong to the group rows: in a list they never switch the details pane's tabs, so the 1.x
 binding that moved between Details and README with them (MB18) is not restored. A tab strip keeps its own arrow keys
@@ -278,8 +279,19 @@ Projects...** (`multi-install-button`), the picker of §3.
 The pane shows the selection of the active view: Installed (direct and transitive rows), Updates or Browse. Each tab
 keeps its own selection and gets it back when it is shown again; Browse starts without one and shows the empty state
 ("Select a package to see its details.") until a row is current, and a new search whose results lack that row clears
-it. The Consolidate tab has a view of its own that nothing selects into until UX-P5.3c, so the pane shows that empty
-state beside it, and the Installed selection comes back with the Installed tab.
+it. The Consolidate tab keeps its own selection too; a round trip through another view shows its default target again.
+
+A Consolidate row (All Projects) opens the package pane without the Installed row: the version selector lists the host's
+versions with "(in use)" on each version a project references (held references included), and **Consolidate...**
+(`consolidate-button`) in place of Install or Update. Until the projects have been read in full the selector shows a
+version in use with "(loading versions...)"; then it moves once to the first listed version in use (else the newest),
+and a later answer never moves it. The Details tab opens with the Projects section (`consolidate-projects`): each
+project and its version, then "Not Changed" with each reference a consolidation leaves and why. Consolidate... is
+disabled with its reason: an operation running, the projects being read, the versions not listed, no reference that can
+change, or nothing to change at the chosen version; when the package no longer drifts the pane says "No longer referenced
+at different versions." (`consolidate-details-empty`) and keeps the selection. It opens the confirmation "Consolidate
+<id> to <version>?" listing `<id> <old> → <new>` under "In <project>:" for each project it changes, and Consolidate
+runs one `ops/bulkUpdateAllProjects`; centrally managed references are never written from here.
 
 A transitive row (single project or the All Projects aggregate) opens a read-only view: the id with a Transitive badge,
 Version, Authors with the Verified mark, and Required by, the top-level ids, one block per target framework when the
@@ -330,6 +342,7 @@ project has several and one block per project in All Projects; no version select
 | `updates-unsupported` | Banner of a single unsupported project above its read-only update rows on the Updates tab, the Installed tab's `installed-unsupported` form (UX-P3.10) |
 | `updates-empty-<name>`, `updates-unsupported-<name>`, `updates-error-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-`: the empty and unsupported sentences are message leaves of its group, the error a banner with Retry above the tree. One tree has one bar: a project's progress is its group row's spinner (UX-P3.1b) |
 | `consolidate-progress`, `consolidate-empty`, `consolidate-error`, `consolidate-incomplete-banner` | The Consolidate tab's 2 px progress bar (a first load with its three skeleton rows, and while the lists are asked again, the list `aria-busy`), empty state ("All projects use the same package versions.", only when every project was compared), inline error with Retry (alone when the lists failed, above the kept list after a failed refresh) and the warning banner naming the projects that were not compared, with no action (UX-P5.3b) |
+| `consolidate-button`, `consolidate-projects`, `consolidate-details-empty` | The Consolidate pane: Consolidate... in place of Install or Update; the Projects section that leads the Details tab panel; the sentence "No longer referenced at different versions." when the selected package no longer drifts |
 | `browse-progress`, `browse-empty`, `browse-error` | The Browse results' 2 px progress bar (over the list area's top edge: alone on a first search, over the rows while it asks again), empty state ("No results for "x"."; never when a source could not be searched, which `browse-unavailable-banner` says) and inline error with Retry (UX-P3.2) |
 | `search-suggestions-loading`, `search-suggestions-error` | The quick-search popup's "Searching..." row while no suggestion has arrived, and its error row ("The suggestions could not be loaded. Press → to retry."; ArrowRight asks again) (UX-P3.2). With no suggestion the popup closes: no marker |
 | `transitive-progress`, `transitive-empty`, `transitive-error` | The transitive group's 2 px progress bar (loading, revalidating and while a restore of the project is queued or running, above the tree; UX-P4.fix-10), empty state ("No transitive dependencies.") and inline error |

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type ProjectInstalledChunk, type SessionSnapshot } from '../../../protocol';
 import { createFakeHost, type FakeHost } from '../bus/testSupport';
 import { MessageBusProvider } from '../bus/useMessageBus';
-import { AllProjectsProvider, consolidationUpdates, useAllProjects, versionDrift, type AllProjectsState, type VersionDrift } from './allProjects';
+import { AllProjectsProvider, consolidationUpdates, useAllProjects, sameVersion, versionDrift, type AllProjectsState, type VersionDrift } from './allProjects';
 import { useOps, useOpsActions } from './ops';
 import { StoreProvider } from './StoreProvider';
 import { RECOVERY_DELAY_MS } from './updates';
@@ -400,6 +400,7 @@ describe('the Consolidate model (UX-P5.3a, F3)', () => {
             held: [],
             versionCount: 2,
             projectCount: 3,
+            inUse: ['3.1.0', '4.0.0'],
         }]);
     });
 
@@ -453,6 +454,23 @@ describe('the Consolidate model (UX-P5.3a, F3)', () => {
         expect([polly.versionCount, polly.projectCount]).toEqual([2, 3]);
         // A held reference is never written: the payload leaves it out.
         expect(consolidationUpdates(serilog, '3.1.1')).toEqual([{ projectPath: C, projectName: 'C', packages: [{ id: 'Serilog', version: '3.1.1' }] }]);
+    });
+
+    it('lists each known version in use once, held ones included, and no unknown one', () => {
+        const [serilog] = versionDrift(ready([
+            listed(A, [pkg('Serilog', '3.1.0', { declaration: 'central', definedIn: '/w/Directory.Packages.props' })], { isCpm: true }),
+            listed(B, [pkg('Serilog', '4.0.0+build.1'), pkg('Serilog', '', { versionType: 'unresolved', declaration: 'unresolved' })]),
+            listed(C, [pkg('Serilog', '4.0.0'), pkg('Serilog', '3.*', { versionType: 'floating' })]),
+        ])).entries;
+        // The central 3.1.0 is held and in use; 4.0.0 is one version however written; the unresolved and the unrestored pattern are none.
+        expect(serilog.inUse).toEqual(['3.1.0', '4.0.0+build.1']);
+        expect(serilog.versionCount).toBe(serilog.inUse.length);
+    });
+
+    it('compares versions by the model\'s key: no case, no build metadata (UX-P5.3c)', () => {
+        expect(sameVersion('1.0.0-Beta', '1.0.0-beta')).toBe(true);
+        expect(sameVersion('4.0.0+build.7', '4.0.0')).toBe(true);
+        expect(sameVersion('4.0.0', '4.0.1')).toBe(false);
     });
 
     it('a reference without a known version is held and adds no version', () => {

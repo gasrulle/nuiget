@@ -456,6 +456,11 @@ export interface DriftEntry {
     held: readonly DriftHeld[];
     /** How many distinct known versions the projects reference, held ones included (the row's "N versions"). */
     versionCount: number;
+    /**
+     * The known versions in use, one per version as first seen, in the order first seen, held ones included (UX-P5.3c): the
+     * Consolidate pane's "(in use)" marks, its default target and its start version; `inUse.length` is `versionCount`.
+     */
+    inUse: readonly string[];
     /** How many projects reference the package, held ones included (the row's "in M projects"). */
     projectCount: number;
 }
@@ -475,6 +480,9 @@ export interface VersionDrift {
 /** The key two versions are equal by: NuGet compares versions without case; build metadata never orders. */
 const versionKey = (version: string): string => version.toLowerCase().replace(/\+.*$/, '');
 
+/** Whether two versions are one by the Consolidate model's key (UX-P5.3c): no case, no build metadata. The webview's one rule. */
+export const sameVersion = (a: string, b: string): boolean => versionKey(a) === versionKey(b);
+
 /**
  * The packages whose version differs between projects under All Projects (F3 Consolidate, UX-P5.3a): from the lists the
  * fan-out streamed, each package that at least two projects reference at at least two versions. A row whose version is set
@@ -486,7 +494,7 @@ const versionKey = (version: string): string => version.toLowerCase().replace(/\
  */
 export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects' | 'chunks'>): VersionDrift {
     const unread: Array<{ projectPath: string; projectName: string; reason: string }> = [];
-    type Gathered = { id: string; versions: Map<string, { version: string; projects: Array<{ projectPath: string; projectName: string }> }>; held: DriftHeld[]; projects: Set<string>; keys: Set<string> };
+    type Gathered = { id: string; versions: Map<string, { version: string; projects: Array<{ projectPath: string; projectName: string }> }>; held: DriftHeld[]; projects: Set<string>; keys: Set<string>; inUse: string[] };
     const byId = new Map<string, Gathered>();
     for (const project of state.projects ?? []) {
         const chunk = state.chunks.get(project.path);
@@ -499,13 +507,14 @@ export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects'
             const version = entry.resolvedVersion || entry.version;
             const key = versionKey(version);
             const lower = entry.id.toLowerCase();
-            const item: Gathered = byId.get(lower) ?? { id: entry.id, versions: new Map(), held: [], projects: new Set<string>(), keys: new Set<string>() };
+            const item: Gathered = byId.get(lower) ?? { id: entry.id, versions: new Map(), held: [], projects: new Set<string>(), keys: new Set<string>(), inUse: [] };
             byId.set(lower, item);
             item.projects.add(project.path);
             const pattern = entry.versionType === 'floating' || entry.versionType === 'range';
             const known = entry.declaration !== 'unresolved' && entry.versionType !== 'unresolved' && (!pattern || Boolean(entry.resolvedVersion));
-            if (known) {
+            if (known && !item.keys.has(key)) {
                 item.keys.add(key);
+                item.inUse.push(version);
             }
             const reason = whyNotUpdatable(entry, result)
                 ?? (isCentral(entry) ? `${entry.id} is set in the central package file of ${project.name}` : undefined)
@@ -525,7 +534,7 @@ export function versionDrift(state: Pick<AllProjectsState, 'status' | 'projects'
     }
     const entries = [...byId.values()]
         .filter(item => item.projects.size > 1 && item.keys.size > 1)
-        .map(item => ({ id: item.id, versions: [...item.versions.values()], held: item.held, versionCount: item.keys.size, projectCount: item.projects.size }))
+        .map(item => ({ id: item.id, versions: [...item.versions.values()], held: item.held, versionCount: item.keys.size, projectCount: item.projects.size, inUse: item.inUse }))
         .sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
     const complete = state.status === 'ready' && state.projects !== undefined && unread.length === 0;
     return { complete, unread, entries };

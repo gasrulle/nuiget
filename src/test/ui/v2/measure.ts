@@ -293,7 +293,7 @@ export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { t
 export type StateGroup = 'main-installed' | 'main-updates' | 'browse' | 'details' | 'dialogs' | 'sources' | 'sidebar';
 
 /** The element groups Appendix B names for DS-INSET-2 (the sidebar is a state group there). */
-export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner' | 'advisories' | 'check-labels' | 'form-message';
+export type ElementGroup = 'toolbars' | 'headers' | 'main-header' | 'rows' | 'chrome' | 'first-row' | 'tabs' | 'controls' | 'sash' | 'text-buttons' | 'icon-buttons' | 'header' | 'list' | 'readme' | 'popup' | 'layers' | 'labels' | 'skeleton' | 'message-leaf' | 'details-skeleton' | 'placeholder' | 'split' | 'dialog-text' | 'dialog-list' | 'panel-top' | 'dialog-focus' | 'facts-banner' | 'advisories' | 'check-labels' | 'form-message' | 'lead';
 
 export type Scope = StateGroup | ElementGroup;
 
@@ -453,7 +453,7 @@ const { browse: _noGroupHeader, dialogs: _noDialogHeader, sources: _noSourcesHea
  */
 export const DETAILS_BROWSE_STATES: readonly string[] = ['main-browse-details'];
 /** The main-list states with no bulk toolbar: the Consolidate list (UX-P5.3b, opening ruling DO 3; design-advisor follow-up 3, DO 1). */
-export const NO_TOOLBAR_STATES: readonly string[] = ['main-consolidate'];
+export const NO_TOOLBAR_STATES: readonly string[] = ['main-consolidate', 'main-consolidate-details'];
 /** The main lists with no group header, so no gap under one and no header badge (UX-P5.3b, opening ruling DO 3; follow-up 3, DO 2). */
 export const FLAT_LIST_STATES: readonly string[] = ['main-consolidate'];
 /** The main-list states with no text button in view (UX-P5.3b, opening ruling DO 3: no toolbar; follow-up 3, DO 3). */
@@ -467,17 +467,19 @@ const CONSOLIDATE_BADGE_WIDTHS: Readonly<Record<string, readonly number[]>> = { 
  * DS-FOCUS-3 `dialog-focus` (UX-P5.fix-2, design-advisor opening ruling of 2026-11-22, DO 2c): the main-panel dialog states, opened
  * by a pointer click or a key; the side-bar dialogs keep the side bar's branch.
  */
-export const MAIN_DIALOG_FOCUS_STATES: readonly string[] = ['main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'];
+export const MAIN_DIALOG_FOCUS_STATES: readonly string[] = ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'];
 /**
  * DS-INSET-4 `panel-top` (UX-P5.fix-3, design-advisor opening ruling of 2026-11-22, DO 2): the states whose details pane shows the
  * Details or README tab panel, loaded, loading or error; `main-transitive-details` has no tabs.
  */
-export const PANEL_TOP_STATES: readonly string[] = ['main-installed-details', 'main-details-readme', 'main-browse-details', 'main-details-readonly', 'main-details-unsupported', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'];
+export const PANEL_TOP_STATES: readonly string[] = ['main-consolidate-details', 'main-installed-details', 'main-details-readme', 'main-browse-details', 'main-details-readonly', 'main-details-unsupported', 'main-details-loading', 'main-details-error', 'main-readme-loading', 'main-readme-error', 'main-details-offline', 'main-details-deprecated'];
 /**
  * DS-INSET-4 `facts-banner` (UX-P5.fix-7, design-advisor opening ruling of 2026-11-26, DO 5): the states that show a banner inside
  * the details facts (the offline warning).
  */
 export const FACTS_BANNER_STATES: readonly string[] = ['main-details-offline', 'main-details-deprecated'];
+/** DS-INSET-4 `lead` (UX-P5.3c, design-advisor opening ruling DO 10): a Consolidate pane, whose Projects section leads the Details tab panel. */
+export const LEAD_STATES: readonly string[] = ['main-consolidate-details'];
 /**
  * DS-STATE-4 `advisories` (UX-P5.2b, design-advisor opening ruling of 2026-11-27, DO 9): the states whose details pane lists
  * advisories; an advisory line's glyph and colour role follow the row badge's severity mapping.
@@ -501,9 +503,9 @@ export const MAIN_PLACEHOLDER_STATES: readonly string[] = [
 ];
 
 /** The dialog states (UX-P3.5): a confirmation over each surface and the Multi Install dialog with its check boxes. */
-export const DIALOG_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
+export const DIALOG_STATES: readonly string[] = ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
 /** The dialog cells that render a list (`.nuiget-dialog-list`), whose items DS-COPY-2 `dialog-list` reads (UX-P4.fix-5). */
-export const DIALOG_LIST_STATES: readonly string[] = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-updates-update-all-dialog'];
+export const DIALOG_LIST_STATES: readonly string[] = ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-updates-update-all-dialog'];
 /** The cells with a dialog open whose text line heights DS-TYPE-4 `dialog-text` reads: the dialog states and the sources dialog's cells (UX-P4.fix-3). */
 export const DIALOG_TEXT_STATES: readonly string[] = [...DIALOG_STATES, 'main-sources', 'main-sources-add', 'main-sources-add-invalid', 'main-sources-revalidating', 'main-sources-empty', 'main-sources-error'];
 /** The dialogs whose title and body DS-TYPE-10 reads in the crop (UX-P3.9 design-advisor follow-up 4; the sidebar's since UX-P3.fix-6). */
@@ -655,7 +657,7 @@ export const RULES: readonly RuleDefinition[] = [
     rule('DS-GRID-2a', { helper: 1, scopes: { 'main-installed': 'hard', ...asGrid1 }, tolerance: TOLERANCES.gapMembership }),
     // UX-P3.2 (design-advisor ruling): a flat Browse list or the popup has no group header, so DS-GRID-2b is registered apart
     // from asGrid1 with no browse scope (an excepted scope with no state is a silent one), never a `not measurable` pass.
-    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', ...SIDEBAR_BROWSE_STATES, ...FLAT_LIST_STATES] }),
+    rule('DS-GRID-2b', { helper: 1, scopes: { 'main-installed': 'hard', ...grid2b }, tolerance: TOLERANCES.proximity, exceptStates: [...NO_LIST_STATES, 'main-browse-details', 'main-consolidate-details', ...SIDEBAR_BROWSE_STATES, ...FLAT_LIST_STATES] }),
     // UX-P3.10 push A (DO 4): `skeleton`, a compact skeleton bar starts at the level-1 row name; push D (fix ruling of 2026-11-14,
     // DEFECTS 1): `details-skeleton`, the details and README skeleton's first painted mark starts at the pane's content inset.
     // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): clause `form-message`, the add form's message at the field's edge.
@@ -708,7 +710,8 @@ export const RULES: readonly RuleDefinition[] = [
     // loading 2); the transitive details have no tabs.
     // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): clause `facts-banner`, a banner inside the details facts at the
     // details content inset with no inline padding of its own; hard since the item's CSS (push 2).
-    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': 'hard', 'facts-banner': 'hard' }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES, 'facts-banner': FACTS_BANNER_STATES } }),
+    // UX-P5.3c (design-advisor opening ruling DO 10): clause `lead`, the Consolidate pane's Projects section, pending until the item's closing.
+    rule('DS-INSET-4', { helper: 2, scopes: { ...inGroups('hard', 'details', 'main-installed', 'main-updates', 'browse'), 'panel-top': 'hard', 'facts-banner': 'hard', lead: { pending: 'P5.3c' } }, tolerance: TOLERANCES.coincide, scopeStates: { 'panel-top': PANEL_TOP_STATES, 'facts-banner': FACTS_BANNER_STATES, lead: LEAD_STATES } }),
     rule('DS-ROW-1', { helper: 2, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.coincide, widths: [800, 932, 1200, 1600], exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ROW-2', { helper: 2, scopes: { 'main-installed': 'hard', details: 'hard', browse: 'hard' }, tolerance: TOLERANCES.coincide, exceptStates: NO_ROW_STATES }),
     rule('DS-ROW-3', { helper: 6, scopes: { 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] } }),
@@ -791,7 +794,7 @@ export const RULES: readonly RuleDefinition[] = [
     // the dialog was opened (DS-FOCUS-3 `dialog-focus`); it supersedes UX-P3.5 follow-up 2's pointer-open clause for the main
     // panel (run 42402701440 read outline none on a click-opened Cancel). A side-bar dialog keeps the side bar's branch.
     rule('DS-FOCUS-1', { helper: 6, scopes: { controls: 'hard', tabs: 'hard' }, tolerance: TOLERANCES.containment, scopeStates: { controls: FOCUSED_CONTROL_STATES, tabs: FOCUSED_TAB_STATES } }),
-    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme'] }),
+    rule('DS-FOCUS-2', { helper: 6, scopes: { rows: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-consolidate-details', 'main-transitive-expanded', 'main-details-readme'] }),
     // The main-panel branch of the premise P-3: the states whose setup clicked a row or a tab.
     // UX-P5.fix-2 (DO 2-3): clause `dialog-focus`, the focused control of a main-panel dialog, hard since the item's CSS (reading run
     // 45039657035: uninstall-dialog ringed, the other five none).
@@ -898,7 +901,7 @@ const FIRST_ROW_STATES: readonly string[] = ['main-installed-single', 'main-upda
 export function elementGroups(group: StateGroup, state?: string): ElementGroup[] {
     const firstRow: ElementGroup[] = state !== undefined && FIRST_ROW_STATES.includes(state) ? ['first-row'] : [];
     // UX-P3.fix-13 (follow-up 1): a details pane opened from Browse has no list toolbar beside it.
-    const detailsToolbars: ElementGroup[] = state !== undefined && DETAILS_BROWSE_STATES.includes(state) ? [] : ['toolbars'];
+    const detailsToolbars: ElementGroup[] = state !== undefined && (DETAILS_BROWSE_STATES.includes(state) || NO_TOOLBAR_STATES.includes(state)) ? [] : ['toolbars'];
     switch (group) {
         case 'main-installed':
         case 'main-updates':
@@ -911,7 +914,7 @@ export function elementGroups(group: StateGroup, state?: string): ElementGroup[]
             // UX-P3.fix-13 (GOLDEN ruling of UX-P3.fix-12, DO 3): the list toolbar beside the details pane is measured too.
             // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2): the first block of the details tab panel (DS-INSET-4 `panel-top`).
             // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5): a banner inside the details facts (DS-INSET-4 `facts-banner`).
-            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split', 'panel-top', 'facts-banner', 'advisories'];
+            return [...detailsToolbars, 'headers', 'main-header', 'rows', 'chrome', 'tabs', 'controls', 'sash', 'text-buttons', 'icon-buttons', 'details-skeleton', 'placeholder', 'split', 'panel-top', 'facts-banner', 'advisories', 'lead'];
         case 'dialogs':
             // UX-P4.fix-3 (design-advisor opening ruling of 2026-11-17, DO 1): a dialog's text line heights, in the sources dialog too.
             // UX-P4.fix-5 (design-advisor opening ruling of 2026-11-18, DO 1b): a dialog list's items, DS-COPY-2.
@@ -1386,6 +1389,11 @@ export interface StateCells {
      * Boxes only, never a painted mark; absent where the details pane shows no tab panel.
      */
     detailsPanelTop?: { first: number; underStrip: number };
+    /**
+     * A Consolidate pane's Projects section (DS-INSET-4 `lead`, UX-P5.3c): its first caption's top from the tab panel's top, and
+     * the content-box top of the next in-flow block after the lead from the section's bottom (`null` without one).
+     */
+    detailsLead?: { caption: number | null; below: number | null };
     /**
      * Each shown banner inside the details facts (DS-INSET-4 `facts-banner`, UX-P5.fix-7): its severity glyph's left from the
      * details pane's left, the banner's computed inline padding; its top from the facts' content-box top, its computed block
@@ -2404,6 +2412,20 @@ const stateCells = {
                     const style = getComputedStyle(first);
                     const panelTop = rectOf(panel).top;
                     return { first: round(rectOf(first).top + px(style.borderTopWidth) + px(style.paddingTop) - panelTop), underStrip: round(panelTop - rectOf(strip).bottom) };
+                })(),
+                // UX-P5.3c (design-advisor opening ruling DO 10): the Consolidate pane's Projects section, on boxes.
+                detailsLead: (() => {
+                    const section = document.querySelector('[data-testid="consolidate-projects"]');
+                    const panel = section ? section.closest('[role="tabpanel"]') : null;
+                    if (!section || !panel || !visible(section)) return undefined;
+                    const caption = section.querySelector('h1, h2, h3, h4, h5, h6, [role="heading"]');
+                    let next = (section.closest('.nuiget-details-lead') || section).nextElementSibling;
+                    while (next && (!visible(next) || getComputedStyle(next).position === 'absolute' || next.classList.contains('nuiget-progress'))) next = next.nextElementSibling;
+                    const nextStyle = next ? getComputedStyle(next) : null;
+                    return {
+                        caption: caption ? round(rectOf(caption).top - rectOf(panel).top) : null,
+                        below: next && nextStyle ? round(rectOf(next).top + px(nextStyle.borderTopWidth) + px(nextStyle.paddingTop) - rectOf(section).bottom) : null,
+                    };
                 })(),
                 // UX-P5.fix-9 (design-advisor opening ruling of 2026-11-27, DO 1): a dialog's check boxes and the add form's messages.
                 dialogCheckLabels: [...document.querySelectorAll('.nuiget-dialog input[type="checkbox"]')].filter(box => visible(box) && !box.closest('.nuiget-source-row, .nuiget-multi-install')).map(box => {
@@ -4600,6 +4622,9 @@ const DETAILS_CONTENT_X = 20;
 /** DS-INSET-4 `panel-top` (UX-P5.fix-3): the tab panel's first block at the details content inset, the panel flush under the strip. */
 const PANEL_TOP_FIRST = 20;
 const PANEL_TOP_UNDER_STRIP = 0;
+/** DS-INSET-4 `lead` (UX-P5.3c): the Projects section's caption 20 below the tab panel's top, the next block's content 20 below it. */
+const LEAD_CAPTION = 20;
+const LEAD_BELOW = 20;
 /** DS-STATE-4 `advisories` (UX-P5.2b): the problems level of each severity word, as the row badge maps it. */
 const ADVISORY_LEVELS: Record<string, 'error' | 'warning' | 'info'> = { Critical: 'error', High: 'error', Moderate: 'warning', Low: 'info' };
 /** DS-INSET-4 `facts-banner` (UX-P5.fix-7, GOLDEN ruling 1): the next block 12 below a banner of the facts, the description's step. */
@@ -4612,7 +4637,7 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
     const cells = layout.endOfP0.stateCells;
     const tolerance = definition.tolerance;
     const notMeasurable = (why: string) => ({ value: `${NOT_MEASURABLE} (${why})`, pass: false });
-    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner')) || (definition.id === 'DS-STATE-4' && scope === 'advisories') || ((definition.id === 'DS-COPY-3' || definition.id === 'DS-COLOR-6') && scope === 'check-labels') || (definition.id === 'DS-INSET-1' && scope === 'form-message');
+    const own = (definition.id === 'DS-COLOR-6' && scope === 'labels') || (definition.id === 'DS-INSET-1' && (scope === 'skeleton' || scope === 'details-skeleton')) || (definition.id === 'DS-TYPE-4' && (scope === 'message-leaf' || scope === 'dialog-text')) || (definition.id === 'DS-OVERFLOW-2' && scope === 'placeholder') || ((definition.id === 'DS-COPY-2' || definition.id === 'DS-OVERFLOW-7') && scope === 'dialog-list') || (definition.id === 'DS-INSET-4' && (scope === 'panel-top' || scope === 'facts-banner' || scope === 'lead')) || (definition.id === 'DS-STATE-4' && scope === 'advisories') || ((definition.id === 'DS-COPY-3' || definition.id === 'DS-COLOR-6') && scope === 'check-labels') || (definition.id === 'DS-INSET-1' && scope === 'form-message');
     if (!own) {
         return undefined;
     }
@@ -4706,6 +4731,16 @@ function evaluateStateClauses(definition: RuleDefinition, scope: Scope, layout: 
                 && near(banner.top, 0, tolerance) && near(banner.padTop, 0, tolerance) && near(banner.padBottom, 0, tolerance) && (banner.below === null || banner.below === undefined || near(banner.below, FACTS_BANNER_BELOW, tolerance))
                 && (banner.inner ?? []).every(gap => near(gap, FACTS_NOTICE_INNER, tolerance))),
         };
+    }
+    if (definition.id === 'DS-INSET-4' && scope === 'lead') {
+        // The layout reaches here through `withoutNulls`: an absent caption or next block is `undefined` as well as `null`.
+        const caption = cells.detailsLead?.caption ?? null;
+        const next = cells.detailsLead?.below ?? null;
+        if (caption === null) {
+            return notMeasurable('no Projects section');
+        }
+        const below = next === null ? 'no next block' : `next block ${next} (target ${LEAD_BELOW})`;
+        return { value: `caption ${caption} (target ${LEAD_CAPTION}); ${below}`, pass: near(caption, LEAD_CAPTION, tolerance) && (next === null || near(next, LEAD_BELOW, tolerance)) };
     }
     if (definition.id === 'DS-INSET-4') {
         const top = cells.detailsPanelTop;

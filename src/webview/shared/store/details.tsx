@@ -17,7 +17,7 @@ export interface DetailsSelection {
      * it. A transitive row (`projectPath` `null` for the All Projects aggregate) asks nothing of the feeds: its view reads
      * the transitive slices.
      */
-    origin: 'installed' | 'updates' | 'browse' | 'transitive';
+    origin: 'installed' | 'updates' | 'browse' | 'transitive' | 'consolidate';
     /** The project the row belongs to (its section's in All Projects); `null` for a row found by a search. */
     projectPath: string | null;
     /** What the row that selected the package knew and the registration does not say. */
@@ -32,7 +32,11 @@ export interface Loadable<T> {
 
 export interface DetailsState {
     selection: DetailsSelection | null;
-    /** The version chosen in the version selector; the selection's version until the user picks another. */
+    /**
+     * The version shown in the version selector: the one the user chose; else, for a Consolidate selection (UX-P5.3c), the default
+     * its pane offered once (the first offer for a selection object is kept), or the selection's version when the versions failed
+     * or answered none, and `null` until then; for any other selection, the selection's version until the user picks another.
+     */
     version: string | null;
     /** Every version of the package on its source (or the allowed sources), newest first. */
     versions: Loadable<readonly string[]>;
@@ -66,8 +70,7 @@ export interface DetailsReveal {
 
 /**
  * The views of the main panel that keep a selection of their own: the Installed tab (transitive rows too), Updates, Browse, and
- * Consolidate under All Projects, which nothing selects into until its pane lands (UX-P5.3b; UX-P5.3c adds its origin), so the
- * pane shows no selection while it is shown.
+ * Consolidate under All Projects (UX-P5.3b; its selections, origin `consolidate`, since UX-P5.3c).
  */
 export type DetailsView = 'installed' | 'updates' | 'browse' | 'consolidate';
 
@@ -77,6 +80,11 @@ export interface DetailsActions {
     /** The shell shows another view: its own selection comes back; Browse always starts without one. Never changes identity. */
     showView: (view: DetailsView) => void;
     chooseVersion: (version: string) => void;
+    /**
+     * A Consolidate pane offers its default target for `selection` (UX-P5.3c): kept as the shown version until the user chooses,
+     * and only the first offer for that selection object counts (the default is applied once).
+     */
+    offerVersion: (selection: DetailsSelection, version: string) => void;
     /** The README tab is shown: from now on the README of the chosen version is asked for. */
     showReadme: () => void;
     /** Asks the list of `reveal.tab` to make the row current; a later reveal replaces it, `null` clears it. */
@@ -99,7 +107,10 @@ const singleProject = (selected: string | undefined): string | null =>
 
 const sameId = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
-const viewOf = (origin: DetailsSelection['origin']): DetailsView => (origin === 'browse' ? 'browse' : origin === 'updates' ? 'updates' : 'installed');
+const viewOf = (origin: DetailsSelection['origin']): DetailsView => (origin === 'browse' ? 'browse' : origin === 'updates' ? 'updates' : origin === 'consolidate' ? 'consolidate' : 'installed');
+
+/** The version a selection starts with: none chosen for a Consolidate selection, whose pane offers its default (UX-P5.3c). */
+const startVersion = (selection: DetailsSelection | null | undefined): string | null => (selection === null || selection === undefined || selection.origin === 'consolidate' ? null : selection.version);
 
 /** A view's selection and the committed project selection when it was made (a path, ALL_PROJECTS or empty). */
 interface Remembered {
@@ -170,6 +181,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     const latestViews = useRef(views);
     latestViews.current = views;
     const [version, setVersion] = useState<string | null>(null);
+    const [offer, setOffer] = useState<{ selection: DetailsSelection; version: string } | null>(null);
     const [readmeWanted, setReadmeWanted] = useState(false);
     const [reveal, setReveal] = useState<DetailsReveal | null>(null);
     const [attempts, setAttempts] = useState({ versions: 0, metadata: 0, readme: 0 });
@@ -192,7 +204,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
             remembered.set(view, { selection: next, selectedUnder: latestCommitted.current });
             return { view, remembered };
         });
-        setVersion(next?.version ?? null);
+        setVersion(startVersion(next));
         setReadmeWanted(false);
     }, []);
     const showView = useCallback((next: DetailsView): void => {
@@ -206,12 +218,12 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
             remembered.delete('browse');
         }
         setViews({ view: next, remembered });
-        setVersion(remembered.get(next)?.selection.version ?? null);
+        setVersion(startVersion(remembered.get(next)?.selection));
         setReadmeWanted(false);
     }, []);
 
     // Stale selection: an installed or update row of another project is kept read-only until the new list says.
-    const stale = selection !== null && selection.origin !== 'browse' && selectedUnder !== committedSelection;
+    const stale = selection !== null && selection.origin !== 'browse' && selection.origin !== 'consolidate' && selectedUnder !== committedSelection;
     useEffect(() => {
         if (!stale || selection === null) {
             return;
@@ -261,18 +273,25 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     const versions = useMemo<Loadable<readonly string[]>>(() => ({ ...listed, value: listed.value?.versions }), [listed]);
     const vulnerableVersions = listed.value?.vulnerableVersions;
 
-    const metadataKey = packageId === undefined || version === null || !asksFeeds ? null : `${packageId.toLowerCase()}@${version.toLowerCase()}|${sourceUrl ?? 'all'}`;
+    // The shown version (UX-P5.3c): chosen, else a Consolidate pane's offer for this very selection, else, for a Consolidate
+    // selection whose versions failed or answered none, its own version.
+    const offered = offer !== null && offer.selection === selection ? offer.version : null;
+    const unlisted = (listed.error !== undefined && listed.value === undefined) || (listed.status === 'ready' && listed.value?.versions.length === 0);
+    const fallback = selection?.origin === 'consolidate' && unlisted ? selection.version : null;
+    const shownVersion = version ?? offered ?? fallback;
+
+    const metadataKey = packageId === undefined || shownVersion === null || !asksFeeds ? null : `${packageId.toLowerCase()}@${shownVersion.toLowerCase()}|${sourceUrl ?? 'all'}`;
     const metadata = useLoadable<PackageMetadata | null>(
         metadataKey,
         attempts.metadata,
-        async signal => (await bus.request('package/metadata', { packageId: packageId as string, version: version as string, sourceUrl }, { signal })).result.metadata,
-        value => value === null || (sameId(value.id, packageId as string) && value.version.toLowerCase() === (version as string).toLowerCase()),
+        async signal => (await bus.request('package/metadata', { packageId: packageId as string, version: shownVersion as string, sourceUrl }, { signal })).result.metadata,
+        value => value === null || (sameId(value.id, packageId as string) && value.version.toLowerCase() === (shownVersion as string).toLowerCase()),
     );
 
     const readme = useLoadable<string | null>(
         readmeWanted ? metadataKey : null,
         attempts.readme,
-        async signal => (await bus.request('package/readme', { packageId: packageId as string, version: version as string, sourceUrl }, { signal })).result.readme,
+        async signal => (await bus.request('package/readme', { packageId: packageId as string, version: shownVersion as string, sourceUrl }, { signal })).result.readme,
         () => true,
     );
 
@@ -280,6 +299,15 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
         select,
         showView,
         chooseVersion: next => setVersion(next),
+        // The latch: the first offer for the shown selection object stands; an offer for any other selection is ignored (UX-P5.3c,
+        // architecture-advisor follow-up 1).
+        offerVersion: (offeredFor, next) => {
+            const current = latestViews.current;
+            if (current.remembered.get(current.view)?.selection !== offeredFor) {
+                return;
+            }
+            setOffer(previous => (previous !== null && previous.selection === offeredFor ? previous : { selection: offeredFor, version: next }));
+        },
         showReadme: () => setReadmeWanted(true),
         retryVersions: () => setAttempts(previous => ({ ...previous, versions: previous.versions + 1 })),
         retryMetadata: () => setAttempts(previous => ({ ...previous, metadata: previous.metadata + 1 })),
@@ -288,8 +316,8 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     }), [select, showView]);
 
     const state = useMemo<DetailsState>(
-        () => ({ selection, version, versions, vulnerableVersions, metadata, readme, stale, reveal }),
-        [selection, version, versions, vulnerableVersions, metadata, readme, stale, reveal],
+        () => ({ selection, version: shownVersion, versions, vulnerableVersions, metadata, readme, stale, reveal }),
+        [selection, shownVersion, versions, vulnerableVersions, metadata, readme, stale, reveal],
     );
 
     return (

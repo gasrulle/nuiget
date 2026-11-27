@@ -578,7 +578,8 @@ either is what makes a surface ask `session/get` and `projects/list` when it sta
   a row `whyNotUpdatable` refuses, a floating version or range and a reference conditioned on some target frameworks are
   held with their reason (UX-P5.3b), a `central-override` row joins (N74); a held row's known version counts towards the
   drift, and a version that is not known (unresolved, or a pattern without a resolved version) is none; each entry carries
-  `versionCount` and `projectCount`, the Consolidate row's text; a project that
+  `versionCount` and `projectCount`, the Consolidate row's text, and `inUse`, the known versions in use (one per version, held ones
+  included; UX-P5.3c), compared by the exported `sameVersion`; a project that
   failed, is unsupported or was not read makes the reading incomplete, never "no drift". The payload of
   `ops/bulkUpdateAllProjects` carries the chosen version for every project at another one, a lower version included.
 - `updates` (P5.5): `useResource` for `updates:<path>|<prerelease>` of the committed project under the committed
@@ -820,8 +821,15 @@ shell, never written). It is one flat `Listbox` (`consolidate-list`) over `versi
 comfortable row per drifting package with "N versions in M projects"; the tab's count is the number of entries once the
 fan-out is ready, whatever was not compared. Its states are the bar `consolidate-progress`, the error
 `consolidate-error`, the warning `consolidate-incomplete-banner` for the projects not compared and the empty state
-`consolidate-empty` only for a complete comparison. Until UX-P5.3c a row is never selected: the details store's view
-`consolidate` holds no selection, so the pane shows its empty state.
+`consolidate-empty` only for a complete comparison. A press or Enter selects a row (origin `consolidate`, `projectPath` `null`,
+never stale) and the details pane shows it (`features/details/ConsolidateDetails.tsx`, UX-P5.3c): `useConsolidation` finds the
+live drift entry and, once the fan-out is ready and the versions are listed, offers the default target (the first listed
+version `inUse` by `sameVersion`, else the newest) through the slice's `offerVersion`, which keeps the first offer for the
+selection object, so `package/metadata` is asked once, for it; on a versions failure or an empty list the slice shows the
+selection's version. `DetailsPane` keeps one header, one version selector and one tab strip, and swaps in Consolidate... with
+its reasons, the "(in use)" marks and the Projects lead block of `DetailsInfo`; the confirmation's lines and the
+`ops/bulkUpdateAllProjects` payload are one `consolidationUpdates` value, held references never in it. A row's menu is the
+transitive row's (Copy Package ID, View Package Details).
 
 `src/webview/main/features/updates` is the Updates tab (P5.5), handed to the shell as
 `updates={view => <UpdatesTab {...view} />}`; the shell shows the count on the tab only when the answer is

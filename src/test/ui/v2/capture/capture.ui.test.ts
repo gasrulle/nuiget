@@ -942,6 +942,26 @@ const REACH: Record<string, Reach> = {
         settled: () => CONSOLIDATE_SETTLED(),
         settledFacts: () => CONSOLIDATE_FACTS,
     },
+    'main-consolidate-details': {
+        // The tab settled as `main-consolidate`'s, then the Newtonsoft.Json row pressed, never by position (opening ruling DO 9).
+        reach: async () => {
+            await REACH['main-consolidate'].reach();
+            await (await optionOf('package-row-newtonsoft.json')).click();
+            await settleOrReport('main-consolidate-details', CONSOLIDATE_DETAILS_SETTLED(), CONSOLIDATE_DETAILS_FACTS);
+        },
+        settled: () => CONSOLIDATE_DETAILS_SETTLED(),
+        settledFacts: () => CONSOLIDATE_DETAILS_FACTS,
+    },
+    'main-consolidate-dialog': {
+        // Consolidate... pressed on the settled pane; the dialog is cancelled after the capture, never confirmed (DO 9).
+        reach: async () => {
+            await REACH['main-consolidate-details'].reach();
+            await (await findByTestId('consolidate-button', 10_000)).click();
+            await findByTestId('confirm-dialog', 10_000);
+            await until(`(() => { const dialog = document.querySelector('[data-testid="confirm-dialog"]'); const title = dialog?.querySelector('h2, [role="heading"]')?.textContent?.trim() ?? ''; const items = [...(dialog?.querySelectorAll('.nuiget-dialog-list li') ?? [])].map(item => item.textContent.trim()); return /^Consolidate Newtonsoft\\.Json to \\S+\\?$/.test(title) && items.length > 0 && items.every(item => /^Newtonsoft\\.Json \\S+ → \\S+$/.test(item)) && document.activeElement === document.querySelector('[data-testid="confirm-dialog-cancel"]'); })()`, 'the confirmation listing each project and the focus on Cancel', 10_000);
+        },
+        leave: cancelDialog,
+    },
     'main-updates-loading': {
         reach: async () => {
             await gatewayUpdates();
@@ -2140,6 +2160,35 @@ const unsettled = (() => { ${UNSETTLED} })();
 return 'list ' + (list === null ? 'absent' : 'scrollTop ' + Math.round(list.scrollTop) + ', rows ' + list.querySelectorAll('[role="option"]').length)
     + ', tab "' + (document.querySelector('[data-testid="consolidate-tab"]')?.textContent ?? 'absent') + '"'
     + ', markers ' + ['consolidate-incomplete-banner', 'details-empty', 'consolidate-progress'].filter(id => document.querySelector('[data-testid="' + id + '"]') !== null).join(' ')
+    + ', unsettled "' + unsettled + '"';
+`;
+/**
+ * The Consolidate pane of Newtonsoft.Json settled (UX-P5.3c, design-advisor opening ruling DO 9): the row selected, Consolidate...
+ * enabled, the selector at a version in use, the facts of that version, at least two projects listed, no bar, nothing unsettled.
+ */
+const CONSOLIDATE_DETAILS_SETTLED = (): string => `
+const option = document.querySelector('[data-testid="package-row-newtonsoft.json"] [role="option"]');
+if (!option || option.getAttribute('aria-selected') !== 'true') return false;
+const button = document.querySelector('[data-testid="consolidate-button"]');
+if (!button || button.disabled || button.textContent.trim() !== 'Consolidate...') return false;
+const select = document.querySelector('[data-testid="version-selector"]');
+if (!select || select.disabled || !select.selectedOptions[0] || !/ \\((in use|in use, vulnerable)\\)$/.test(select.selectedOptions[0].textContent || '')) return false;
+const term = [...document.querySelectorAll('.nuiget-details-info .nuiget-property-term')].find(el => el.textContent.trim() === 'Version');
+if (!term || !term.nextElementSibling || term.nextElementSibling.textContent.trim() !== select.value) return false;
+if (document.querySelectorAll('[data-testid="consolidate-projects"] .nuiget-property-term').length < 2) return false;
+if (document.querySelector('[data-testid="details-progress"], [data-testid="consolidate-progress"]') !== null) return false;
+const unsettled = (() => { ${UNSETTLED} })();
+return unsettled === '';`;
+/** What `CONSOLIDATE_DETAILS_SETTLED` did not find, printed when it times out. */
+const CONSOLIDATE_DETAILS_FACTS = `
+const select = document.querySelector('[data-testid="version-selector"]');
+const button = document.querySelector('[data-testid="consolidate-button"]');
+const unsettled = (() => { ${UNSETTLED} })();
+return 'selected ' + (document.querySelector('[data-testid="package-row-newtonsoft.json"] [role="option"]')?.getAttribute('aria-selected') ?? 'absent')
+    + ', button ' + (button ? (button.disabled ? 'disabled "' + (button.title || '') + '"' : 'enabled') + ' "' + button.textContent.trim() + '"' : 'absent')
+    + ', select ' + (select ? (select.disabled ? 'disabled ' : '') + '"' + (select.selectedOptions[0]?.textContent ?? '') + '"' : 'absent')
+    + ', projects ' + document.querySelectorAll('[data-testid="consolidate-projects"] .nuiget-property-term').length
+    + ', bars ' + document.querySelectorAll('[data-testid="details-progress"], [data-testid="consolidate-progress"]').length
     + ', unsettled "' + unsettled + '"';
 `;
 /** `STATE_MARKERS['main-updates-all']` of `measure.ts`. */

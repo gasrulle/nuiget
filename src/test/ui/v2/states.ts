@@ -203,6 +203,11 @@ export const STATES: readonly NamedState[] = [
     // UX-P5.3b (design-advisor opening ruling of 2026-11-27, DO 10; follow-up 1, DO 8): the Consolidate tab's Partial cell.
     { ...ready('main-consolidate', 'main', [primary('main'), { theme: 'dark-modern', look: 'modern', width: 400 }],
         'All Projects selected, the Consolidate tab: the flat list of the packages referenced at different versions at its top (package-row-newtonsoft.json present: Gateway 12.0.1, Utility 13.0.2), no row current, the details pane empty; the Unsupported project was not compared, so one warning banner names it (marker consolidate-incomplete-banner); the tab shows its count (UX-P5.3b).', [LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    // UX-P5.3c (design-advisor opening ruling of 2026-11-27, DO 9): the Consolidate pane and its confirmation.
+    { ...ready('main-consolidate-details', 'main', [primary('main')],
+        'All Projects, the Consolidate tab, the Newtonsoft.Json row pressed and selected: the pane shows Consolidate... enabled, the version selector at the default target marked "(in use)", the Projects section leading the Details tab and the facts of that version (UX-P5.3c).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
+    { ...ready('main-consolidate-dialog', 'main', [primary('main')],
+        'The Consolidate pane of Newtonsoft.Json, Consolidate... pressed: the confirmation "Consolidate Newtonsoft.Json to <version>?" lists each project it changes as "Newtonsoft.Json <old> → <new>", the focus on Cancel; cancelled after the capture, never confirmed (UX-P5.3c).', [LIVE_DETAILS, LIVE_ICONS]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-browse-results', 'main', [primary('main')],
         '"Newtonsoft.Json" searched with Enter; the Browse list shows package-row-newtonsoft.json.', [LIVE_RESULTS, LIVE_CARET]), diffTolerance: 0 },
     { ...ready('main-browse-hover', 'main', [primary('main')],

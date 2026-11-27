@@ -123,7 +123,11 @@ function AdvisoryGlyph({ level }: { level: 'error' | 'warning' | 'info' }): Reac
  * framework, collapsed, each with its count badge. Details read from the local package cache are marked offline, saying whether a source
  * is down or no source knows the version. The pane keys it by package and version, so another package starts collapsed.
  */
-export function DetailsInfo({ announce, shownKey, find }: { announce: (message: string) => void; shownKey: string | null; find?: (packageId: string) => void }): React.JSX.Element {
+/**
+ * `lead`: a block that opens the Details tab panel in every metadata state, after the 2 px bar (a Consolidate row's Projects
+ * section, UX-P5.3c, design-advisor opening ruling DO 2).
+ */
+export function DetailsInfo({ announce, shownKey, find, lead }: { announce: (message: string) => void; shownKey: string | null; find?: (packageId: string) => void; lead?: React.ReactNode }): React.JSX.Element {
     const { metadata, selection } = useDetails();
     const { retryMetadata } = useDetailsActions();
     const { sources, failed, enable } = useSources();
@@ -142,12 +146,13 @@ export function DetailsInfo({ announce, shownKey, find }: { announce: (message: 
                 <div className="nuiget-details-progress">
                     <ProgressBar label={LOADING_DETAILS} data-testid="details-progress" />
                 </div>
+                {lead}
                 <Skeleton density="compact" />
             </>
         );
     }
     if (metadata.status === 'error') {
-        return <Banner severity="error" data-testid="details-error" action={{ label: 'Retry', onClick: retryMetadata }}>{failure('The details', 'loaded', metadata.error?.message)}</Banner>;
+        return <>{lead}<Banner severity="error" data-testid="details-error" action={{ label: 'Retry', onClick: retryMetadata }}>{failure('The details', 'loaded', metadata.error?.message)}</Banner></>;
     }
     const value = metadata.value;
     const toggle = (framework: string): void => setExpanded(previous => {
@@ -158,13 +163,15 @@ export function DetailsInfo({ announce, shownKey, find }: { announce: (message: 
         return next;
     });
     if (value === null || value === undefined) {
-        return <EmptyState message={failed.length > 0 ? 'No details: a package source could not be reached.' : 'No package source has details for this version.'} />;
+        return <>{lead}<EmptyState message={failed.length > 0 ? 'No details: a package source could not be reached.' : 'No package source has details for this version.'} /></>;
     }
     // Report abuse is nuget.org's: the answering source, else the row's, else All Sources with nuget.org among them.
     const from = value.sourceUrl ?? selection?.sourceUrl;
     const onNuGetOrg = from !== undefined ? isNuGetOrg(from) : allSources && (sources ?? []).some(source => source.enabled && isNuGetOrg(source.url));
     const reportAbuse = onNuGetOrg ? `https://www.nuget.org/packages/${encodeURIComponent(value.id)}/${encodeURIComponent(value.version)}/ReportAbuse` : undefined;
     return (
+        <>
+        {lead}
         <div className="nuiget-details-info">
             {value.offline ? (
                 <div className="nuiget-details-notice">
@@ -215,5 +222,6 @@ export function DetailsInfo({ announce, shownKey, find }: { announce: (message: 
                 )}
             </section>
         </div>
+        </>
     );
 }

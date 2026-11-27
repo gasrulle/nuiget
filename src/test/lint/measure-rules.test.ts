@@ -77,7 +77,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-FOCUS-1')?.pendingStates).toBeUndefined();
         expect(definition('DS-FOCUS-1')?.scopeStates).toEqual({ controls: ['main-browse-results', 'main-details-readonly', 'main-installed-filter', 'main-installed-vulnerable', 'main-installed-vulnerable-unavailable', 'main-installed-all-vulnerable-unavailable', 'main-installed-filter-nomatch', 'main-installed-unfocused', 'main-quicksearch-open', 'main-quicksearch-versions', 'main-sources-add'], tabs: ['main-installed-error', 'main-installed-unresolved', 'main-installed-single', 'main-installed-all', 'main-installed-cpm', 'main-installed-hover', 'main-installed-toolbar-hover', 'main-installed-unsupported', 'main-updates', 'main-updates-unsupported'] });
         // UX-P3.5: the dialog scopes only where they can measure (design-advisor ruling of 2026-11-07, DO 6).
-        const dialogStates = ['main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
+        // UX-P5.3c (design-advisor opening ruling DO 10): the Consolidate confirmation joins the dialog states.
+        const dialogStates = ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'sidebar-update-all-dialog', 'main-browse-multi-install-dialog', 'main-sources-remove-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog', 'main-updates-update-all-dialog'];
         expect(definition('DS-HEIGHT-9')?.scopeStates).toEqual({ dialogs: ['main-browse-multi-install-dialog', 'main-installed-uninstall-dialog', 'sidebar-uninstall-dialog'], sources: ['main-sources', 'main-sources-revalidating', 'main-sources-error', 'main-sources-add-invalid'] });
         expect(definition('DS-INSET-2')?.scopeStates).toEqual({ dialogs: dialogStates });
         expect(definition('DS-RADIUS-2')?.scopeStates).toMatchObject({ layers: dialogStates });
@@ -85,10 +86,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(definition('DS-DIVIDER-5')?.states).toEqual(dialogStates);
         expect(definition('DS-INSET-3')?.scopeStates).toEqual({ rows: ['main-installed-hover', 'main-installed-focus', 'main-installed-details'] });
         expect(definition('DS-ROW-3')?.scopeStates).toEqual({ 'main-installed': ['main-installed-hover', 'main-installed-focus', 'main-installed-unfocused'], details: ['main-installed-details', 'main-details-readme', 'main-transitive-details', 'main-browse-details'], 'main-updates': ['main-updates-hover'], browse: ['main-browse-hover'], sidebar: ['sidebar-hover'] });
-        expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-transitive-expanded', 'main-details-readme']);
+        expect(definition('DS-FOCUS-2')?.states).toEqual(['main-installed-focus', 'main-installed-details', 'main-transitive-details', 'main-browse-details', 'main-consolidate-details', 'main-transitive-expanded', 'main-details-readme']); // UX-P5.3c: the Consolidate pane (design-advisor opening ruling DO 10)
         expect(definition('DS-FOCUS-2')?.pendingStates).toBeUndefined();
-        // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22, DO 2): the main-panel dialogs' focused control.
-        expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': ['main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'] });
+        // UX-P5.fix-2 (design-advisor opening ruling of 2026-11-22, DO 2): the main-panel dialogs' focused control; the Consolidate confirmation since UX-P5.3c (opening ruling DO 10).
+        expect(definition('DS-FOCUS-3')?.scopeStates).toEqual({ rows: ['main-installed-details'], tabs: ['main-updates'], 'dialog-focus': ['main-consolidate-dialog', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources'] });
         expect(definition('DS-FOCUS-4')?.states).toEqual(['main-installed-details', 'main-installed-focus']);
         expect(scopes('DS-GRID-1')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
         expect(scopes('DS-GRID-2a')).toEqual({ 'main-installed': 'hard', ...asGrid1 });
@@ -174,7 +175,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P3.3b: the empty state's top inset in the three main groups too, hard since its closing commit.
         // UX-P5.fix-3 (design-advisor opening ruling of 2026-11-22, DO 2-3): the clause `panel-top`, hard since the item's CSS.
         // UX-P5.fix-7 (design-advisor opening ruling of 2026-11-26, DO 5, DO 11): the clause `facts-banner`, hard since the item's CSS.
-        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': 'hard' });
+        // UX-P5.3c (design-advisor opening ruling of 2026-11-27, DO 10): the clause `lead`, pending until the item's closing.
+        expect(scopes('DS-INSET-4')).toEqual({ ...Object.fromEntries(['details', 'main-installed', 'main-updates', 'browse'].map(group => [group, 'hard'])), 'panel-top': 'hard', 'facts-banner': 'hard', lead: { pending: 'P5.3c' } });
+        expect(definition('DS-INSET-4')?.scopeStates?.lead).toEqual(['main-consolidate-details']);
         expect(scopes('DS-ROW-1')).toEqual(mainHard());
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
@@ -238,7 +241,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-FOCUS-1')).toEqual({ controls: 'hard', tabs: 'hard' });
         expect(scopes('DS-FOCUS-2')).toEqual({ rows: 'hard' });
         expect(scopes('DS-FOCUS-3')).toEqual({ rows: 'hard', tabs: 'hard', 'dialog-focus': 'hard' });
-        expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources']);
+        expect(RULES.find(rule => rule.id === 'DS-FOCUS-3')?.states).toEqual(['main-installed-details', 'main-updates', 'main-consolidate-dialog', 'main-installed-bulk-dialog', 'main-installed-uninstall-dialog', 'main-updates-update-all-dialog', 'main-sources-remove-dialog', 'main-browse-multi-install-dialog', 'main-sources']);
         expect(scopes('DS-FOCUS-4')).toEqual({ rows: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-FOCUS-4')?.themes).toEqual(['dark-high-contrast', 'light-high-contrast']);
         expect(scopes('DS-STATE-7')).toEqual({ 'main-installed': 'hard', 'main-updates': 'hard', browse: 'hard', details: 'hard' });
@@ -729,7 +732,10 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
 
     it('leaves out of the Consolidate cell what its flat list has not: a toolbar, a group header, a text button, a badge at 400 (UX-P5.3b)', () => {
         const ruleOf = (id: string): RuleDefinition => RULES.find(candidate => candidate.id === id) as RuleDefinition;
-        expect([NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES]).toEqual([['main-consolidate'], ['main-consolidate'], ['main-consolidate']]);
+        // UX-P5.3c (design-advisor opening ruling DO 10): the Consolidate pane's details cell has no list toolbar either.
+        expect([NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES]).toEqual([['main-consolidate', 'main-consolidate-details'], ['main-consolidate'], ['main-consolidate']]);
+        expect(elementGroups('details', 'main-consolidate-details')).not.toContain('toolbars');
+        expect(elementGroups('details', 'main-consolidate-details')).toContain('lead');
         expect(elementGroups('main-installed', 'main-consolidate')).not.toContain('toolbars');
         expect(elementGroups('main-installed', 'main-consolidate')).toContain('tabs');
         expect(elementGroups('main-installed', 'main-installed-all')).toContain('toolbars');
@@ -1142,7 +1148,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // UX-P5.3b (design-advisor follow-up 3, DO 2 and DO 6): and the Consolidate list, a main list with no group header.
         expect(RULES.find(rule => rule.id === 'DS-OVERFLOW-2')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, ...sidebarBrowse, 'main-consolidate']);
         // UX-P3.3b: and the flat Browse list (the UX-P3.2 form) for DS-GRID-2b.
-        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'main-browse-details', ...sidebarBrowse, 'main-consolidate']);
+        // UX-P5.3c (design-advisor follow-up 2): the Consolidate list beside its pane, the main-browse-details form.
+        expect(RULES.find(rule => rule.id === 'DS-GRID-2b')?.exceptStates).toEqual(['main-installed-loading', 'main-details-readonly', 'main-installed-error', ...updatesNoList, 'main-browse-details', 'main-consolidate-details', ...sidebarBrowse, 'main-consolidate']);
         // UX-P3.8 follow-up 2: the remaining ruled lists, pinned so none widens (never sidebar-installed-loading where it has headers).
         const except = (id: string) => RULES.find(rule => rule.id === id)?.exceptStates;
         for (const id of ['DS-COPY-5', 'DS-HEIGHT-1', 'DS-TYPE-9']) {
@@ -1979,6 +1986,19 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         expect(lineOf('main-details-error', withCells({ detailsSkeletonMarks: [46] }), 'DS-INSET-1@main-details-error/details-skeleton')).toBeUndefined();
     });
 
+    it('reads a Consolidate pane\'s Projects section 20 below the tab panel\'s top and 20 above the next block (DS-INSET-4 lead, UX-P5.3c)', () => {
+        const name = 'DS-INSET-4@main-consolidate-details/lead';
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: 20 } }), name))
+            .toMatchObject({ pass: true, status: { pending: 'P5.3c' }, value: 'caption 20 (target 20); next block 20 (target 20)' });
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 36, below: 20 } }), name)?.pass).toBe(false);
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: 4 } }), name)?.pass).toBe(false);
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: 20, below: null } }), name)).toMatchObject({ pass: true, value: 'caption 20 (target 20); no next block' });
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: { caption: null, below: 20 } }), name)).toMatchObject({ pass: false, value: 'not measurable (no Projects section)' });
+        expect(lineOf('main-consolidate-details', withCells({ detailsLead: undefined }), name)).toMatchObject({ pass: false, value: 'not measurable (no Projects section)' });
+        // Only the Consolidate pane reads it.
+        expect(lineOf('main-installed-details', withCells({ detailsLead: { caption: 20, below: 20 } }), 'DS-INSET-4@main-installed-details/lead')).toBeUndefined();
+    });
+
     it('reads the details tab panel\'s first block at the 20 px content inset under the strip (DS-INSET-4 panel-top, UX-P5.fix-3)', () => {
         const name = 'DS-INSET-4@main-details-error/panel-top';
         expect(lineOf('main-details-error', withCells({ detailsPanelTop: { first: 4, underStrip: 0 } }), name))
@@ -2111,9 +2131,9 @@ describe('UX-P3.10: the state-cell clauses, hard since push E (design-advisor op
         expect(lineOf('sidebar-uninstall-dialog', withCells({}), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'title', lineHeight: '25.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
         expect(lineOf('sidebar-uninstall-dialog', withCells({ dialogText: [{ part: 'body', lineHeight: '18.2px' }] }), name)).toMatchObject({ pass: false, value: 'not measurable (no dialog text)' });
-        // Only the thirteen cells with a dialog open read it (the main Update All confirmation since UX-P4.fix-19).
+        // Only the fourteen cells with a dialog open read it (the main Update All confirmation since UX-P4.fix-19, the Consolidate one since UX-P5.3c).
         expect(lineOf('main-installed-single', withCells({ dialogText: normal }), 'DS-TYPE-4@main-installed-single/dialog-text')).toBeUndefined();
-        expect(DIALOG_TEXT_STATES).toHaveLength(13);
+        expect(DIALOG_TEXT_STATES).toHaveLength(14);
         expect(elementGroups('dialogs')).toContain('dialog-text');
         expect(elementGroups('sources')).toContain('dialog-text');
     });

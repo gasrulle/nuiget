@@ -693,6 +693,22 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().endOfP0.stateCells.detailsPanelTop).toEqual({ first: 22, underStrip: 1 });
     });
 
+    it('reads a Consolidate pane\'s Projects section on boxes: its caption from the tab panel, the next in-flow block below it (DS-INSET-4 lead, UX-P5.3c)', () => {
+        expect(collect().endOfP0.stateCells.detailsLead).toBeUndefined();
+        // The lead wraps the section; a hidden block and an absolute layer after it are no block; the facts' content box starts at their padding.
+        document.querySelector('[data-testid="package-details-panel"] [role="tablist"]')?.insertAdjacentHTML('afterend', [
+            '<div role="tabpanel" data-rect="600,101,900,700">',
+            '<div class="nuiget-details-lead" data-rect="600,101,900,220">',
+            '<section data-testid="consolidate-projects" data-rect="620,121,880,220"><h3 data-rect="620,121,880,139">Projects</h3></section>',
+            '</div>',
+            '<div style="display: none" data-rect="600,220,900,240"></div>',
+            '<div style="position: absolute" data-rect="600,220,900,240"></div>',
+            '<div class="nuiget-details-info" style="padding-top: 20px" data-rect="600,220,900,600"></div>',
+            '</div>',
+        ].join(''));
+        expect(collect().endOfP0.stateCells.detailsLead).toEqual({ caption: 20, below: 20 });
+    });
+
     it('reads each banner of the details facts on boxes: its glyph from the pane and its inline padding (DS-INSET-4 facts-banner, UX-P5.fix-7)', () => {
         expect(collect().endOfP0.stateCells.detailsFactsBanner).toEqual([]);
         // A hidden banner is no banner; a banner outside the facts (the header's) is not read.

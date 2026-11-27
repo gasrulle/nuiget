@@ -32,7 +32,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several. Each row acts on
   its own project, Update All covers every project, and a search result can be installed into several projects at
   once. From a single project, the details pane of a search result also offers Install in Projects.... A Consolidate tab
-  lists the packages your projects reference at different versions.
+  lists the packages your projects reference at different versions and brings each to one version you choose, after a
+  confirmation that lists every project it changes.
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
   top-level packages that require it. A project that has not been restored shows a Restore banner instead.
 - **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update All,

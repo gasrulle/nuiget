@@ -206,35 +206,46 @@ describe('main panel: the Consolidate tab (UX-P5.3b, F3)', () => {
         expect(optionOf('serilog')).not.toHaveAttribute('aria-busy');
     });
 
-    it('a press makes a row active and selects nothing: the details pane shows no selection (UX-P5.3b, before its pane)', async () => {
+    it('a press selects the row and shows its pane, with no aria-current (UX-P5.3c)', async () => {
         const user = userEvent.setup();
         const host = await mount();
         await user.click(screen.getByTestId('consolidate-tab'));
         await stream(host, DRIFTING);
         await user.click(optionOf('serilog'));
         expect(optionOf('serilog')).toHaveFocus();
-        expect(options().map(option => option.getAttribute('aria-selected'))).toEqual(['false', 'false']);
-        expect(screen.getByTestId('details-empty')).toBeInTheDocument();
+        expect(options().map(option => option.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+        expect(options().every(option => !option.hasAttribute('aria-current'))).toBe(true);
+        expect(screen.queryByTestId('details-empty')).toBeNull();
+        expect(screen.getByRole('heading', { name: 'Serilog' })).toBeInTheDocument();
+        expect(screen.getByTestId('consolidate-button')).toHaveTextContent('Consolidate...');
+        expect(host.requests('package/versions').map(request => request.payload.packageId)).toEqual(['Serilog']);
     });
 
-    it('Enter, Ctrl+Enter, Delete and Space on a row change nothing and send no request (ADR-013 Decision 1 until UX-P5.3c)', async () => {
+    it('Enter selects the row and shows its pane; Ctrl+Enter, Delete and Space change nothing and send no request (ADR-013 Decision 1)', async () => {
         const user = userEvent.setup();
         const host = await mount();
         await user.click(screen.getByTestId('consolidate-tab'));
         await stream(host, DRIFTING);
         optionOf('newtonsoft.json').focus();
         const sent = host.sent.length;
-        await user.keyboard('{Enter}');
         await user.keyboard('{Control>}{Enter}{/Control}');
         await user.keyboard('{Delete}');
         await user.keyboard(' ');
         expect(host.sent.slice(sent)).toEqual([]);
         expect(screen.queryByTestId('confirm-dialog')).toBeNull();
-        for (const option of options()) {
-            expect(option).toHaveAttribute('aria-selected', 'false');
-            expect(option).not.toHaveAttribute('aria-current');
-        }
-        expect(screen.getByTestId('details-empty')).toBeInTheDocument();
+        expect(options().every(option => option.getAttribute('aria-selected') === 'false')).toBe(true);
+        await user.keyboard('{Enter}');
+        expect(optionOf('newtonsoft.json')).toHaveAttribute('aria-selected', 'true');
+        expect(host.requests('package/versions').map(request => request.payload.packageId)).toEqual(['Newtonsoft.Json']);
+        expect(host.requests('ops/bulkUpdateAllProjects')).toHaveLength(0);
+    });
+
+    it('a row carries the transitive row\'s menu context: Copy Package ID and View Package Details, nothing that writes (UX-P5.3c)', async () => {
+        const user = userEvent.setup();
+        const host = await mount();
+        await user.click(screen.getByTestId('consolidate-tab'));
+        await stream(host, DRIFTING);
+        expect(JSON.parse(screen.getByTestId('package-row-serilog').getAttribute('data-vscode-context') ?? '{}')).toMatchObject({ webviewSection: 'transitiveRow', packageId: 'Serilog', projectPath: ALL_PROJECTS, 'nuiget.readOnly': true });
     });
 
     it('a package current on Installed is not shown beside Consolidate and comes back with Installed', async () => {
@@ -249,13 +260,13 @@ describe('main panel: the Consolidate tab (UX-P5.3b, F3)', () => {
         expect(screen.queryByTestId('details-empty')).toBeNull();
     });
 
-    it('the list names its one key in its hint, and Ctrl+Up returns to the search box', async () => {
+    it('the list names its keys in its hint, and Ctrl+Up returns to the search box', async () => {
         const user = userEvent.setup();
         const host = await mount();
         await user.click(screen.getByTestId('consolidate-tab'));
         await stream(host, DRIFTING);
         const list = screen.getByRole('listbox', { name: 'Packages at different versions' });
-        expect(list).toHaveAccessibleDescription('Ctrl+Up (Cmd+Up) returns to the search box.');
+        expect(list).toHaveAccessibleDescription('Enter shows the package and its versions in the projects. Shift+F10 opens the actions menu. Ctrl+Up (Cmd+Up) returns to the search box.');
         optionOf('serilog').focus();
         await user.keyboard('{Control>}{ArrowUp}{/Control}');
         expect(screen.getByTestId('search-input')).toHaveFocus();
