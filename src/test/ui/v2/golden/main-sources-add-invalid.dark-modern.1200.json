@@ -68,7 +68,14 @@
     {
       "selector": ".nuiget-text-field:focus",
       "reason": "the caret blinks (H27)",
-      "rects": []
+      "rects": [
+        {
+          "h": 26,
+          "w": 416,
+          "x": 392,
+          "y": 289
+        }
+      ]
     }
   ],
   "fingerprint": {
@@ -80,5 +87,5 @@
     "chromium": "150",
     "image": "ubuntu26 20261116.202.1"
   },
-  "run": "45042903058"
+  "run": "45937496315"
 }

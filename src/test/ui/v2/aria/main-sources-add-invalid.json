@@ -68,14 +68,14 @@
     "    combobox \"Add to config file\"",
     "      option \"User\"",
     "      option \"Workspace: app\"",
-    "    textbox \"URL\" {add-source-url}",
+    "    textbox \"URL\" [focused] {add-source-url}",
     "    alert \"\" {add-source-error}",
     "    textbox \"Name (optional)\"",
     "    button \"Credentials\" [expanded] {add-source-credentials}",
     "    textbox \"Username\"",
     "    textbox \"Password\" {add-source-password}",
-    "    checkbox \"Stored in clear text: a %VAR% placeholder is read from the environment when the source is used\" [unchecked, disabled]",
+    "    checkbox \"Store the password encrypted\" [unchecked, disabled]",
     "    button \"Back\"",
-    "    button \"Add Source\" [focused] {add-source-submit}"
+    "    button \"Add Source\" {add-source-submit}"
   ]
 }

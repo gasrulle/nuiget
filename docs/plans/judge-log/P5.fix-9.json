@@ -1,0 +1,122 @@
+{
+  "item": "P5.fix-9",
+  "runs": [
+    {
+      "runId": "45937496315",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "e22d9047 (push 2, the form and the flip; the proving run)",
+      "look": "modern",
+      "workflow": "wf_e0589574-dd5",
+      "mode": "screen",
+      "note": "The two cells the ruling named (DO 5) against main-installed-details as the page beneath (DECISIONS 2026-11-07 Dialogs and layers, Sources dialog). No standing finding; two single-judge findings, routed to two planning rows by the GOLDEN ruling. The five moved cells and the main-sources-add-invalid ARIA snapshot adopted under that ruling.",
+      "captures": {
+        "main-sources-add-invalid": {
+          "png": "captures/45937496315/main-sources-add-invalid.dark-modern.1200.png",
+          "sha256": "ef6d5095c9a9bb46441a39d9739eca16a2fa36fb75679b833c8c1e5630c89f31",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-sources": {
+          "png": "captures/45937496315/main-sources.dark-modern.1200.png",
+          "sha256": "8db6d8a0b22fe076f132fc42a8b8874fd8dbf2f14e56d74cec80ec114e58e926",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        }
+      },
+      "panel": {
+        "candidates": 2,
+        "standing": 0,
+        "refuted": 0,
+        "singleJudge": 2,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-sources-add-invalid#D1",
+          "state": "main-sources-add-invalid",
+          "finding": "[states] The URL field the error sentence names ('Enter the URL of the source.') is not drawn invalid. Its whole 1 px edge reads the focusBorder colour (0,120,212) on every side, and no inputValidation.errorBorder pixel appears around it, so only the sentence below shows the error state, not the field. The colour-role table (§4, Text field: invalid = inputValidation.errorBorder, token --nuiget-color-input-error-border) asks for the error border on an invalid field.",
+          "severity": "major",
+          "box": [
+            392,
+            289,
+            416,
+            26
+          ],
+          "rule": "DS-COLOR-1",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-sources-add-invalid",
+              "finding": "The URL field the error sentence names ('Enter the URL of the source.') is not drawn invalid. Its whole 1 px edge reads the focusBorder colour (0,120,212) on every side, and no inputValidation.errorBorder pixel appears around it, so only the sentence below shows the error state, not the field. The colour-role table (§4, Text field: invalid = inputValidation.errorBorder, token --nuiget-color-input-error-border) asks for the error border on an invalid field.",
+              "severity": "major",
+              "box": [
+                392,
+                289,
+                416,
+                26
+              ],
+              "rule": "DS-COLOR-1",
+              "verdict": "confirmed",
+              "reason": "The crop shows the URL field's 1 px edge as focusBorder rgb(0,120,212) on all four sides (x 392 and 807, y 290 and 314), with zero red error-border pixels in the padded box; the error sentence below it is the only sign of the error. The cause is the -1 px focus outline painting over the aria-invalid error border. No hard measurement in ui-output.txt covers the field's border colour, and the main-installed-details spec does not declare this difference.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "fixed",
+          "reason": "A consequence of ruled (f): the focus ring on the focused invalid URL field covers its error border, as DS-FOCUS-3 rules; every hard focus line of the cell is green and the error is still said by the glyph, the sentence, aria-invalid and aria-describedby. Not fixed in this item: owned by a new planning row (a), probe the workbench input box first.",
+          "evidence": "run 45937496315, captures/45937496315/main-sources-add-invalid.dark-modern.1200.png 392,289,416,26",
+          "owner": "planning row (a): a focused invalid text field shows no error line",
+          "ruling": "docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling"
+        },
+        {
+          "id": "main-sources#D1",
+          "state": "main-sources",
+          "finding": "[native] In the NuGet sources dialog the source's check box is centred on the whole four-line block (name, URL and wrapped config path) instead of beside the name it toggles, so it sits about 22 px below the 'nuget.org' line. Built-in check box rows, such as the Settings editor's boolean settings, put the box on the first text line.",
+          "severity": "minor",
+          "box": [
+            391,
+            391,
+            92,
+            42
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-1",
+              "lens": "native",
+              "state": "main-sources",
+              "finding": "In the NuGet sources dialog the source's check box is centred on the whole four-line block (name, URL and wrapped config path) instead of beside the name it toggles, so it sits about 22 px below the 'nuget.org' line. Built-in check box rows, such as the Settings editor's boolean settings, put the box on the first text line.",
+              "severity": "minor",
+              "box": [
+                391,
+                391,
+                92,
+                42
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop the NuGet sources dialog's check box (about y 414-432) is centred on the four-line name/URL/config-path block, about 22 px below the 'nuget.org' line (about y 400) instead of on it; the redline main-installed-details.spec.json does not describe the sources dialog, and no hard measurement in ui-output.txt for main-sources reads check box alignment (DS-HEIGHT-9 checks only its 18x18 size), so nothing contradicts the finding.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ],
+          "disposition": "fixed",
+          "reason": "The source row is not in this item: owned by a new planning row (b), the source row check box centring on the whole text block.",
+          "evidence": "run 45937496315, captures/45937496315/main-sources.dark-modern.1200.png 391,391,92,42",
+          "owner": "planning row (b): a source row check box centres on the whole text block",
+          "ruling": "docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling"
+        }
+      ],
+      "findings": [],
+      "refuted": []
+    }
+  ]
+}

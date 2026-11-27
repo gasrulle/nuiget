@@ -71,9 +71,10 @@
           "lenses": [
             "states"
           ],
-          "disposition": "informational",
+          "disposition": "fixed",
           "reason": "Single judge, pre-existing add-source form and sources dialog copy: routed to the same planning-session row (follow-up 2).",
-          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2; fixed under docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling DO 4",
+          "fixedBy": "UX-P5.fix-9 (e22d9047), proving run 45937496315: the description opens with a whole sentence; DS-COPY-3 sources hard"
         },
         {
           "id": "main-sources-error#D1",
@@ -109,9 +110,10 @@
           "lenses": [
             "states"
           ],
-          "disposition": "informational",
+          "disposition": "fixed",
           "reason": "Single judge, pre-existing add-source form and sources dialog copy: routed to the same planning-session row (follow-up 2).",
-          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2; fixed under docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling DO 4",
+          "fixedBy": "UX-P5.fix-9 (e22d9047), proving run 45937496315: the disabled label in disabledForeground; DS-COLOR-6 check-labels hard"
         }
       ],
       "findings": [
@@ -132,10 +134,11 @@
             "geometry",
             "states"
           ],
-          "disposition": "informational",
+          "disposition": "fixed",
           "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2).",
           "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
-          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2; fixed under docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling DO 4",
+          "fixedBy": "UX-P5.fix-9 (e22d9047), proving run 45937496315: the box and its label on one line (.nuiget-dialog-option)"
         },
         {
           "id": "main-sources-add-invalid#D2",
@@ -153,10 +156,11 @@
             "native",
             "states"
           ],
-          "disposition": "informational",
+          "disposition": "fixed",
           "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2).",
           "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
-          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2; fixed under docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling DO 4",
+          "fixedBy": "UX-P5.fix-9 (e22d9047), proving run 45937496315: a short label with the reason as its description; DS-COPY-3 check-labels hard"
         },
         {
           "id": "main-sources-add-invalid#D3",
@@ -174,10 +178,11 @@
             "native",
             "geometry"
           ],
-          "disposition": "informational",
+          "disposition": "fixed",
           "reason": "Pre-existing add-source form defect, not this item's (the cell's diff is Add Source's ring box only): routed to the tracker for the planning session (follow-up 2). Its vertical clause is refuted by DS-GRID-2a@main-sources-add-invalid: gaps 8 (hard); the horizontal 16 px offset is what stands.",
           "evidence": "pre-existing; ui-diff.txt of run 45042903058: 210 px, box 719-810 × 606-637.",
-          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2"
+          "ruling": "docs/plans/handoff/P5.fix-2.md, Advisor decisions, design-advisor follow-up 2; fixed under docs/plans/handoff/P5.fix-9.md, Advisor decisions, design-advisor GOLDEN ruling DO 4",
+          "fixedBy": "UX-P5.fix-9 (e22d9047), proving run 45937496315: the banner glyph at the field edge; DS-INSET-1 form-message hard"
         }
       ],
       "refuted": [
