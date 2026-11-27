@@ -1,0 +1,168 @@
+{
+  "item": "P5.2b",
+  "runs": [
+    {
+      "runId": "45927636074",
+      "rubric": "aaec14b88b334d27334f33a0b68c38925fbae8a3",
+      "tree": "939e910a (push 2)",
+      "look": "modern",
+      "workflow": "wf_7604b019-95b",
+      "mode": "screen",
+      "note": "The two new cells, the advisory line and the Updates cell; adopted under GOLDEN ruling 1 with every finding disposed.",
+      "captures": {
+        "main-details-deprecated": {
+          "png": "captures/45927636074/main-details-deprecated.dark-modern.1200.png",
+          "sha256": "f2d009ca9f9f5cea35c049b03132ebd5ab12a8269f62b9b9a1c70ed5cc71908e",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-installed-deprecated": {
+          "png": "captures/45927636074/main-installed-deprecated.dark-modern.1200.png",
+          "sha256": "2051579944fff72f9fa0d49dcf63e814382b546e131e1128d34cd1c84378c3dc",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-installed-details": {
+          "png": "captures/45927636074/main-installed-details.dark-modern.1200.png",
+          "sha256": "f8d5b6c9ebb0b062227c079b8c1efdab0a99b5d0ee60735bd5bf928f3ec50448",
+          "artboard": "docs/design/artboards/main-installed-details.dark-modern.1200.png",
+          "artboardSha256": "53961f737872e4071ea5c283dad3adb2d58dd007ef6bffac91ce994bb756eabd"
+        },
+        "main-updates": {
+          "png": "captures/45927636074/main-updates.dark-modern.1200.png",
+          "sha256": "a4d51b1fecbd97aa9d200a04cebce0573e90906541b435f8dcfa36fb172126fa",
+          "artboard": "docs/design/artboards/main-updates.dark-modern.1200.png",
+          "artboardSha256": "9b13678b307052ca7203e8aaf342239f50f701a6ffbdec7cf52d6dc38e5993ef"
+        }
+      },
+      "panel": {
+        "candidates": 8,
+        "standing": 2,
+        "refuted": 2,
+        "singleJudge": 2,
+        "incomplete": 0,
+        "blocking": 0
+      },
+      "singleJudge": [
+        "main-installed-deprecated#D1",
+        "main-installed-deprecated#D2"
+      ],
+      "findings": [
+        {
+          "id": "main-details-deprecated#D1",
+          "state": "main-details-deprecated",
+          "finding": "[native] The current Serilog row in the list shows no Deprecated label badge beside its name, while the details pane beside it says the version is deprecated and the same run's main-installed-deprecated capture draws the badge on that row (x 158 to 229 after the name). The row therefore reads as a healthy package next to a deprecation notice. | [states] The current Serilog row, whose details pane says 'This version is deprecated', draws no Deprecated label badge beside its name, while the same row in this run's main-installed-deprecated capture shows the badge at the same position; the list and the details contradict each other about the package's state.",
+          "severity": "major",
+          "box": [
+            98,
+            747,
+            134,
+            20
+          ],
+          "rule": "judge-only, DS-ROW-5",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS row of 2026-11-27 \"Details deprecated cell (UX-P5.2b)\": one type per hold, the row badge has its own cell main-installed-deprecated",
+          "ruling": "docs/plans/handoff/P5.2b.md, Advisor decisions, 2026-11-27 UX-P5.2b design-advisor GOLDEN ruling 1"
+        },
+        {
+          "id": "main-installed-details#D1",
+          "state": "main-installed-details",
+          "finding": "[native] The details pane's advisory line draws a High advisory with the error codicon (problemsErrorIcon colour) and the severity words in the body foreground, where the artboard draws a warning triangle with the words in the warning colour; the capture follows DS-STATE-4's 'advisories' clause (High = error, colour on the glyph only), so the artboard has fallen behind the rule. This is a disagreement between the artboard and the rule, not a product defect. | [states] The Vulnerabilities line draws an error glyph (red circle-x) and 'High severity' in the default foreground, where the approved artboard draws a warning triangle with the severity text in warning yellow. The capture follows DS-STATE-4's advisories clause (High maps to the error codicon in problemsErrorIcon.foreground), so the artboard and the rule disagree here.",
+          "severity": "minor",
+          "box": [
+            441,
+            497,
+            167,
+            19
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DS-STATE-4 advisories (hard: \"advisory lines 1: High error; glyph colours on their level\") and the DECISIONS row \"Advisory lines on the badge's severity mapping\"; the artboard predates the rule (planning row for artboards in the ruled form)",
+          "ruling": "docs/plans/handoff/P5.2b.md, Advisor decisions, 2026-11-27 UX-P5.2b design-advisor GOLDEN ruling 1"
+        },
+        {
+          "id": "main-installed-deprecated#D1",
+          "state": "main-installed-deprecated",
+          "finding": "[geometry] The Serilog row with the Deprecated badge has a taller text block than its sibling rows. Its name line sits 1 px higher (ink top 579, where the 72 px pitch puts it at 580 as in Microsoft.Extensions.Http and the artboard's Serilog row) and its facts line 1 px lower (601 against 600). Name to facts therefore reads 22 px against 20 px in every badge-less row, so the badge's line 1 is taller than the 20 px name box the row anatomy specifies. The SDK and High badge rows grow by only 1 px.",
+          "severity": "minor",
+          "box": [
+            98,
+            576,
+            187,
+            35
+          ],
+          "rule": "DS-ROW-1",
+          "lenses": [
+            "geometry"
+          ],
+          "promoted": "single judge, disposed by the design-advisor",
+          "disposition": "refuted-by-measurement",
+          "evidence": "run 45927636074: DS-ROW-1@main-installed-deprecated … centre offsets 0 ×28 … badges: name gap 8 ×3, pill gap 4 (hard); the same 1 px in every badge row of the committed goldens",
+          "ruling": "docs/plans/handoff/P5.2b.md, Advisor decisions, 2026-11-27 UX-P5.2b design-advisor GOLDEN ruling 1"
+        },
+        {
+          "id": "main-installed-deprecated#D2",
+          "state": "main-installed-deprecated",
+          "finding": "[states] The Installed tab carries a 1 px focusBorder ring (pixels at x 6 and 144, y 77 and 111 read 0,120,212) that neither the artboard's tab nor the state's name calls for. It is an interaction state left over from the reach, not the promised deprecated-row state. The ring also takes in the selected tab's 1 px underline, so the artboard's underline indicator (artboard: underline only at y 111, no sides) no longer reads as its own element.",
+          "severity": "major",
+          "box": [
+            6,
+            77,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "states"
+          ],
+          "promoted": "single judge, disposed by the design-advisor",
+          "disposition": "accepted-as-design",
+          "evidence": "DS-FOCUS-3: the main panel rings a control after a click; the reach's holdTab clicks the Installed tab, as the README cells' goldens show",
+          "ruling": "docs/plans/handoff/P5.2b.md, Advisor decisions, 2026-11-27 UX-P5.2b design-advisor GOLDEN ruling 1"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-2",
+          "state": "main-details-deprecated",
+          "finding": "The deprecation notice already says the version 'is legacy and no longer maintained', and the secondary-text line under it ('This package is no longer maintained.') repeats that. The wording is correct but says the same thing twice in one block.",
+          "severity": "minor",
+          "box": [
+            441,
+            262,
+            610,
+            59
+          ],
+          "rule": "judge-only",
+          "lens": "native",
+          "verdict": "refuted",
+          "reason": "The crop shows the notice 'This version is deprecated: it is legacy and no longer maintained...' followed by the secondary line 'This package is no longer maintained.'. That second line is the package's own deprecation message, which counts as live package content under rubric §6. The layout around it holds: the facts-banner measurement reads glyph at 20, next block 12 below, notice 4 below, all on target. The overlap in wording comes from the package data, not from a layout or copy-rule defect."
+        },
+        {
+          "id": "states-2",
+          "state": "main-installed-details",
+          "finding": "The details header's version select reads '12.0.1 (installed, vulnerable)' where the artboard reads '12.0.1 (installed)'. The capture adds an annotation the artboard lacks. The select is about 218 px wide against the spec's 141 px (version-selector), and the Uninstall and Update buttons move from x 653 (spec uninstall-button and install-update-button) to about x 731.",
+          "severity": "minor",
+          "box": [
+            504,
+            130,
+            298,
+            56
+          ],
+          "rule": "judge-only",
+          "lens": "states",
+          "verdict": "refuted",
+          "reason": "The crop does show '12.0.1 (installed, vulnerable)' in a wider select, with Uninstall and Update stacked and aligned with each other. Interaction model §version-selector declares the '(installed, vulnerable)' marker for a version under a live advisory, so the extra words are declared live content (§6). The layout around it holds: DS-HEIGHT-7 'select 26 ×3' and DS-GRID-1 '[version-selector] 22 (16 + 6)' are hard and green, and the buttons' shift only follows the content-sized select."
+        }
+      ]
+    }
+  ]
+}

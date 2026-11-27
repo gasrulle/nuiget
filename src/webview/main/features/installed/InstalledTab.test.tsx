@@ -788,6 +788,15 @@ describe('main panel: Installed tab', () => {
             expect(results).toHaveNoViolations();
         });
 
+        it('a deprecated transitive row carries the Deprecated label badge as a direct row does (UX-P5.2b)', async () => {
+            const { host } = await mountVulnerable();
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));
+            await hostSays(() => host.respond(host.requests('transitive/metadata')[1], { metadata: [{ id: 'X', version: '1.0.0', vulnerabilities: [advisory('Low', 1)], deprecation: { reasons: ['CriticalBugs'] } }] }));
+            const [row] = transitiveRows();
+            expect(within(row).getByTestId('row-deprecation')).toHaveTextContent('Deprecated');
+            expect(row).toHaveAccessibleDescription(/This version is deprecated: it has critical bugs\./);
+        });
+
         it('a vulnerable transitive row carries the same badge as a direct row', async () => {
             const { host } = await mountVulnerable();
             await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: clearDirect }));

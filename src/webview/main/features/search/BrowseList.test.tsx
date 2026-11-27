@@ -113,6 +113,20 @@ describe('main panel: browse', () => {
         await waitFor(() => expect(said()).toBe('2 packages found for "seri"'));
     });
 
+    it('a deprecated result carries the Deprecated label badge, beside the Installed badge when installed, and a current one none (UX-P5.2b)', async () => {
+        const user = userEvent.setup();
+        const host = await mountReady();
+        await user.type(box(), 'seri{Enter}');
+        const [request] = queries(host);
+        const deprecation = { reasons: ['Legacy'], alternatePackage: { id: 'Serilog.Next' } };
+        await hostSays(() => host.respond(request, { query: 'seri', results: [result('Serilog.Old', '1.0.0', { deprecation }), result('Serilog', '4.0.0', { deprecation }), result('Serilog.Sinks.Console', '6.0.0')] }));
+
+        expect(within(list()).getByTestId('package-row-serilog.old').querySelector('[data-testid="row-deprecation"]')).not.toBeNull();
+        expect(option('Serilog.Old')).toHaveAccessibleDescription(/This version is deprecated: it is legacy and no longer maintained\. Use Serilog\.Next instead\./);
+        expect(option('Serilog')).toHaveAccessibleDescription(/Installed: 3\.0\.0.*This version is deprecated/);
+        expect(within(list()).getByTestId('package-row-serilog.sinks.console').querySelector('[data-testid="row-deprecation"]')).toBeNull();
+    });
+
     it('a result carries its menu context; an installed one says so', async () => {
         const host = await mountReady();
         await searchFor(host, 'x', [result('Polly', '8.4.2', { sourceUrl: FEED })]);
