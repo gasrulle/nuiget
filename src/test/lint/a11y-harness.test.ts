@@ -171,6 +171,36 @@ describe('the accessibility harness (UX-P0.23)', () => {
         axe.teardown();
     });
 
+    it('holds a run of annotated version options under a combobox as one line, whatever its one parenthetical (UX-P5.fix-12)', () => {
+        const node = (depth: number, role: string, name: string, states: string[] = [], testid?: string): AriaNode => ({ depth, role, name, states, testid });
+        const option = (name: string, states: string[] = []): AriaNode => node(2, 'option', name, states);
+        const snapshot = ariaSnapshot('main-installed-details', [
+            node(0, 'region', 'Package details', [], 'package-details-panel'),
+            node(1, 'combobox', 'Version', [], 'version-selector'),
+            option('13.0.4'), option('13.0.3 (vulnerable)'), option('13.0.2 (vulnerable)'),
+            option('12.0.1 (installed, vulnerable)'),
+            option('12.0.0 (vulnerable)'), option('11.0.2 (vulnerable)'), option('11.0.1 (vulnerable)', ['selected']), option('11.0.0 (vulnerable)'),
+            option('10.0.3 (in use)'), option('10.0.2 (in use)'), option('10.0.1'), option('10.0.0'),
+            node(1, 'listbox', 'Versions of Serilog', [], 'search-suggestions'),
+            option('3.1.1 (vulnerable)'), option('3.1.0 (vulnerable)'),
+        ]);
+        expect(snapshot.lines).toEqual([
+            'region "Package details" {package-details-panel}',
+            '  combobox "Version" {version-selector}',
+            '    option "#"',
+            '    option "# (vulnerable)"',
+            '    option "# (installed, vulnerable)"',
+            '    option "# (vulnerable)"',
+            '    option "# (vulnerable)" [selected]',
+            '    option "# (vulnerable)"',
+            '    option "# (in use)"',
+            '    option "#"',
+            '  listbox "Versions of Serilog" {search-suggestions}',
+            '    option "# (vulnerable)"',
+            '    option "# (vulnerable)"',
+        ]);
+    });
+
     it('holds a run of version options under a combobox as one line, collapses a flagged live result list after its first and stateful options, and enumerates every other list (UX-P3.fix-2, UX-P3.fix-8)', () => {
         const node = (depth: number, role: string, name: string, states: string[] = [], testid?: string): AriaNode => ({ depth, role, name, states, testid });
         const version = (depth = 2): AriaNode => node(depth, 'option', '13.0.4');

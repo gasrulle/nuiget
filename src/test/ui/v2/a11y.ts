@@ -314,8 +314,11 @@ export const maskDigits = (text: string): string => text.replace(/\s+/g, ' ').tr
 export const ariaLine = (node: AriaNode): string =>
     `${'  '.repeat(node.depth)}${node.role} "${maskDigits(node.name)}"${node.states.length > 0 ? ` [${node.states.join(', ')}]` : ''}${node.testid ? ` {${maskDigits(node.testid)}}` : ''}`;
 
-/** A version option whose name is all digits: how many of them a select lists follows nuget.org. */
-const LIVE_OPTION = 'option "#"';
+/**
+ * A version option of a native select: its name all digits, or digits with one trailing parenthetical ("(vulnerable)", "(in
+ * use)"); how many of them a select lists, and which carry an annotation, follow nuget.org and its advisories (UX-P5.fix-12).
+ */
+const LIVE_OPTION = /^option "#(?: \([^()"]*\))?"$/;
 
 /** The line that stands for a stretch of live results, whatever their number. */
 export const LIVE_RESULTS_LINE = 'option × # (live)';
@@ -362,9 +365,10 @@ function liveResults(nodes: readonly AriaNode[], masks: readonly Mask[]): { drop
 }
 
 /**
- * One line per node, with two collapses. A run of equal `option "#"` lines under a `combobox` keeps its first line: the
- * native version select lists every published version, a count that grows with each publish (UX-P3.fix-2, design-advisor
- * ruling). A listbox that a state's `liveList` mask names keeps its first option and every option with a state or a test
+ * One line per node, with two collapses. A run of equal version option lines under a `combobox` (`option "#"`, or
+ * `option "# (vulnerable)"` and any other single trailing parenthetical) keeps its first line: the native version select lists every
+ * published version, a count that grows with each publish, and marks the ones an advisory covers (UX-P3.fix-2, design-advisor
+ * ruling; UX-P5.fix-12). A listbox that a state's `liveList` mask names keeps its first option and every option with a state or a test
  * id, each with its subtree; each stretch of the other options, the order nuget.org ranks them in, is one line
  * `option × # (live)` at their indent (UX-P3.fix-8). Every other list (the quick search's suggestions and versions)
  * stays enumerated.
@@ -387,7 +391,7 @@ export const ariaSnapshot = (state: string, nodes: readonly AriaNode[], masks: r
         if (dropped.has(index)) {
             return;
         }
-        if (line.trim() === LIVE_OPTION && parentRole === 'combobox' && lines[lines.length - 1] === line) {
+        if (LIVE_OPTION.test(line.trim()) && parentRole === 'combobox' && lines[lines.length - 1] === line) {
             return;
         }
         lines.push(line);
