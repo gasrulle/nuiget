@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict, BUSY_EXPECTED, busyWordsVerdict } from '../ui/v2/measure';
+import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, compactVersionClause, COMPACT_VERSION_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict, BUSY_EXPECTED, busyWordsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -675,7 +675,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // DS-ROW-5: on a compact row's one line a name cut beside an uncut version is cut too early; a comfortable name ellipsizes beside whole badges.
         const truncation = layout({ rows: [
             row('Microsoft.Extensions.Logging', { nameCut: true, badgesShown: 1 }), row('Microsoft.Extensions.Hosting', { nameCut: true }),
-            row('Polly', { compact: true, nameCut: true, versionShown: false }), row('Serilog.Sinks.Console', { compact: true, nameCut: true, versionCut: true }),
+            row('Polly', { compact: true, nameCut: true, versionShown: false }), row('Serilog.Sinks.Console', { compact: true, nameCut: true, versionCut: true, versionWidth: 30, versionNeed: 15 }),
             row('Newtonsoft.Json', { compact: true, nameCut: true }),
         ] });
         expect(lineOf('main-installed-single', truncation, 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: expect.stringMatching(/^2 rows, 2 names cut; badges clipped 0; version whole ×\d$/) });
@@ -683,7 +683,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // The facts line yields the authors, never the version (judge main-installed-single#D7, UX-P2.8a).
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: false })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: true, value: '1 rows, 0 names cut; badges clipped 0; version whole ×1' });
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: true })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 0; version whole ×0, 1 cut' });
-        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' });
+        // UX-P5.fix-17: the side bar line ends with the compact-version clause (a cut with room for its first character and the ellipsis).
+        const versionsSuffix = COMPACT_VERSION_STATUS === 'hard' ? '; versions cut 1, slivers 0' : '; versions cut 1, slivers 0 (Serilog.Sinks.Console 30/15) (pending ' + COMPACT_VERSION_STATUS.pending + ')';
+        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' + versionsSuffix });
     });
 
     it('reads a collapsed glyph button in a list toolbar: the glyph alone below 250, the label above (DS-OVERFLOW-3, UX-P3.fix-12)', () => {
@@ -782,6 +784,35 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         const fitSuffix = TOOLBAR_FIT_STATUS === 'hard' ? '' : ' (pending ' + TOOLBAR_FIT_STATUS.pending + ')';
         expect(value('main-installed-single', facts({ controlsOut: [{ container: 'toolbars', label: '[installed-toolbar]', out: 0, hidden: 0, menu: false, total: 2, toolbarFit: today }] }), 'DS-OVERFLOW-3@main-installed-single/toolbars'))
             .toMatchObject({ value: '[installed-toolbar] 2/2 reachable; cut 1 (uninstall-selected-button); lines 2' + fitSuffix, pass: TOOLBAR_FIT_STATUS !== 'hard' });
+    });
+
+    it('DS-ROW-5\'s compact-version clause: a cut version draws its first character and its ellipsis, a zero-wide one counts nothing (UX-P5.fix-17)', () => {
+        const compact = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'sidebar-installed-list', compact: true, name, nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides }) as RowFacts;
+        // The lone "9" of the classic side bar (judge sidebar-installed-busy#D1): 8 wide where "9…" needs 15.
+        const sliver = compact('Microsoft.Extensions.AI.Abstractions', { versionCut: true, versionWidth: 8, versionNeed: 15 });
+        expect(compactVersionClause([sliver], true)).toEqual({ text: 'versions cut 1, slivers 1 (Microsoft.Extensions.AI. 8/15)', pass: false });
+        expect(compactVersionClause([sliver], false)).toEqual({ text: 'versions cut 1, slivers 1 (Microsoft.Extensions.AI. 8/15)', pass: false });
+        // A cut with room for its first character and the ellipsis passes; once hard only slivers are listed.
+        const room = compact('Serilog', { versionCut: true, versionWidth: 20, versionNeed: 15 });
+        expect(compactVersionClause([room], true)).toEqual({ text: 'versions cut 1, slivers 0 (Serilog 20/15)', pass: true });
+        expect(compactVersionClause([room], false)).toEqual({ text: 'versions cut 1, slivers 0', pass: true });
+        // The threshold: 0.5 on the width side.
+        expect(compactVersionClause([compact('A', { versionCut: true, versionWidth: 14.5, versionNeed: 15 })], false).pass).toBe(true);
+        expect(compactVersionClause([compact('A', { versionCut: true, versionWidth: 14.4, versionNeed: 15 })], false).pass).toBe(false);
+        // A two-character sliver ("6." beside a CPM badge) is a sliver too.
+        expect(compactVersionClause([compact('Swashbuckle.AspNetCore', { versionCut: true, versionWidth: 11, versionNeed: 15 })], false)).toEqual({ text: 'versions cut 1, slivers 1 (Swashbuckle.AspNetCore 11/15)', pass: false });
+        // A collapsed version is not shown: neither cut nor a sliver. A whole version is not cut.
+        expect(compactVersionClause([compact('Polly', { versionShown: false }), compact('Moq')], true)).toEqual({ text: 'versions cut 0, slivers 0', pass: true });
+        // A cut version without a reading is not measurable, never a pass.
+        expect(compactVersionClause([compact('Dapper', { versionCut: true })], true)).toEqual({ text: 'versions cut 1, slivers 0, not measurable 1 (Dapper ?/?)', pass: false });
+        // In the rule: side bar only, the sliver failing once hard; the main line does not change by a character.
+        const suffix = COMPACT_VERSION_STATUS === 'hard' ? '' : ' (pending ' + COMPACT_VERSION_STATUS.pending + ')';
+        expect(lineOf('sidebar-installed-busy', layout({ rows: [sliver] }), 'DS-ROW-5@sidebar-installed-busy')).toMatchObject({
+            value: '1 rows, 0 names cut; versions cut 1, slivers 1 (Microsoft.Extensions.AI. 8/15)' + suffix, pass: COMPACT_VERSION_STATUS !== 'hard',
+        });
+        expect(lineOf('sidebar-installed-busy', layout({ rows: [room] }), 'DS-ROW-5@sidebar-installed-busy')).toMatchObject({ pass: true });
+        const comfortable = { ...compact('Serilog'), compact: false, list: 'installed-list' } as RowFacts;
+        expect(lineOf('main-installed-single', layout({ rows: [comfortable] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ value: '1 rows, 0 names cut; badges clipped 0; version whole ×1', pass: true });
     });
 
     it('PF-3a: separated authors that fill their room are ellipsized, 4 px short of it are cut (UX-P3.fix-14)', () => {

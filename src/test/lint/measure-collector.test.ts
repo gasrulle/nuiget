@@ -925,6 +925,36 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(facts.endOfP0.rows.find(row => row.nameLeft === 28)?.band).toEqual({ left: 4, top: 400, right: 296, bottom: 422 });
     });
 
+    it('reads a cut compact version\'s width and the width of its first character plus the ellipsis, nothing elsewhere (DS-ROW-5, UX-P5.fix-17)', () => {
+        document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,400,300,422"><div class="nuiget-row-option nuiget-row-option--compact" role="option" data-rect="4,400,296,422"><span class="nuiget-row-name" data-rect="28,403,254,419" data-text="28,403,254,419">Microsoft.Extensions.AI.Abstractions</span><span class="nuiget-row-version" data-rect="262,404,270,418" data-text="262,404,270,418">9.5.0</span></div></div>'
+            + '<div class="nuiget-row nuiget-row--compact" data-rect="0,422,300,444"><div class="nuiget-row-option nuiget-row-option--compact" role="option" data-rect="4,422,296,444"><span class="nuiget-row-name" data-rect="28,425,60,441" data-text="28,425,60,441">Moq</span><span class="nuiget-row-version" data-rect="68,426,98,440" data-text="68,426,98,440">4.20.72</span></div></div>');
+        const [cut, whole] = [...document.querySelectorAll('.nuiget-row--compact .nuiget-row-version')] as HTMLElement[];
+        Object.defineProperty(cut, 'scrollWidth', { configurable: true, value: 28 });
+        Object.defineProperty(whole, 'scrollWidth', { configurable: true, value: 30 });
+        const measured: string[] = [];
+        // jsdom has no canvas: the measured width stands in for Chromium's.
+        const canvas = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ font: '', measureText: (text: string) => { measured.push(text); return { width: 15.64 }; } } as unknown as CanvasRenderingContext2D);
+        try {
+            const rows = collect().rows;
+            expect(rows.find(row => row.name === 'Microsoft.Extensions.AI.Abstractions')).toMatchObject({ compact: true, versionCut: true, versionWidth: 8, versionNeed: 15.6 });
+            // The first character and the ellipsis, read once: a whole compact version and a comfortable row carry neither number.
+            expect(measured).toEqual(['9…']);
+            const moq = rows.find(row => row.name === 'Moq' && row.compact);
+            expect(moq?.versionCut).toBe(false);
+            expect(moq).not.toHaveProperty('versionNeed');
+            expect(rows.find(row => row.name === 'Serilog')).not.toHaveProperty('versionWidth');
+        } finally {
+            canvas.mockRestore();
+        }
+        // Without a 2D context the width is read and the need is not: the clause prints it as not measurable.
+        const none = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+        try {
+            expect(collect().rows.find(row => row.name === 'Microsoft.Extensions.AI.Abstractions')).toMatchObject({ versionWidth: 8, versionNeed: undefined });
+        } finally {
+            none.mockRestore();
+        }
+    });
+
     it('reads a sidebar tree row at its level: the title and name x less its indents, a group row as a compact row, a start padding as a slot (UX-P3.7c)', () => {
         document.body.insertAdjacentHTML('beforeend', '<main data-testid="nuiget-sidebar" id="tree-fixture" style="--nuiget-tree-indent: 8px" data-rect="0,0,300,600">'
             + '<div class="nuiget-row nuiget-row--compact" data-row-kind="group" data-level="2" data-rect="0,100,300,122"><div class="nuiget-row-group nuiget-row-group--compact" role="treeitem" data-rect="4,100,296,122"><div class="nuiget-section-header" data-rect="4,100,296,122"><span class="nuiget-section-title" data-rect="36,103,80,119" data-text="36,103,80,119">App</span></div></div></div>'

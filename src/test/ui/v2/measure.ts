@@ -76,6 +76,13 @@ export const TOOLBAR_FIT_STATUS: RuleStatus = 'hard';
  */
 export const ROW_LINE_STATUS: RuleStatus = 'hard';
 
+/**
+ * DS-ROW-5's compact-version clause in the side bar (a shown compact version is whole, zero-wide, or cut with at least its
+ * first character and its ellipsis drawn; UX-P5.fix-17, design-advisor opening ruling of 2026-11-27). Pending until the CSS
+ * of that item lands.
+ */
+export const COMPACT_VERSION_STATUS: RuleStatus = { pending: 'P5.fix-17' };
+
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
 
@@ -247,6 +254,24 @@ export function rowLineClause(rows: readonly RowFacts[]): { text: string; pass: 
     return {
         text: `line children inside ×${children.length - bad.length}, sliced ${bad.length}${bad.length > 0 ? ` (${bad.slice(0, 3).map(child => `${child.row.slice(0, 24)} ${child.name}`).join('; ')})` : ''}`,
         pass: bad.length === 0,
+    };
+}
+
+/**
+ * DS-ROW-5's compact-version clause (UX-P5.fix-17): a compact version cut by its box (`versionCut`) is a sliver when its box is
+ * narrower than its first character plus the ellipsis by more than 0.5. A zero-wide version is not shown, so neither cut nor a
+ * sliver; a cut version without a reading is not measurable and never passes. `listAll` prints every cut version's
+ * width/need pair (the pending reading), otherwise the first three slivers.
+ */
+export function compactVersionClause(rows: readonly RowFacts[], listAll: boolean): { text: string; pass: boolean } {
+    const cut = rows.filter(row => row.compact && row.versionShown && row.versionCut);
+    const unread = cut.filter(row => row.versionWidth === undefined || row.versionNeed === undefined);
+    const slivers = cut.filter(row => row.versionWidth !== undefined && row.versionNeed !== undefined && row.versionWidth + 0.5 < row.versionNeed);
+    const listed = listAll ? cut : slivers.slice(0, 3);
+    const pair = (row: RowFacts) => `${row.name.slice(0, 24)} ${row.versionWidth ?? '?'}/${row.versionNeed ?? '?'}`;
+    return {
+        text: `versions cut ${cut.length}, slivers ${slivers.length}${unread.length > 0 ? `, not measurable ${unread.length}` : ''}${listed.length > 0 ? ` (${listed.map(pair).join('; ')})` : ''}`,
+        pass: slivers.length === 0 && unread.length === 0,
     };
 }
 
@@ -1031,6 +1056,10 @@ export interface RowFacts {
     versionCut: boolean;
     /** The version's own `text-overflow` is an ellipsis (UX-P3.fix-14). */
     versionEllipsis?: boolean;
+    /** UX-P5.fix-17: a cut compact version's box width; undefined otherwise. */
+    versionWidth?: number;
+    /** UX-P5.fix-17: the width of a cut compact version's first character plus the ellipsis in its computed font; undefined otherwise or without a canvas. */
+    versionNeed?: number;
     /** UX-P3.fix-14: the shown children of the row's lines other than badges, each sliced past its line or overflowing without an ellipsis. */
     lineChildren?: Array<{ name: string; sliced: boolean; plain: boolean }>;
     badgesShown: number;
@@ -1885,6 +1914,20 @@ const buttonBox = id => { const el = scope.querySelector('[data-testid="' + id +
 const detailsButtons = { uninstall: buttonBox('uninstall-button'), update: buttonBox('install-update-button') };
 // Helpers 5 and 6 (UX-P0.12): named text, rows' trailing actions, still chrome, collisions and containment.
 const width = round(document.documentElement.clientWidth);
+// UX-P5.fix-17 (DS-ROW-5): the width a cut compact version needs to draw its first character and its ellipsis, in its own computed
+// font (an update row's version box is regular weight; its bold new version is never read). Undefined without a 2D canvas.
+let versionCanvas;
+const versionNeedOf = version => {
+    if (versionCanvas === undefined) {
+        const canvas = document.createElement('canvas');
+        versionCanvas = typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
+    }
+    if (!versionCanvas) return undefined;
+    const style = getComputedStyle(version);
+    versionCanvas.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+    const first = Array.from((version.textContent || '').trim())[0] || '';
+    return round(versionCanvas.measureText(first + '\\u2026').width);
+};
 const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind="message"])').map(row => {
     const option = row.querySelector('.nuiget-row-option') ?? row;
     const name = option.querySelector('.nuiget-row-name');
@@ -1912,6 +1955,10 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         // 0.5 is the rounding between a rect and the integer scrollWidth (as PF-3a): a fractional box one integer short is not cut (UX-P3.fix-14).
         versionCut: visible(version) && version.scrollWidth - rectOf(version).width > 0.5,
         versionEllipsis: visible(version) && getComputedStyle(version).textOverflow === 'ellipsis',
+        // UX-P5.fix-17: read only where DS-ROW-5's compact-version clause judges, a compact version cut by its box.
+        ...(row.classList.contains('nuiget-row--compact') && visible(version) && version.scrollWidth - rectOf(version).width > 0.5
+            ? { versionWidth: round(rectOf(version).width), versionNeed: versionNeedOf(version) }
+            : {}),
         // UX-P3.fix-14: each shown child of the row's lines, badges aside, against its line's content right.
         lineChildren: [...option.querySelectorAll('.nuiget-row-line')].filter(visible).flatMap(line => {
             const lineStyle = getComputedStyle(line);
@@ -3385,9 +3432,13 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
             // Printed where a row has line children (every capture; a fact without them, as an old fixture, prints none).
             const line = scope === 'sidebar' || rows.every(row => (row.lineChildren ?? []).length === 0) ? undefined : rowLineClause(rows);
             const lineText = line === undefined ? '' : `; ${line.text}${ROW_LINE_STATUS === 'hard' ? '' : ` (pending ${ROW_LINE_STATUS.pending})`}`;
+            // UX-P5.fix-17: the side bar's compact versions are whole, zero-wide, or cut with their first character and ellipsis drawn.
+            const versions = scope === 'sidebar' ? compactVersionClause(rows, COMPACT_VERSION_STATUS !== 'hard') : undefined;
+            const versionsText = versions === undefined ? '' : `; ${versions.text}${COMPACT_VERSION_STATUS === 'hard' ? '' : ` (pending ${COMPACT_VERSION_STATUS.pending})`}`;
             return {
-                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut - ellipsized}${ellipsized > 0 ? `, ellipsized ${ellipsized}` : ''}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}${lineText}`,
-                pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0 && (line === undefined || ROW_LINE_STATUS !== 'hard' || line.pass),
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut - ellipsized}${ellipsized > 0 ? `, ellipsized ${ellipsized}` : ''}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}${lineText}${versionsText}`,
+                pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0 && (line === undefined || ROW_LINE_STATUS !== 'hard' || line.pass)
+                    && (versions === undefined || COMPACT_VERSION_STATUS !== 'hard' || versions.pass),
             };
         }
         default:
