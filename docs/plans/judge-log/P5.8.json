@@ -1,0 +1,547 @@
+{
+  "item": "P5.8",
+  "runs": [
+    {
+      "runId": "46149229906",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "117cf92c (push 2)",
+      "look": "modern",
+      "workflow": "wf_5e8b9386-014",
+      "mode": "screen",
+      "note": "Six captures of design-advisor follow-up 3 DO 1 (the header with Restore at 932 and 220, the three 280-pane toolbar cells, the toggle at 1200), each against its state's artboard as re-rendered in this run (main-updates-all against main-installed-all, as P5.3b paired it); every other moved main cell is covered by its hard lines and the opening ruling's header class. Dispositions under follow-up 4; the two copied artboards are committed in this closing commit.",
+      "captures": {
+        "main-installed-single@932": {
+          "png": "captures/46149229906/ui-screenshots/main-installed-single.dark-modern.932.png",
+          "sha256": "965baa6964d74c945a2bf14248484381b9e434e8230f6a39f98dec9150867f5d",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-single@220": {
+          "png": "captures/46149229906/ui-screenshots/main-installed-single.dark-modern.220.png",
+          "sha256": "16cf061a9974790cce0ce3422ae61927807b54412d63e90e040ee6d4ad73c1ce",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-single@800": {
+          "png": "captures/46149229906/ui-screenshots/main-installed-single.dark-modern.800.png",
+          "sha256": "9e38d2d3d45f92817f755755e8f8b2ab61d968d6796f266bd33dce5296e64fa8",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-single.dark-modern.932.png"
+        },
+        "main-installed-all@1200": {
+          "png": "captures/46149229906/ui-screenshots/main-installed-all.dark-modern.1200.png",
+          "sha256": "496003144d1d64db47c28306ccf1858b28b90881c98c0b75524853be925249a3",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-all.dark-modern.1200.png"
+        },
+        "main-installed-all@800": {
+          "png": "captures/46149229906/ui-screenshots/main-installed-all.dark-modern.800.png",
+          "sha256": "5cf9adb59367bf1fea6ecf858d1c2f654a5f50bc2f4ed685a3efa555ebf39aaa",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-all.dark-modern.1200.png"
+        },
+        "main-updates-all@800": {
+          "png": "captures/46149229906/ui-screenshots/main-updates-all.dark-modern.800.png",
+          "sha256": "42d757c029deaf585ca6af6e64533761bae85783f28e52081b87f7fd93251862",
+          "artboard": "captures/46149229906/ui-screenshots/artboards/main-installed-all.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 23,
+        "standing": 4,
+        "blocking": 0,
+        "refuted": 6,
+        "singleJudge": 8,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "main-installed-single@932#D1",
+          "state": "main-installed-single@932",
+          "finding": "[states] The search box placeholder reads \"Search or type @ to filter\" while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows design-system.md's overflow table (main header row: the placeholder \"Search or type @ to filter\", the side bar's), so the artboard drawing and the written spec disagree and the artboard copy is the stale side.",
+          "severity": "minor",
+          "box": [
+            23,
+            47,
+            410,
+            16
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-1",
+              "lens": "states",
+              "state": "main-installed-single@932",
+              "finding": "The search box placeholder reads \"Search or type @ to filter\" while the approved artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\"; the capture follows design-system.md's overflow table (main header row: the placeholder \"Search or type @ to filter\", the side bar's), so the artboard drawing and the written spec disagree and the artboard copy is the stale side.",
+              "severity": "minor",
+              "box": [
+                23,
+                47,
+                410,
+                16
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "In the crop the capture's placeholder reads \"Search or type @ to filter\" (DS-OVERFLOW-2 hard, log line 6121: 164 of 868 px), while the artboard crop at the same box draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The written spec (design-system.md overflow table, main header row) names the capture's copy, so the artboard is the stale side. Rubric §6 reports this disagreement once as a minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-single@800#D1",
+          "state": "main-installed-single@800",
+          "finding": "[states] The artboard draws the search box placeholder as 'Search packages, or filter: @installed, @updates, @vulnerable', but the design system's overflow table (§8, main header) sets the copy to 'Search or type @ to filter', which the capture shows; the artboard and the rules disagree on this copy.",
+          "severity": "minor",
+          "box": [
+            16,
+            68,
+            768,
+            26
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "states"
+          ],
+          "members": [
+            {
+              "id": "states-2",
+              "lens": "states",
+              "state": "main-installed-single@800",
+              "finding": "The artboard draws the search box placeholder as 'Search packages, or filter: @installed, @updates, @vulnerable', but the design system's overflow table (§8, main header) sets the copy to 'Search or type @ to filter', which the capture shows; the artboard and the rules disagree on this copy.",
+              "severity": "minor",
+              "box": [
+                16,
+                68,
+                768,
+                26
+              ],
+              "rule": "spec-conflict",
+              "verdict": "confirmed",
+              "reason": "The capture crop shows the search box placeholder 'Search or type @ to filter' at y 68–94, which matches the Design System §8 main-header row and the hard measurement 'DS-OVERFLOW-2…/placeholder: placeholder \"Search or type @ to filter\" 164 of 536 px'. The artboard crop draws the older 'Search packages, or filter: @installed, @updates, @vulnerable', and the spec.json declares no placeholder copy, so this is a real artboard-versus-rules disagreement that rubric §6 says to report once as minor spec-conflict.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-all@1200#D2",
+          "state": "main-installed-all@1200",
+          "finding": "[native] The expand/collapse icon in the bulk toolbar is 4 px left of the artboard. Its glyph spans x 99 to 111 against the artboard's 103 to 115 at the same y (124 to 136), and the spec's expand-collapse-button rect is x 97.7, w 22, which centres the glyph at about 108.7. It sits closer to Select All (10 px from that button's edge to the glyph, against 14 px in the artboard) and looks squeezed beside it.",
+          "severity": "major",
+          "box": [
+            89,
+            117,
+            31,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-installed-all@1200",
+              "finding": "The expand/collapse icon in the bulk toolbar is 4 px left of the artboard. Its glyph spans x 99 to 111 against the artboard's 103 to 115 at the same y (124 to 136), and the spec's expand-collapse-button rect is x 97.7, w 22, which centres the glyph at about 108.7. It sits closer to Select All (10 px from that button's edge to the glyph, against 14 px in the artboard) and looks squeezed beside it.",
+              "severity": "minor",
+              "box": [
+                89,
+                117,
+                31,
+                26
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "Pixel scan at y 130 puts the expand/collapse glyph at x 99-111 in the capture against 103-115 in the artboard, while Select All (right edge 89) and Uninstall Selected (left edge 257) are identical in both, so the icon button sits 4 px left of the spec's rect (x 97.7), about 4 px from Select All instead of 8, which contradicts the spec rect.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "src/webview/shared/primitives/primitives.css:1617 (.nuiget-toolbar gap: var(--nuiget-space-2), UX-P2.5); ui-output.txt: [measure] DS-GRID-2a@main-installed-all: gaps 4, 8 (hard); the round-3 page draws its toolbar with --nuiget-gap-between (8, round1/tokens-A.css:22)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-installed-all@800#D2",
+          "state": "main-installed-all@800",
+          "finding": "[geometry] When the Unsupported.csproj message leaf wraps to two lines, it loses its vertical padding. Its line boxes start about 3 px below the group header (about 456.9 against the header bottom at 454) and end flush with the next row's top (about 493.3 against 493). The artboard and spec show 7.9 px above (installed-unsupported-unsupported.csproj y 435.9 under a header ending at 428) and 4.9 px below (ending at 454.1, with package-row-newtonsoft.json#2 at 459). The rows below move down only 8 px for an 18 px second line, so the wrapped message looks squeezed between its header and the next row.",
+          "severity": "major",
+          "box": [
+            16,
+            432,
+            256,
+            66
+          ],
+          "rule": "DS-GRID-2",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-installed-all@800",
+              "finding": "When the Unsupported.csproj message leaf wraps to two lines, it loses its vertical padding. Its line boxes start about 3 px below the group header (about 456.9 against the header bottom at 454) and end flush with the next row's top (about 493.3 against 493). The artboard and spec show 7.9 px above (installed-unsupported-unsupported.csproj y 435.9 under a header ending at 428) and 4.9 px below (ending at 454.1, with package-row-newtonsoft.json#2 at 459). The rows below move down only 8 px for an 18 px second line, so the wrapped message looks squeezed between its header and the next row.",
+              "severity": "major",
+              "box": [
+                16,
+                432,
+                256,
+                66
+              ],
+              "rule": "DS-GRID-2",
+              "verdict": "confirmed",
+              "reason": "In the crop the wrapped message sits close under the Unsupported.csproj header. Pixel scan of the crop: header badge bottom 452, message ink 460–487, next row's check box top 520, so the row starts at about 493 (check box offset 27, the same as the artboard's 486 against 459). The leaf therefore spans 454→493, 39 px for two 18.2 px lines, against 7.9 px above and 4.9 px below in the spec. No hard measurement covers message-leaf padding (DS-GRID-2b reads only the headers, 3/3).",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        },
+        {
+          "id": "main-installed-all@800#D4",
+          "state": "main-installed-all@800",
+          "finding": "[geometry] In the bulk toolbar, the Collapse All icon button sits about 4 px after the collapsed Select All button: the button's border ends at x 50 and the glyph starts at x 59, against x 103 after an edge at 89.7 in the artboard. The artboard and spec use an 8 px gap here (select-all-button ends at 89.7, expand-collapse-button starts at 97.7).",
+          "severity": "major",
+          "box": [
+            16,
+            143,
+            61,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-3",
+              "lens": "geometry",
+              "state": "main-installed-all@800",
+              "finding": "In the bulk toolbar, the Collapse All icon button sits about 4 px after the collapsed Select All button: the button's border ends at x 50 and the glyph starts at x 59, against x 103 after an edge at 89.7 in the artboard. The artboard and spec use an 8 px gap here (select-all-button ends at 89.7, expand-collapse-button starts at 97.7).",
+              "severity": "major",
+              "box": [
+                16,
+                143,
+                61,
+                26
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "A column scan of the crop puts the collapsed Select All border at x 16–49 and the Collapse All glyph at x 59 (glyph inset 5.3 in its 22 px box, so the box starts at about 53.7), a gap of about 4 px. The artboard has border 16–89 and glyph at 103, the spec's 8 px gap (89.7 → 97.7). The overflow table's staged collapse declares no different gap.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "src/webview/shared/primitives/primitives.css:1617 (.nuiget-toolbar gap: var(--nuiget-space-2), UX-P2.5); ui-output.txt: [measure] DS-GRID-2a@main-installed-all: gaps 4, 8 (hard); the round-3 page draws its toolbar with --nuiget-gap-between (8, round1/tokens-A.css:22)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-updates-all@800#D4",
+          "state": "main-updates-all@800",
+          "finding": "[native] The Dapper row's facts line ends in the Verified mark followed straight by an ellipsis ('· ✓…'), with the author cut to zero characters, while the CsvHelper and Unresolved Newtonsoft.Json rows above keep at least the first letter ('✓ J…').",
+          "severity": "minor",
+          "box": [
+            200,
+            775,
+            36,
+            16
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native"
+          ],
+          "members": [
+            {
+              "id": "native-2",
+              "lens": "native",
+              "state": "main-updates-all@800",
+              "finding": "The Dapper row's facts line ends in the Verified mark followed straight by an ellipsis ('· ✓…'), with the author cut to zero characters, while the CsvHelper and Unresolved Newtonsoft.Json rows above keep at least the first letter ('✓ J…').",
+              "severity": "minor",
+              "box": [
+                200,
+                775,
+                36,
+                16
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "In the crop the Dapper facts line ends in '· ✓…', with the author cut to zero characters after the Verified mark, while the CsvHelper row above keeps 'J…'. The mark stays, so this is polish at the same mechanism in another row.",
+              "method": "crop",
+              "refuterSeverity": "minor"
+            }
+          ]
+        },
+        {
+          "id": "main-updates-all@800#D2",
+          "state": "main-updates-all@800",
+          "finding": "[geometry] In the bulk toolbar the collapsed Select All button (x 16-50) and the Collapse All icon button (box about 54-76) are only 4 px apart. The spec puts them 8 px apart (select-all-button ends at 89.7, expand-collapse-button starts at 97.7), and the artboard draws the same 14 px from the Select All border to the glyph that the capture draws at 10 px.",
+          "severity": "major",
+          "box": [
+            16,
+            143,
+            60,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-1",
+              "lens": "geometry",
+              "state": "main-updates-all@800",
+              "finding": "In the bulk toolbar the collapsed Select All button (x 16-50) and the Collapse All icon button (box about 54-76) are only 4 px apart. The spec puts them 8 px apart (select-all-button ends at 89.7, expand-collapse-button starts at 97.7), and the artboard draws the same 14 px from the Select All border to the glyph that the capture draws at 10 px.",
+              "severity": "major",
+              "box": [
+                16,
+                143,
+                60,
+                26
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "A column scan puts the capture's Select All border at x 16–49 and the Collapse All glyph ink from x 59, about a 4 px gap between the button boxes (the toolbar's gap is --nuiget-space-2). In the artboard the border ends at 89 and the glyph ink starts at 103, and the spec puts select-all-button's end at 89.7 and expand-collapse-button's start at 97.7, an 8 px gap (the artboard's toolbar gap is --nuiget-gap-between). DS-GRID-2a only checks that gaps sit on the ramp ('gaps 4, 8'), so it does not contradict this.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "src/webview/shared/primitives/primitives.css:1617 (.nuiget-toolbar gap: var(--nuiget-space-2), UX-P2.5); ui-output.txt: [measure] DS-GRID-2a@main-installed-all: gaps 4, 8 (hard); the round-3 page draws its toolbar with --nuiget-gap-between (8, round1/tokens-A.css:22)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-updates-all@800#D3",
+          "state": "main-updates-all@800",
+          "finding": "[geometry] The wrapped Unsupported.csproj message leaf (two lines, y 385-421) loses its block padding. Its first line box starts at the header band's bottom (385) and its second line ends where the Newtonsoft.Json row band starts (421). In the artboard the leaf's text sits about 5 px inside its 28 px band, below the header (installed-unsupported text at 435.9 in a leaf starting at 431), so the header, message and row look squeezed compared with the artboard.",
+          "severity": "major",
+          "box": [
+            16,
+            357,
+            240,
+            64
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "geometry"
+          ],
+          "members": [
+            {
+              "id": "geometry-2",
+              "lens": "geometry",
+              "state": "main-updates-all@800",
+              "finding": "The wrapped Unsupported.csproj message leaf (two lines, y 385-421) loses its block padding. Its first line box starts at the header band's bottom (385) and its second line ends where the Newtonsoft.Json row band starts (421). In the artboard the leaf's text sits about 5 px inside its 28 px band, below the header (installed-unsupported text at 435.9 in a leaf starting at 431), so the header, message and row look squeezed compared with the artboard.",
+              "severity": "major",
+              "box": [
+                16,
+                357,
+                240,
+                64
+              ],
+              "rule": "judge-only",
+              "verdict": "confirmed",
+              "reason": "A row scan of the crop puts the Unsupported.csproj title ink at y 365–377 and the leaf's first line ink at y 388, 23 px top to top. The single-line Empty.csproj leaf sits 28 px below its title (209 to 237), and the artboard's Unsupported leaf also sits 28 px below (411 to 439). The two-line leaf fills 385–421 with no block padding, so the header, message and row read squeezed.",
+              "method": "crop",
+              "refuterSeverity": "major"
+            }
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "id": "main-installed-all@1200#D1",
+          "state": "main-installed-all@1200",
+          "finding": "[native] The tab bar draws a third tab, CONSOLIDATE with a count badge of 2, after Updates (about x 248 to 372). The artboard and the spec.json show only installed-tab and updates-tab, so this is an element the artboard does not have. | [geometry] The capture's tab strip draws a third tab, CONSOLIDATE with its count badge, after UPDATES (x 248 to about 372, inside the 420 px strip and not overflowing), but the artboard and spec.json draw only the Installed and Updates tabs (installed-tab x 6 w 138.6, updates-tab x 144.6 w 103; no consolidate-tab rect). The Design System's overflow table names 'Tab strip (Installed/Updates, and Consolidate under All Projects)', so this looks like the artboard and spec leaving out an element the rules require. The capture itself follows the rule. Every other edge, inset, height, gap and the scrollbar thumb (y 527 to 645) match the artboard to the pixel. | [states] The capture's tab strip draws a third tab, CONSOLIDATE with a count badge of 2, right of UPDATES. The artboard draws only INSTALLED and UPDATES, and the spec lists only installed-tab and updates-tab. The Design System's overflow table (Tab strip row: \"Installed/Updates, and Consolidate under All Projects\") declares this tab, so the artboard and spec are stale here, not the product: reported once as a conflict between the artboard/spec and the rules.",
+          "severity": "minor",
+          "box": [
+            248,
+            77,
+            124,
+            35
+          ],
+          "rule": "judge-only, spec-conflict",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "docs/design/design-system.md §8 Tab strip row (\"Installed/Updates, and Consolidate under All Projects\") and the DECISIONS row of 2026-11-27 \"Consolidate tab (UX-P5.3b, G5)\", as docs/plans/judge-log/P5.3b.json cites them; [tab-bar] 3/3 reachable (hard)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-installed-all@800#D1",
+          "state": "main-installed-all@800",
+          "finding": "[native] At 800 px the tab strip keeps every count badge at full width and ellipsizes the labels down to 'I...' and 'U...' (and 'CONS...'), so Installed and Updates can no longer be told apart by their text; the artboard's tab strip reads INSTALLED and UPDATES in full, and a built-in strip never cuts a tab label to its first letter while a decoration keeps its width. | [geometry] In the 280 px list pane, the tab labels ellipsize to one to four characters ('I...', 'U...', 'CONS...') while every count badge stays in the strip. The overflow table orders the strip's behaviour the other way: badges leave first, then labels ellipsize. The active Installed tab shrinks the most (one letter), against the artboard's full INSTALLED and UPDATES labels.",
+          "severity": "major",
+          "box": [
+            6,
+            103,
+            268,
+            35
+          ],
+          "rule": "judge-only, DS-OVERFLOW-3",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "docs/design/design-system.md §8 Tab strip row (the badges leave the strip below 250, then the labels ellipsize); pane 280; ui-output.txt: [measure] DS-OVERFLOW-3@main-installed-all/tabs: [tab-bar] 3/3 reachable; badges shown 4 (hard)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-installed-all@800#D3",
+          "state": "main-installed-all@800",
+          "finding": "[geometry] The capture's tab strip has a third tab, Consolidate, with its own count badge. The artboard and spec draw only the Installed and Updates tabs, while the overflow table of the Design System puts Consolidate in the strip under All Projects. The artboard and spec disagree with the Design System here. | [states] The tab strip shows a third tab, Consolidate with a count badge of 2 (\"CONS...\"), which neither the approved artboard nor the spec.json draws: they have only the installed-tab and updates-tab entries. Design System §8 (the tab-strip row) declares \"Consolidate under All Projects\", so the capture follows the rule and the artboard and redline lag it. This is reported once as a spec conflict, not as an extra element.",
+          "severity": "minor",
+          "box": [
+            182,
+            103,
+            92,
+            35
+          ],
+          "rule": "spec-conflict",
+          "lenses": [
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "docs/design/design-system.md §8 Tab strip row and the DECISIONS row of 2026-11-27 \"Consolidate tab (UX-P5.3b, G5)\", as docs/plans/judge-log/P5.3b.json cites them",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        },
+        {
+          "id": "main-updates-all@800#D1",
+          "state": "main-updates-all@800",
+          "finding": "[native] In the three Unsupported.csproj update rows (Newtonsoft.Json, Polly, Serilog) the facts line after the new version shows only '· …   · …': the authors (and their Verified mark) and the Read-only status are each cut to a bare ellipsis with no character left, where the artboard's rows show '· ✓ <author> · Read-only' and the Extensions view never draws an ellipsis with no text before it. | [states] In the Unsupported.csproj rows (Newtonsoft.Json, Polly, Serilog) the facts line ends in two bare '· ...' fragments: the author and the 'Read-only' word are each cut down to a lone ellipsis. The artboard's package-row-newtonsoft.json#2, package-row-polly and package-row-serilog#2 show '<version> · <author> · Read-only'. The read-only status is lost, where hiding by priority should drop parts whole.",
+          "severity": "major",
+          "box": [
+            98,
+            458,
+            136,
+            161
+          ],
+          "rule": "judge-only, DS-ROW-6",
+          "lenses": [
+            "native",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "DECISIONS row of 2026-11-15 \"The list pane's floor: the bulk primary and the facts line (UX-P3.fix-14)\"; ui-output.txt: [measure] DS-ROW-5@main-updates-all: 16 rows, 6 names cut; badges clipped 0; version whole ×16; line children inside ×51, sliced 0 (hard)",
+          "ruling": "docs/plans/handoff/P5.8.md, Advisor decisions, design-advisor follow-up 4 of 2026-11-28"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-single@932",
+          "finding": "The search box placeholder reads \"Search or type @ to filter\", while the artboard's search-input draws \"Search packages, or filter: @installed, @updates, @vulnerable\". The capture's wording no longer names what the box searches or which @ filters exist. The placeholder colour is correct: #989898, input.placeholderForeground.",
+          "severity": "minor",
+          "box": [
+            23,
+            46,
+            408,
+            18
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop does show \"Search or type @ to filter\" where the artboard draws \"Search packages, or filter: @installed, @updates, @vulnerable\". But this is the specified copy, so the capture is not wrong: design-system.md's overflow table gives the main header placeholder as \"Search or type @ to filter\", and the hard measurement agrees (log line 6121: DS-OVERFLOW-2@main-installed-single/placeholder: placeholder \"Search or type @ to filter\" 164 of 868 px (hard)). Under rubric §6 the spec wins, and the stale-artboard disagreement is states-1's spec-conflict.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-single@220",
+          "finding": "In this rest state the Installed tab has a full 1 px focusBorder ring (x 6–85, y 201–235). The artboard's Installed tab (932 px, x 6–144, y 77–111) has only the 1 px active underline at its bottom edge and no ring, so the capture shows a focus mark that the artboard and the spec's installed-tab tokens do not.",
+          "severity": "minor",
+          "box": [
+            6,
+            201,
+            80,
+            35
+          ],
+          "rule": "DS-FOCUS-3",
+          "verdict": "refuted",
+          "reason": "The crop does show a 1 px blue ring around the INSTALLED tab, but in this cell the tab holds the keyboard focus. The hard measurement for this cell, 'DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1) (hard)', asserts that ring. DS-COLOR-5 reads '0 elements of an unfocused row in focusBorder', so focusBorder marks only the focused tab, and the spec's rest-state note rules out only a current row, not tab focus.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-single@220",
+          "finding": "The Installed tab draws a 1 px focusBorder (#0078d4) ring on all four sides around the tab (x 6-85, y 201-235) in this rest state. The artboard's Installed tab (x 6-144, y 77-112) shows only the active-tab underline and no ring. The rest state therefore shows a focus ring that the reference does not draw.",
+          "severity": "major",
+          "box": [
+            6,
+            201,
+            80,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "Same box and same ring as native-1: the crop shows a 1 px focusBorder ring around the focused INSTALLED tab, which the hard measurement 'DS-FOCUS-1@main-installed-single/tabs: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1) (hard)' asserts for this cell. The ring is the correct focus ring on the focused element, not an extra element missing from the artboard.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "native-1",
+          "lens": "native",
+          "state": "main-installed-single@800",
+          "finding": "The Installed tab carries a full 1 px focusBorder ring (x 6–144, y 103–137) in this rest state, while the artboard's Installed tab (installed-tab rect 6,77,138.6×35) draws only its 1 px active underline. The ring's bottom edge lands on the underline's row, so in the capture the active-tab indicator cannot be told apart from focus.",
+          "severity": "minor",
+          "box": [
+            6,
+            103,
+            139,
+            35
+          ],
+          "rule": "judge-only",
+          "verdict": "refuted",
+          "reason": "The crop shows the 1 px blue ring around the Installed tab, but that tab holds keyboard focus in this cell and the hard measurement for the 800 cell asserts exactly this ring as the target ('DS-FOCUS-1@main-installed-single/tabs: tab [installed-tab]: outline 1 solid rgb(0, 120, 212) offset -1 (target 1 solid #0078d4 offset -1) (hard)'), while DS-COLOR-4/5 measure the active underline separately in panelTitle.activeBorder, so this is a correct focus state and not a defect.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-installed-single@800",
+          "finding": "In the Microsoft.Extensions.A... row (the 9.5.0-preview.1.25262.9 row) the facts line ends at the version: the separator, the Verified mark and the authors are gone with no ellipsis, while the spec composition says the authors ellipsize after the Verified mark when a long version leaves no room (the 932 capture of the same row keeps the separator, mark and ellipsis).",
+          "severity": "minor",
+          "box": [
+            98,
+            455,
+            140,
+            16
+          ],
+          "rule": "DS-ROW-5",
+          "verdict": "refuted",
+          "reason": "In the crop the 9.5.0-preview.1.25262.9 row's facts line ends at the version at the 800 cell's narrow list pane (about 210 to 280 px), which is DS-ROW-5's declared clause 'a line narrower than its version ellipsizes the version' (the meta, authors and status share what is left), and the hard measurement passes on it: 'DS-ROW-5@main-installed-single: 13 rows, 10 names cut; badges clipped 0; version whole ×12, ellipsized 1; line children inside ×39, sliced 0 (hard)'.",
+          "method": "crop",
+          "refuterSeverity": "minor"
+        },
+        {
+          "id": "states-1",
+          "lens": "states",
+          "state": "main-updates-all@800",
+          "finding": "In the tab strip the Installed and Updates labels are cut to a single letter ('I...' and 'U...', the selected tab included) while the count badges stay and 'CONS...' keeps four letters. The artboard's installed-tab and updates-tab show full labels. DS-OVERFLOW-3's overflow table says the badges leave the strip first and the labels ellipsize only after that, so at this width the state no longer says which tab it shows.",
+          "severity": "blocking",
+          "box": [
+            6,
+            103,
+            262,
+            35
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "verdict": "refuted",
+          "reason": "The crop does show 'I...', 'U...' and 'CONS...' with their badges, but the list pane is 280 px ('split: list 280'). The DS-OVERFLOW-3 overflow table removes the badges only below 250 and then lets the labels ellipsize. The hard measurement '[tab-bar] 3/3 reachable; badges shown 4' is green, so this is the declared overflow behaviour at this width, not the reversed order the finding claims.",
+          "method": "crop",
+          "refuterSeverity": "major"
+        }
+      ]
+    }
+  ]
+}

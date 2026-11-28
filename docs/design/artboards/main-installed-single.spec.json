@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "43731497246",
+  "run": "46149229906",
   "composition": "The Microsoft.Extensions.DependencyInjection.Abstractions row, the sixth in id order, is drawn current (list.activeSelectionBackground band, focus outline, its action shown) and the details pane filled with its details and README: the scene of main-details-readme. main-installed-single is the rest state: no current row, the details pane's empty state. Elements marked composed are compared in main-details-readme only. In the facts line the version stays whole and the authors ellipsize after the Verified mark when a long version leaves no room (DS-ROW-5).",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 593,
+          "x": 567,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 600,
+        "inset": 574,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 758,
+          "x": 732,
           "y": 8,
           "w": 102,
           "h": 26
         },
-        "inset": 765,
+        "inset": 739,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -51,6 +51,22 @@
         ]
       },
       "source-settings": {
+        "rect": {
+          "x": 842,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 842,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "restore-button": {
         "rect": {
           "x": 868,
           "y": 10,
@@ -443,12 +459,12 @@
     "classic": {
       "project-selector": {
         "rect": {
-          "x": 593,
+          "x": 567,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 600,
+        "inset": 574,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -463,12 +479,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 758,
+          "x": 732,
           "y": 8,
           "w": 102,
           "h": 26
         },
-        "inset": 765,
+        "inset": 739,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -482,6 +498,22 @@
         ]
       },
       "source-settings": {
+        "rect": {
+          "x": 842,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 842,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "restore-button": {
         "rect": {
           "x": 868,
           "y": 10,

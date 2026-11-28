@@ -17,6 +17,7 @@
     "    option \"All Sources\"",
     "    option \"nuget.org\"",
     "  button \"Manage Package Sources...\" {source-settings}",
+    "  button \"Restore Packages\" {restore-button}",
     "  button \"Refresh\" {refresh-button}",
     "  search \"\"",
     "    combobox \"Search packages, or filter with @installed, @updates or @vulnerable\" [collapsed, focused] {search-input}",

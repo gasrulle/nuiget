@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "45020316676",
+  "run": "46149229906",
   "composition": "The state's scene at scrollTop 0: Gateway's Updates tab, selected and focused (the reach's click leaves the 1 px focusBorder ring at offset -1 on it), the bulk toolbar with Select All and the primary Update All (14) enabled, and the Direct packages group row at the top of the tree with its count badge, the ruled target of UX-P3.1a (MS-8, D48): the product today renders a flat list from y 147, and the page draws the group row at 147-175 and the fourteen update rows from 175. The Microsoft.Extensions.Http row is drawn current (list.activeSelectionBackground band, focus outline, its update action shown) as the render's colour sample: the state itself has no current row and its details pane shows the empty sentence. Elements marked composed carry main-updates-current, a state that does not exist, so nothing compares them. The other rows' actions are not drawn, as the product hides them until a row is hovered or current. Versions are live content: the rects count, not the numbers.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 861,
+          "x": 835,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 868,
+        "inset": 842,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1026,
+          "x": 1000,
           "y": 8,
           "w": 102,
           "h": 26
         },
-        "inset": 1033,
+        "inset": 1007,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -51,6 +51,22 @@
         ]
       },
       "source-settings": {
+        "rect": {
+          "x": 1110,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 1110,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "restore-button": {
         "rect": {
           "x": 1136,
           "y": 10,

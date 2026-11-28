@@ -6,18 +6,18 @@
   "vscode": "1.140.0",
   "chromium": "150",
   "platform": "linux",
-  "run": "45020316676",
+  "run": "46149229906",
   "composition": "The window is the product's at scrollTop 580: Microsoft.Extensions.Configuration 8.0.0 under net8.0 is the last full row and current (its band is the render's colour sample), and its read-only details fill the pane (interaction model §7): the id with the Transitive badge, Version and Authors, Required by per target framework; no tabs, no actions, no README.",
   "looks": {
     "modern": {
       "project-selector": {
         "rect": {
-          "x": 861,
+          "x": 835,
           "y": 8,
           "w": 157,
           "h": 26
         },
-        "inset": 868,
+        "inset": 842,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -32,12 +32,12 @@
       },
       "source-selector": {
         "rect": {
-          "x": 1026,
+          "x": 1000,
           "y": 8,
           "w": 102,
           "h": 26
         },
-        "inset": 1033,
+        "inset": 1007,
         "padding": "0px 22px 0px 6px",
         "gap": "normal normal",
         "tokens": [
@@ -51,6 +51,22 @@
         ]
       },
       "source-settings": {
+        "rect": {
+          "x": 1110,
+          "y": 10,
+          "w": 22,
+          "h": 22
+        },
+        "inset": 1110,
+        "padding": "0px 0px 0px 0px",
+        "gap": "normal normal",
+        "tokens": [
+          "--nuiget-action-size",
+          "--nuiget-radius-action",
+          "--nuiget-color-icon"
+        ]
+      },
+      "restore-button": {
         "rect": {
           "x": 1136,
           "y": 10,
