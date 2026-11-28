@@ -72,8 +72,25 @@ export function readCodicon(file, releaseDir = RELEASE_DIR) {
     return parseSvg(file, readFileSync(svg, 'utf8'));
 }
 
-const pathElement = ({ d, 'fill-rule': fillRule, 'clip-rule': clipRule }) =>
-    `<path${fillRule ? ` fillRule="${fillRule}"` : ''}${clipRule ? ` clipRule="${clipRule}"` : ''} d="${d}" />`;
+/** A string literal of the module: single-quoted, refused when the value would need an escape. */
+const literal = (name, value) => {
+    if (/['\\\n\r]/.test(value)) {
+        throw new Error(`${name}: ${JSON.stringify(value)} cannot be written as a plain string literal`);
+    }
+    return `'${value}'`;
+};
+
+/** One path as the shared render function reads it: `[d]`, or `[d, fillRule, clipRule]` with `undefined` for a missing rule. */
+const pathTuple = (file, { d, 'fill-rule': fillRule, 'clip-rule': clipRule }) => {
+    const parts = [literal(file, d)];
+    if (fillRule || clipRule) {
+        parts.push(fillRule ? literal(file, fillRule) : 'undefined');
+    }
+    if (clipRule) {
+        parts.push(literal(file, clipRule));
+    }
+    return `[${parts.join(', ')}]`;
+};
 
 /** The whole icon module for a list, the release's drawings read through `read`. */
 export function generateModule(list, read = readCodicon) {
@@ -81,12 +98,7 @@ export function generateModule(list, read = readCodicon) {
         const { viewBox, paths } = read(file);
         return [
             `/** Codicon: ${file} */`,
-            `export const ${name} = /* @__PURE__ */ React.memo<IconProps>(({ size = defaultSize, className, title }) => (`,
-            `    <svg width={size} height={size} viewBox="${viewBox}" fill="currentColor" data-codicon="${file}" className={className} aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>`,
-            '        {title && <title>{title}</title>}',
-            ...paths.map(entry => `        ${pathElement(entry)}`),
-            '    </svg>',
-            '));',
+            `export const ${name} = /* @__PURE__ */ React.memo<IconProps>(props => draw(props, ${literal(file, file)}, ${literal(file, viewBox)}, [${paths.map(entry => pathTuple(file, entry)).join(', ')}]));`,
             '',
         ].join('\n');
     });
@@ -109,6 +121,19 @@ export function generateModule(list, read = readCodicon) {
         '}',
         '',
         'const defaultSize = 16;',
+        '',
+        '/** One path of a drawing: its `d`, then its fill and clip rules when the release sets them. */',
+        'type PathData = readonly [d: string, fillRule?: React.SVGAttributes<SVGPathElement>[\'fillRule\'], clipRule?: React.SVGAttributes<SVGPathElement>[\'clipRule\']];',
+        '',
+        '/** The one element every icon renders: the viewBox and paths of the release, the title first when there is one. */',
+        'function draw({ size = defaultSize, className, title }: IconProps, file: string, viewBox: string, paths: readonly PathData[]): React.ReactElement {',
+        '    return (',
+        '        <svg width={size} height={size} viewBox={viewBox} fill="currentColor" data-codicon={file} className={className} aria-hidden={title ? undefined : true} role={title ? \'img\' : undefined}>',
+        '            {title && <title>{title}</title>}',
+        '            {paths.map(([d, fillRule, clipRule], index) => <path key={index} fillRule={fillRule} clipRule={clipRule} d={d} />)}',
+        '        </svg>',
+        '    );',
+        '}',
         '',
         ...icons,
     ].join('\n');

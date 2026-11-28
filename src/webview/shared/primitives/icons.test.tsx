@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import * as icons from './icons';
 import type { IconProps } from './icons';
 import iconPlan from '../../../../docs/design/icons.json';
+import { readCodicon } from '../../../../scripts/sync-codicons.mjs';
 
 // Every export of the module, so that an icon added later is tested without a change here.
 const entries = Object.entries(icons) as Array<[string, React.ComponentType<IconProps>]>;
@@ -82,6 +83,42 @@ describe('icons', () => {
             // Among its classes: the loading icon also carries the class its animation is bound to.
             expect(svgOf(container).classList.contains('row-icon'), name).toBe(true);
             unmount();
+        }
+    });
+
+    it('every icon renders the release\'s drawing: its viewBox, file and paths, the title first (UX-P5.fix-24)', () => {
+        // The markup a generation must keep byte for byte in the DOM, whatever the module's source form.
+        const plan = iconPlan.icons as Record<string, string>;
+        for (const [name, file] of Object.entries(plan)) {
+            const Icon = (icons as unknown as Record<string, React.ComponentType<IconProps>>)[name];
+            const { viewBox, paths } = readCodicon(file) as { viewBox: string; paths: Array<Record<string, string>> };
+            for (const title of [undefined, `${name} of the test`]) {
+                const { container, unmount } = render(<Icon title={title} />);
+                const svg = svgOf(container);
+                expect(svg.getAttribute('viewBox'), name).toBe(viewBox);
+                expect(svg.getAttribute('data-codicon'), name).toBe(file);
+                expect(svg.getAttribute('fill'), name).toBe('currentColor');
+                expect(svg.getAttributeNames(), name).toEqual(['width', 'height', 'viewBox', 'fill', 'data-codicon', ...(title ? ['role'] : ['aria-hidden'])]);
+                const children = [...svg.children];
+                if (title) {
+                    expect(children[0]?.tagName.toLowerCase(), name).toBe('title');
+                    expect(children[0]?.textContent, name).toBe(title);
+                }
+                const drawn = children.filter(child => child.tagName.toLowerCase() === 'path').map(child => ({
+                    d: child.getAttribute('d'),
+                    fillRule: child.getAttribute('fill-rule'),
+                    clipRule: child.getAttribute('clip-rule'),
+                    attributes: child.getAttributeNames().sort(),
+                }));
+                expect(drawn, name).toEqual(paths.map(entry => ({
+                    d: entry.d,
+                    fillRule: entry['fill-rule'] ?? null,
+                    clipRule: entry['clip-rule'] ?? null,
+                    attributes: ['d', ...(entry['fill-rule'] ? ['fill-rule'] : []), ...(entry['clip-rule'] ? ['clip-rule'] : [])].sort(),
+                })));
+                expect(children.length, name).toBe(paths.length + (title ? 1 : 0));
+                unmount();
+            }
         }
     });
 

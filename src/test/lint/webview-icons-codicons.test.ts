@@ -67,16 +67,23 @@ describe('2.0 webview icons against the codicon release (DS-ICON-1)', () => {
     });
 
     it('the generation keeps each viewBox and path verbatim, in list order, as a pure component without a style', () => {
-        const text = generateModule({ release: '1.2.3', icons: { BIcon: 'b', AIcon: 'a' } }, file => (file === 'b'
+        // Since UX-P5.fix-24 each export hands its drawing to one shared render function as string literals.
+        const text = generateModule({ release: '1.2.3', icons: { BIcon: 'b', AIcon: 'a', CIcon: 'c' } }, file => (file === 'b'
             ? { viewBox: '0 0 24 24', paths: [{ d: 'M2 2', 'fill-rule': 'evenodd', 'clip-rule': 'evenodd' }] }
-            : { viewBox: '0 0 16 16', paths: [{ d: 'M1 1' }, { d: 'M3 3' }] }));
+            : file === 'c' ? { viewBox: '0 0 16 16', paths: [{ d: 'M4 4', 'clip-rule': 'evenodd' }] }
+                : { viewBox: '0 0 16 16', paths: [{ d: 'M1 1' }, { d: 'M3 3' }] }));
         expect(text.startsWith(`${GENERATED_MARK} from @vscode/codicons 1.2.3; do not edit. Code MIT; drawings CC-BY-4.0`)).toBe(true);
         expect(text.indexOf('export const BIcon = /* @__PURE__ */ React.memo<IconProps>')).toBeLessThan(text.indexOf('export const AIcon = /* @__PURE__ */ React.memo<IconProps>'));
-        expect(text).toContain('viewBox="0 0 24 24"');
-        expect(text).toContain('<path fillRule="evenodd" clipRule="evenodd" d="M2 2" />');
-        expect(text).toContain('<path d="M1 1" />');
-        expect(text).toContain('<path d="M3 3" />');
+        expect(text).toContain("export const BIcon = /* @__PURE__ */ React.memo<IconProps>(props => draw(props, 'b', '0 0 24 24', [['M2 2', 'evenodd', 'evenodd']]));");
+        expect(text).toContain("export const AIcon = /* @__PURE__ */ React.memo<IconProps>(props => draw(props, 'a', '0 0 16 16', [['M1 1'], ['M3 3']]));");
+        expect(text).toContain("export const CIcon = /* @__PURE__ */ React.memo<IconProps>(props => draw(props, 'c', '0 0 16 16', [['M4 4', undefined, 'evenodd']]));");
+        // The one render function draws the release's attributes: the viewBox, the file, and each path's rules and `d`.
+        expect(text).toContain('<svg width={size} height={size} viewBox={viewBox} fill="currentColor" data-codicon={file} className={className}');
+        expect(text).toContain('<path key={index} fillRule={fillRule} clipRule={clipRule} d={d} />');
+        expect(text.match(/React\.memo/g)).toHaveLength(3);
+        expect(text).not.toMatch(/^export function|^export const draw/m);
         expect(text).not.toContain('style');
+        expect(() => generateModule({ release: '1.2.3', icons: { QIcon: 'q' } }, () => ({ viewBox: '0 0 16 16', paths: [{ d: "M1 1'" }] }))).toThrow('q: "M1 1\'" cannot be written as a plain string literal');
     });
 
     it('--check reads the release, the list and the module', () => {
@@ -105,7 +112,10 @@ describe('2.0 webview icons against the codicon release (DS-ICON-1)', () => {
 
     it('icons.tsx is the generation, and exports the icon plan and nothing else', () => {
         expect(module_).toBe(generateModule(list));
-        expect(module_.match(/data-codicon="/g)).toHaveLength(Object.keys(list.icons).length);
+        expect(module_.match(/^\/\*\* Codicon: [a-z0-9-]+ \*\/$/gm)).toHaveLength(Object.keys(list.icons).length);
+        // Each export draws the file its plan entry names.
+        expect(Object.fromEntries([...module_.matchAll(/^export const (\w+Icon) = \/\* @__PURE__ \*\/ React\.memo<IconProps>\(props => draw\(props, '([a-z0-9-]+)', /gm)]
+            .map(match => [match[1], match[2]]))).toEqual(list.icons);
         expect(module_).not.toContain('/** Custom:');
         expect([...module_.matchAll(/^export const (\w+Icon) = /gm)].map(match => match[1])).toEqual(Object.keys(list.icons));
     });

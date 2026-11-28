@@ -324,7 +324,7 @@ the twelve token records of the theme dump.
 
 `src/webview/shared/primitives/icons.tsx` is the icon set (codicon paths as inline SVG). The list
 `docs/design/icons.json` names its drawings in the exact-pinned `@vscode/codicons`, and a glyph enters the list in the
-change that renders it (ADR-012). `scripts/sync-codicons.mjs --write` generates the module (13 icons, each with `data-codicon` naming its drawing), and
+change that renders it (ADR-012). `scripts/sync-codicons.mjs --write` generates the module (17 icons, each with `data-codicon` naming its drawing), and
 `--check` and `webview-icons-codicons.test.ts` hold the list and the module against the release. An icon takes
 `size`, `className` and `title` and renders no `style` attribute, which the Content Security Policy would
 refuse (ADR-006); without a title it is hidden from assistive technology, with one it is an image with that
