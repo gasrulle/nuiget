@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vulnerable and Deprecated Packages in the Sidebar** — The sidebar's package rows mark a known vulnerable or deprecated version, as the main panel does.
 - **Install a Transitive Package Directly** — The details of a transitive package have an Install button that adds it to the project as a direct reference at the version it resolves to.
 - **Package Commands in the Command Palette** — Refresh Packages, Check for Package Updates, Update All Packages, Install Package... and Restore Packages run from the Command Palette on the selected project, or under All Projects on every project or the ones you pick.
+- **Keyboard Shortcut for the Main Panel** — Ctrl+Shift+Alt+P (Cmd+Shift+Alt+P on macOS) opens Manage NuGet Packages from anywhere in VS Code.
 
 ### Changed
 - **Vulnerable packages show their highest severity**
@@ -97,6 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Installed tab keeps its progress bar until the package list is complete**
 - **Updating or uninstalling across several projects says how many projects were changed**
 - **Icons and authors under All Projects appear before the list is verified**
+- **Menus show Manage NuGet Packages without the nUIget prefix; the Command Palette still groups the commands under nUIget**
 
 ### Fixed
 - **Keyboard focus stays on Refresh while it runs, and clicked section headers show the focus ring**

@@ -9,7 +9,11 @@ import { describe, expect, it } from 'vitest';
 interface MenuEntry { command: string; when?: string; group?: string }
 
 const manifest = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as {
-    contributes: { commands: { command: string; title: string }[]; menus: Record<string, MenuEntry[]> };
+    contributes: {
+        commands: { command: string; title: string; category?: string; shortTitle?: string }[];
+        keybindings?: { command: string; key: string; mac?: string; when?: string }[];
+        menus: Record<string, MenuEntry[]>;
+    };
 };
 const menus = manifest.contributes.menus;
 
@@ -106,14 +110,20 @@ describe('package.json menus', () => {
         expect(offered.sort()).toEqual(['nuiget.checkForUpdates', 'nuiget.clearHttpCache', 'nuiget.clearSdkVersionCache', 'nuiget.installPackage', 'nuiget.openManager', 'nuiget.refreshPackages', 'nuiget.restorePackages', 'nuiget.updateAllPackages']);
     });
 
-    it('names a palette-hidden command without the "nUIget: " prefix and a palette command with it; the palette titles stay (UX-P3.11)', () => {
+    it('gives a palette command the category "nUIget" and a palette-hidden command none; no title carries the prefix (UX-P5.7b, X16; replaces the UX-P3.11 prefix case)', () => {
         const hidden = new Set((menus.commandPalette ?? []).filter(entry => entry.when === 'false').map(entry => entry.command));
-        for (const { command, title } of manifest.contributes.commands) {
-            expect(title.startsWith('nUIget: '), `${command}: ${title}`).toBe(!hidden.has(command));
+        for (const { command, title, category, shortTitle } of manifest.contributes.commands) {
+            expect(category, `${command}: category`).toBe(hidden.has(command) ? undefined : 'nUIget');
+            expect(title.startsWith('nUIget'), `${command}: ${title}`).toBe(false);
+            expect(shortTitle?.startsWith('nUIget') ?? false, `${command}: ${shortTitle}`).toBe(false);
         }
         const titleOf = (command: string): string | undefined => manifest.contributes.commands.find(entry => entry.command === command)?.title;
-        expect(titleOf('nuiget.openManager')).toBe('nUIget: Manage NuGet Packages');
-        expect(titleOf('nuiget.clearHttpCache')).toBe('nUIget: Clear NuGet HTTP Cache');
-        expect(titleOf('nuiget.clearSdkVersionCache')).toBe('nUIget: Clear SDK Version Cache');
+        expect(titleOf('nuiget.openManager')).toBe('Manage NuGet Packages');
+        expect(titleOf('nuiget.clearHttpCache')).toBe('Clear NuGet HTTP Cache');
+        expect(titleOf('nuiget.clearSdkVersionCache')).toBe('Clear SDK Version Cache');
+    });
+
+    it('binds one chord, Ctrl+Shift+Alt+P (Cmd+Shift+Alt+P on macOS), to open the manager, with no when clause (UX-P5.7b, G19)', () => {
+        expect(manifest.contributes.keybindings).toEqual([{ command: 'nuiget.openManager', key: 'ctrl+shift+alt+p', mac: 'cmd+shift+alt+p' }]);
     });
 });

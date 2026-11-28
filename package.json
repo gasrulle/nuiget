@@ -80,13 +80,15 @@
         "commands": [
             {
                 "command": "nuiget.openManager",
-                "title": "nUIget: Manage NuGet Packages",
-                "shortTitle": "nUIget: Manage Packages",
+                "title": "Manage NuGet Packages",
+                "category": "nUIget",
+                "shortTitle": "Manage Packages",
                 "icon": "$(package)"
             },
             {
                 "command": "nuiget.refreshPackages",
-                "title": "nUIget: Refresh Packages",
+                "title": "Refresh Packages",
+                "category": "nUIget",
                 "icon": "$(refresh)"
             },
             {
@@ -134,11 +136,13 @@
             },
             {
                 "command": "nuiget.clearHttpCache",
-                "title": "nUIget: Clear NuGet HTTP Cache"
+                "title": "Clear NuGet HTTP Cache",
+                "category": "nUIget"
             },
             {
                 "command": "nuiget.clearSdkVersionCache",
-                "title": "nUIget: Clear SDK Version Cache"
+                "title": "Clear SDK Version Cache",
+                "category": "nUIget"
             },
             {
                 "command": "nuiget.row.installLatest",
@@ -174,19 +178,30 @@
             },
             {
                 "command": "nuiget.checkForUpdates",
-                "title": "nUIget: Check for Package Updates"
+                "title": "Check for Package Updates",
+                "category": "nUIget"
             },
             {
                 "command": "nuiget.updateAllPackages",
-                "title": "nUIget: Update All Packages"
+                "title": "Update All Packages",
+                "category": "nUIget"
             },
             {
                 "command": "nuiget.installPackage",
-                "title": "nUIget: Install Package..."
+                "title": "Install Package...",
+                "category": "nUIget"
             },
             {
                 "command": "nuiget.restorePackages",
-                "title": "nUIget: Restore Packages"
+                "title": "Restore Packages",
+                "category": "nUIget"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "nuiget.openManager",
+                "key": "ctrl+shift+alt+p",
+                "mac": "cmd+shift+alt+p"
             }
         ],
         "menus": {

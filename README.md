@@ -80,10 +80,11 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 ## 🚀 Quick Start
 
 1. **Open** a folder that contains `.csproj`, `.fsproj` or `.vbproj` files.
-2. **Run** `nUIget: Manage NuGet Packages` from the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS).
+2. **Run** `nUIget: Manage NuGet Packages` from the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS), or press
+   `Ctrl+Shift+Alt+P` (`Cmd+Shift+Alt+P` on macOS).
 3. **Search** for a package and press Enter, select it, choose a version in the details pane and click Install.
 
-> 💡 **Tip:** Right-click a project file in the Explorer and choose the nUIget command to open the panel with that project selected.
+> 💡 **Tip:** Right-click a project file in the Explorer and choose **Manage NuGet Packages** to open the panel with that project selected.
 
 > 💡 **Tip:** Right-click a project in Solution Explorer for the same command.
 
@@ -116,6 +117,12 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 
 <details>
 <summary><b>⌨️ Keyboard Shortcuts</b></summary>
+
+### Anywhere in VS Code
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+Shift+Alt+P` (`Cmd+Shift+Alt+P` on macOS) | Open the main panel (Manage NuGet Packages); change it in the Keyboard Shortcuts editor |
 
 ### Search box
 
