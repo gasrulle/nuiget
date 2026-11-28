@@ -12,7 +12,7 @@ import { useSearch } from '../../../shared/store/search';
 import { useSession } from '../../../shared/store/session';
 import type { BrowseView } from '../../MainShell';
 import { failure } from '../../../shared/updates/sentence';
-import { DeprecationBadge } from '../installed/DeprecationBadge';
+import { DeprecationBadge } from '../../../shared/installed/DeprecationBadge';
 
 interface Item {
     id: string;

@@ -12,6 +12,7 @@ import { useSession } from '../shared/store/session';
 import { useSources } from '../shared/store/sources';
 import { BrowseResults } from './BrowseResults';
 import { InstalledSection } from './InstalledSection';
+import { SettleMark } from './SettleMark';
 import { UpdatesSection } from './UpdatesSection';
 import { FirstUsefulRenderMark, useShellChrome } from '../shared/shellChrome';
 import type { ViewStateStore } from '../shared/viewState';
@@ -152,6 +153,7 @@ export function SidebarView({ viewState }: { viewState?: ViewStateStore } = {}):
     return (
         <main className="nuiget-sidebar" data-testid="nuiget-sidebar" style={cssVars({ '--nuiget-tree-indent': `${config?.treeIndent ?? 8}px` })}>
             <FirstUsefulRenderMark />
+            <SettleMark />
             <div className="nuiget-sidebar-header">
                 {sourceName === undefined
                     ? <p className="nuiget-sidebar-context" data-testid="sidebar-source">All Sources</p>

@@ -19,7 +19,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { bulkUpdateButton, noCandidateWhy, singleKnowledge } from '../../../shared/updates/updateAll';
 import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
-import { VulnerabilityBadge } from '../installed/VulnerabilityBadge';
+import { VulnerabilityBadge } from '../../../shared/installed/VulnerabilityBadge';
 
 /**
  * An item of the tab's one grouped list (D48): the Direct packages group row, then its updates; the list identifies its

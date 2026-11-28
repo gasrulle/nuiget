@@ -156,8 +156,8 @@ describe('the named states (UX-P0.8)', () => {
             // UX-P5.1a push 3b: main-installed-all-vulnerable-unavailable, three widths.
             // UX-P5.fix-7: main-details-offline, three widths. UX-P5.2b: main-details-deprecated, main-installed-deprecated.
             // UX-P5.3b: main-consolidate, three widths. UX-P5.3c: main-consolidate-details and main-consolidate-dialog, three widths each.
-            // UX-P5.fix-5: main-updates-vulnerable and sidebar-installed-busy, three widths each.
-            const expected = theme === 'dark-high-contrast' ? 293 : theme.includes('high-contrast') ? 292 : 301;
+            // UX-P5.fix-5: main-updates-vulnerable and sidebar-installed-busy, three widths each. UX-P5.4: sidebar-installed-deprecated, three widths.
+            const expected = theme === 'dark-high-contrast' ? 296 : theme.includes('high-contrast') ? 295 : 304;
             expect(files, theme).toHaveLength(expected);
             const zoomed = files.filter(file => file.startsWith('main-installed-zoom2-'));
             expect(zoomed, theme).toEqual(theme === 'dark-high-contrast' ? ['main-installed-zoom2-800px.dark-high-contrast.800.png'] : []);
@@ -181,11 +181,11 @@ describe('the named states (UX-P0.8)', () => {
         // 36 at UX-P0.9, and UX-P0.14's four narrow widths (main-installed-single at 600/400/220, main-installed-details at 400), and UX-P2.3's main-installed-toolbar-hover, and UX-P2.5b's main-installed-refresh-hover, and UX-P2.8a's main-installed-hover-current, and UX-P3.1b's eight Updates states, and UX-P3.2's six Browse and three quick-search states, and UX-P3.3b's main-details-readme at 932, and UX-P3.5's main-browse-multi-install-dialog, and UX-P3.6's seven sources states, and UX-P3.7a's sidebar-hover, and UX-P3.7b's sidebar-filter, and UX-P3.7c's sidebar-all-projects, and UX-P3.7d's sidebar-all-projects-updates, and UX-P3.8's seven sidebar Browse and Installed cells, and UX-P3.10's ten sidebar state cells, seven details cells and main-updates-unsupported, and UX-P4.2a's main-installed-uninstall-dialog, and UX-P4.2b's sidebar-uninstall-dialog, and UX-P4.fix-13's main-installed-busy, and UX-P4.fix-19's main-updates-update-all-dialog, and UX-P4.fix-23's main-installed-provisional and sidebar-installed-provisional.
         // UX-P5.1a: the two @vulnerable states. UX-P5.fix-7: main-details-offline. UX-P5.2b: main-details-deprecated, main-installed-deprecated.
         // UX-P5.3b: main-consolidate at its primary width and at 400. UX-P5.3c: main-consolidate-details and main-consolidate-dialog.
-        // UX-P5.fix-5: main-updates-vulnerable and sidebar-installed-busy, one classic file each.
-        expect(files).toHaveLength(121);
+        // UX-P5.fix-5: main-updates-vulnerable and sidebar-installed-busy, one classic file each. UX-P5.4: sidebar-installed-deprecated at 300 and 250.
+        expect(files).toHaveLength(123);
         // The zoomed cell is in no lane but its matrix shard (UX-P4.10).
         expect([...expectedFiles(), ...files, ...laneFiles('macos')].filter(file => file.startsWith('main-installed-zoom2-'))).toEqual([]);
-        expect(new Set(files).size).toBe(121);
+        expect(new Set(files).size).toBe(123);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());
@@ -196,10 +196,10 @@ describe('the named states (UX-P0.8)', () => {
         // Architecture-advisor ruling of 2026-11-21: part 1 the main panel below its widest width, part 2 the main panel at its widest width and the side bar.
         // UX-P5.1a: the two @vulnerable states add 800 and 1200 to part 1 and 1600 to part 2. UX-P5.3b: main-consolidate the same; UX-P5.3c: its two pane states the same.
         // UX-P5.fix-5: main-updates-vulnerable adds 800 and 1200 to part 1 and 1600 to part 2; sidebar-installed-busy adds its three widths to part 2.
-        const counts: Record<string, [number, number]> = { 'dark-high-contrast': [143, 150], 'light-high-contrast': [142, 150] };
+        const counts: Record<string, [number, number]> = { 'dark-high-contrast': [143, 153], 'light-high-contrast': [142, 153] };
         for (const theme of MATRIX_THEMES) {
             const [one, two] = MATRIX_PARTS.map(part => laneFiles('matrix', theme, part));
-            expect([one.length, two.length], theme).toEqual(counts[theme] ?? [148, 153]);
+            expect([one.length, two.length], theme).toEqual(counts[theme] ?? [148, 156]);
             expect(one.filter(file => two.includes(file)), theme).toEqual([]);
             expect(new Set([...one, ...two]), theme).toEqual(new Set(laneFiles('matrix', theme)));
             const keys = (part: '1' | '2') => new Set(matrixCaptures(theme, part).map(({ state, capture }) => `${state.surface}:${capture.width}`));

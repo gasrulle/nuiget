@@ -925,6 +925,33 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(facts.endOfP0.rows.find(row => row.nameLeft === 28)?.band).toEqual({ left: 4, top: 400, right: 296, bottom: 422 });
     });
 
+    it('reads a compact row\'s badges against its option and its list\'s width, a hidden badge as not shown (DS-ROW-5, DS-ROW-6, UX-P5.4)', () => {
+        document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-listbox-root" data-rect="0,400,250,460"><div class="nuiget-row nuiget-row--compact" data-rect="0,400,250,422"><div class="nuiget-row-option nuiget-row-option--compact" role="option" data-rect="4,400,246,422">'
+            + '<span class="nuiget-row-name" data-rect="28,403,120,419" data-text="28,403,120,419">Newtonsoft.Json</span><span class="nuiget-row-badges" data-rect="190,401,251,421"><span class="nuiget-badge nuiget-badge--label nuiget-badge--severity-error" data-rect="190,401,239,421">High</span><span class="nuiget-badge nuiget-badge--label nuiget-badge--warning" style="display: none" data-rect="0,0,0,0">Deprecated</span></span></div></div></div>');
+        const newtonsoft = collect().rows.find(row => row.name === 'Newtonsoft.Json' && row.compact);
+        expect(newtonsoft?.listWidth).toBe(250);
+        expect(newtonsoft?.compactBadges).toEqual([{ severity: true, shown: true, described: false, out: 0 }, { severity: false, shown: false, described: false, out: 0 }]);
+        // A badge past the option's right edge is read by how far it passes.
+        (document.querySelector('.nuiget-badge--severity-error') as HTMLElement).setAttribute('data-rect', '200,401,249,421');
+        expect(collect().rows.find(row => row.name === 'Newtonsoft.Json' && row.compact)?.compactBadges?.[0]).toEqual({ severity: true, shown: true, described: false, out: 3 });
+        // Follow-up 1 (DO 4, 6): clipped to the line width with a clip-path, a badge is not shown, and its words are described when its
+        // title is rendered and the option's aria-describedby names the slot; size alone never hides it.
+        const deprecated = document.querySelector('.nuiget-badge--warning') as HTMLElement;
+        deprecated.style.display = '';
+        deprecated.setAttribute('data-rect', '190,401,191,402');
+        deprecated.insertAdjacentHTML('beforeend', '<span class="nuiget-visually-hidden">This version is deprecated.</span>');
+        const slot = document.querySelector('.nuiget-listbox-root .nuiget-row-badges') as HTMLElement;
+        slot.id = 'row-badges-1';
+        (slot.closest('.nuiget-row-option') as HTMLElement).setAttribute('aria-describedby', 'row-version-1 row-badges-1');
+        expect(collect().rows.find(row => row.name === 'Newtonsoft.Json' && row.compact)?.compactBadges?.[1]).toEqual({ severity: false, shown: true, described: true, out: 0 });
+        deprecated.style.clipPath = 'inset(50%)';
+        expect(collect().rows.find(row => row.name === 'Newtonsoft.Json' && row.compact)?.compactBadges?.[1]).toEqual({ severity: false, shown: false, described: true, out: 0 });
+        // DS-ROW-7's reader leaves the clipped badge out too.
+        expect(collect().rowBadges.filter(badge => badge.name === 'Newtonsoft.Json')).toHaveLength(1);
+        // A comfortable row carries neither fact.
+        expect(collect().rows.find(row => row.name === 'Serilog')).not.toHaveProperty('compactBadges');
+    });
+
     it('reads a cut compact version\'s width and the width of its first character plus the ellipsis, nothing elsewhere (DS-ROW-5, UX-P5.fix-17)', () => {
         document.querySelector('.nuiget-list')?.insertAdjacentHTML('beforeend', '<div class="nuiget-row nuiget-row--compact" data-rect="0,400,300,422"><div class="nuiget-row-option nuiget-row-option--compact" role="option" data-rect="4,400,296,422"><span class="nuiget-row-name" data-rect="28,403,254,419" data-text="28,403,254,419">Microsoft.Extensions.AI.Abstractions</span><span class="nuiget-row-version" data-rect="262,404,270,418" data-text="262,404,270,418">9.5.0</span></div></div>'
             + '<div class="nuiget-row nuiget-row--compact" data-rect="0,422,300,444"><div class="nuiget-row-option nuiget-row-option--compact" role="option" data-rect="4,422,296,444"><span class="nuiget-row-name" data-rect="28,425,60,441" data-text="28,425,60,441">Moq</span><span class="nuiget-row-version" data-rect="68,426,98,440" data-text="68,426,98,440">4.20.72</span></div></div>');

@@ -1,9 +1,10 @@
 import type React from 'react';
 import type { InstalledResult, PackageUpdate } from '../../protocol';
-import { busyText, isCentral, updateRowContext, updatesInOrder, whyNotDeletable, whyNotUpdatable } from '../shared/installed/rules';
+import { busyText, isCentral, liteOfInstalled, updateRowContext, updatesInOrder, vulnerabilitySeverity, whyNotDeletable, whyNotUpdatable } from '../shared/installed/rules';
+import { VulnerabilityBadge } from '../shared/installed/VulnerabilityBadge';
 import { ArrowUpIcon, Badge, IconButton, openRowMenu, Row, type RowPlacement } from '../shared/primitives';
 import { useOps, useOpsActions } from '../shared/store/ops';
-import type { AskUninstall } from './packageRows';
+import { useRowLite, type AskUninstall } from './packageRows';
 import { useRowRequests } from './rowRequests';
 
 /**
@@ -28,6 +29,7 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
     const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
+    const liteOf = useRowLite();
 
     // The Delete key on an update row: busy does nothing, what cannot be uninstalled says why, else the view's confirmation (UX-P4.2b).
     const askUninstall = (projectPath: string, projectName: string, installed: InstalledResult | undefined, update: PackageUpdate): void => {
@@ -70,6 +72,9 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
         const busy = isPackageBusy(projectPath, update.id, true);
         const entry = entryOf(installed, update.id);
         const central = entry?.declaration === 'central' || entry?.declaration === 'central-override';
+        // The installed version's severity after CPM, as the main Updates tab; no Deprecated badge on an Updates row (UX-P5.4).
+        const lite = liteOfInstalled(liteOf(projectPath, update.id), update);
+        const marked = central || vulnerabilitySeverity(lite) !== undefined;
         return (
             <Row
                 {...placement}
@@ -80,7 +85,10 @@ export function useUpdateRows(announce: (message: string) => void, ask: AskUnins
                 nextVersion={update.latestVersion}
                 busy={busy}
                 status={busy ? busyText(ops, projectPath, update.id) : undefined}
-                badges={central ? <Badge label="CPM" title={entry?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : undefined}
+                badges={marked ? <>
+                    {central ? <Badge label="CPM" title={entry?.declaration === 'central-override' ? 'Centrally managed; this project overrides the version' : 'Centrally managed'} /> : null}
+                    <VulnerabilityBadge lite={lite} installedVersion={update.installedVersion} />
+                </> : undefined}
                 actions={installed?.unsupported ? undefined : (
                     <IconButton label={`Update ${update.id} to ${update.latestVersion}`} tabIndex={-1} data-testid="row-action-update" onClick={() => updateOne(projectPath, installed, update)}><ArrowUpIcon /></IconButton>
                 )}

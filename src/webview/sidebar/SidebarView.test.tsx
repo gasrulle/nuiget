@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { recordRowMenus } from '../shared/primitives/testSupport';
 import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type SessionSnapshot } from '../../protocol';
+import { ALL_PROJECTS, resourceKeys, type InstalledPackage, type InstalledResult, type OperationOutcome, type OperationProgress, type PackageMetadataLite, type SessionSnapshot } from '../../protocol';
 import { createFakeHost, type FakeHost } from '../shared/bus/testSupport';
 import { axeRuleOutcome, expectFocusAfterClose, installFakeLayout } from '../shared/primitives/testSupport';
 import { SidebarStoreProvider as StoreProvider } from '../shared/store/StoreProvider';
@@ -920,5 +920,121 @@ describe('sidebar: what a row shows and allows', () => {
         expect(whyNotRemovable(pkg('A', { declaration: 'central-override' }), result)).toBeUndefined();
         // An unsupported project comes first: nothing in it can be changed.
         expect(whyNotRemovable(pkg('A', { declaration: 'central' }), { ...result, unsupported: { reason: 'packages-config', message: 'uses packages.config' } })).toBe('A cannot be uninstalled: uses packages.config');
+    });
+});
+
+describe('sidebar: vulnerability and deprecation marks (UX-P5.4)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 400, row: 22 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    const high = { severity: 'High' as const, advisoryUrl: 'https://github.com/advisories/x' };
+    const deprecation = { reasons: ['Legacy'], alternatePackage: { id: 'Moq.Next' } };
+    const badgeLabels = (id: string): string[] => [...row(id).querySelectorAll('.nuiget-badge')].map(badge => badge.firstChild?.textContent ?? '');
+    const settle = (): HTMLElement => screen.getByTestId('sidebar-settle');
+
+    async function withMetadata(packages: InstalledPackage[], metadata: PackageMetadataLite[]): Promise<FakeHost> {
+        const host = await mountWith(packages);
+        await waitFor(() => expect(host.requests('transitive/metadata').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata }));
+        return host;
+    }
+
+    it('an Installed row shows CPM, then the severity, then Deprecated, the main panel\'s marks in their order; axe finds nothing', async () => {
+        await withMetadata(
+            [pkg('Moq', { version: '4.20.0', declaration: 'central' }), pkg('Serilog', { version: '3.0.0' })],
+            [{ id: 'Moq', version: '4.20.0', vulnerabilities: [high], deprecation }, { id: 'Serilog', version: '3.0.0', vulnerabilities: [] }],
+        );
+        expect(badgeLabels('Moq')).toEqual(['CPM', 'High', 'Deprecated']);
+        expect(within(row('Moq')).getByTestId('row-vulnerability')).toBeInTheDocument();
+        expect(within(row('Moq')).getByTestId('row-deprecation')).toBeInTheDocument();
+        expect(option('Moq')).toHaveAccessibleDescription(/1 known vulnerability, High severity/);
+        expect(option('Moq')).toHaveAccessibleDescription(/This version is deprecated: it is legacy and no longer maintained\. Use Moq\.Next instead\./);
+        // A clear row has no mark and no badge slot.
+        expect(row('Serilog').querySelector('.nuiget-row-badges')).toBeNull();
+        const results = await axe(list());
+        expect(results).toHaveNoViolations();
+    });
+
+    it('an unknown row shows no mark: no answer yet, or an entry without the field', async () => {
+        const host = await mountWith([pkg('Moq', { version: '4.20.0' })]);
+        expect(row('Moq').querySelector('.nuiget-badge')).toBeNull();
+        await waitFor(() => expect(host.requests('transitive/metadata').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0' }] }));
+        expect(row('Moq').querySelector('.nuiget-badge')).toBeNull();
+        expect(await axe(list())).toHaveNoViolations();
+    });
+
+    it('under All Projects a row reads its own project\'s metadata', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+        await waitFor(() => expect(host.requests('allProjects/installed').length).toBeGreaterThan(0));
+        const [stream] = host.requests('allProjects/installed');
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Moq', { version: '4.20.0' })]) } }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: B, projectName: 'Lib', result: installed(B, [pkg('Moq', { version: '4.18.0' })]) } }));
+        // Only Lib's Moq is vulnerable: App's row keeps no mark.
+        await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: A, packages: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [] }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: B, packages: [{ id: 'Moq', version: '4.18.0', vulnerabilities: [high] }] }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B], errored: [] }));
+        const marked = [...screen.getByTestId('sidebar-installed-list').querySelectorAll('.nuiget-row-option')].map(item => item.querySelector('[data-testid="row-vulnerability"]') !== null);
+        expect(marked).toEqual([false, true]);
+        expect(await axe(screen.getByTestId('sidebar-installed-list'))).toHaveNoViolations();
+    });
+
+    it('an Updates row shows its installed version\'s severity, named in its title, and never Deprecated', async () => {
+        const host = await withMetadata([pkg('Moq', { version: '4.20.0' })], [{ id: 'Moq', version: '4.20.0', vulnerabilities: [high], deprecation }]);
+        await waitFor(() => expect(host.requests('updates/get').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('updates/get')[0], { projectPath: A, updates: [{ id: 'Moq', installedVersion: '4.20.0', latestVersion: '4.21.0' }] }, 1));
+        const update = within(screen.getByTestId('sidebar-updates-list')).getByTestId('package-row-moq');
+        expect(within(update).getByTestId('row-vulnerability')).toBeInTheDocument();
+        expect(within(update).getByRole('option')).toHaveAccessibleDescription(/Installed 4\.20\.0: 1 known vulnerability, High severity/);
+        expect(within(update).queryByTestId('row-deprecation')).toBeNull();
+        expect(await axe(screen.getByTestId('sidebar-updates-list'))).toHaveNoViolations();
+    });
+
+    it('the settle marker is pending from the list\'s answer until its metadata settles, latched per view, never on a re-ask', async () => {
+        const host = await mountWith([pkg('Moq', { version: '4.20.0' })]);
+        expect(settle()).toHaveAttribute('data-pending');
+        await waitFor(() => expect(host.requests('transitive/metadata').length).toBeGreaterThan(0));
+        await hostSays(() => host.respond(host.requests('transitive/metadata')[0], { metadata: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [] }] }));
+        expect(settle()).not.toHaveAttribute('data-pending');
+        // A revalidation asks again; the view stays settled.
+        await hostSays(() => host.invalidate([[resourceKeys.installed(A), 2]]));
+        await waitFor(() => expect(host.requests('installed/get').length).toBeGreaterThan(1));
+        await hostSays(() => host.respond(host.requests('installed/get').at(-1)!, installed(A, [pkg('Moq', { version: '4.21.0' })]), 2));
+        expect(settle()).not.toHaveAttribute('data-pending');
+        // Another view is pending again from its own list's answer until its own metadata settles.
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        await waitFor(() => expect(host.requests('installed/get').some(request => request.payload.projectPath === B)).toBe(true));
+        await hostSays(() => host.respond(host.requests('installed/get').filter(request => request.payload.projectPath === B).at(-1)!, installed(B, [pkg('Polly', { version: '8.0.0' })]), 1));
+        expect(settle()).toHaveAttribute('data-pending');
+        await waitFor(() => expect(host.requests('transitive/metadata').length).toBeGreaterThan(1));
+        await hostSays(() => host.respond(host.requests('transitive/metadata').at(-1)!, { metadata: [{ id: 'Polly', version: '8.0.0', vulnerabilities: [] }] }));
+        expect(settle()).not.toHaveAttribute('data-pending');
+    });
+
+    // The fan-out's metadata chunks come before its answer and `metadataSettled` is the answer with no ask outstanding, so the All
+    // Projects view is settled at its answer: the marker is never pending there on a first ask.
+    it('under All Projects the settle marker is never pending: the fan-out\'s metadata settles with its answer', async () => {
+        const host = mount();
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1, ALL_PROJECTS)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }] }, 1));
+        await waitFor(() => expect(host.requests('allProjects/installed').length).toBeGreaterThan(0));
+        const [stream] = host.requests('allProjects/installed');
+        await hostSays(() => host.chunk(stream, { kind: 'start', projects: [{ name: 'App', path: A }] }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: { projectPath: A, projectName: 'App', result: installed(A, [pkg('Moq', { version: '4.20.0' })]) } }));
+        // Before the answer nothing is pending: the list has not answered.
+        expect(settle()).not.toHaveAttribute('data-pending');
+        await hostSays(() => host.chunk(stream, { kind: 'metadata', projectPath: A, packages: [{ id: 'Moq', version: '4.20.0', vulnerabilities: [] }] }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A], errored: [] }));
+        expect(settle()).not.toHaveAttribute('data-pending');
     });
 });

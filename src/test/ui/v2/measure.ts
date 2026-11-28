@@ -83,6 +83,12 @@ export const ROW_LINE_STATUS: RuleStatus = 'hard';
  */
 export const COMPACT_VERSION_STATUS: RuleStatus = 'hard';
 
+/**
+ * DS-ROW-5's compact-badge clause in the side bar (a compact row's badges keep their width and are never clipped by the option;
+ * UX-P5.4, design-advisor opening ruling of 2026-11-28, DO 10 a). Pending until that item's closing commit.
+ */
+export const COMPACT_BADGES_STATUS: RuleStatus = { pending: 'P5.4' };
+
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
 
@@ -254,6 +260,43 @@ export function rowLineClause(rows: readonly RowFacts[]): { text: string; pass: 
     return {
         text: `line children inside ×${children.length - bad.length}, sliced ${bad.length}${bad.length > 0 ? ` (${bad.slice(0, 3).map(child => `${child.row.slice(0, 24)} ${child.name}`).join('; ')})` : ''}`,
         pass: bad.length === 0,
+    };
+}
+
+/** DS-ROW-5's compact-badge clause (UX-P5.4, DO 10 a): every shown badge of a compact row lies inside its option within `tolerance`. */
+export function compactBadgesClause(rows: readonly RowFacts[], tolerance: number): { text: string; pass: boolean } {
+    const badges = rows.flatMap(row => (row.compact ? (row.compactBadges ?? []).filter(badge => badge.shown).map(badge => ({ ...badge, row: row.name })) : []));
+    const clipped = badges.filter(badge => badge.out > tolerance);
+    return {
+        text: `badges ${badges.length}, clipped ${clipped.length}${clipped.length > 0 ? ` (${clipped.slice(0, 3).map(badge => `${badge.row.slice(0, 24)} ${badge.out}`).join('; ')})` : ''}`,
+        pass: clipped.length === 0,
+    };
+}
+
+/**
+ * DS-ROW-6's side bar clause (UX-P5.4, DO 10 b): in a list of at most 250 px a compact row shows its severity badges and no other
+ * label badge, and every hidden one keeps its words in the description (follow-up 1, DO 6); a wider list is not judged. Printed per
+ * narrow list as `label hidden <n>, described <n>, severity shown <m>`.
+ */
+export function compactNarrowBadgesClause(rows: readonly RowFacts[]): { text: string; pass: boolean } {
+    const compact = rows.filter(row => row.compact && row.listWidth !== undefined);
+    if (compact.length === 0) {
+        return { text: NOT_MEASURABLE, pass: false };
+    }
+    const narrow = compact.filter(row => (row.listWidth ?? Infinity) <= COLLAPSE_PANE);
+    if (narrow.length === 0) {
+        return { text: `list ${Math.max(...compact.map(row => row.listWidth ?? 0))} > ${COLLAPSE_PANE}: not narrow`, pass: true };
+    }
+    const badges = narrow.flatMap(row => row.compactBadges ?? []);
+    const labelShown = badges.filter(badge => !badge.severity && badge.shown).length;
+    const hidden = badges.filter(badge => !badge.severity && !badge.shown);
+    const labelHidden = hidden.length;
+    const described = hidden.filter(badge => badge.described === true).length;
+    const severity = badges.filter(badge => badge.severity);
+    const severityShown = severity.filter(badge => badge.shown).length;
+    return {
+        text: `list ${Math.max(...narrow.map(row => row.listWidth ?? 0))}: label hidden ${labelHidden}, described ${described}, severity shown ${severityShown}${labelShown > 0 ? `; label shown ${labelShown}` : ''}${severityShown < severity.length ? `; severity hidden ${severity.length - severityShown}` : ''}`,
+        pass: labelShown === 0 && severityShown === severity.length && described === labelHidden,
     };
 }
 
@@ -777,7 +820,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-6', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
+    rule('DS-ROW-6', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P5.4' } }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P3.7b (design trigger 6, design-advisor ruling): the sidebar's view-title actions, read by the capture suite in the top document.
@@ -1056,6 +1099,10 @@ export interface RowFacts {
     versionCut: boolean;
     /** The version's own `text-overflow` is an ellipsis (UX-P3.fix-14). */
     versionEllipsis?: boolean;
+    /** UX-P5.4: a compact row's badges in its badge slot, hidden ones included: a severity badge or not, shown (a box), and how far its box passes the option's (px, 0 inside). */
+    compactBadges?: Array<{ severity: boolean; shown: boolean; out: number; described?: boolean }>;
+    /** UX-P5.4: a compact row's list width (its `.nuiget-listbox-root`, the container DS-ROW-6's 250 query reads). */
+    listWidth?: number;
     /** UX-P5.fix-17: a cut compact version's box width; undefined otherwise. */
     versionWidth?: number;
     /** UX-P5.fix-17: the width of a cut compact version's first character plus the ellipsis in its computed font; undefined otherwise or without a canvas. */
@@ -1822,6 +1869,9 @@ const hitOf = el => {
     const widened = after.content && after.content !== 'none' && after.position === 'absolute';
     return widened ? { width: round(rect.width - px(after.left) - px(after.right)), height: round(rect.height - px(after.top) - px(after.bottom)) } : { width: round(rect.width), height: round(rect.height) };
 };
+// UX-P5.4 (follow-up 1, DO 4): a badge clipped to at most the line width in both axes, with a clip-path, is not visible (DS-ROW-6's
+// narrow form); size alone never says so.
+const clippedAway = badge => { const r = rectOf(badge); return r.width <= 1 && r.height <= 1 && getComputedStyle(badge).clipPath !== 'none'; };
 const heights = {
     headers: shown('[data-testid^="section-box-"]').map(el => ({ id: el.dataset.testid.replace(/^section-box-/, ''), variant: el.dataset.variant ?? '', height: heightOf(el) })),
     // A compact tree's group rows are compact rows too (UX-P3.7c); message leaves wrap and stay out.
@@ -1872,7 +1922,8 @@ const heights = {
     }),
     checkSelect: { fill: rootVars.getPropertyValue('--vscode-checkbox-selectBackground').trim(), border: rootVars.getPropertyValue('--vscode-checkbox-selectBorder').trim() },
     // UX-P3.fix-13 (GOLDEN ruling): a badge inside a tab span the 250 query clips to 1 px is not shown (the tabs clause's predicate).
-    badges: shown('.nuiget-badge').filter(el => { const span = el.closest('.nuiget-tab-count, .nuiget-tab-badge'); if (!span) return true; const r = rectOf(span); return !(r.width <= 1 && r.height <= 1); }).map(el => {
+    // UX-P5.4 (follow-up 2): DS-HEIGHT-10 and DS-TYPE-8 read drawn badges only, a row badge clipped away at 250 left out.
+    badges: shown('.nuiget-badge').filter(el => !clippedAway(el)).filter(el => { const span = el.closest('.nuiget-tab-count, .nuiget-tab-badge'); if (!span) return true; const r = rectOf(span); return !(r.width <= 1 && r.height <= 1); }).map(el => {
         const style = getComputedStyle(el);
         const rect = rectOf(el);
         const text = badgeLabel(el);
@@ -1897,7 +1948,7 @@ const centring = shown('[data-testid="installed-list"] .nuiget-row-option, [data
 });
 // Helper 4, DS-ROW-7 (UX-P3.fix-5): each visible badge of a compact row against its band, the option or the group row; a band cut
 // by its list's scroller edge is not read.
-const rowBadges = shown('.nuiget-row--compact .nuiget-badge').flatMap(badge => {
+const rowBadges = shown('.nuiget-row--compact .nuiget-badge').filter(badge => !clippedAway(badge)).flatMap(badge => {
     const band = badge.closest('.nuiget-row-option, .nuiget-row-group');
     if (!band) return [];
     const bandBox = rectOf(band);
@@ -1955,6 +2006,25 @@ const rows = shown('.nuiget-row:not([data-row-kind="group"]):not([data-row-kind=
         // 0.5 is the rounding between a rect and the integer scrollWidth (as PF-3a): a fractional box one integer short is not cut (UX-P3.fix-14).
         versionCut: visible(version) && version.scrollWidth - rectOf(version).width > 0.5,
         versionEllipsis: visible(version) && getComputedStyle(version).textOverflow === 'ellipsis',
+        // UX-P5.4: a compact row's badges against its option, and its list's width (DS-ROW-5 compact badges, DS-ROW-6 side bar).
+        ...(row.classList.contains('nuiget-row--compact') ? (() => {
+            const box = rectOf(option);
+            const root = row.closest('.nuiget-listbox-root');
+            return {
+                compactBadges: [...option.querySelectorAll('.nuiget-row-badges .nuiget-badge')].map(badge => {
+                    const r = rectOf(badge);
+                    const shownBadge = visible(badge) && !clippedAway(badge);
+                    // DS-ROW-6 (follow-up 1, DO 6): a hidden badge's words are in the description when its title is rendered and the
+                    // option's aria-describedby names the slot.
+                    const slot = badge.closest('.nuiget-row-badges');
+                    const titleSpan = badge.querySelector('.nuiget-visually-hidden');
+                    const described = Boolean(slot && slot.id && titleSpan && getComputedStyle(titleSpan).display !== 'none' && (titleSpan.textContent || '').trim() !== '' && (option.getAttribute('aria-describedby') || '').split(/\\s+/).includes(slot.id));
+                    // A hidden badge has no box to pass the option with.
+                    return { severity: /nuiget-badge--severity-/.test(badge.className), shown: shownBadge, described, out: shownBadge ? round(Math.max(0, box.left - r.left, r.right - box.right, box.top - r.top, r.bottom - box.bottom)) : 0 };
+                }),
+                listWidth: root ? round(rectOf(root).width) : undefined,
+            };
+        })() : {}),
         // UX-P5.fix-17: read only where DS-ROW-5's compact-version clause judges, a compact version cut by its box.
         ...(row.classList.contains('nuiget-row--compact') && visible(version) && version.scrollWidth - rectOf(version).width > 0.5
             ? { versionWidth: round(rectOf(version).width), versionNeed: versionNeedOf(version) }
@@ -3435,10 +3505,14 @@ function evaluateOverflow(definition: RuleDefinition, scope: Scope, state: strin
             // UX-P5.fix-17: the side bar's compact versions are whole, zero-wide, or cut with their first character and ellipsis drawn.
             const versions = scope === 'sidebar' ? compactVersionClause(rows, COMPACT_VERSION_STATUS !== 'hard') : undefined;
             const versionsText = versions === undefined ? '' : `; ${versions.text}${COMPACT_VERSION_STATUS === 'hard' ? '' : ` (pending ${COMPACT_VERSION_STATUS.pending})`}`;
+            // UX-P5.4: the side bar's compact badges keep their width inside the option.
+            const compactBadges = scope === 'sidebar' ? compactBadgesClause(rows, tolerance) : undefined;
+            const compactBadgesText = compactBadges === undefined ? '' : `; ${compactBadges.text}${COMPACT_BADGES_STATUS === 'hard' ? '' : ` (pending ${COMPACT_BADGES_STATUS.pending})`}`;
             return {
-                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut - ellipsized}${ellipsized > 0 ? `, ellipsized ${ellipsized}` : ''}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}${lineText}${versionsText}`,
+                value: `${rows.length} rows, ${cut} names cut${early.length > 0 ? `; cut before the version: ${early.join(', ')}` : ''}${plain > 0 ? `; no ellipsis ${plain}` : ''}${scope === 'sidebar' ? '' : `; badges clipped ${clipped}; version whole ×${comfortableVersions.length - versionCut - ellipsized}${ellipsized > 0 ? `, ellipsized ${ellipsized}` : ''}${versionCut > 0 ? `, ${versionCut} cut` : ''}`}${lineText}${versionsText}${compactBadgesText}`,
                 pass: early.length === 0 && plain === 0 && clipped === 0 && versionCut === 0 && (line === undefined || ROW_LINE_STATUS !== 'hard' || line.pass)
-                    && (versions === undefined || COMPACT_VERSION_STATUS !== 'hard' || versions.pass),
+                    && (versions === undefined || COMPACT_VERSION_STATUS !== 'hard' || versions.pass)
+                    && (compactBadges === undefined || COMPACT_BADGES_STATUS !== 'hard' || compactBadges.pass),
             };
         }
         default:
@@ -3799,6 +3873,11 @@ function evaluateEndOfP0(definition: RuleDefinition, scope: Scope, state: string
             };
         }
         case 'DS-ROW-6': {
+            // UX-P5.4: the side bar's compact rows keep their severity badge and hide their other label badges at 250 and below.
+            if (scope === 'sidebar') {
+                const narrow = compactNarrowBadgesClause(layout.rows);
+                return { value: narrow.text, pass: narrow.pass };
+            }
             const width = facts.listPaneWidth;
             const rows = comfortable;
             if (width === undefined || rows.length === 0) {

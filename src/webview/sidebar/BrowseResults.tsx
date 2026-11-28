@@ -3,6 +3,7 @@ import type React from 'react';
 import type { InstalledPackage, PackageSearchResult } from '../../protocol';
 import { useMessageBus } from '../shared/bus/useMessageBus';
 import { allProjectsBrowseContext, browseRowContext, installedProjectsOf, whyNotRemovable } from '../shared/installed/rules';
+import { DeprecationBadge } from '../shared/installed/DeprecationBadge';
 import { Badge, Banner, EmptyState, IconButton, Listbox, openRowMenu, PlusIcon, ProgressBar, Row, TrashIcon } from '../shared/primitives';
 import { useAllProjects } from '../shared/store/allProjects';
 import { useInstalled } from '../shared/store/installed';
@@ -226,7 +227,7 @@ export function BrowseResults({ announce, ask, focusSearch }: BrowseResultsProps
                             version={result.version}
                             busy={busy}
                             status={busy && projectPath !== null ? busyStatus(projectPath, result.id) : undefined}
-                            badges={badge}
+                            badges={badge === undefined && result.deprecation === undefined ? undefined : <>{badge}<DeprecationBadge deprecation={result.deprecation} /></>}
                             actions={action}
                         />
                     );

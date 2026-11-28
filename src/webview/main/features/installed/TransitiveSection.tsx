@@ -6,8 +6,8 @@ import { groupCount, vulnerabilityOf } from '../../../shared/installed/rules';
 import { metadataKey, type TransitiveState } from '../../../shared/store/transitive';
 import { rowId, type TreeItem } from './installedTree';
 import { failure } from '../../../shared/updates/sentence';
-import { VulnerabilityBadge } from './VulnerabilityBadge';
-import { DeprecationBadge } from './DeprecationBadge';
+import { VulnerabilityBadge } from '../../../shared/installed/VulnerabilityBadge';
+import { DeprecationBadge } from '../../../shared/installed/DeprecationBadge';
 
 type GroupItem = Extract<TreeItem, { kind: 'group' }>;
 

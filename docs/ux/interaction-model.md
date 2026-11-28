@@ -317,7 +317,7 @@ project has several and one block per project in All Projects; no version select
 | `details-empty` | The details pane's empty state, "Select a package to see its details." |
 | `details-progress`, `readme-progress` | The 2 px bar over the details facts' skeleton while the selection's metadata loads, and over the README's while it loads (UX-P3.10) |
 | `details-error`, `readme-error` | The inline error with Retry of the details facts and of the README (UX-P3.10) |
-| `row-deprecation` | The Deprecated label badge of a main-panel row whose version is known deprecated (Installed, Transitive, Browse; UX-P5.2b) |
+| `row-deprecation` | The Deprecated label badge of a row whose version is known deprecated (main panel: Installed, Transitive, Browse, UX-P5.2b; side bar: Installed and Browse, UX-P5.4) |
 | `details-deprecation` | The deprecation notice of the chosen version, first in the details facts, with Find Alternative when the source names an alternate (UX-P5.2b) |
 | `details-deprecation-message` | The source's own deprecation message under the notice, plain text (UX-P5.2b) |
 | `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |
@@ -336,7 +336,7 @@ project has several and one block per project in All Projects; no version select
 | `section-box-<name>`, the pane and group forms | The pane-header form: 28 px with a 12 px semibold capitalised title and the count badge at the end; 22 px with an 11 px bold uppercase title under classic; the hover tint and corners of the pane variant at P3.7a |
 | `installed-progress`, `installed-empty`, `installed-error`, `installed-unsupported`, `installed-provisional` | The Installed tab's 2 px progress bar (loading, the first provisional list and revalidating, above the tree), empty state, inline error, unsupported banner, and the provisional badge of the Direct packages group row |
 | `installed-vulnerable-unavailable-banner` | The Installed tab's warning banner under `@vulnerable` when some packages' vulnerability data is unknown (UX-P5.1a) |
-| `row-vulnerability` | A vulnerable row's badge: the highest severity's glyph and word, the count when several, the full statement for assistive technology (UX-P5.1b) |
+| `row-vulnerability` | A vulnerable row's badge: the highest severity's glyph and word, the count when several, the full statement for assistive technology (UX-P5.1b; the side bar's Installed and Updates rows too, UX-P5.4) |
 | `installed-empty-<name>`, `installed-error-<name>`, `installed-unsupported-<name>`, `installed-provisional-<name>` | The same markers for one project under All Projects, `<name>` being its group row id after `project-` (`unsupported.csproj`): the empty and unsupported sentences are message leaves of its group, the error a banner above the tree, the badge on its group row. One tree has one bar: a project's progress is its group row's spinner (UX-P2.1d) |
 | `updates-progress`, `updates-empty`, `updates-error` | The Updates tab's 2 px progress bar (loading and revalidating, above the tree), empty state ("No packages installed." for a project without a package, whatever its sources answer, since nothing was checked; otherwise "No updates available.", never when a source could not be checked, which `updates-unavailable-banner` says) and inline error with Retry (UX-P3.1b) |
 | `updates-unsupported` | Banner of a single unsupported project above its read-only update rows on the Updates tab, the Installed tab's `installed-unsupported` form (UX-P3.10) |
@@ -363,6 +363,7 @@ State markers (§4) and layer roots:
 | `sidebar-installed-provisional` | The "Provisional" badge of the sidebar's installed section |
 | `sidebar-installed-provisional-<name>` | The same badge on one project's header under All Projects (UX-P3.7b; on the project's group row since UX-P3.7c) |
 | `sidebar-source` | The sidebar header line that names the active source (UX-P3.7b) |
+| `sidebar-settle` | The side bar's hidden settle marker: `data-pending` from the list's answer until its lite metadata first settled for that view (UX-P5.4) |
 | `cpm-preview-dialog`, `cpm-preview-confirm`, `multi-install-dialog`, `multi-install-button` | Dialog roots (central package management preview, install into several projects), the preview's *Update Central Version* button and the details pane's *Install in Projects...* |
 
 All Projects (§3; `<name>` = project name lower-cased):

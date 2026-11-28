@@ -4,8 +4,8 @@ import { busyText, directVulnerability, filterById, versionCell, whyNotRemovable
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../../../shared/primitives';
 import { useOps } from '../../../shared/store/ops';
-import { VulnerabilityBadge } from './VulnerabilityBadge';
-import { DeprecationBadge } from './DeprecationBadge';
+import { VulnerabilityBadge } from '../../../shared/installed/VulnerabilityBadge';
+import { DeprecationBadge } from '../../../shared/installed/DeprecationBadge';
 
 /** A package as a project's rows hold it. */
 export interface Item {

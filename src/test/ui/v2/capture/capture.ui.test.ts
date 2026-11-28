@@ -103,6 +103,32 @@ async function printVulnerabilityBadges(): Promise<void> {
     }
 }
 
+/**
+ * The side bar's marks (UX-P5.4, design-advisor opening ruling of 2026-11-28, DO 7): one `[live] vulnerability <list> <id> <label>` and
+ * `[live] deprecation <list> <id>` line per row of the side bar's Installed and Updates lists that shows one. Prints only.
+ */
+async function printSidebarMarks(): Promise<void> {
+    const marks = await script<Array<{ list: string; id: string; vulnerability: string | null; deprecated: boolean }>>(`return ['sidebar-installed-list', 'sidebar-updates-list'].flatMap(list => [...document.querySelectorAll('[data-testid="' + list + '"] .nuiget-row-option')].flatMap(option => {
+        const badge = option.querySelector('[data-testid="row-vulnerability"]');
+        const deprecated = option.querySelector('[data-testid="row-deprecation"]') !== null;
+        if (badge === null && !deprecated) return [];
+        const shown = badge === null ? null : badge.querySelector('[aria-hidden="true"]');
+        const name = option.querySelector('.nuiget-row-name');
+        return [{ list, id: name === null ? '?' : name.textContent.trim(), vulnerability: badge === null ? null : (shown === null ? badge.textContent : shown.textContent).trim(), deprecated }];
+    }));`);
+    for (const mark of marks) {
+        if (mark.vulnerability !== null) {
+            console.warn(`[live] vulnerability ${mark.list} ${mark.id} ${mark.vulnerability}`);
+        }
+        if (mark.deprecated) {
+            console.warn(`[live] deprecation ${mark.list} ${mark.id}`);
+        }
+    }
+}
+
+/** The side bar's settle truth (UX-P5.4, DO 6): the marker is mounted and the lite metadata has settled for the view. */
+const SIDEBAR_SETTLED = '(() => { const mark = document.querySelector(\'[data-testid="sidebar-settle"]\'); return mark !== null && !mark.hasAttribute("data-pending"); })()';
+
 const optionOf = async (rowTestId: string, timeoutMs = 120_000) => (await findByTestId(rowTestId, timeoutMs)).findElement(By.css('.nuiget-row-option'));
 
 /**
@@ -222,6 +248,10 @@ hold.literals = {
     // the same deprecation on Serilog's entry only; no entry is added and no other field or entry is touched.
     'installed-deprecated': { type: 'transitive/metadata', of: result => (!result || !Array.isArray(result.metadata) ? result
         : { ...result, metadata: result.metadata.map(entry => (String(entry.id).toLowerCase() === 'serilog' ? { ...entry, deprecation: hold.deprecation } : entry)) }) },
+    // UX-P5.4 (design-advisor follow-up 1, DO 5): the same deprecation on Serilog's and Newtonsoft.Json's entries, so one side bar row
+    // carries a severity badge beside Deprecated; no entry is added and no other field or entry is touched.
+    'sidebar-deprecated': { type: 'transitive/metadata', of: result => (!result || !Array.isArray(result.metadata) ? result
+        : { ...result, metadata: result.metadata.map(entry => (['serilog', 'newtonsoft.json'].includes(String(entry.id).toLowerCase()) ? { ...entry, deprecation: hold.deprecation } : entry)) }) },
 };
 hold.literal = (mode, result) => hold.literals[mode].of(result);
 hold.apply = data => {
@@ -244,7 +274,7 @@ window.postMessage = function (data, ...rest) {
 
 type HeldType = 'installed/get' | 'updates/get' | 'search/query' | 'search/autocomplete' | 'sources/list' | 'package/metadata' | 'package/readme' | 'transitive/metadata';
 /** The rewrite modes, each bound to the one type whose answer it replaces. */
-type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline' | 'deprecated' | 'installed-deprecated';
+type RewriteMode = 'unavailable' | 'uptodate' | 'browse-unavailable' | 'quicksearch-grouped' | 'sources-empty' | 'offline' | 'deprecated' | 'installed-deprecated' | 'sidebar-deprecated';
 
 /** Holds `type`'s envelopes; `'answer'` lets the provisional chunks of `installed/get` through and holds its answers (UX-P4.fix-23). */
 async function holdRequest(type: HeldType, hold: 'all' | 'answer' = 'all'): Promise<void> {
@@ -1526,6 +1556,35 @@ const REACH: Record<string, Reach> = {
         },
         leave: () => clearBusy('sidebar-installed-busy', SIDEBAR_BUSY_ROWS),
     },
+    // UX-P5.4 (design-advisor opening ruling of 2026-11-28, DO 9; follow-up 1, DO 5): the side bar's lite metadata of Gateway answered
+    // with Serilog's and Newtonsoft.Json's installed versions deprecated, main-installed-deprecated's rewrite in the side bar frame. The hold is armed on Gateway and the
+    // project goes to Utility and back, so Gateway's ask is held (Utility's, if held too, is rewritten and touches no row shown).
+    'sidebar-installed-deprecated': {
+        reach: async () => {
+            await sidebarSections();
+            await holdRequest('transitive/metadata');
+            await sidebarChooses('Utility.csproj');
+            await sidebarChooses('Gateway.csproj');
+            await findByTestId('package-row-serilog', 120_000);
+            await until('window.__nuigetHold.held.some(d => d.kind === "response")', 'the held lite metadata', 60_000);
+            await rewriteHeld('sidebar-installed-deprecated', 'sidebar-deprecated');
+            await until('document.querySelectorAll(\'[data-testid="sidebar-installed-list"] [data-testid="row-deprecation"]\').length === 2 && document.querySelector(\'[data-testid="sidebar-installed-list"] [data-testid="package-row-serilog"] [data-testid="row-deprecation"]\') !== null && document.querySelector(\'[data-testid="sidebar-installed-list"] [data-testid="package-row-newtonsoft.json"] [data-testid="row-deprecation"]\') !== null', 'the Deprecated badges on the side bar\'s Serilog and Newtonsoft.Json rows');
+            await until(SIDEBAR_SETTLED, 'the side bar\'s lite metadata settled', 60_000);
+            await parkSidebarPointer();
+        },
+        // The side bar keeps the rewritten answer until it asks again: the hold ends, the project goes to Utility and back, and the
+        // side bar's Serilog row is plain again before the next cell.
+        leave: async () => {
+            await enterSidebarWebview();
+            await endHold();
+            await sidebarChooses('Utility.csproj');
+            await sidebarChooses('Gateway.csproj');
+            await findByTestId('package-row-serilog', 120_000);
+            await until(`${SIDEBAR_SETTLED} && document.querySelector('[data-testid="sidebar-installed-list"] [data-testid="row-deprecation"]') === null`, 'the side bar\'s Serilog row plain again', 120_000);
+            await leaveWebview();
+            await enterMainWebview();
+        },
+    },
     'sidebar-hover': {
         reach: async () => {
             await sidebarSections();
@@ -1943,6 +2002,12 @@ async function shoot(state: NamedState, capture: Capture): Promise<Shot> {
         const tab = await script<{ text: string; pending: boolean; transitive: string | null } | null>('const tab = document.querySelector(\'[data-testid="installed-tab"]\'); const aggregate = document.querySelector(\'[data-testid="section-box-transitive"]\'); return tab ? { text: (tab.textContent || "").replace(/\\s+/g, " ").trim(), pending: tab.hasAttribute("data-pending"), transitive: aggregate ? (aggregate.textContent || "").replace(/\\s+/g, " ").trim() : null } : null;');
         console.warn(`[pending] ${file}: ${tab === null ? 'no Installed tab' : `tab "${tab.text}", data-pending ${tab.pending ? 'present' : 'absent'}${tab.transitive === null ? '' : `, transitive group "${tab.transitive}"`}`}`);
     }
+    // UX-P5.4 (DO 6, 7): the side bar's settle truth at the shot (measure waited for it) and the side bar's marks.
+    if (state.surface === 'sidebar') {
+        const pending = await script<boolean>('return document.querySelector(\'[data-testid="sidebar-settle"][data-pending]\') !== null;');
+        console.warn(`[pending] ${file}: side bar, data-pending ${pending ? 'present' : 'absent'}`);
+        await printSidebarMarks();
+    }
     if (!HOVER_STATES.includes(state.name)) {
         await leaveWebview();
         await driverOf().actions().move({ x: 1, y: 1 }).perform();
@@ -2173,6 +2238,8 @@ for (const id of ['installed-tab', 'updates-tab']) {
 if ([...document.querySelectorAll('.nuiget-row--comfortable:not([data-row-kind])')].some(row => !row.querySelector('.nuiget-row-authors') && !row.querySelector('[aria-disabled="true"]') && row.closest('[data-testid="consolidate-list"]') === null)) clauses.push('a comfortable row without authors');
 // UX-P5.1a (design-advisor ruling DO 5): the Installed tab's vulnerability count has not settled yet.
 if (document.querySelector('[data-testid="installed-tab"][data-pending]')) clauses.push('installed-tab pending');
+// UX-P5.4 (DO 6): the side bar's lite metadata has not settled yet.
+if (document.querySelector('[data-testid="sidebar-settle"][data-pending]')) clauses.push('sidebar pending');
 return clauses.join('; ');
 `;
 
@@ -3011,6 +3078,15 @@ async function measure(state: NamedState, capture: Capture): Promise<{ red: stri
         viewTitleActions = await script<number>(VIEW_TITLE_ACTIONS);
     }
     await (state.surface === 'main' ? enterMainWebview() : enterSidebarWebview());
+    // UX-P5.4 (DO 6): a side bar cell is measured and shot once its lite metadata has settled for the view (the marks are in).
+    if (state.surface === 'sidebar') {
+        try {
+            await until(SIDEBAR_SETTLED, 'the side bar\'s lite metadata settled', 60_000);
+        } catch {
+            console.warn(`[pending] ${captureFile(state.name, capture)}: side bar, data-pending present`);
+            throw new Error(`${state.name} is not reachable: the side bar's lite metadata did not settle`);
+        }
+    }
     await until(NO_RUNNING_TRANSITION, 'the CSS transitions to end', 30_000);
     // A state that declares its settled truths has them re-checked here, before the collector reads (UX-P3.1b).
     const settled = REACH[state.name]?.settled;

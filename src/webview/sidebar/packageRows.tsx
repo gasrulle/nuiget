@@ -1,6 +1,10 @@
 import type React from 'react';
-import type { InstalledPackage, InstalledResult } from '../../protocol';
-import { UNRESOLVED_HINT, busyText, filterById, shownVersion, whyNotRemovable } from '../shared/installed/rules';
+import type { InstalledPackage, InstalledResult, PackageMetadataLite } from '../../protocol';
+import { DeprecationBadge } from '../shared/installed/DeprecationBadge';
+import { UNRESOLVED_HINT, busyText, filterById, shownVersion, vulnerabilitySeverity, whyNotRemovable } from '../shared/installed/rules';
+import { VulnerabilityBadge } from '../shared/installed/VulnerabilityBadge';
+import { useAllProjects } from '../shared/store/allProjects';
+import { useInstalled } from '../shared/store/installed';
 import { Badge, IconButton, Row, TrashIcon, type RowPlacement } from '../shared/primitives';
 import type { UninstallRequest } from '../shared/installed/uninstallConfirm';
 import { useOps, useOpsActions } from '../shared/store/ops';
@@ -13,6 +17,18 @@ export function visiblePackages(result: InstalledResult, filter: string): Instal
 
 /** A project's name in a single project's list: the project file's name, extension kept, as the project selector shows it. */
 export const projectFileName = (projectPath: string): string => projectPath.split(/[\\/]/).pop() ?? projectPath;
+
+/**
+ * A row's lite metadata (UX-P5.4): under All Projects the row's own project's map, else the selected project's, by lower-cased id;
+ * undefined when the row's project is not the one the slice describes. Unknown shows no mark.
+ */
+export function useRowLite(): (projectPath: string, id: string) => PackageMetadataLite | undefined {
+    const installed = useInstalled();
+    const all = useAllProjects();
+    return (projectPath, id) => (all.active
+        ? all.metadata.get(projectPath)?.get(id.toLowerCase())
+        : installed.projectPath === projectPath ? installed.metadata.get(id.toLowerCase()) : undefined);
+}
 
 /** The view's Delete confirmation, which the key asks and the row button never does (ADR-013 Decision 3, UX-P4.2b). */
 export type AskUninstall = (request: UninstallRequest) => void;
@@ -28,6 +44,7 @@ export function usePackageRows(announce: (message: string) => void, ask: AskUnin
     const { isPackageBusy } = ops;
     const { run } = useOpsActions();
     const { viewDetails } = useRowRequests(announce);
+    const liteOf = useRowLite();
 
     const uninstall = (projectPath: string, result: InstalledResult, entry: InstalledPackage): void => {
         if (isPackageBusy(projectPath, entry.id)) {
@@ -62,6 +79,9 @@ export function usePackageRows(announce: (message: string) => void, ask: AskUnin
         const busy = isPackageBusy(projectPath, entry.id);
         const unresolved = entry.declaration === 'unresolved';
         const central = entry.declaration === 'central' || entry.declaration === 'central-override';
+        // The main panel's marks in its order: CPM, the severity, Deprecated (UX-P5.4); no slot when none applies.
+        const lite = liteOf(projectPath, entry.id);
+        const marked = central || vulnerabilitySeverity(lite) !== undefined || lite?.deprecation !== undefined;
         return (
             <Row
                 {...placement}
@@ -80,7 +100,11 @@ export function usePackageRows(announce: (message: string) => void, ask: AskUnin
                 versionTitle={unresolved ? UNRESOLVED_HINT : undefined}
                 busy={busy}
                 status={busy ? busyText(ops, projectPath, entry.id) : unresolved ? 'Unresolved' : undefined}
-                badges={central ? <Badge label="CPM" title="Centrally managed" /> : undefined}
+                badges={marked ? <>
+                    {central ? <Badge label="CPM" title="Centrally managed" /> : null}
+                    <VulnerabilityBadge lite={lite} />
+                    <DeprecationBadge deprecation={lite?.deprecation} />
+                </> : undefined}
                 actions={whyNotRemovable(entry, result) === undefined
                     ? <IconButton label={`Uninstall ${entry.id}`} tabIndex={-1} data-testid="row-action-uninstall" onClick={() => uninstall(projectPath, result, entry)}><TrashIcon /></IconButton>
                     : undefined}

@@ -980,11 +980,17 @@ The README's typography (headings on the type ramp, underlined links, inline cod
 host (`ui/copyToClipboard`), then the button shows the check and "Copied" for `COPIED_MS` and the live region says so
 (P9.8).
 
-he main
-panel's Installed, Transitive and Browse rows carry `DeprecationBadge` (`features/installed/DeprecationBadge.tsx`) from their lite
-entry or search row, and an Updates row (single project and All Projects) carries `VulnerabilityBadge` for its installed version
-from the slices' lite metadata, only when the entry's version equals the row's `installedVersion` (`liteOfInstalled`); no Updates
-file asks a request for it.
+The main
+panel's Installed, Transitive and Browse rows carry `DeprecationBadge` (`src/webview/shared/installed/DeprecationBadge.tsx`) from their lite
+entry or search row, and an Updates row (single project and All Projects) carries `VulnerabilityBadge`
+(`src/webview/shared/installed/VulnerabilityBadge.tsx`) for its installed version from the slices' lite metadata, only when the
+entry's version equals the row's `installedVersion` (`liteOfInstalled`); no Updates file asks a request for it. Since UX-P5.4 the
+side bar's compact rows carry the same two components in the same mapping (`useRowLite` in `src/webview/sidebar/packageRows.tsx`:
+the selected project's map, or under All Projects the row's project's): an Installed row CPM, the severity, Deprecated; an Updates row
+the installed version's severity; a Browse row Deprecated from its search row. In a list of at most 250 px a compact row keeps its
+severity badge and hides its other label badges (`primitives.css`). `SettleMark` (`src/webview/sidebar/SettleMark.tsx`) is the side
+bar's settle truth for the capture harness, the Installed tab's `data-pending` form: pending from the list's answer until its lite
+metadata first settled for that view, latched per view.
 
 ### Sources feature (main)
 

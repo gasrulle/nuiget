@@ -140,6 +140,18 @@ describe('sidebar: search modes and browse', () => {
         expect(host.requests('ops/install').map(request => request.payload.packageId)).toEqual(['Polly', 'Polly.Core']);
     });
 
+    it('a result whose version is deprecated shows Deprecated after Installed, and no vulnerability mark (UX-P5.4)', async () => {
+        const host = await mountReady();
+        await searchFor(host, 'serilog', [{ ...result('Serilog', '4.0.0'), deprecation: { reasons: ['Legacy'] } }, result('Polly')]);
+        const labels = [...row('Serilog').querySelectorAll('.nuiget-badge')].map(badge => badge.firstChild?.textContent ?? '');
+        expect(labels).toEqual(['Installed', 'Deprecated']);
+        expect(within(row('Serilog')).getByRole('option')).toHaveAccessibleDescription(/This version is deprecated: it is legacy and no longer maintained\./);
+        expect(within(row('Serilog')).queryByTestId('row-vulnerability')).toBeNull();
+        // A result neither installed nor deprecated has no badge slot.
+        expect(row('Polly').querySelector('.nuiget-row-badges')).toBeNull();
+        expect(await axe(screen.getByTestId('sidebar-browse-list'))).toHaveNoViolations();
+    });
+
     it('an installed package says so and installs nothing; under All Projects Ctrl+Enter, the button and the menu open the row menu with where it is installed', async () => {
         const user = userEvent.setup();
         const menus = recordRowMenus();

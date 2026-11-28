@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, compactVersionClause, COMPACT_VERSION_STATUS, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict, BUSY_EXPECTED, busyWordsVerdict } from '../ui/v2/measure';
+import { appliesTo, cellList, isSnappedLine, snappedLine, type ChromeReference, COLLECT_LAYOUT, ROW_LEFTS_REFERENCE, rowLeftsOf, elementGroups, formatLine, type Heights, type Layout, MEASURE_WIDGETS, measureLines, outerScrollVerdict, parseColour, pixelRuleLines, RAMP, rule, type RuleDefinition, RULES, type SashHit, type Scope, type SpecElement, type SpecLook, stateGroup, DIALOG_STATES, DIALOG_TEXT_STATES, thumbVerdict, TOLERANCES, WORKBENCH_WIDGETS, collapsedGlyphClause, COLLAPSED_GLYPH_STATUS, tabBadgesClause, TAB_BADGES_STATUS, DETAILS_BROWSE_STATES, NO_TOOLBAR_STATES, FLAT_LIST_STATES, NO_TEXT_BUTTON_STATES, toolbarFitClause, TOOLBAR_FIT_STATUS, rowLineClause, ROW_LINE_STATUS, compactVersionClause, COMPACT_VERSION_STATUS, compactBadgesClause, COMPACT_BADGES_STATUS, compactNarrowBadgesClause, type RowFacts, splitClause, SPLIT_STATUS, sashNotShown, detailsNotShown, MAIN_PLACEHOLDER_STATUS, ALIGN_2_STATUS, BADGE_GAP_STATUS, factsPitchClause, badgeGapClause, type FactBlock, SIDEBAR_SASH_STATUS, SASH_SECOND_Y_STATUS, sidebarSashNotShown, secondYText, EMPTY_BLOCK_STATUS, busyRowsVerdict, BUSY_EXPECTED, busyWordsVerdict } from '../ui/v2/measure';
 import { STATES } from '../ui/v2/states';
 
 /**
@@ -183,7 +183,8 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(scopes('DS-ROW-2')).toEqual({ 'main-installed': 'hard', details: 'hard', browse: 'hard' });
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
         expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' });
-        expect(scopes('DS-ROW-6')).toEqual(mainHard());
+        // UX-P5.4: the side bar's narrow compact rows keep their severity badge and hide their other label badges.
+        expect(scopes('DS-ROW-6')).toEqual({ ...mainHard(), sidebar: { pending: 'P5.4' } });
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
         // UX-P1.4b: the two states whose readiness holds a Verified mark.
         expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });
@@ -685,7 +686,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(lineOf('main-installed-single', layout({ rows: [row('Serilog', { versionShown: true, versionCut: true })] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ pass: false, value: '1 rows, 0 names cut; badges clipped 0; version whole ×0, 1 cut' });
         // UX-P5.fix-17: the side bar line ends with the compact-version clause (a cut with room for its first character and the ellipsis).
         const versionsSuffix = COMPACT_VERSION_STATUS === 'hard' ? '; versions cut 1, slivers 0' : '; versions cut 1, slivers 0 (Serilog.Sinks.Console 30/15) (pending ' + COMPACT_VERSION_STATUS.pending + ')';
-        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' + versionsSuffix });
+        // UX-P5.4: then the compact-badge clause (no badge in this fixture).
+        const badgesSuffix = '; badges 0, clipped 0' + (COMPACT_BADGES_STATUS === 'hard' ? '' : ' (pending ' + COMPACT_BADGES_STATUS.pending + ')');
+        expect(lineOf('sidebar-sections', truncation, 'DS-ROW-5@sidebar-sections')).toMatchObject({ pass: false, status: 'hard', value: '3 rows, 3 names cut; cut before the version: Newtonsoft.Json' + versionsSuffix + badgesSuffix });
     });
 
     it('reads a collapsed glyph button in a list toolbar: the glyph alone below 250, the label above (DS-OVERFLOW-3, UX-P3.fix-12)', () => {
@@ -808,11 +811,40 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // In the rule: side bar only, the sliver failing once hard; the main line does not change by a character.
         const suffix = COMPACT_VERSION_STATUS === 'hard' ? '' : ' (pending ' + COMPACT_VERSION_STATUS.pending + ')';
         expect(lineOf('sidebar-installed-busy', layout({ rows: [sliver] }), 'DS-ROW-5@sidebar-installed-busy')).toMatchObject({
-            value: '1 rows, 0 names cut; versions cut 1, slivers 1 (Microsoft.Extensions.AI. 8/15)' + suffix, pass: COMPACT_VERSION_STATUS !== 'hard',
+            value: '1 rows, 0 names cut; versions cut 1, slivers 1 (Microsoft.Extensions.AI. 8/15)' + suffix + '; badges 0, clipped 0' + (COMPACT_BADGES_STATUS === 'hard' ? '' : ' (pending ' + COMPACT_BADGES_STATUS.pending + ')'), pass: COMPACT_VERSION_STATUS !== 'hard',
         });
         expect(lineOf('sidebar-installed-busy', layout({ rows: [room] }), 'DS-ROW-5@sidebar-installed-busy')).toMatchObject({ pass: true });
         const comfortable = { ...compact('Serilog'), compact: false, list: 'installed-list' } as RowFacts;
         expect(lineOf('main-installed-single', layout({ rows: [comfortable] }), 'DS-ROW-5@main-installed-single')).toMatchObject({ value: '1 rows, 0 names cut; badges clipped 0; version whole ×1', pass: true });
+    });
+
+    it('DS-ROW-5\'s compact-badge clause and DS-ROW-6\'s side bar clause: badges inside the option; at 250 and below only severity badges (UX-P5.4)', () => {
+        const compact = (name: string, overrides: Record<string, unknown> = {}) => ({ list: 'sidebar-installed-list', compact: true, name, nameCut: false, nameEllipsis: true, authors: undefined, versionShown: true, versionCut: false, badgesShown: 0, badgesClipped: 0, actionsEnd: undefined, ...overrides }) as RowFacts;
+        const high = { severity: true, shown: true, out: 0 };
+        const deprecated = { severity: false, shown: true, out: 0 };
+        // Inside the option: counted, none clipped; a badge 3 px past the option is clipped; a hidden one is not counted.
+        expect(compactBadgesClause([compact('Newtonsoft.Json', { compactBadges: [high, deprecated] })], 0)).toEqual({ text: 'badges 2, clipped 0', pass: true });
+        expect(compactBadgesClause([compact('Newtonsoft.Json', { compactBadges: [high, { ...deprecated, out: 3 }] })], 0)).toEqual({ text: 'badges 2, clipped 1 (Newtonsoft.Json 3)', pass: false });
+        expect(compactBadgesClause([compact('Serilog', { compactBadges: [{ ...deprecated, shown: false, out: 0 }] })], 0)).toEqual({ text: 'badges 0, clipped 0', pass: true });
+        // A comfortable row is not read.
+        expect(compactBadgesClause([{ ...compact('Moq', { compactBadges: [{ ...high, out: 9 }] }), compact: false }], 0).pass).toBe(true);
+        // DS-ROW-6 side bar: at 250 the severity badge stays and Deprecated is clipped with its words kept; a shown label badge, a hidden
+        // severity badge or a hidden badge whose words left the description fails (follow-up 1, DO 6).
+        const clipped = { ...deprecated, shown: false, described: true };
+        expect(compactNarrowBadgesClause([compact('Newtonsoft.Json', { listWidth: 250, compactBadges: [high, clipped] }), compact('Serilog', { listWidth: 250, compactBadges: [clipped] })]))
+            .toEqual({ text: 'list 250: label hidden 2, described 2, severity shown 1', pass: true });
+        expect(compactNarrowBadgesClause([compact('Newtonsoft.Json', { listWidth: 250, compactBadges: [high, { ...clipped, described: false }] })]))
+            .toEqual({ text: 'list 250: label hidden 1, described 0, severity shown 1', pass: false });
+        expect(compactNarrowBadgesClause([compact('Serilog', { listWidth: 250, compactBadges: [deprecated] })])).toEqual({ text: 'list 250: label hidden 0, described 0, severity shown 0; label shown 1', pass: false });
+        expect(compactNarrowBadgesClause([compact('Newtonsoft.Json', { listWidth: 200, compactBadges: [{ ...high, shown: false }] })])).toEqual({ text: 'list 200: label hidden 0, described 0, severity shown 0; severity hidden 1', pass: false });
+        // A wider list is not judged; no compact row with a list is not measurable.
+        expect(compactNarrowBadgesClause([compact('Serilog', { listWidth: 300, compactBadges: [deprecated] })])).toEqual({ text: 'list 300 > 250: not narrow', pass: true });
+        expect(compactNarrowBadgesClause([compact('Serilog')]).pass).toBe(false);
+        // In the rules: the side bar's DS-ROW-6 line is the clause; DS-ROW-5's side bar line ends with the badges.
+        expect(lineOf('sidebar-installed-deprecated', layout({ rows: [compact('Newtonsoft.Json', { listWidth: 250, compactBadges: [high] })] }), 'DS-ROW-6@sidebar-installed-deprecated')).toMatchObject({ value: 'list 250: label hidden 0, described 0, severity shown 1' });
+        expect(lineOf('sidebar-installed-deprecated', layout({ rows: [compact('Newtonsoft.Json', { compactBadges: [high, deprecated] })] }), 'DS-ROW-5@sidebar-installed-deprecated')).toMatchObject({
+            value: '1 rows, 0 names cut; versions cut 0, slivers 0; badges 2, clipped 0' + (COMPACT_BADGES_STATUS === 'hard' ? '' : ' (pending ' + COMPACT_BADGES_STATUS.pending + ')'), pass: true,
+        });
     });
 
     it('PF-3a: separated authors that fill their room are ellipsized, 4 px short of it are cut (UX-P3.fix-14)', () => {

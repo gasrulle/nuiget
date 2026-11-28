@@ -17,7 +17,7 @@ import { UpdateAllDialog } from '../../../shared/updates/UpdateAllDialog';
 import { failure, sentence } from '../../../shared/updates/sentence';
 import { allProjectsKnowledge, bulkUpdateButton, noCandidateWhy } from '../../../shared/updates/updateAll';
 import { LOADING_UPDATES, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
-import { VulnerabilityBadge } from '../installed/VulnerabilityBadge';
+import { VulnerabilityBadge } from '../../../shared/installed/VulnerabilityBadge';
 
 const HINT = 'Space selects the package for a bulk update. Enter shows its details. Ctrl+Enter (Cmd+Enter) updates it. Delete (Cmd+Backspace) uninstalls it. Shift+F10 opens the actions menu. On a group row, Enter, Left and Right expand and collapse it. Ctrl+Up (Cmd+Up) returns to the search box.';
 

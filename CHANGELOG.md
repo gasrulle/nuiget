@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update All stays visible when VS Code always shows header actions** — With VS Code's `workbench.view.alwaysShowHeaderActions` setting on, the Update All button of the sidebar's Updates section is shown without hovering.
 - **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your projects get through their references, for one project or All Projects, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
 - **Consolidate Tab** — With All Projects selected, lists the packages your projects reference at different versions and brings them to one version.
+- **Vulnerable and Deprecated Packages in the Sidebar** — The sidebar's package rows mark a known vulnerable or deprecated version, as the main panel does.
 
 ### Changed
 - **Vulnerable packages show their highest severity**
