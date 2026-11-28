@@ -24,6 +24,7 @@ import { isPathInside, normalizeProjectPath } from './core/util/paths';
 import { registerOperationFeedback, registerQueueStatus } from './host/feedback';
 import { MainPanelHost } from './host/MainPanelHost';
 import { registerRowMenuCommands } from './host/rowMenu';
+import { registerPaletteCommands } from './host/paletteCommands';
 import { HostEvents, LOOK_SETTINGS, createWorkflowDeps, loggerFor, mergeEvents, readExtensionConfig, type HostServices } from './host/services';
 import { sweepLegacyState } from './host/legacyState';
 import { SidebarHost } from './host/SidebarHost';
@@ -348,6 +349,7 @@ export async function activateWith(context: vscode.ExtensionContext, overrides: 
     });
     register('nuiget.refreshPackages', () => catalog.invalidate({ kind: 'workspace' }, 'manual-refresh'));
     registerRowMenuCommands(services, register);
+    registerPaletteCommands(services, register);
     register('nuiget.sidebar.selectSource', () => sidebar.showSourcePicker());
     register('nuiget.sidebar.selectProject', () => sidebar.showProjectPicker());
     register('nuiget.sidebar.togglePrerelease', () => sidebar.togglePrerelease());

@@ -2,6 +2,10 @@ import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type Operati
 import { directCount } from '../counts';
 import { busyKey, type OpsState } from '../store/ops';
 import { metadataKey } from '../store/transitive';
+import { isCentral, updateCandidates, whyNotUpdatable } from './updateRule';
+
+// The update-candidate rule lives in a React-free leaf the host reads too (UX-P5.7a); its importers keep this path.
+export { isCentral, updateCandidates, whyNotUpdatable };
 
 /**
  * The rules an installed row follows on both surfaces: which version it shows, whether it can be uninstalled and
@@ -126,40 +130,6 @@ export function whyNotDeletable(packageId: string, entry: InstalledPackage | und
 /** A project's name as the lists show it: the listed name, else the file name without its extension. */
 export const projectNameOf = (projects: ReadonlyArray<{ name: string; path: string }> | undefined, projectPath: string): string =>
     projects?.find(project => project.path === projectPath)?.name ?? projectPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? projectPath;
-
-/**
- * Why a package cannot be updated from this list, in a sentence for the user; `undefined` when it can. A row with a
- * `VersionOverride` updates in its project alone (`dotnet package add --version` rewrites the override and leaves the
- * central entry; probe row `add-override`, N74).
- */
-export function whyNotUpdatable(entry: InstalledPackage, result: InstalledResult): string | undefined {
-    if (result.unsupported) {
-        return `${entry.id} cannot be updated: ${result.unsupported.message}`;
-    }
-    if (entry.declaration === 'unresolved') {
-        return `${entry.id} cannot be updated: its reference could not be resolved`;
-    }
-    return undefined;
-}
-
-/** A row whose version comes from the central entry: its update changes every project that uses the entry. */
-export const isCentral = (entry: InstalledPackage): boolean => entry.declaration === 'central';
-
-/**
- * The updates a bulk update takes, on both surfaces (UX-P3.7d): the package is installed in the project and can be updated
- * there (a supported project, a resolved reference), its version is not set centrally (a `central` row goes through its
- * preview, N76; a `central-override` row joins, N74) and it is not busy. The subset keeps the order of `rows`: the callers
- * filter and sort.
- */
-export function updateCandidates(rows: readonly PackageUpdate[], installed: InstalledResult | undefined, isBusy: (id: string) => boolean): PackageUpdate[] {
-    if (installed === undefined) {
-        return [];
-    }
-    return rows.filter(row => {
-        const entry = installed.packages.find(candidate => candidate.id.toLowerCase() === row.id.toLowerCase());
-        return entry !== undefined && whyNotUpdatable(entry, installed) === undefined && !isCentral(entry) && !isBusy(row.id);
-    });
-}
 
 /** The tooltip of an unresolved version cell (interaction model §4). */
 export const UNRESOLVED_HINT = 'Its version could not be resolved from the project files; edit the project file by hand.';

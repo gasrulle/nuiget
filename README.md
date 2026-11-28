@@ -106,6 +106,11 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
 | Command | Description |
 |---------|-------------|
 | `nUIget: Manage NuGet Packages` | Open the main panel. From a project file's menu, the panel opens with that project selected. |
+| `nUIget: Refresh Packages` | Read the projects and their packages again. |
+| `nUIget: Check for Package Updates` | Check the selected project's packages for updates again and open the main panel on the Updates tab. |
+| `nUIget: Update All Packages` | Update every package of one project that can be updated together, after a confirmation that lists them. Centrally managed packages are left out: update them one by one. |
+| `nUIget: Install Package...` | Install a package by its exact ID: pick its version, and under All Projects the projects to install it into. |
+| `nUIget: Restore Packages` | Restore the selected project, or every project under All Projects. |
 | `nUIget: Clear NuGet HTTP Cache` | Run `dotnet nuget locals http-cache --clear`, drop the feed data nUIget cached and reload the lists. Use it when packages or versions look stale. |
 | `nUIget: Clear SDK Version Cache` | Forget the .NET SDK versions detected per directory and detect them again, for example after installing a new SDK. |
 

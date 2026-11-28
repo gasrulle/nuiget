@@ -11,7 +11,7 @@ import { activateWith, proxyConfigured, type ActivatedExtension, type Activation
 import { LEGACY_GLOBAL_KEYS, LEGACY_WORKSPACE_KEYS } from './host/legacyState';
 import { MainPanelHost } from './host/MainPanelHost';
 import { readExtensionConfig } from './host/services';
-import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OperationOutcome, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
+import { makeRequest, type BulkOutcome, type EventPayload, type EventType, type InstalledResult, type OperationOutcome, type OperationProgress, type OutboundEnvelope, type RequestPayload, type RequestType } from './protocol';
 import {
     commands as mockCommands,
     createMockExtensionContext,
@@ -153,7 +153,7 @@ describe('extension (2.0 composition root)', () => {
         await start();
 
         const registered = mockCommands.registerCommand.mock.calls.map(call => call[0]);
-        expect(contributed).toHaveLength(20);
+        expect(contributed).toHaveLength(24);
         expect([...registered].sort()).toEqual([...contributed].sort());
     });
 
@@ -394,7 +394,7 @@ describe('extension (2.0 composition root)', () => {
             await vi.waitFor(() => expect(sent().some(message => message.kind === 'response' && message.id === id)).toBe(true), { timeout: 10_000 });
             return sent().find(message => message.kind === 'response' && message.id === id) as { ok: boolean; result: OperationOutcome | BulkOutcome };
         };
-        return { project, send };
+        return { project, send, sent };
     }
 
     it('bulk update shows progress and a summary toast', async () => {
@@ -416,6 +416,15 @@ describe('extension (2.0 composition root)', () => {
         await vi.waitFor(() => expect(mockWindow.showInformationMessage).toHaveBeenCalledTimes(1));
         expect(mockWindow.showInformationMessage).toHaveBeenCalledWith('nUIget: Updated 2 packages.');
         expect(mockWindow.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('the palette commands run through the composed services', async () => {
+        const { project, sent } = await operationsFromSidebar();
+        // Restore Packages: the selected project, through the real queue; the host reports it queued with its project, then its outcome once.
+        await mockCommands.executeCommand('nuiget.restorePackages');
+        await vi.waitFor(() => expect(sent().some(message => message.kind === 'event' && message.type === 'ops/progress' && (message.payload as OperationProgress).status === 'queued' && (message.payload as OperationProgress).kind === 'restore' && ((message.payload as OperationProgress).projectPaths ?? []).includes(project))).toBe(true), { timeout: 10_000 });
+        await vi.waitFor(() => expect(sent().filter(message => message.kind === 'event' && message.type === 'ops/completed')).toHaveLength(1), { timeout: 10_000 });
+        expect(dotnet.calls.filter(dotnetCalls.restore())).toHaveLength(1);
     });
 
     it('failed op shows warning and reveals output', async () => {

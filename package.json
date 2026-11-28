@@ -86,7 +86,7 @@
             },
             {
                 "command": "nuiget.refreshPackages",
-                "title": "Refresh Packages",
+                "title": "nUIget: Refresh Packages",
                 "icon": "$(refresh)"
             },
             {
@@ -171,14 +171,26 @@
             {
                 "command": "nuiget.row.viewDetails",
                 "title": "View Package Details"
+            },
+            {
+                "command": "nuiget.checkForUpdates",
+                "title": "nUIget: Check for Package Updates"
+            },
+            {
+                "command": "nuiget.updateAllPackages",
+                "title": "nUIget: Update All Packages"
+            },
+            {
+                "command": "nuiget.installPackage",
+                "title": "nUIget: Install Package..."
+            },
+            {
+                "command": "nuiget.restorePackages",
+                "title": "nUIget: Restore Packages"
             }
         ],
         "menus": {
             "commandPalette": [
-                {
-                    "command": "nuiget.refreshPackages",
-                    "when": "false"
-                },
                 {
                     "command": "nuiget.sidebar.selectSource",
                     "when": "false"

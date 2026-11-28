@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Consolidate Tab** — With All Projects selected, lists the packages your projects reference at different versions and brings them to one version.
 - **Vulnerable and Deprecated Packages in the Sidebar** — The sidebar's package rows mark a known vulnerable or deprecated version, as the main panel does.
 - **Install a Transitive Package Directly** — The details of a transitive package have an Install button that adds it to the project as a direct reference at the version it resolves to.
+- **Package Commands in the Command Palette** — Refresh Packages, Check for Package Updates, Update All Packages, Install Package... and Restore Packages run from the Command Palette on the selected project, or under All Projects on every project or the ones you pick.
 
 ### Changed
 - **Vulnerable packages show their highest severity**

@@ -100,10 +100,10 @@ describe('package.json menus', () => {
     it('the command palette hides the sidebar-only and row menu commands', () => {
         const hidden = (menus.commandPalette ?? []).filter(entry => entry.when === 'false').map(entry => entry.command).sort();
         const sidebarOnly = manifest.contributes.commands.map(entry => entry.command).filter(command => command.startsWith('nuiget.sidebar.') || command.startsWith('nuiget.row.'));
-        expect(hidden).toEqual([...sidebarOnly, 'nuiget.refreshPackages'].sort());
-        // What the palette offers: the manager and the two cache commands.
+        expect(hidden).toEqual([...sidebarOnly].sort());
+        // What the palette offers: the manager, the two cache commands and, since UX-P5.7a, the five package commands.
         const offered = manifest.contributes.commands.map(entry => entry.command).filter(command => !hidden.includes(command));
-        expect(offered.sort()).toEqual(['nuiget.clearHttpCache', 'nuiget.clearSdkVersionCache', 'nuiget.openManager']);
+        expect(offered.sort()).toEqual(['nuiget.checkForUpdates', 'nuiget.clearHttpCache', 'nuiget.clearSdkVersionCache', 'nuiget.installPackage', 'nuiget.openManager', 'nuiget.refreshPackages', 'nuiget.restorePackages', 'nuiget.updateAllPackages']);
     });
 
     it('names a palette-hidden command without the "nUIget: " prefix and a palette command with it; the palette titles stay (UX-P3.11)', () => {

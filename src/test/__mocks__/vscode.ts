@@ -176,6 +176,7 @@ export const window = {
         return task(progress, token);
     }),
     showQuickPick: vi.fn(),
+    showInputBox: vi.fn(),
     createQuickPick: vi.fn(() => {
         let onAcceptCb: (() => void) | undefined;
         let onHideCb: (() => void) | undefined;
