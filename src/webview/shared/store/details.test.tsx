@@ -231,6 +231,33 @@ describe('details slice', () => {
         expect(metadataAsked(host).map(request => request.payload)).toEqual([{ packageId: 'Polly', version: '8.4.2', sourceUrl: undefined }]);
     });
 
+    it('a null offer shows the selection\'s version and asks its details once; a later default replaces it and is kept (UX-P5.fix-15)', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        await hostSays(() => host.respond(versionsAsked(host)[0], { packageId: 'Polly', versions: ['8.5.0', '8.4.2', '8.4.0'] }));
+        await act(async () => actions.offerVersion(row, null));
+        expect(text('selection')).toBe('Polly@8.4.0');
+        expect(metadataAsked(host).map(request => request.payload.version)).toEqual(['8.4.0']);
+        await act(async () => actions.offerVersion(row, null));
+        expect(metadataAsked(host)).toHaveLength(1);
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+        await act(async () => actions.offerVersion(row, '8.5.0'));
+        expect(text('selection')).toBe('Polly@8.4.2');
+    });
+
+    it('a null offer after a default changes nothing (UX-P5.fix-15)', async () => {
+        const host = mount();
+        await ready(host);
+        const row = consolidateRow('Polly', '8.4.0');
+        await act(async () => actions.select(row));
+        await act(async () => actions.offerVersion(row, '8.4.2'));
+        await act(async () => actions.offerVersion(row, null));
+        expect(text('selection')).toBe('Polly@8.4.2');
+    });
+
     it('the first offer for a selection is kept; a later offer for the same selection changes nothing; another selection object\'s offer is ignored', async () => {
         const host = mount();
         await ready(host);

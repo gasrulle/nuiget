@@ -18,8 +18,10 @@ export const defaultTarget = (list: readonly string[], entry: DriftEntry): strin
 export interface Consolidation {
     selection: DetailsSelection;
     entry: DriftEntry | undefined;
-    /** The projects' lists were read in full once (the fan-out ready); before that no default is applied. */
+    /** The projects' first load ended: read in full (the fan-out ready) or failed (UX-P5.fix-15); a default needs them read. */
     read: boolean;
+    /** The projects' load failed (the fan-out's `error`): no default comes until a Retry reads them (UX-P5.fix-15). */
+    failed: boolean;
     /** The lists are being asked again. */
     revalidating: boolean;
 }
@@ -42,20 +44,26 @@ export function useConsolidation(): Consolidation | undefined {
         const id = consolidate.packageId.toLowerCase();
         return versionDrift({ status, projects, chunks }).entries.find(candidate => candidate.id.toLowerCase() === id);
     }, [consolidate, status, projects, chunks]);
-    const read = status === 'ready';
+    const failed = status === 'error';
     const list = versions.status === 'ready' ? versions.value : undefined;
-    const target = consolidate !== null && read && entry !== undefined && list !== undefined && list.length > 0 ? defaultTarget(list, entry) : undefined;
+    const target = consolidate !== null && status === 'ready' && entry !== undefined && list !== undefined && list.length > 0 ? defaultTarget(list, entry) : undefined;
+    // No default will come (UX-P5.fix-15): the projects failed, or were read with the package no longer drifting; the slice then
+    // shows the selection's own version, and a later default still replaces it once.
+    const ended = failed || (status === 'ready' && !revalidating && entry === undefined);
     useEffect(() => {
-        if (consolidate !== null && target !== undefined) {
-            offerVersion(consolidate, target);
+        if (consolidate !== null && (target !== undefined || ended)) {
+            offerVersion(consolidate, target ?? null);
         }
-    }, [consolidate, target, offerVersion]);
-    return consolidate === null ? undefined : { selection: consolidate, entry, read, revalidating };
+    }, [consolidate, target, ended, offerVersion]);
+    return consolidate === null ? undefined : { selection: consolidate, entry, read: status === 'ready' || failed, failed, revalidating };
 }
 
 /** Why Consolidate... is disabled, first match (design-advisor opening ruling DO 5, follow-up 1 DO 3); `note` when it shows as text. */
 export function consolidateWhy(consolidation: Consolidation, chosen: string, versions: { status: string; listed: boolean; failed: boolean }): { text: string; note?: 'empty' | 'plain' } | undefined {
-    const { entry, read, revalidating } = consolidation;
+    const { entry, read, failed, revalidating } = consolidation;
+    if (failed) {
+        return { text: 'The projects could not be read.' };
+    }
     if (!read || (entry === undefined && revalidating)) {
         return { text: 'The projects are being read.' };
     }
@@ -131,7 +139,8 @@ export function ConsolidateProjects({ entry }: { entry: DriftEntry }): React.JSX
         <div className="nuiget-details-lead">
             <section aria-label="Projects" className="nuiget-details-section" data-testid="consolidate-projects">
                 <GroupCaption title="Projects" />
-                <PropertyList items={entry.versions.flatMap(at => at.projects.map(project => ({ term: project.projectName, value: at.version })))} />
+                {/* An entry whose every reference is held lists no empty list (UX-P5.fix-15): Not Changed follows the caption. */}
+                {entry.versions.length === 0 ? null : <PropertyList items={entry.versions.flatMap(at => at.projects.map(project => ({ term: project.projectName, value: at.version })))} />}
                 {entry.held.length === 0 ? null : (
                     <div className="nuiget-details-block">
                         <GroupCaption level={4} title="Not Changed" />

@@ -290,7 +290,11 @@ and a later answer never moves it. The Details tab opens with the Projects secti
 project and its version, then "Not Changed" with each reference a consolidation leaves and why. Consolidate... is
 disabled with its reason: an operation running, the projects being read, the versions not listed, no reference that can
 change, or nothing to change at the chosen version; when the package no longer drifts the pane says "No longer referenced
-at different versions." (`consolidate-details-empty`) and keeps the selection. It opens the confirmation "Consolidate
+at different versions." (`consolidate-details-empty`) and keeps the selection, also when it stopped drifting before the pane
+offered a target: then the pane shows the details of the row's own version, the version selector enabled, and no progress bar once
+they loaded (UX-P5.fix-15). When the projects could not be read, the pane shows the row's own version and Consolidate... says "The
+projects could not be read." in its tooltip (Retry is the tab's banner). An entry whose every reference is held lists no Projects
+rows, only "Not Changed" with the reasons. It opens the confirmation "Consolidate
 <id> to <version>?" listing `<id> <old> → <new>` under "In <project>:" for each project it changes, and Consolidate
 runs one `ops/bulkUpdateAllProjects`; centrally managed references are never written from here.
 

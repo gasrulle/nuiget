@@ -195,6 +195,86 @@ describe('the Consolidate pane (UX-P5.3c, F3)', () => {
         expect(screen.getByTestId('consolidate-button')).toBeDisabled();
     });
 
+    /** UX-P5.fix-15: the Newtonsoft.Json row pressed while the projects stream, the versions listed, then the final lists no longer drift. */
+    async function ended(): Promise<{ host: FakeHost; user: ReturnType<typeof userEvent.setup> }> {
+        const user = userEvent.setup();
+        const host = await mount();
+        await stream(host, DRIFT, false);
+        await user.click(screen.getByTestId('consolidate-tab'));
+        await user.click(row());
+        await hostSays(() => host.respond(host.requests('package/versions')[0], LIST));
+        const request = host.requests('allProjects/installed')[0];
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: listed(PROJECTS[0], [pkg('13.0.3')]) }));
+        await hostSays(() => host.chunk(request, { kind: 'project', chunk: listed(PROJECTS[1], [pkg('13.0.3')]) }));
+        await hostSays(() => host.respond(request, { projectPaths: PROJECTS.map(project => project.path), errored: [] }));
+        return { host, user };
+    }
+
+    it('an entry that stops drifting before the first offer ends the loading: the start version\'s details are asked once and the sentence says why (UX-P5.fix-15)', async () => {
+        const { host } = await ended();
+        expect(host.requests('package/metadata').map(request => request.payload.version)).toEqual(['12.0.1']);
+        expect(screen.getByTestId('consolidate-details-empty')).toHaveTextContent('No longer referenced at different versions.');
+        expect(screen.getByTestId('consolidate-button')).toBeDisabled();
+        expect(screen.getByTestId('consolidate-button')).toHaveAccessibleDescription('No longer referenced at different versions.');
+        expect(screen.queryByTestId('consolidate-projects')).toBeNull();
+        expect(screen.getByRole('heading', { name: ID })).toBeInTheDocument();
+        expect(select()).toBeEnabled();
+        expect(select().value).toBe('12.0.1');
+        expect(optionTexts().filter(text => /\((in use|installed)\)/.test(text))).toEqual([]);
+        await hostSays(() => host.respond(host.requests('package/metadata')[0], { metadata: null }));
+        expect(screen.queryByTestId('details-progress')).toBeNull();
+        expect(document.querySelector('.nuiget-skeleton')).toBeNull();
+        // A revalidation with the same lists keeps what is shown: no bar, no second request (DS-STATE-2).
+        await hostSays(() => host.invalidate([['projects', 2]]));
+        await stream(host, [listed(PROJECTS[0], [pkg('13.0.3')]), listed(PROJECTS[1], [pkg('13.0.3')]), DRIFT[2]], true, 1);
+        expect(screen.queryByTestId('details-progress')).toBeNull();
+        expect(host.requests('package/metadata')).toHaveLength(1);
+    });
+
+    it('an entry that drifts again after it ended gets the default once (UX-P5.fix-15)', async () => {
+        const { host } = await ended();
+        await hostSays(() => host.invalidate([['projects', 2]]));
+        await stream(host, DRIFT, true, 1);
+        expect(select().value).toBe('13.0.3');
+    });
+
+    it('a first load that fails ends the loading: the start version\'s details, the selector enabled, and Consolidate... says the projects could not be read (UX-P5.fix-15)', async () => {
+        const user = userEvent.setup();
+        const host = await mount();
+        await stream(host, DRIFT, false);
+        await user.click(screen.getByTestId('consolidate-tab'));
+        await user.click(row());
+        await hostSays(() => host.respond(host.requests('package/versions')[0], LIST));
+        await hostSays(() => host.fail(host.requests('allProjects/installed')[0], 'failed', 'The projects could not be evaluated'));
+        expect(host.requests('package/metadata').map(request => request.payload.version)).toEqual(['12.0.1']);
+        expect(select()).toBeEnabled();
+        expect(screen.getByTestId('consolidate-button')).toBeDisabled();
+        expect(screen.getByTestId('consolidate-button')).toHaveAttribute('title', 'The projects could not be read.');
+        expect(screen.getByTestId('consolidate-projects')).toBeInTheDocument();
+        await hostSays(() => host.respond(host.requests('package/metadata')[0], { metadata: null }));
+        expect(screen.queryByTestId('details-progress')).toBeNull();
+        await user.click(within(screen.getByTestId('consolidate-error')).getByRole('button', { name: 'Retry' }));
+        await stream(host, DRIFT, true, 1);
+        expect(select().value).toBe('13.0.3');
+    });
+
+    it('an entry whose every reference is held lists no empty Projects list: Not Changed says why and the note explains the disabled button (UX-P5.fix-15)', async () => {
+        const user = userEvent.setup();
+        const host = await mount();
+        const sdk = { isImplicit: true, declaration: 'props' as const, definedIn: '/sdk/Microsoft.NET.Sdk.props' };
+        await stream(host, [listed(PROJECTS[0], [pkg('12.0.1', sdk)]), listed(PROJECTS[1], [pkg('13.0.2', sdk)]), listed(PROJECTS[2], [])]);
+        await user.click(screen.getByTestId('consolidate-tab'));
+        await user.click(row());
+        await hostSays(() => host.respond(host.requests('package/versions')[0], LIST));
+        const projects = screen.getByTestId('consolidate-projects');
+        expect([...projects.querySelectorAll('dl')].filter(list => list.querySelector('dt') === null)).toHaveLength(0);
+        expect(within(projects).getByRole('heading', { name: 'Not Changed' })).toBeInTheDocument();
+        expect(within(projects).getAllByText(`${ID} is added by the .NET SDK.`)).toHaveLength(2);
+        expect(screen.getByTestId('consolidate-button')).toBeDisabled();
+        expect(screen.getByTestId('consolidate-button')).toHaveAccessibleDescription('No reference of this package can be changed from here.');
+        expect(await axe(screen.getByTestId('package-details-panel'))).toHaveNoViolations();
+    });
+
     it('confirms with the changeable projects only and sends their payload; Cancel and Confirm leave the focus on the button and the list', async () => {
         const { host, user } = await shown();
         await user.click(screen.getByTestId('consolidate-button'));

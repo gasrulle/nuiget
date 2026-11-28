@@ -827,7 +827,9 @@ never stale) and the details pane shows it (`features/details/ConsolidateDetails
 live drift entry and, once the fan-out is ready and the versions are listed, offers the default target (the first listed
 version `inUse` by `sameVersion`, else the newest) through the slice's `offerVersion`, which keeps the first offer for the
 selection object, so `package/metadata` is asked once, for it; on a versions failure or an empty list the slice shows the
-selection's version. `DetailsPane` keeps one header, one version selector and one tab strip, and swaps in Consolidate... with
+selection's version, and so it does when the pane offers `null` because no default will come (the projects read with the package
+no longer drifting, or their load failed): a later default still replaces that `null` once (UX-P5.fix-15).
+`DetailsPane` keeps one header, one version selector and one tab strip, and swaps in Consolidate... with
 its reasons, the "(in use)" marks and the Projects lead block of `DetailsInfo`; the confirmation's lines and the
 `ops/bulkUpdateAllProjects` payload are one `consolidationUpdates` value, held references never in it. A row's menu is the
 transitive row's (Copy Package ID, View Package Details).

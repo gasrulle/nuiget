@@ -35,7 +35,8 @@ export interface DetailsState {
     /**
      * The version shown in the version selector: the one the user chose; else, for a Consolidate selection (UX-P5.3c), the default
      * its pane offered once (the first offer for a selection object is kept), or the selection's version when the versions failed
-     * or answered none, and `null` until then; for any other selection, the selection's version until the user picks another.
+     * or answered none or the pane offered `null` (no default will come: the entry ended, UX-P5.fix-15), and `null` until then; for
+     * any other selection, the selection's version until the user picks another.
      */
     version: string | null;
     /** Every version of the package on its source (or the allowed sources), newest first. */
@@ -82,9 +83,11 @@ export interface DetailsActions {
     chooseVersion: (version: string) => void;
     /**
      * A Consolidate pane offers its default target for `selection` (UX-P5.3c): kept as the shown version until the user chooses,
-     * and only the first offer for that selection object counts (the default is applied once).
+     * and only the first offer for that selection object counts (the default is applied once). `null` says no default will come
+     * (the entry ended or the projects could not be read, UX-P5.fix-15): the selection's own version shows, and a later default
+     * still replaces it once.
      */
-    offerVersion: (selection: DetailsSelection, version: string) => void;
+    offerVersion: (selection: DetailsSelection, version: string | null) => void;
     /** The README tab is shown: from now on the README of the chosen version is asked for. */
     showReadme: () => void;
     /** Asks the list of `reveal.tab` to make the row current; a later reveal replaces it, `null` clears it. */
@@ -181,7 +184,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     const latestViews = useRef(views);
     latestViews.current = views;
     const [version, setVersion] = useState<string | null>(null);
-    const [offer, setOffer] = useState<{ selection: DetailsSelection; version: string } | null>(null);
+    const [offer, setOffer] = useState<{ selection: DetailsSelection; version: string | null } | null>(null);
     const [readmeWanted, setReadmeWanted] = useState(false);
     const [reveal, setReveal] = useState<DetailsReveal | null>(null);
     const [attempts, setAttempts] = useState({ versions: 0, metadata: 0, readme: 0 });
@@ -274,10 +277,11 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
     const vulnerableVersions = listed.value?.vulnerableVersions;
 
     // The shown version (UX-P5.3c): chosen, else a Consolidate pane's offer for this very selection, else, for a Consolidate
-    // selection whose versions failed or answered none, its own version.
-    const offered = offer !== null && offer.selection === selection ? offer.version : null;
+    // selection whose versions failed or answered none, or whose pane offered `null` (UX-P5.fix-15), its own version.
+    const ownOffer = offer !== null && offer.selection === selection ? offer : null;
+    const offered = ownOffer?.version ?? null;
     const unlisted = (listed.error !== undefined && listed.value === undefined) || (listed.status === 'ready' && listed.value?.versions.length === 0);
-    const fallback = selection?.origin === 'consolidate' && unlisted ? selection.version : null;
+    const fallback = selection?.origin === 'consolidate' && (unlisted || (ownOffer !== null && ownOffer.version === null)) ? selection.version : null;
     const shownVersion = version ?? offered ?? fallback;
 
     const metadataKey = packageId === undefined || shownVersion === null || !asksFeeds ? null : `${packageId.toLowerCase()}@${shownVersion.toLowerCase()}|${sourceUrl ?? 'all'}`;
@@ -306,7 +310,8 @@ export function DetailsProvider({ children }: { children: React.ReactNode }): Re
             if (current.remembered.get(current.view)?.selection !== offeredFor) {
                 return;
             }
-            setOffer(previous => (previous !== null && previous.selection === offeredFor ? previous : { selection: offeredFor, version: next }));
+            // A default replaces a `null` offer once; a `null` never replaces a default (UX-P5.fix-15).
+            setOffer(previous => (previous !== null && previous.selection === offeredFor && (previous.version !== null || next === null) ? previous : { selection: offeredFor, version: next }));
         },
         showReadme: () => setReadmeWanted(true),
         retryVersions: () => setAttempts(previous => ({ ...previous, versions: previous.versions + 1 })),
