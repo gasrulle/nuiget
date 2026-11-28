@@ -493,9 +493,9 @@
   },
   "main-transitive-details.dark-modern.1200.png": {
     "status": "approved",
-    "run": "44893944427",
-    "sha256": "29d6faac7437fde91e627015176dbfe2a1eea974f1d6b20de98dd202a4e872e0",
-    "sidecarSha256": "beddc3caa9478ef77bafc953752c3959601b965f49998f7efc71a0f8ed59019d"
+    "run": "46094929692",
+    "sha256": "d27c1df915f41b826beb71e586c3691b05105ee4ff22fb93b6056eca8cd36739",
+    "sidecarSha256": "8c9a7d604328ec30aa674ff2fe1d4415157917a5d600e875792a1752c3be9e16"
   },
   "main-transitive-expanded.dark-modern.1200.png": {
     "status": "approved",

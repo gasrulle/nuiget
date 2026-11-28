@@ -77,6 +77,7 @@
     "    term \"Authors\"",
     "    definition \"\"",
     "      img \"Verified: the package id prefix is reserved by its owner\"",
+    "    button \"Install\" {install-update-button}",
     "    region \"Required by\"",
     "      heading \"Required by\"",
     "      heading \"net#\" {section-box-required-by-net#}",

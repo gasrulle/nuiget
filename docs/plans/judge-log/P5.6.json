@@ -1,0 +1,55 @@
+{
+  "item": "UX-P5.6",
+  "runs": [
+    {
+      "runId": "46094929692",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "fb0449c9 (push 1)",
+      "look": "modern",
+      "workflow": "wf_6098a802-3d6",
+      "mode": "screen",
+      "note": "The transitive details cell against its own artboard main-transitive-details.dark-modern.1200 and spec.",
+      "captures": {
+        "main-transitive-details": {
+          "png": "captures/46094929692/ui-screenshots/main-transitive-details.dark-modern.1200.png",
+          "sha256": "d27c1df915f41b826beb71e586c3691b05105ee4ff22fb93b6056eca8cd36739",
+          "artboard": "docs/design/artboards/main-transitive-details.dark-modern.1200.png"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 3,
+        "standing": 1,
+        "blocking": 1,
+        "refuted": 0,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [
+        {
+          "id": "main-transitive-details#D1",
+          "state": "main-transitive-details",
+          "finding": "[native] The details pane draws a primary Install button under Authors (about 441,181, 54 x 26) where the artboard has no control and goes straight from Authors to Required by, and the spec's composition declares the transitive details read-only with no actions, so the capture shows an element the artboard and redline lack and the block below it is pushed down about 34 px. | [geometry] The details header draws an Install button (26 px tall, x 441-494, y 181-206) under the Authors line that neither the approved artboard nor the spec's composition has (spec: 'no tabs, no actions, no README'); it pushes the Required by section 34 px lower than the artboard (ink top 230 against 196). Everything else in the pane sits where the artboard has it: the title and labels on the 20 px inset at x 441, the Version row at y 133, and the 19 px heading-to-framework gap. | [states] The transitive details pane draws a primary Install button under Authors (about x 441, y 181) that the approved artboard does not have; the redline's composition says these details are read-only with no tabs and no actions, so this is an extra element, and it pushes the Required by block down about 34 px from where the artboard puts it (y 201 vs 235).",
+          "severity": "blocking",
+          "box": [
+            441,
+            181,
+            54,
+            26
+          ],
+          "rule": "judge-only",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "accepted-as-design",
+          "evidence": "the header gains the Install row by design; every other element sits where the artboard has it (the finding's own text); SPEC 5/5, 17/17, 2/2 (hard) in run 46094929692",
+          "ruling": "DECISIONS.md 2026-11-28 \"Promote a transitive package (UX-P5.6, G6)\"; docs/plans/handoff/P5.6.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-28"
+        }
+      ],
+      "refuted": []
+    }
+  ]
+}
