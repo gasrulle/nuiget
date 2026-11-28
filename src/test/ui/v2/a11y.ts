@@ -446,7 +446,7 @@ export const KEYS_STATUS: RuleStatus = 'hard';
 export const MOTION_STATUS: RuleStatus = 'hard';
 
 /** The screens the capture suite walks, each from scratch. */
-export type KeyScreen = 'main-installed' | 'main-updates' | 'main-browse' | 'sidebar';
+export type KeyScreen = 'main-installed' | 'main-updates' | 'main-browse' | 'main-consolidate' | 'sidebar';
 
 /** The focused element as the webview reports it (`DESCRIBE_FOCUS`). */
 export interface FocusFacts {
@@ -511,7 +511,8 @@ export interface KeyOutcome {
 /**
  * The tab sequence each screen's walk records, as `focusLine`s, copied from run 40146274455 (design-advisor ruling of
  * 2026-10-25; interaction model §5 has no Tab-order table, H48). Only the item whose change moves a stop updates its screen
- * here, in the same commit, with the reason in its note (P2.5 the tab stops' names, P3.7a the main Installed row order).
+ * here, in the same commit, with the reason in its note (P2.5 the tab stops' names, P3.7a the main Installed row order; P5.fix-18
+ * the Consolidate screen, derived from the committed `main-consolidate` snapshot).
  * A stop the snapshot cannot hold before the item's green run is named by `KEYS_AWAITING_ARIA`.
  */
 export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]>>> = {
@@ -532,6 +533,12 @@ export const KEYS_EXPECTED: Readonly<Partial<Record<KeyScreen, readonly string[]
     'main-browse': [
         'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
         'option "Newtonsoft.Json #"',
+        'separator "Resize the package list" {sash}',
+    ],
+    'main-consolidate': [
+        'combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+        'tab "Consolidate #" {consolidate-tab}',
+        'option "Newtonsoft.Json # versions in # projects"',
         'separator "Resize the package list" {sash}',
     ],
     'sidebar': [

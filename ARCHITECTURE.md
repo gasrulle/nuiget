@@ -1205,7 +1205,7 @@ These parts are the current truth for the build, test and release pipeline.
   the Modern UI pass a snapshot of the accessible tree read with axe's own role and name functions, digits masked,
   a run of equal version options under a native select kept as one line (UX-P3.fix-2), written to `aria/<state>.json` beside the crops and compared with `src/test/ui/v2/aria/<state>.json` (`[aria]` lines;
   a snapshot is adopted from a green run's artifact, like a golden). After the captures, in that pass, the suite walks
-  the keyboard paths of interaction model §5 on four screens (main Installed, Updates and Browse, the sidebar), each from
+  the keyboard paths of interaction model §5 on five screens (main Installed, Updates and Browse, the sidebar, and since UX-P5.fix-18 the Consolidate list with its confirmation, left with Escape), each from
   scratch: Tab from the search box (each stop recorded as a line of the screen's ARIA snapshot, with whether it shows a
   ring), the row keys that write nothing and the bulk dialog's trap, Escape and focus restore (`[keys]` lines against
   `KEYS_EXPECTED`, recorded from run 40146274455; a walk starts once the snapshot's settle predicate holds); and it

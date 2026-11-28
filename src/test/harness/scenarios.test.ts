@@ -590,6 +590,38 @@ describe('two-surface harness', () => {
         expectOneResponsePerRequest(main);
     });
 
+    it('consolidate to the lower version in use: one ops/bulkUpdateAllProjects from the main panel downgrades the higher project, and both projects end authoritative at it (UX-P5.fix-18)', async () => {
+        h = await createHarness({ tree: { 'A/A.csproj': projectXml(['Serilog', '3.1.0']), 'B/B.csproj': projectXml(['Serilog', '3.0.0']) }, selectedProject: 'A/A.csproj', evaluate: true });
+        const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];
+        const sidebar = await h.resolve('sidebar');
+        const main = await h.resolve('main');
+        h.showAllProjects('main');
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.1.0'], allProjects: { [A]: ['Serilog@3.1.0'], [B]: ['Serilog@3.0.0'] } });
+        const before = fs.readFileSync(B, 'utf8');
+        const projectName = main.projects?.find(project => project.path === A)?.name;
+        expect(projectName).toBeDefined();
+
+        // The consolidation the webview sends (`consolidationUpdates`, R372): only the project above the target changes.
+        const outcome = resultOf(await h.operate('main', 'ops/bulkUpdateAllProjects', { projectUpdates: [{ projectPath: A, projectName: projectName as string, packages: [{ id: 'Serilog', version: '3.0.0' }] }] }).response);
+        expect(outcome).toMatchObject({ status: 'completed' });
+        const adds = h.dotnet.calls.filter(dotnetCalls.packageAdd('Serilog'));
+        expect(adds).toHaveLength(1);
+        expect(adds[0].args).toEqual(expect.arrayContaining(['--version', '3.0.0', '--project', A]));
+        expect(fs.readFileSync(A, 'utf8')).toContain('Include="Serilog" Version="3.0.0"');
+        expect(fs.readFileSync(B, 'utf8')).toBe(before);
+
+        await h.expectState({ selectedProject: A, projects: [A, B], installed: ['Serilog@3.0.0'], allProjects: { [A]: ['Serilog@3.0.0'], [B]: ['Serilog@3.0.0'] } });
+        await h.settle(() => {
+            for (const [path, entry] of main.allProjects) {
+                expect('fidelity' in entry ? entry.fidelity : entry.error, `${path}: the main panel's fan-out`).toBe('authoritative');
+            }
+        });
+        await h.selectProject('sidebar', B);
+        await h.expectState({ selectedProject: B, projects: [A, B], installed: ['Serilog@3.0.0'] });
+        expectOneResponsePerRequest(sidebar);
+        expectOneResponsePerRequest(main);
+    });
+
     it('sidebar: uninstall then watcher invalidation converges', async () => {
         h = await createHarness({ tree: TWO_PROJECTS, selectedProject: 'A/A.csproj' });
         const [A, B] = [h.path('A/A.csproj'), h.path('B/B.csproj')];

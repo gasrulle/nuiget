@@ -324,6 +324,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
             'main-installed 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-updates 5 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'main-browse 3 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
+            'main-consolidate 4 combobox "Search packages, or filter with @installed, @updates or @vulnerable" {search-input}',
             'sidebar 7 combobox "Search packages, or filter with @installed or @updates" {sidebar-search-input}',
         ]);
     });
@@ -526,7 +527,7 @@ describe('the accessibility harness (UX-P0.23)', () => {
 
     it('expects only tab stops that the screen\'s committed ARIA snapshot holds, or that KEYS_AWAITING_ARIA names for the item adopting the snapshot (UX-P0.24, UX-P2.1d)', () => {
         const statuses = trackerStatuses(fs.readFileSync(path.resolve(__dirname, '../../../docs/plans/STATUS-ux.md'), 'utf8'));
-        const snapshotOf: Record<string, string> = { 'main-installed': 'main-installed-single', 'main-updates': 'main-updates', 'main-browse': 'main-browse-results', sidebar: 'sidebar-sections' };
+        const snapshotOf: Record<string, string> = { 'main-installed': 'main-installed-single', 'main-updates': 'main-updates', 'main-browse': 'main-browse-results', 'main-consolidate': 'main-consolidate', sidebar: 'sidebar-sections' };
         const stripped = (line: string): string => line.trim().replace(/ \[[^\]]*\]/, '');
         for (const [screen, expected] of Object.entries(KEYS_EXPECTED)) {
             const lines = (JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ui/v2/aria', `${snapshotOf[screen]}.json`), 'utf8')) as { lines: string[] }).lines.map(stripped);

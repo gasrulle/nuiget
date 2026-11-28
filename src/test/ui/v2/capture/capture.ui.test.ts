@@ -2651,6 +2651,58 @@ async function dialogKeys(): Promise<KeyOutcome[]> {
 }
 
 /**
+ * The Consolidate pane and its confirmation from the keyboard (UX-P5.fix-18, architecture-advisor opening ruling DO 4): Enter on the
+ * Newtonsoft.Json row shows its pane, Tab reaches Consolidate..., Enter opens the confirmation on Cancel, Tab stays inside, Escape
+ * closes it and the focus returns to the button. Never Ctrl+Enter, Confirm, Space or Delete; each step is an outcome, never a throw.
+ */
+async function consolidateDialogKeys(): Promise<KeyOutcome[]> {
+    const outcomes: KeyOutcome[] = [];
+    const option = await driverOf().findElement(By.css('[data-testid="consolidate-list"] [data-testid="package-row-newtonsoft.json"] .nuiget-row-option'));
+    await script('arguments[0].focus();', option);
+    await press(Key.ENTER);
+    const current = await poll(async () => {
+        const row = await activeRow('consolidate-list');
+        return row.startsWith('current ') ? row : undefined;
+    }, 'the Consolidate row current', 10_000).catch(async () => activeRow('consolidate-list'));
+    outcomes.push({ path: 'dialog row Enter', observed: current, expected: 'current row 1' });
+    const settled = await poll(async () => ((await script<boolean>(CONSOLIDATE_DETAILS_SETTLED())) ? true : undefined), 'the Consolidate pane settled', 60_000).then(() => true, () => false);
+    if (!settled) {
+        outcomes.push({ path: 'dialog pane', observed: await script<string>(CONSOLIDATE_DETAILS_FACTS), expected: 'settled' });
+        return outcomes;
+    }
+    const passed: string[] = [];
+    for (let step = 0; step < 6 && (await focusedTestId()) !== 'consolidate-button'; step++) {
+        await press(Key.TAB);
+        passed.push(await focusedTestId());
+    }
+    outcomes.push({ path: 'row Tab to consolidate-button', observed: passed.join(' → '), expected: 'sash → version-selector → consolidate-button' });
+    if ((await focusedTestId()) !== 'consolidate-button') {
+        outcomes.push({ path: 'dialog open', observed: 'not pressed: the focus is not on consolidate-button', expected: 'confirm-dialog-cancel' });
+        return outcomes;
+    }
+    await press(Key.ENTER);
+    const opened = await findByTestId('confirm-dialog', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'dialog open', observed: opened ? await focusedTestId() : 'no dialog', expected: 'confirm-dialog-cancel' });
+    if (!opened) {
+        return outcomes;
+    }
+    let inside = true;
+    for (let step = 0; step < 6; step++) {
+        await press(Key.TAB);
+        inside = inside && (await script<boolean>(FOCUS_IN_DIALOG));
+    }
+    outcomes.push({ path: 'dialog Tab ×6', observed: inside ? 'focus stays inside' : 'focus left the dialog', expected: 'focus stays inside' });
+    await press(Key.ESCAPE);
+    const closed = await poll(async () => ((await driverOf().findElements(By.css('[data-testid="confirm-dialog"]'))).length === 0 ? true : undefined), 'the dialog closed', 10_000).then(() => true, () => false);
+    outcomes.push({ path: 'dialog Escape', observed: closed ? 'closed' : 'still open', expected: 'closed' });
+    if (!closed) {
+        await cancelDialog();
+    }
+    outcomes.push({ path: 'dialog restore', observed: await focusedTestId(), expected: 'consolidate-button' });
+    return outcomes;
+}
+
+/**
  * The Delete key on an Installed row (UX-P4.2a): it opens the confirmation on Cancel, Escape closes it, and the row is
  * active again; never confirmed, the box never ticked. On a build whose hint does not say Delete asks, the key is not
  * pressed and the path is red.
@@ -3404,6 +3456,18 @@ describe(`named states (${LANE} lane, ${LOOK} look)`, () => {
             await sidebarSections();
             // Delete before Enter: Enter on a side bar row opens the main panel, so it stays the walk's last step (UX-P4.2b).
             await walkScreen('sidebar', 'nuiget-sidebar', 'sidebar-search-input', async () => [...await rowKeys('sidebar', 'sidebar-installed-list', 'sidebar-search-input', 'later'), ...await deleteCancelKeys('sidebar-installed-list', 'package-row-serilog'), ...await sidebarEnterKeys()]);
+        });
+
+        // UX-P5.fix-18 (architecture-advisor opening ruling DO 3): the Consolidate list and its confirmation, under All Projects; the
+        // Tab stops are read with no row current (REACH leaves the pane empty), then the row keys and the dialog's, left with Escape.
+        it('keyboard paths: main panel, Consolidate (UX-P5.fix-18)', async function () {
+            this.timeout(300_000);
+            await driverOf().actions().clear();
+            await applyTheme('dark-modern');
+            await applyWidth(stateNamed('main-consolidate'), PANEL_WIDTH);
+            await freshMainPanel();
+            await REACH['main-consolidate'].reach();
+            await walkScreen('main-consolidate', 'nuiget-app', 'search-input', async () => [...await rowKeys('main-consolidate', 'consolidate-list', 'search-input', 'press'), ...await consolidateDialogKeys()]);
         });
 
         // UX-P0.26 (H57–H59): informational `[perf]` lines, timed in page; after the walks, so no capture's data state
