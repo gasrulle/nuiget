@@ -827,7 +827,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.7b (design trigger 6, design-advisor ruling): the sidebar's view-title actions, read by the capture suite in the top document.
     rule('DS-OVERFLOW-4', { helper: 6, scopes: { sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-OVERFLOW-1', { helper: 6, scopes: { ...inGroups('hard', 'main-installed', 'main-updates', 'browse', 'details'), sidebar: 'hard' }, tolerance: TOLERANCES.containment }),
-    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: ['main-transitive-details'], scopeExceptStates: { details: DETAILS_NO_HEADER_STATES } }),
+    rule('DS-OVERFLOW-3', { helper: 6, scopes: { toolbars: 'hard', tabs: 'hard', 'main-header': 'hard', details: 'hard' }, tolerance: TOLERANCES.containment, scopeExceptStates: { details: DETAILS_NO_HEADER_STATES } }),
     // UX-P3.fix-15: `split`, the main split below and above the sum of both pane minimums (SPLIT_STATUS).
     rule('DS-OVERFLOW-5', { helper: 6, scopes: { details: 'hard', split: 'hard' }, tolerance: TOLERANCES.containment }),
     rule('DS-ALIGN-1', { helper: 2, scopes: { details: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: DETAILS_NO_FACTS_STATES }),

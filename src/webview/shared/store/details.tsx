@@ -15,7 +15,7 @@ export interface DetailsSelection {
     /**
      * Where it came from: an installed or update row belongs to its project and leaves when that project no longer has
      * it. A transitive row (`projectPath` `null` for the All Projects aggregate) asks nothing of the feeds: its view reads
-     * the transitive slices.
+     * the transitive slices, and in a single project offers Install at the row's own version (UX-P5.6).
      */
     origin: 'installed' | 'updates' | 'browse' | 'transitive' | 'consolidate';
     /** The project the row belongs to (its section's in All Projects); `null` for a row found by a search. */

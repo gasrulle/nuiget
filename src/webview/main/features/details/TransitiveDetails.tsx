@@ -1,8 +1,11 @@
 import { useId } from 'react';
 import type React from 'react';
-import { Badge, GroupCaption, PropertyList, VerifiedIcon } from '../../../shared/primitives';
+import { busyText } from '../../../shared/installed/rules';
+import { Badge, Button, GroupCaption, PropertyList, VerifiedIcon } from '../../../shared/primitives';
 import { useAllProjects } from '../../../shared/store/allProjects';
-import type { DetailsSelection } from '../../../shared/store/details';
+import { useDetails, type DetailsSelection } from '../../../shared/store/details';
+import { useInstalled } from '../../../shared/store/installed';
+import { useOps } from '../../../shared/store/ops';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
 import { aggregateTransitive, rootsByProject } from '../installed/transitiveAggregate';
 
@@ -13,14 +16,19 @@ interface Block {
 }
 
 /**
- * The details of a transitive package, read-only as 1.x showed them: the id with a Transitive badge, the version, the
- * authors with the Verified mark, and what requires it — one block per target framework of the project (headed when it
- * has several), or one block per project in All Projects. Everything comes from the transitive slices; nothing is asked
- * of the feeds, and there is no version selector, action or README.
+ * The details of a transitive package: the id with a Transitive badge, the version, the authors with the Verified mark, and
+ * what requires it — one block per target framework of the project (headed when it has several), or one block per project
+ * in All Projects. Everything comes from the transitive slices; nothing is asked of the feeds; no version selector or README.
+ * In a single project one Install makes it a direct reference at the row's own version, through the pane's install path (the
+ * CPM preview included); it stays shown and says why when it cannot (UX-P5.6, G6). All Projects is read-only.
  */
-export function TransitiveDetails({ selection }: { selection: DetailsSelection }): React.JSX.Element {
+export function TransitiveDetails({ selection, onInstall, asking }: { selection: DetailsSelection; onInstall: () => void; asking: boolean }): React.JSX.Element {
     const transitive = useTransitive();
     const all = useAllProjects().transitive;
+    const { stale } = useDetails();
+    const installed = useInstalled();
+    const ops = useOps();
+    const noteId = useId();
     const key = metadataKey(selection.packageId, selection.version);
     const aggregate = selection.projectPath === null;
     const lite = (aggregate ? all.metadata : transitive.metadata).get(key);
@@ -39,6 +47,20 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
         })));
         blocks = listing.length === 0 ? undefined : listing;
     }
+
+    // Install goes to the committed project, so it is offered only for the selection of that one project (UX-P5.6, DO 5, 6).
+    const projectPath = selection.projectPath;
+    const busy = projectPath !== null && ops.isPackageBusy(projectPath, selection.packageId);
+    let why: string | undefined;
+    if (stale || projectPath !== installed.projectPath) {
+        why = 'Checking the selected project';
+    } else if (installed.result?.unsupported !== undefined) {
+        why = `Unsupported project: ${installed.result.unsupported.message.replace(/\.+$/, '')}`;
+    } else if (installed.result?.packages.some(entry => entry.id.toLowerCase() === selection.packageId.toLowerCase())) {
+        why = 'Already a direct reference of this project';
+    }
+    // A row no longer listed says so once, in the info below, and that sentence describes the button.
+    const blocked = why !== undefined || blocks === undefined;
 
     return (
         <div className="nuiget-details" data-testid="transitive-details">
@@ -59,9 +81,23 @@ export function TransitiveDetails({ selection }: { selection: DetailsSelection }
                         </>,
                     }] : []),
                 ]} />
+                {projectPath === null ? null : (
+                    <div className="nuiget-details-actions">
+                        <Button
+                            data-testid="install-update-button"
+                            disabled={busy || asking || blocked}
+                            title={busy ? 'An operation on this package is running.' : blocked ? undefined : 'Install this version as a direct reference of the project.'}
+                            aria-describedby={blocked ? noteId : undefined}
+                            onClick={onInstall}
+                        >
+                            {busy ? busyText(ops, projectPath, selection.packageId) : 'Install'}
+                        </Button>
+                    </div>
+                )}
+                {why === undefined || projectPath === null ? null : <p className="nuiget-details-note" id={noteId}>{`${why}.`}</p>}
             </div>
             <div className="nuiget-details-info nuiget-details-info--continued">
-                {blocks === undefined ? <p className="nuiget-details-note">No longer listed as a transitive package.</p> : (
+                {blocks === undefined ? <p className="nuiget-details-note" id={why === undefined ? noteId : undefined}>No longer listed as a transitive package.</p> : (
                     <section aria-label="Required by" className="nuiget-details-section">
                         <GroupCaption title="Required by" />
                         {blocks.map((block, index) => {

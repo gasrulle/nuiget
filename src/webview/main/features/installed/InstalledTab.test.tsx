@@ -1003,7 +1003,7 @@ describe('main panel: Installed tab', () => {
         expect(screen.getByRole('treeitem', { name: 'Ranged [1,2) (run restore)' })).toHaveAccessibleDescription(/Version range/);
     });
 
-    it('a transitive row under its framework group opens the read-only details with Required by and is current, not selected', async () => {
+    it('a transitive row under its framework group opens its details with Required by and an Install, and is current, not selected', async () => {
         const user = userEvent.setup();
         const host = await mountWith(THREE, true);
         await user.click(screen.getByTestId('section-header-transitive'));
@@ -1045,6 +1045,9 @@ describe('main panel: Installed tab', () => {
         expect(heading).toHaveAccessibleName(`${name} Installed through another package's dependencies`);
         expect(detailsHeader.querySelector('.nuiget-details-name')).toHaveAttribute('title', detailsHeader.querySelector('.nuiget-details-name')?.textContent ?? '');
         expect(within(details).getByRole('heading', { level: 3, name: 'Required by' })).toHaveClass('nuiget-group-caption');
+        // UX-P5.6: one Install in the header, no version selector; still nothing asked of the feeds.
+        expect(within(detailsHeader).getByTestId('install-update-button')).toHaveTextContent('Install');
+        expect(within(details).queryByTestId('version-selector')).toBeNull();
         expect(host.requests('package/versions')).toHaveLength(0);
         expect(host.requests('package/metadata')).toHaveLength(0);
 
@@ -1153,5 +1156,99 @@ describe('main panel: Installed tab', () => {
             await hostSays(() => host.respond(request, { projectPaths: [A, B], errored: [] }));
             expect(heard).toEqual(['Loading installed packages']);
         });
+    });
+});
+
+describe('main panel: Install on a transitive package (UX-P5.6, G6)', () => {
+    let removeLayout: () => void;
+
+    beforeEach(() => {
+        removeLayout = installFakeLayout({ viewport: 400, row: 44 });
+    });
+
+    afterEach(() => {
+        removeLayout();
+    });
+
+    const LOGGING: TransitiveResult = { projectPath: A, dataSourceAvailable: true, frameworks: [{ targetFramework: 'net8.0', packages: [{ id: 'Microsoft.Extensions.Logging', version: '9.0.0', requiredByChain: ['Serilog'] }] }] };
+
+    /** The single project A with a transitive Microsoft.Extensions.Logging made current; `changes` reshape A's installed answer. */
+    async function transitiveSelected(changes: Partial<InstalledResult> = {}, transitive: TransitiveResult = LOGGING): Promise<{ host: FakeHost; button: () => HTMLElement }> {
+        const user = userEvent.setup();
+        const host = mount(true);
+        await hostSays(() => host.respond(host.requests('session/get')[0], snapshot(1)));
+        await hostSays(() => host.respond(host.requests('projects/list')[0], { projects: [{ name: 'App', path: A }, { name: 'Lib', path: B }] }, 1));
+        await hostSays(() => host.respond(host.requests('installed/get')[0], { ...installed(A, THREE), ...changes }, 1));
+        await user.click(screen.getByTestId('section-header-transitive'));
+        await hostSays(() => host.respond(host.requests('transitive/get')[0], transitive, 1));
+        // The row under Transitive (a package also direct has a row under Direct too).
+        await user.click(transitiveRows()[0]);
+        return { host, button: () => within(screen.getByTestId('transitive-details')).getByTestId('install-update-button') };
+    }
+
+    it('a press installs the row\'s own version into the project, with no source and through the pane\'s one install path; axe finds nothing', async () => {
+        const user = userEvent.setup();
+        const { host, button } = await transitiveSelected();
+        expect(button()).toHaveTextContent('Install');
+        expect(button()).toBeEnabled();
+        expect(button()).toHaveAttribute('title', 'Install this version as a direct reference of the project.');
+        expect(within(screen.getByTestId('transitive-details')).queryByTestId('version-selector')).toBeNull();
+        await user.click(button());
+        expect(host.requests('ops/install').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Microsoft.Extensions.Logging', version: '9.0.0' }]);
+        // No source: the project's own restore resolved this version across its sources (architecture-advisor ruling, DO 11).
+        expect(host.requests('ops/install')[0].payload.sourceUrl).toBeUndefined();
+        expect(host.requests('package/versions')).toHaveLength(0);
+        expect(await axe(screen.getByTestId('transitive-details'))).toHaveNoViolations();
+    });
+
+    it('into a CPM project it asks the central preview first, and an entry opens the one central dialog instead of installing', async () => {
+        const user = userEvent.setup();
+        const { host, button } = await transitiveSelected({ isCpm: true });
+        await user.click(button());
+        // While the preview is asked every install control waits, this one too.
+        expect(button()).toBeDisabled();
+        expect(host.requests('cpm/preview').map(request => request.payload)).toEqual([{ projectPath: A, packageId: 'Microsoft.Extensions.Logging', version: '9.0.0' }]);
+        expect(host.requests('ops/install')).toHaveLength(0);
+        const preview = { centralPropsPath: '/w/Directory.Packages.props', packageId: 'Microsoft.Extensions.Logging', fromVersion: '8.0.0', toVersion: '9.0.0', affectedProjects: [A] };
+        await hostSays(() => host.respond(host.requests('cpm/preview')[0], { preview }));
+        expect(screen.getByTestId('cpm-preview-dialog')).toBeInTheDocument();
+        expect(host.requests('ops/install')).toHaveLength(0);
+    });
+
+    it('a package already a direct reference says so at the disabled button', async () => {
+        const { button } = await transitiveSelected({ packages: [...THREE, pkg('Microsoft.Extensions.Logging', { version: '9.0.0' })] });
+        expect(button()).toBeDisabled();
+        expect(button()).toHaveAccessibleDescription('Already a direct reference of this project.');
+    });
+
+    it('an unsupported project says why at the disabled button', async () => {
+        const { button } = await transitiveSelected({ unsupported: { reason: 'packages-config', message: 'uses packages.config.' } });
+        expect(button()).toBeDisabled();
+        expect(button()).toHaveAccessibleDescription('Unsupported project: uses packages.config.');
+    });
+
+    it('a busy package reads its busy word and says an operation is running', async () => {
+        const { host, button } = await transitiveSelected();
+        await hostSays(() => host.event('ops/progress', { opId: 'x', status: 'running', kind: 'install', projectPaths: [A], packageIds: ['Microsoft.Extensions.Logging'] }));
+        expect(button()).toBeDisabled();
+        expect(button()).toHaveTextContent('Installing');
+        expect(button()).toHaveAttribute('title', 'An operation on this package is running.');
+    });
+
+    it('after the row leaves the transitive list the button stays, disabled, described by the one "No longer listed" sentence', async () => {
+        const { host, button } = await transitiveSelected();
+        await hostSays(() => host.invalidate([[resourceKeys.transitive(A), 2]]));
+        await waitFor(() => expect(host.requests('transitive/get').length).toBeGreaterThan(1));
+        await hostSays(() => host.respond(host.requests('transitive/get').at(-1)!, { ...LOGGING, frameworks: [{ targetFramework: 'net8.0', packages: [] }] }, 2));
+        expect(button()).toBeDisabled();
+        expect(button()).toHaveAccessibleDescription('No longer listed as a transitive package.');
+        expect(screen.getAllByText('No longer listed as a transitive package.')).toHaveLength(1);
+    });
+
+    it('a stale selection says the selected project is being checked', async () => {
+        const { host, button } = await transitiveSelected();
+        await hostSays(() => host.event('session/changed', snapshot(2, B)));
+        expect(button()).toBeDisabled();
+        expect(button()).toHaveAccessibleDescription('Checking the selected project.');
     });
 });

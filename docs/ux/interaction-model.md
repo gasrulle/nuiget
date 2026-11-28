@@ -141,7 +141,7 @@ in "..."; each surface writes counts one way.
 
 | Action | Where | Confirmation |
 |---|---|---|
-| Install / Update to version | Details panel button; the row's hover/focus action; Ctrl+Enter on a Browse or Updates row; the actions menu | None. Progress shows on the row and in the pane where it started; success shows in place (§4). |
+| Install / Update to version | Details panel button (the transitive details' Install too, in a single project, UX-P5.6); the row's hover/focus action; Ctrl+Enter on a Browse or Updates row; the actions menu | None. Progress shows on the row and in the pane where it started; success shows in place (§4). |
 | Uninstall (single) | Details button, row action, the Delete key on an Installed or Updates row and on an installed Browse row of one project in the sidebar (UX-P3.8), the actions menu | The Delete key asks first, as the Explorer's Delete does: "Uninstall <id> from <project>?" with Uninstall, Cancel and "Do not ask me again". The button, the row action and the menu item name the action and do not ask. |
 | Bulk update / bulk uninstall | Updates/Installed toolbar; the sidebar's Updates header (Update All) | In-panel **Dialog** listing the packages (and projects in All Projects) with Confirm/Cancel; then a progress notification (N of M) and a summary toast. The sidebar keeps the in-panel dialog, the same body as the main panel's (UX-P3.7d); a central change stays the host's modal (ADR-013). |
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project | Main panel details button and Ctrl+Enter: the pane asks `cpm/preview` first and opens the **Dialog** (`cpm-preview-dialog`) only when an entry exists, listing the projects the central version applies to; choice: *Update Central Version* / Cancel. The actions menu, on either surface: VS Code's modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no CPM confirmation (the central entry stays). |
@@ -293,9 +293,14 @@ at different versions." (`consolidate-details-empty`) and keeps the selection. I
 <id> to <version>?" listing `<id> <old> → <new>` under "In <project>:" for each project it changes, and Consolidate
 runs one `ops/bulkUpdateAllProjects`; centrally managed references are never written from here.
 
-A transitive row (single project or the All Projects aggregate) opens a read-only view: the id with a Transitive badge,
-Version, Authors with the Verified mark, and Required by, the top-level ids, one block per target framework when the
-project has several and one block per project in All Projects; no version selector, no actions, no README.
+A transitive row opens its view: the id with a Transitive badge, Version, Authors with the Verified mark, and Required by, the
+top-level ids, one block per target framework when the project has several and one block per project in All Projects; no
+version selector and no README. In a single project the header holds one Install (`install-update-button`), which makes the
+package a direct reference of the project at the row's own version, through the panel's one install path (the CPM preview
+first in a CPM project); disabled, it says why: the selected project is being checked, the project is unsupported, the
+package is already a direct reference, an operation on it is running, or it is no longer listed as a transitive package.
+After an install the view stays: the row leaves Transitive when the host's list says so, and the button reads why it is
+disabled. Under All Projects the view is read-only (UX-P5.6, G6).
 
 ## 8. Stable `data-testid` hooks
 
@@ -321,7 +326,7 @@ project has several and one block per project in All Projects; no version select
 | `details-deprecation` | The deprecation notice of the chosen version, first in the details facts, with Find Alternative when the source names an alternate (UX-P5.2b) |
 | `details-deprecation-message` | The source's own deprecation message under the notice, plain text (UX-P5.2b) |
 | `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |
-| `version-selector`, `install-update-button`, `uninstall-button` | Details actions |
+| `version-selector`, `install-update-button`, `uninstall-button` | Details actions (the transitive details render `install-update-button` alone, UX-P5.6) |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
 | `transitive-restore-banner` | Transitive |
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |

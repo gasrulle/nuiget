@@ -105,7 +105,8 @@ export function DetailsPane({ announce, install, central, find }: DetailsPanePro
         return <EmptyState data-testid="details-empty" message="Select a package to see its details." />;
     }
     if (selection.origin === 'transitive') {
-        return <TransitiveDetails selection={selection} />;
+        // UX-P5.6: the pane's one install path; its own ask is cancelled with the selection, as any install it starts.
+        return <TransitiveDetails selection={selection} asking={asking} onInstall={() => { ownAsk.current = install.install({ packageId: selection.packageId, version: selection.version }); }} />;
     }
 
     const committedProject = installed.projectPath;

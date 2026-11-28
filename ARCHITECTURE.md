@@ -936,9 +936,11 @@ lists' prop). The box's `hint` names these hidden keys in a visually hidden span
 
 ### Details feature (main)
 
-`features/details/DetailsPane.tsx` renders the selection of the `details` slice (a `transitive` selection as the
-read-only `TransitiveDetails`: the id with a Transitive badge, Version, Authors with the Verified mark, Required by per
-framework or per project, nothing asked of the feeds); the Installed, Updates and browse
+`features/details/DetailsPane.tsx` renders the selection of the `details` slice (a `transitive` selection as
+`TransitiveDetails`: the id with a Transitive badge, Version, Authors with the Verified mark, Required by per framework or
+per project, nothing asked of the feeds; in a single project one Install at the row's own version through the pane's install
+path, `useInstallAction`, the CPM preview first and the pane's own ask cancelled with the selection; read-only under All
+Projects, UX-P5.6); the Installed, Updates and browse
 lists call `select()` when the user makes a row current (and the browse list after a navigation), never when a list
 resets its own row, so the stale-selection rule can keep the pane; the one exception is Browse, whose selection is never
 stale: a new text whose results lack the current row clears it. The header shows the installed version with

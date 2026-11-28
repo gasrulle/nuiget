@@ -154,6 +154,8 @@ describe('main panel: All Projects', () => {
         const details = screen.getByTestId('transitive-details');
         const blocks = within(details).getAllByRole('heading', { level: 4 }).map(heading => heading.textContent);
         expect(blocks).toEqual(['App', 'Lib', 'Tool']);
+        // UX-P5.6: the aggregate is read-only, no Install under All Projects.
+        expect(within(details).queryByTestId('install-update-button')).toBeNull();
         // Each block's heading is a level box of the measurements (UX-P0.10).
         expect(within(details).getAllByRole('heading', { level: 4 }).map(heading => [heading.dataset.testid, heading.dataset.variant])).toEqual([
             ['section-box-required-by-app', 'level'], ['section-box-required-by-lib', 'level'], ['section-box-required-by-tool', 'level'],

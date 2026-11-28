@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transitive vulnerabilities counted and listed** — The vulnerability count on the Installed tab includes the packages your projects get through their references, for one project or All Projects, and `@vulnerable` lists them, opening the Transitive group while one is vulnerable.
 - **Consolidate Tab** — With All Projects selected, lists the packages your projects reference at different versions and brings them to one version.
 - **Vulnerable and Deprecated Packages in the Sidebar** — The sidebar's package rows mark a known vulnerable or deprecated version, as the main panel does.
+- **Install a Transitive Package Directly** — The details of a transitive package have an Install button that adds it to the project as a direct reference at the version it resolves to.
 
 ### Changed
 - **Vulnerable packages show their highest severity**

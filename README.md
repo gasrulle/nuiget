@@ -35,7 +35,8 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   lists the packages your projects reference at different versions and brings each to one version you choose, after a
   confirmation that lists every project it changes.
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
-  top-level packages that require it. A project that has not been restored shows a Restore banner instead.
+  top-level packages that require it. A project that has not been restored shows a Restore banner instead. A transitive
+  package's details have Install, which adds it to the project as a direct reference at the version it resolves to.
 - **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update All,
   Update Selected or Uninstall Selected. A confirmation dialog lists exactly the packages that will change.
 - **Central Package Management.** Centrally managed packages carry a CPM badge. Before the central version of a
