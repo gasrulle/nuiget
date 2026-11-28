@@ -174,6 +174,58 @@ describe('main panel: All Projects', () => {
         expect(treeitem('group-row-project-app')).toHaveAttribute('aria-level', '1');
     });
 
+    it('Collapse All and Expand All act on the project group rows only, on one button that keeps the focus and one tab stop (UX-P5.8, MI10)', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll();
+        const toolbar = screen.getByTestId('installed-toolbar');
+        const toggle = within(toolbar).getByTestId('expand-collapse-button');
+        expect(toggle).toHaveAccessibleName('Collapse All');
+        expect(toggle).toBeEnabled();
+        expect(toggle).not.toHaveAttribute('aria-pressed');
+        const transitive = treeitem('group-row-transitive')?.getAttribute('aria-expanded');
+        const transitiveAsks = host.requests('allProjects/transitive').length + host.requests('transitive/get').length;
+
+        await user.click(toggle);
+        for (const project of ['app', 'lib', 'tool']) {
+            expect(treeitem(`group-row-project-${project}`)).toHaveAttribute('aria-expanded', 'false');
+        }
+        // The folder groups and the Transitive group keep their state; no transitive list is asked.
+        for (const folder of ['w1', 'w2']) {
+            expect(treeitem(`group-row-folder-${folder}`)).toHaveAttribute('aria-expanded', 'true');
+        }
+        expect(treeitem('group-row-transitive')?.getAttribute('aria-expanded')).toBe(transitive);
+        expect(host.requests('allProjects/transitive').length + host.requests('transitive/get').length).toBe(transitiveAsks);
+        expect(within(screen.getByTestId('installed-list')).queryAllByRole('treeitem', { name: /^Serilog/ })).toHaveLength(0);
+        // The same element names the other action and keeps the focus; the toolbar keeps one tab stop.
+        expect(within(toolbar).getByTestId('expand-collapse-button')).toBe(toggle);
+        expect(toggle).toHaveAccessibleName('Expand All');
+        expect(toggle).toHaveFocus();
+        expect([...toolbar.querySelectorAll('button')].filter(button => button.tabIndex === 0)).toHaveLength(1);
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Collapsed all projects.'));
+
+        await user.click(toggle);
+        for (const project of ['app', 'lib', 'tool']) {
+            expect(treeitem(`group-row-project-${project}`)).toHaveAttribute('aria-expanded', 'true');
+        }
+        expect(toggle).toHaveAccessibleName('Collapse All');
+        expect(toggle).toHaveFocus();
+        await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Expanded all projects.'));
+    });
+
+    it('one collapsed project makes the toggle collapse the rest; with every project collapsed it reads Expand All (UX-P5.8)', async () => {
+        const user = userEvent.setup();
+        await mountAll(PROJECTS.slice(0, 2));
+        (treeitem('group-row-project-app') as HTMLElement).focus();
+        await user.keyboard('{Enter}');
+        expect(treeitem('group-row-project-app')).toHaveAttribute('aria-expanded', 'false');
+        const toggle = screen.getByTestId('expand-collapse-button');
+        expect(toggle).toHaveAccessibleName('Collapse All');
+        await user.click(toggle);
+        expect(treeitem('group-row-project-app')).toHaveAttribute('aria-expanded', 'false');
+        expect(treeitem('group-row-project-lib')).toHaveAttribute('aria-expanded', 'false');
+        expect(toggle).toHaveAccessibleName('Expand All');
+    });
+
     it('the Transitive group row aggregates every project once expanded, and the banner above the tree offers Restore for the projects not restored', async () => {
         const user = userEvent.setup();
         const host = await mountAll(PROJECTS.slice(0, 2));
@@ -293,6 +345,23 @@ describe('main panel: All Projects', () => {
             await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         });
         expect(screen.getByTestId('status-live').textContent).toBe(before);
+    });
+
+    it('one restore path: a restore the banner started leaves the header\'s Restore Packages to ask for the other projects only, with its spinner meanwhile (UX-P5.8)', async () => {
+        const user = userEvent.setup();
+        const host = await mountAll();
+        await user.click(screen.getByTestId('section-header-transitive'));
+        const stream = host.requests('allProjects/transitive')[0];
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(A, 'App', []) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(B, 'Lib', [], false) }));
+        await hostSays(() => host.chunk(stream, { kind: 'project', chunk: transitiveChunk(C, 'Tool', []) }));
+        await hostSays(() => host.respond(stream, { projectPaths: [A, B, C], errored: [] }));
+        await user.click(within(screen.getByTestId('transitive-restore-banner')).getByRole('button', { name: 'Restore' }));
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }]);
+        const header = screen.getByTestId('restore-button');
+        expect(header.querySelector('svg')?.getAttribute('data-codicon')).toBe('loading');
+        await user.click(header);
+        expect(host.requests('ops/restore').map(request => request.payload)).toEqual([{ projectPaths: [B] }, { projectPaths: [A, C] }]);
     });
 
     it('an sdk-too-old project lists its packages read-only under the Unsupported banner and takes no bulk selection', async () => {

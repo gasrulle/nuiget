@@ -193,6 +193,11 @@ describe('main panel: Installed tab', () => {
         expect(screen.queryByText('provisional')).toBeNull();
     });
 
+    it('one project: no Collapse All or Expand All on the toolbar (UX-P5.8, MI10)', async () => {
+        await mountWith();
+        expect(within(screen.getByTestId('installed-toolbar')).queryByTestId('expand-collapse-button')).toBeNull();
+    });
+
     it('select all selects the removable rows only and the toolbar counts them', async () => {
         const user = userEvent.setup();
         await mountWith();

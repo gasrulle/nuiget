@@ -17,6 +17,7 @@ import { CentralUpdateDialog } from './features/updates/CentralUpdateDialog';
 import { useCentralChange, type CentralChange } from './features/updates/useCentralChange';
 import { UninstallConfirmDialog, useUninstallConfirm, type UninstallConfirm } from '../shared/installed/uninstallConfirm';
 import { SourcesControl } from './features/sources/SourcesControl';
+import { RestoreButton } from './features/installed/RestoreButton';
 import { MainTabs, readMainTab } from './MainTabs';
 import { clampTo, useSplitBounds } from './useSplitBounds';
 import { useHiddenDetailsFocus } from './useHiddenDetailsFocus';
@@ -233,7 +234,7 @@ export function MainShell({ installed, updates, consolidate, browse, details, vi
                             {supported.length > 1 ? <option value={ALL_PROJECTS}>{`All Projects (${supported.length})`}</option> : null}
                             {supported.map(project => <option key={project.path} value={project.path} title={project.path}>{project.name}</option>)}
                         </Select>
-                        <SourcesControl announce={announce} end={<IconButton label="Refresh" data-testid="refresh-button" onClick={refreshing ? undefined : refresh}>{refreshing ? <LoadingIcon /> : <RefreshIcon />}</IconButton>} />
+                        <SourcesControl announce={announce} end={<><RestoreButton announce={announce} /><IconButton label="Refresh" data-testid="refresh-button" onClick={refreshing ? undefined : refresh}>{refreshing ? <LoadingIcon /> : <RefreshIcon />}</IconButton></>} />
                     </div>
                 </div>
                 <div className="nuiget-main-search" role="search">

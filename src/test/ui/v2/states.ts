@@ -148,7 +148,9 @@ export const STATES: readonly NamedState[] = [
         { theme: 'dark-modern', look: 'modern', width: 400 },
         { theme: 'dark-modern', look: 'modern', width: 220 },
     ], 'Gateway selected; the Installed list shows its direct rows (package-row-newtonsoft.json present).', [LIVE_ICONS]), diffTolerance: 0 },
-    { ...ready('main-installed-all', 'main', themeSensitive('main'),
+    // UX-P5.8 (design-advisor opening ruling of 2026-11-28, DO 6; follow-up 1, DO 3): the toolbar's fit with Collapse All at an 800 px
+    // panel; the 400 cell waits for the group header's fix row.
+    { ...ready('main-installed-all', 'main', [...themeSensitive('main'), { theme: 'dark-modern', look: 'modern', width: 800 }],
         'Scrolled to the Tools folder, whose Unsupported project shows its badges and its message leaf; the Unresolved project is unrestored by design (NU1015). All Projects selected; six project sections, the Transitive group\'s restore-needed message for the unrestored Unresolved project, the Unsupported section header shows "Unsupported" and "provisional". The provisional badge is the Unsupported project\'s permanent one (an SDK-8 project is never evaluated), not the SDK-10 provisional window.', [LIVE_ICONS]), diffTolerance: 0 },
     { ...ready('main-installed-unsupported', 'main', [primary('main')],
         'Unsupported selected; the Unsupported banner, the read-only list and both header badges; the transitive header shows its count and framework badge (the prefetch settled).', [LIVE_ICONS]), diffTolerance: 0 },
@@ -201,7 +203,7 @@ export const STATES: readonly NamedState[] = [
         'Gateway selected, the Updates tab, the pointer on its first update row; the row matches :hover (the band of DS-ROW-3, UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     { ...ready('main-updates-update-all-dialog', 'main', [primary('main')],
         'Gateway selected, the Updates tab, no row in the bulk selection, Update All pressed in the toolbar; the confirmation "Update N packages?" lists every update as its row writes it and is cancelled after the capture, never confirmed (UX-P4.fix-19).', [LIVE_UPDATES, LIVE_BULK_LIST]), diffTolerance: DIFF_TOLERANCE_START },
-    { ...ready('main-updates-all', 'main', [primary('main')],
+    { ...ready('main-updates-all', 'main', [primary('main'), { theme: 'dark-modern', look: 'modern', width: 800 }],
         'All Projects selected, the Updates tab: one tree with a group row per project under its workspace folder; scrolled to the Tools folder, whose Unsupported project says why it is read-only and whose Empty project says nothing is installed, as message leaves (UX-P3.1b).', [LIVE_UPDATES]), diffTolerance: DIFF_TOLERANCE_START },
     // UX-P5.3b (design-advisor opening ruling of 2026-11-27, DO 10; follow-up 1, DO 8): the Consolidate tab's Partial cell.
     { ...ready('main-consolidate', 'main', [primary('main'), { theme: 'dark-modern', look: 'modern', width: 400 }],

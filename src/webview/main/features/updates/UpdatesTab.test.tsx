@@ -543,6 +543,33 @@ describe('main panel: Updates tab', () => {
         /** A project's group row, the treeitem inside its `group-row-project-<name>` wrapper (UX-P3.1b). */
         const groupOf = (name: string): HTMLElement => within(screen.getByTestId(`group-row-project-${name}`)).getByRole('treeitem');
 
+        it('All Projects: Collapse All and Expand All on the toolbar act on every project group row, one button keeping the focus (UX-P5.8, MU8)', async () => {
+            const user = userEvent.setup();
+            await mountAll();
+            const toolbar = screen.getByTestId('updates-toolbar');
+            const toggle = within(toolbar).getByTestId('expand-collapse-button');
+            expect(toggle).toHaveAccessibleName('Collapse All');
+            expect(toggle).toBeEnabled();
+            await user.click(toggle);
+            expect(groupOf('app')).toHaveAttribute('aria-expanded', 'false');
+            expect(groupOf('lib')).toHaveAttribute('aria-expanded', 'false');
+            expect(document.querySelectorAll('[data-testid^="package-row-"]')).toHaveLength(0);
+            expect(within(toolbar).getByTestId('expand-collapse-button')).toBe(toggle);
+            expect(toggle).toHaveAccessibleName('Expand All');
+            expect(toggle).toHaveFocus();
+            expect([...toolbar.querySelectorAll('button')].filter(button => button.tabIndex === 0)).toHaveLength(1);
+            await user.click(toggle);
+            expect(groupOf('app')).toHaveAttribute('aria-expanded', 'true');
+            expect(groupOf('lib')).toHaveAttribute('aria-expanded', 'true');
+            expect(toggle).toHaveAccessibleName('Collapse All');
+            await waitFor(() => expect(screen.getByTestId('status-live')).toHaveTextContent('Expanded all projects.'));
+        });
+
+        it('one project: no Collapse All or Expand All on the toolbar (UX-P5.8)', async () => {
+            await mountWith();
+            expect(within(screen.getByTestId('updates-toolbar')).queryByTestId('expand-collapse-button')).toBeNull();
+        });
+
         it('All Projects: an update row reads Finishing until the update stream answers, not the installed fan-out (X31, UX-P4.8c)', async () => {
             const host = await mountAll();
             await hostSays(() => host.event('ops/completed', { opId: 'op-1', kind: 'update', status: 'completed', projectPath: B, packageId: 'Moq', version: '4.20.72', edit: { ok: true } }));

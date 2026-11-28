@@ -1,13 +1,14 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { ALL_PROJECTS, type InstalledPackage, type InstalledResult, type PackageMetadataLite } from '../../../../protocol';
 import { groupCount, transitiveVulnerability, whyNotRemovable } from '../../../shared/installed/rules';
 import { Banner, Button, CheckAllIcon, EmptyState, Listbox, ProgressBar, SectionHeader, Skeleton, Toolbar, TrashIcon, type ListboxGroups } from '../../../shared/primitives';
+import { ProjectGroupsToggle } from '../../ProjectGroupsToggle';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
 import { useAllProjects } from '../../../shared/store/allProjects';
 import { useDetails, useDetailsActions } from '../../../shared/store/details';
 import { useInstalled } from '../../../shared/store/installed';
-import { restoringProjects, useOps, useOpsActions } from '../../../shared/store/ops';
+import { useOps, useOpsActions } from '../../../shared/store/ops';
 import { useProjects } from '../../../shared/store/projects';
 import { useSession } from '../../../shared/store/session';
 import { metadataKey, useTransitive } from '../../../shared/store/transitive';
@@ -21,6 +22,7 @@ import { aggregateVulnerability, allProjectsTransitiveGroupContent, allProjectsT
 import { failure } from '../../../shared/updates/sentence';
 import { LOADING_INSTALLED, useFirstLoadAnnouncement } from '../../../shared/firstLoad';
 import { useRestoreBannerFocus } from './useRestoreBannerFocus';
+import { useRestore } from './useRestore';
 
 const NO_METADATA: ReadonlyMap<string, PackageMetadataLite> = new Map();
 const NOT_COLLAPSED: ReadonlySet<string> = new Set();
@@ -197,6 +199,8 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     // A project's group row id, unique though a project's name is not; its suffix names the project's markers.
     const projectGroups = useMemo((): ReadonlyMap<string, string> => (allMode ? projectGroupIds(sections) : new Map()), [allMode, sections]);
     const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? section.projectPath).slice(PROJECT_GROUP.length);
+    // The project group rows under All Projects, which the toolbar's Collapse All and Expand All act on (UX-P5.8).
+    const projectGroupList = useMemo(() => [...projectGroups.values()], [projectGroups]);
 
     // UX-P5.1a: a project's vulnerability data has settled once both slices' asks ended; under `@vulnerable` the Transitive
     // group opens while a vulnerable transitive row is known, unless the user toggled it there.
@@ -222,18 +226,9 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
     const transitiveWanted = vulnerableView ? vulnerableOverride ?? transitiveKnowledge.vulnerable > 0 : transitiveOpen;
     const transitiveExpanded = transitiveWanted && (allMode ? all.transitive.enabled : transitive.enabled);
     // A restore queued or running, from the ops slice (UX-P4.fix-10): the Transitive bar and spinner say it, a second press starts nothing.
-    const restoringPaths = useMemo(() => restoringProjects(ops), [ops]);
+    const { restoringPaths, restore: restoreProjects } = useRestore(announce);
     const singleRestoring = !allMode && transitive.projectPath !== null && restoringPaths.has(transitive.projectPath);
     const allRestoring = allMode && [...all.transitive.chunks.values()].some(chunk => !chunk.dataSourceAvailable && restoringPaths.has(chunk.projectPath));
-    const restoreProjects = useCallback((projectPaths: string[]): void => {
-        const fresh = projectPaths.filter(projectPath => !restoringPaths.has(projectPath));
-        if (fresh.length === 0) {
-            announce(projectPaths.length === 1 && !allMode ? 'A restore of this project is running.' : 'A restore of these projects is running.');
-            return;
-        }
-        // The outcome is announced from the ops slice; here only a request that got no answer.
-        run('ops/restore', { projectPaths: fresh }).catch((error: unknown) => announce(`Restore failed: ${error instanceof Error ? error.message : String(error)}`));
-    }, [restoringPaths, allMode, run, announce]);
     const transitivePart = useMemo(
         () => (allMode
             ? allProjectsTransitiveTree(all, transitiveExpanded, restoreProjects, allRestoring, vulnerableView, singleSettled || everSettled)
@@ -509,6 +504,7 @@ export function InstalledTab({ filter, vulnerableOnly, announce, uninstall: conf
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={allSelected} disabled={candidateCount === 0} title={candidateCount === 0 ? 'No package in this list can join a bulk action.' : undefined} onClick={selectAll}>
                     Select All
                 </Button>
+                <ProjectGroupsToggle groupIds={projectGroupList} collapsed={collapsed} setCollapsed={setCollapsed} announce={announce} />
             </Toolbar>
             {/* The tree is the tab's scroller (D48, UX-P2.1e). */}
             <div className="nuiget-installed-lists">

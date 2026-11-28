@@ -808,7 +808,8 @@ builds it into `dist/webview.js` and, because the entry imports `../shared/token
   and a muted check mark (a transitive row is current, never selected); a row opens `TransitiveDetails`. A Restore banner
   (`transitive-restore-banner`) above the tree when the assets file is missing, in one element shape with the bar beside it so a
   focused Restore keeps the focus while the restore runs; when the banner leaves with the focus on it, `useRestoreBannerFocus`
-  hands the focus to the Transitive group row (`focusListRow`, UX-P4.fix-16); the group's 2 px progress bar, empty state
+  hands the focus to the Transitive group row (`focusListRow`, UX-P4.fix-16). The banner's Restore and the header's Restore Packages
+  (`RestoreButton`) start a restore through one hook, `useRestore`, which leaves out a project whose restore is queued or running (UX-P5.8); the group's 2 px progress bar, empty state
   and inline error stand there too (`transitive-progress`, `transitive-empty`, `transitive-error`). The tab's own cells follow the same order: one bar for both loads (`installed-progress`), banners and the empty state above the tree; under All Projects a project's action-less sentence is a message leaf of its group (`ListboxGroups.isMessage`) and its error a banner above the tree. In All Projects the main panel asks the
   aggregate once the projects' lists answered, without a click (the side bar only when the group is opened); the group row
   shows its row count once the stream answers (`k of N` under `@vulnerable` once the view has first settled), and its rows carry an `N projects` badge whose title names each project's roots.

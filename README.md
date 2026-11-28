@@ -29,13 +29,15 @@ A Visual Studio-style NuGet package manager for VS Code with a modern split-pane
   box names the active package source. The title bar holds the restore and prerelease switches and the project and
   source pickers; Refresh and Manage NuGet Packages are in its `...` menu, and the Updates header has Update All.
 - **All Projects.** With two or more projects, choose **All Projects (N)** in the project selector. Installed and
-  Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several. Each row acts on
+  Updates are each one tree with a row per project, under a row per workspace folder when the workspace has several; Collapse All
+  and Expand All on their toolbars fold every project row at once. Each row acts on
   its own project, Update All covers every project, and a search result can be installed into several projects at
   once. From a single project, the details pane of a search result also offers Install in Projects.... A Consolidate tab
   lists the packages your projects reference at different versions and brings each to one version you choose, after a
   confirmation that lists every project it changes.
 - **Transitive packages.** The Installed tab lists the transitive packages per target framework, each with the
-  top-level packages that require it. A project that has not been restored shows a Restore banner instead. A transitive
+  top-level packages that require it. A project that has not been restored shows a Restore banner instead; the main panel
+  header's Restore Packages button restores the selected project, or every project under All Projects. A transitive
   package's details have Install, which adds it to the project as a direct reference at the version it resolves to.
 - **Bulk operations.** Select rows with Space, Ctrl+click (Cmd+click on macOS) or the check mark, then Update All,
   Update Selected or Uninstall Selected. A confirmation dialog lists exactly the packages that will change.

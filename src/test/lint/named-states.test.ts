@@ -182,10 +182,11 @@ describe('the named states (UX-P0.8)', () => {
         // UX-P5.1a: the two @vulnerable states. UX-P5.fix-7: main-details-offline. UX-P5.2b: main-details-deprecated, main-installed-deprecated.
         // UX-P5.3b: main-consolidate at its primary width and at 400. UX-P5.3c: main-consolidate-details and main-consolidate-dialog.
         // UX-P5.fix-5: main-updates-vulnerable and sidebar-installed-busy, one classic file each. UX-P5.4: sidebar-installed-deprecated at 300 and 250.
-        expect(files).toHaveLength(123);
+        // UX-P5.8: main-installed-all and main-updates-all at 800.
+        expect(files).toHaveLength(125);
         // The zoomed cell is in no lane but its matrix shard (UX-P4.10).
         expect([...expectedFiles(), ...files, ...laneFiles('macos')].filter(file => file.startsWith('main-installed-zoom2-'))).toEqual([]);
-        expect(new Set(files).size).toBe(123);
+        expect(new Set(files).size).toBe(125);
         expect(files.every(file => file.includes('-classic.'))).toBe(true);
         expect(floorCaptures().every(({ capture }) => capture.look === 'classic')).toBe(true);
         expect(laneFiles('macos')).toEqual(expectedFiles());

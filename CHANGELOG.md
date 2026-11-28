@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Install a Transitive Package Directly** — The details of a transitive package have an Install button that adds it to the project as a direct reference at the version it resolves to.
 - **Package Commands in the Command Palette** — Refresh Packages, Check for Package Updates, Update All Packages, Install Package... and Restore Packages run from the Command Palette on the selected project, or under All Projects on every project or the ones you pick.
 - **Keyboard Shortcut for the Main Panel** — Ctrl+Shift+Alt+P (Cmd+Shift+Alt+P on macOS) opens Manage NuGet Packages from anywhere in VS Code.
+- **Collapse All and Expand All under All Projects** — One button on the Installed and Updates toolbars collapses every project, or expands them all again.
+- **Restore Packages in the Main Panel Header** — A button next to Refresh restores the selected project, or every project under All Projects.
 
 ### Changed
 - **Vulnerable packages show their highest severity**
@@ -204,7 +206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updates rows show icon, authors and Verified mark with the new version marked, sorted by id; no 0 on the tab; every row of an Update all stays busy until it ends**
 - **Transitive packages: per-framework headers with counts, rows with icon, authors and Verified mark, and a details view with Required by (All Projects too)**
 - **Browse rows show icon, downloads, authors and Verified mark with the description; quick-search suggestions grouped per source with a loading row; the details pane follows the active tab and each tab keeps its own selection**
-- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
+- **The main panel header shows the title, the Restore after operations checkbox, an unreachable-source marker with Retry, a Restore Packages button, a busy refresh button and a revalidation bar; the search box has Clear and Filters buttons**
 - **The main panel's list starts at 35 % of the width and keeps the position you drag it to**
 - **The main panel reopens on the tab you chose last**
 - **The Installed tab shows how many packages have known vulnerabilities**
@@ -217,7 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar section headers in the side-bar section colours, rows indented to the section title, All Projects headers in normal case indented by workbench.tree.indent**
 - **High-contrast lines on buttons, tabs and row icons; VS Code check-box and drop-down colours; the page dimmed under a dialog**
 - **Header separator and side-bar-coloured list pane in the main panel; All Projects project headers in normal case**
-- **Not back from 1.x: recent searches, Collapse all and Expand all, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs**
+- **Not back from 1.x: recent searches, details prefetched on hover, and ArrowLeft/ArrowRight between the Details and README tabs**
 - **Benchmarks live next to the 2.0 modules they measure**
 - **2.0 evaluation of a single-framework project is one msbuild run**
 - **Benchmarks for the 2.0 core (versioning, cache, operation queue, invalidation scopes) with a regenerated baseline**

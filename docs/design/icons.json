@@ -17,6 +17,9 @@
     "VerifiedIcon": "verified-filled",
     "PlusIcon": "add",
     "ArrowUpIcon": "arrow-up",
-    "FilterIcon": "filter"
+    "FilterIcon": "filter",
+    "CloudDownloadIcon": "cloud-download",
+    "CollapseAllIcon": "collapse-all",
+    "ExpandAllIcon": "expand-all"
   }
 }

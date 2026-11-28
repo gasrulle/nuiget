@@ -1554,8 +1554,13 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
             measureLines('main-installed-single', layout({ testIds }), 'modern', {}, undefined, width, given).find(line => line.name === `SPEC@main-installed-single/${scope}`);
         // Within 1 px, tokens not compared.
         expect(at('header', { 'project-selector': element(600.5, 8, 150, 26) })).toMatchObject({ pass: true, status: 'hard', value: '1/1 within 1' });
-        // A header id off by 2 is named, and missing is never a pass.
-        expect(at('header', { 'project-selector': element(602, 8, 150, 26) })).toMatchObject({ pass: false, value: '0/1 within 1; off: project-selector Δx 2 Δinset 2' });
+        // A header id off by 2 is named, and missing is never a pass. UX-P5.8 (design-advisor opening ruling DO 5): the header's
+        // selectors and gear move with Restore Packages until its closing commit copies the re-rendered specs; it reads pending P5.8.
+        expect(at('header', { 'project-selector': element(602, 8, 150, 26) })).toMatchObject({ pass: true, value: '0/0 within 1; pending P5.8: project-selector Δx 2 Δinset 2' });
+        // A header id P5.8 does not own still reads off and fails while it holds the three (precommit-review of UX-P5.8).
+        const withRefresh: SpecLook = { ...spec, 'refresh-button': element(900, 10, 22, 22) };
+        expect(at('header', { 'project-selector': element(600, 8, 150, 26), 'refresh-button': element(902, 10, 22, 22) }, withRefresh))
+            .toMatchObject({ pass: false, value: '1/2 within 1; off: refresh-button Δx 2 Δinset 2' });
         expect(at('header', {})).toMatchObject({ pass: false, value: '0/1 within 1; missing: project-selector' });
         // A padding off is named on a control; a row's strings are not compared, its rect is.
         expect(at('header', { 'project-selector': element(600, 8, 150, 26, '2px 0px 0px 0px') })).toMatchObject({ pass: false, value: '1/1 within 1; style: project-selector padding 2px 0px 0px 0px (spec 0px 0px 0px 0px)' });

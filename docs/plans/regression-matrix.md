@@ -19,10 +19,9 @@ How to read and maintain it:
 - **manual-credentials**: needs a real credentialed package source, which CI does not have. The cited test covers the
   automated part; the row is checked by hand before a release (`docs/release-checklist.md`, P10.1).
 - Ids are never reused or renumbered; a new row takes the next free id.
-- Not rows: what 2.0.0 does not ship (recent searches, hover prefetch, Collapse all / Expand all, ArrowLeft/ArrowRight
-  between the details tabs; ledger V1-V5 and the parity audit's open rows), the manual screen-reader pass P7.4
-  (2.0.1), and the header "Restore project(s)" that interaction model §5 names but no surface renders (parity audit,
-  critic). The `data-testid` hooks of §8 are held by `src/test/lint/interaction-model-testids.test.ts`.
+- Not rows: what 2.0.0 does not ship (recent searches, hover prefetch, ArrowLeft/ArrowRight
+  between the details tabs; ledger V1-V5 and the parity audit's open rows) and the manual screen-reader pass P7.4
+  (2.0.1). The `data-testid` hooks of §8 are held by `src/test/lint/interaction-model-testids.test.ts`.
 
 | ID | Area | Behaviour | Surface | Kind | Test file | Test title | Status |
 |---|---|---|---|---|---|---|---|
@@ -422,3 +421,10 @@ How to read and maintain it:
 | R394 | Transitive | The transitive Install in an unsupported project says why at the disabled button (UX-P5.6, DS-STATE-7) | main | unit | `src/webview/main/features/installed/InstalledTab.test.tsx` | an unsupported project says why at the disabled button | covered |
 | R395 | Transitive | The transitive Install of a busy package reads its busy word and says an operation is running (UX-P5.6, DS-STATE-6) | main | unit | `src/webview/main/features/installed/InstalledTab.test.tsx` | a busy package reads its busy word and says an operation is running | covered |
 | R396 | Transitive | The transitive Install of a stale selection says the selected project is being checked (UX-P5.6, DS-STATE-7) | main | unit | `src/webview/main/features/installed/InstalledTab.test.tsx` | a stale selection says the selected project is being checked | covered |
+| R397 | Toolbars | Under All Projects the Installed toolbar's Collapse All / Expand All collapses or expands every project group row, the folder and Transitive groups kept, one button keeping the focus (UX-P5.8, MI10) | main | unit | `src/webview/main/features/installed/AllProjectsView.test.tsx` | Collapse All and Expand All act on the project group rows only, on one button that keeps the focus and one tab stop (UX-P5.8, MI10) | covered |
+| R398 | Toolbars | Under All Projects the Updates toolbar's Collapse All / Expand All acts on every project group row (UX-P5.8, MU8) | main | unit | `src/webview/main/features/updates/UpdatesTab.test.tsx` | All Projects: Collapse All and Expand All on the toolbar act on every project group row, one button keeping the focus (UX-P5.8, MU8) | covered |
+| R399 | Toolbars | One project's Installed toolbar has no Collapse All or Expand All (UX-P5.8) | main | unit | `src/webview/main/features/installed/InstalledTab.test.tsx` | one project: no Collapse All or Expand All on the toolbar (UX-P5.8, MI10) | covered |
+| R400 | Header | The header's Restore Packages restores the committed project with one ops/restore request (UX-P5.8, G10, RESTORE-HEADER) | main | unit | `src/webview/main/features/installed/RestoreButton.test.tsx` | restores the committed project with one ops/restore request | covered |
+| R401 | Header | Under All Projects the header's Restore Packages restores every listed project in one request (UX-P5.8) | main | unit | `src/webview/main/features/installed/RestoreButton.test.tsx` | under All Projects restores every listed project in one request | covered |
+| R402 | Header | A second press of Restore Packages while the restore runs asks nothing and says so; the button keeps the focus and is never disabled (UX-P5.8, A6) | main | unit | `src/webview/main/features/installed/RestoreButton.test.tsx` | a second press while the restore runs asks nothing and says so; the button keeps the focus and is never disabled | covered |
+| R403 | Header | The banner and the header share one restore path: the header asks only for the projects no restore holds (UX-P5.8) | main | unit | `src/webview/main/features/installed/AllProjectsView.test.tsx` | one restore path: a restore the banner started leaves the header's Restore Packages to ask for the other projects only, with its spinner meanwhile (UX-P5.8) | covered |

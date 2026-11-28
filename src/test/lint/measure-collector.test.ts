@@ -293,6 +293,17 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         expect(collect().heights.badges.filter(badge => badge.glyph !== undefined)).toHaveLength(1);
     });
 
+    it('counts a 22 px icon button centred among 26 px buttons as one toolbar line, by vertical centre (DS-OVERFLOW-3, DS-HEIGHT-8, UX-P5.8)', () => {
+        // Design-advisor follow-up 1 of 2026-11-28 (UX-P5.8): a control joins a line when its centre is within 1 px of that line's.
+        const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
+        toolbar.querySelector('[data-testid="select-all-button"]')?.insertAdjacentHTML('afterend', '<button class="nuiget-icon-button" data-testid="expand-collapse-button" data-rect="104,76,126,98"></button>');
+        const fit = () => collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.toolbarFit;
+        expect(fit()).toMatchObject({ cut: [], lines: 1 });
+        // The same button on the next row is a second line.
+        (toolbar.querySelector('[data-testid="expand-collapse-button"]') as HTMLElement).setAttribute('data-rect', '16,108,38,130');
+        expect(fit()).toMatchObject({ cut: [], lines: 2 });
+    });
+
     it('reads a toolbar\'s cut buttons and control rows, and each line child of a row against its line (DS-OVERFLOW-3, DS-ROW-5, UX-P3.fix-14)', () => {
         const toolbar = document.querySelector('[data-testid="installed-toolbar"]') as HTMLElement;
         const primary = toolbar.querySelector('[data-testid="uninstall-selected-button"]') as HTMLElement;

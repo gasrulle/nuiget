@@ -855,7 +855,7 @@ export const RULES: readonly RuleDefinition[] = [
     }),
     // Helper 8 (UX-P0.13): the states with an artboard spec (`docs/design/artboards/<state>.spec.json`), at the spec's width;
     // pending on the screen item that builds the state (P2.8a: `main-installed-single`, UX-P0.27a's artboard A).
-    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'] }),
+    rule('SPEC', { helper: 8, scopes: { header: 'hard', list: 'hard', details: 'hard', readme: 'hard' }, tolerance: TOLERANCES.coincide, states: ['main-installed-single', 'main-transitive-expanded', 'main-transitive-details', 'main-updates', 'main-details-readme'], stateWidths: { 'main-installed-single': [932], 'main-transitive-expanded': [1200], 'main-transitive-details': [1200], 'main-updates': [1200], 'main-details-readme': [932] }, lanes: ['ui'], pendingIds: { 'project-selector': 'P5.8', 'source-selector': 'P5.8', 'source-settings': 'P5.8' } }),
     // UX-P0.14 (design-advisor rulings of 2026-10-24): the rules of the research's 27 not measurable on the probe whose
     // condition a ready state renders, pending on their Appendix B items. DS-FOCUS-1's `controls` is hard where a state focuses
     // a control (the search box); a select and the sidebar box are proved by the stylesheet lint and two UI tests (UX-P2.4).
@@ -2344,13 +2344,16 @@ const controlsIn = (kind, container) => {
     } : undefined;
     // UX-P3.fix-14: a button whose own box overflows has a cut label (a collapsed one keeps its glyph and a clipped label); the control rows.
     const toolbarFit = kind === 'toolbars' ? (() => {
-        const tops = [];
+        // UX-P5.8 (design-advisor follow-up 1): a control joins a line when its vertical centre is within 1 px of that line's, so a
+        // 22 px icon button centred among 26 px buttons is on their line (DS-HEIGHT-8).
+        const centres = [];
         for (const control of controls.filter(visible)) {
-            const top = rectOf(control).top;
-            if (!tops.some(seen => Math.abs(seen - top) <= 1)) tops.push(top);
+            const box = rectOf(control);
+            const centre = (box.top + box.bottom) / 2;
+            if (!centres.some(seen => Math.abs(seen - centre) <= 1)) centres.push(centre);
         }
         const cut = [...container.querySelectorAll('.nuiget-button')].filter(button => visible(button) && button.scrollWidth > button.clientWidth).map(button => button.dataset.testid || 'button');
-        return { pane: holderWidth(container), cut, lines: tops.length };
+        return { pane: holderWidth(container), cut, lines: centres.length };
     })() : undefined;
     return { container: kind, label: label(container), out: outside + (menu ? 0 : hidden), hidden, menu, total: controls.length, collapsible, tabBadges, toolbarFit };
 };

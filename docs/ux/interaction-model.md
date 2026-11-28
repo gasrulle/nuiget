@@ -147,7 +147,8 @@ in "..."; each surface writes counts one way.
 | CPM central change | Any update of a `central` package, or an install of a package that already has a central entry in a CPM project | Main panel details button and Ctrl+Enter: the pane asks `cpm/preview` first and opens the **Dialog** (`cpm-preview-dialog`) only when an entry exists, listing the projects the central version applies to; choice: *Update Central Version* / Cancel. The actions menu, on either surface: VS Code's modal listing the same projects. *Override in this project only* is not offered: no `dotnet` command writes a `VersionOverride` (ADR-003); an existing override updates in place from the Updates lists and the details pane. An uninstall of a central row needs no CPM confirmation (the central entry stays). |
 | Remove source | Source settings | **ConfirmDialog** (`alertdialog`) over the sources dialog: 'Remove <name>?', "Removes <name> from <file>. This cannot be undone."; Remove / Cancel, focus on Cancel. |
 | Add source (invalid URL) | Source settings | No dialog: the inline error under the URL field, the field marked `aria-invalid`, and the focus moves to the URL field (UX-P5.fix-9); a refusal from the host shows its error and moves no focus |
-| Restore project(s) | Transitive banner; the Command Palette's `nUIget: Restore Packages` (the selected project, or every project under All Projects, UX-P5.7a) | None. |
+| Restore project(s) | The header's Restore Packages button (the selected project, or every project under All Projects; its glyph turns to the spinner while a restore of them is queued or running, and a press then starts nothing and says so; UX-P5.8); the transitive banner; the Command Palette's `nUIget: Restore Packages` (the same projects, UX-P5.7a) | None. |
+| Collapse All / Expand All | Under All Projects, the Installed and Updates bulk toolbars: one button after Select All that collapses every project group row while any is expanded, else expands them all, and says which; the folder groups and the Transitive group keep their state (UX-P5.8). No key of its own: the toolbar's arrow keys reach it | None. |
 
 Terminology: UI says **Install / Update / Uninstall / Restore**. Protocol uses `remove`.
 
@@ -311,6 +312,7 @@ disabled. Under All Projects the view is read-only (UX-P5.6, G6).
 | `search-input` / `sidebar-search-input`, `search-suggestions` | Search boxes and the list of their prefixes, suggestions or versions |
 | `project-selector`, `source-selector` | Header selectors (main) |
 | `refresh-button` | The header's Refresh button (main): a workspace rescan |
+| `restore-button` | The header's Restore Packages button (main), before Refresh: restores the selected project, or every project under All Projects (UX-P5.8) |
 | `tab-bar`, `installed-tab`, `updates-tab`, `consolidate-tab` | Main tabs (`consolidate-tab` under All Projects only, UX-P5.3b) |
 | `installed-list`, `updates-list`, `consolidate-list`, `browse-list`, `sidebar-installed-list`, `sidebar-updates-list`, `sidebar-browse-list` | Lists (a grouped list, such as the main panel's Installed list or a single project's Updates list, is a tree) |
 | `package-row-<id>` | A row (id lower-cased): the wrapper around the option and its pointer actions; the option is the `role="option"`, or in a tree the `role="treeitem"`, inside it (read `aria-selected` there; in a multi-selectable list `aria-current` marks the current row) |
@@ -328,6 +330,7 @@ disabled. Under All Projects the view is read-only (UX-P5.6, G6).
 | `details-readonly` | The read-only note: a stale selection's banner while another project is listed, and the note at the disabled controls of a selection in an unsupported project (UX-P3.10) |
 | `version-selector`, `install-update-button`, `uninstall-button` | Details actions (the transitive details render `install-update-button` alone, UX-P5.6) |
 | `select-all-button`, `update-all-button`, `uninstall-selected-button` | Bulk toolbar |
+| `expand-collapse-button` | Bulk toolbar under All Projects (Installed and Updates): Collapse All or Expand All on the project group rows (UX-P5.8) |
 | `transitive-restore-banner` | Transitive |
 | `source-settings`, `source-settings-modal`, `add-source-panel`, `source-row-<name>`, `source-row-remove-<name>`, `source-health-indicator` | Sources (`<name>` = source name lower-cased; the row's Remove button; the indicator shows while a source is unreachable) |
 | `add-source-button`, `add-source-url`, `add-source-credentials`, `add-source-password`, `add-source-submit`, `add-source-error`, `add-source-clear-text` | The sources dialog's Add Source... button, the add form's URL field, Credentials toggle, password field and submit button, its inline error under the URL field and the description of the disabled "Store the password encrypted" box (a `%VAR%` password, or not on Windows; UX-P3.6, UX-P5.fix-9) |

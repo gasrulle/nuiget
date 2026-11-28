@@ -39,4 +39,17 @@ describe('the webviews\' controls', () => {
     it('the Delete key\'s confirmation is mounted once per surface, in MainShell.tsx and SidebarView.tsx (UX-P4.2a, UX-P4.2b)', () => {
         expect(holders('<UninstallConfirmDialog').sort()).toEqual(['MainShell.tsx', 'SidebarView.tsx']);
     });
+
+    it('restores start in one place, useRestore.ts (UX-P5.8)', () => {
+        // The banner and the header's Restore Packages share the one path; `holders` reads TSX only, so this walks TS too.
+        const walk = (dir: string): string[] => readdirSync(dir).flatMap(name => {
+            const file = path.join(dir, name);
+            if (statSync(file).isDirectory()) {
+                return walk(file);
+            }
+            return /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file) ? [file] : [];
+        });
+        const starters = walk('src/webview').filter(file => readFileSync(file, 'utf8').includes("run('ops/restore'")).map(file => path.basename(file));
+        expect(starters).toEqual(['useRestore.ts']);
+    });
 });

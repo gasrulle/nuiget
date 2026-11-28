@@ -3,6 +3,7 @@ import type React from 'react';
 import { ALL_PROJECTS, type InstalledResult, type PackageUpdate, type ProjectUpdatesChunk } from '../../../../protocol';
 import { busyText, filterById, isCentral as isCentralRow, updateCandidates, updateRowContext, whyNotDeletable, whyNotUpdatable, liteOfInstalled } from '../../../shared/installed/rules';
 import { ArrowUpIcon, Badge, Banner, Button, CheckAllIcon, EmptyState, IconButton, Listbox, ProgressBar, Row, SectionHeader, Skeleton, Toolbar, type ListboxGroups } from '../../../shared/primitives';
+import { ProjectGroupsToggle } from '../../ProjectGroupsToggle';
 import { packageIconSrc } from '../../../shared/packageIcon';
 import { groupByFolder, PROJECT_GROUP, projectGroupIds } from '../../../shared/allProjects/folderGroups';
 import { useBulkSelection } from '../../../shared/selection/useBulkSelection';
@@ -90,6 +91,8 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
     })), [projects, updates.chunks, all.chunks]);
     const projectGroups = useMemo(() => projectGroupIds(sections), [sections]);
     const markerOf = (section: Section): string => (projectGroups.get(section.projectPath) ?? `${PROJECT_GROUP}${section.projectPath.toLowerCase()}`).slice(PROJECT_GROUP.length);
+    // The project group rows, which the toolbar's Collapse All and Expand All act on (UX-P5.8).
+    const projectGroupList = useMemo(() => [...projectGroups.values()], [projectGroups]);
 
     const needle = filter.trim().toLowerCase();
     const filtering = needle !== '';
@@ -407,6 +410,7 @@ export function AllProjectsUpdates({ filter, announce, central, uninstall, focus
                 <Button variant="secondary" icon={<CheckAllIcon />} data-testid="select-all-button" aria-pressed={bulk.allSelected} disabled={candidateTotal === 0} title={candidateTotal === 0 ? noCandidateWhy(knowledge) : undefined} onClick={bulk.selectAll}>
                     Select All
                 </Button>
+                <ProjectGroupsToggle groupIds={projectGroupList} collapsed={collapsed} setCollapsed={setCollapsed} announce={announce} />
             </Toolbar>
             {updates.sourcesUnavailable
                 ? <Banner severity="warning" data-testid="updates-unavailable-banner" action={{ label: 'Retry', onClick: updates.refreshUpdates }}>Some package sources could not be checked.</Banner>
