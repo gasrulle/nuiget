@@ -553,6 +553,26 @@
     }
 }
 
+/*
+ * The staged collapse of a bulk toolbar (§8, UX-P5.8, design-advisor follow-up 2): at a pane of 300 px or less Select All, the
+ * toolbar's one secondary button, gives way to its glyph before the primary does at 250, so the toolbar keeps one line with Collapse All.
+ * The label is clipped, never removed: it stays the button's name. After the 250 query, which it does not narrow.
+ */
+@container (max-width: 300px) {
+    .nuiget-button--secondary .nuiget-button-icon {
+        display: inline-flex;
+    }
+
+    .nuiget-button--secondary .nuiget-button-label {
+        position: absolute;
+        inline-size: var(--nuiget-line-width);
+        block-size: var(--nuiget-line-width);
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+
 @container (max-width: 200px) {
     .nuiget-row-icon {
         display: none;

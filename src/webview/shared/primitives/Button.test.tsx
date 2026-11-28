@@ -54,6 +54,14 @@ describe('Button', () => {
         // The tab badges leave the strip by the clip form and stay in the tab's name; never `display: none` (UX-P3.fix-13).
         expect(narrow).toMatch(/\.nuiget-tab-count,\n\s+\.nuiget-tab-badge,\n\s+\.nuiget-button-icon \+ \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);
         expect(css).not.toMatch(/\.nuiget-tab-(count|badge)[^{]*\{[^}]*display: none/);
+        // UX-P5.8 (design-advisor follow-up 2): at a pane of 300 or less a secondary button (Select All) collapses first; the rule
+        // follows the base rule and the 250 query, and clips the label rather than removing it.
+        const staged = css.indexOf('@container (max-width: 300px)');
+        expect(staged).toBeGreaterThan(css.indexOf('@container (max-width: 250px)'));
+        const secondary = css.slice(staged);
+        expect(secondary).toMatch(/^@container \(max-width: 300px\) \{\n\s+\.nuiget-button--secondary \.nuiget-button-icon \{\n\s+display: inline-flex;/);
+        expect(secondary).toMatch(/\.nuiget-button--secondary \.nuiget-button-label \{[^}]*clip-path: inset\(50%\)/);
+        expect(secondary.slice(0, secondary.indexOf('\n}\n'))).not.toContain('display: none');
     });
 
     it('a button without an icon renders its children alone', () => {

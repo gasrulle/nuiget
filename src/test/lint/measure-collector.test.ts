@@ -248,15 +248,15 @@ describe('the in-page collector on stubbed geometry (UX-P0.10, UX-P0.11)', () =>
         button.innerHTML = '<span class="nuiget-button-icon" aria-hidden="true" data-rect="25,79,41,95"><svg data-rect="25,79,41,95"></svg></span><span class="nuiget-button-label" data-rect="33,87,34,88">Select All</span>';
         const read = () => collect().endOfP0.controlsOut.find(entry => entry.container === 'toolbars')?.collapsible;
         width(170);
-        expect(read()).toEqual([{ pane: 170, glyph: { w: 16, h: 16, inside: true, dx: 0, dy: 0 }, labelShown: false, name: 'Select All' }]);
+        expect(read()).toEqual([{ pane: 170, glyph: { w: 16, h: 16, inside: true, dx: 0, dy: 0 }, labelShown: false, name: 'Select All', secondary: false }]);
         // Above the breakpoint the glyph is not displayed and the label has its box.
         width(400);
         (button.querySelector('.nuiget-button-icon') as HTMLElement).style.display = 'none';
         (button.querySelector('.nuiget-button-label') as HTMLElement).setAttribute('data-rect', '29,76,87,98');
-        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: true, name: 'Select All' }]);
+        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: true, name: 'Select All', secondary: false }]);
         // A label hidden outright takes the name with it: the glyph is aria-hidden.
         (button.querySelector('.nuiget-button-label') as HTMLElement).style.display = 'none';
-        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: false, name: '' }]);
+        expect(read()).toEqual([{ pane: 400, glyph: undefined, labelShown: false, name: '', secondary: false }]);
     });
 
     it('reads the tab strip\'s badges and cut labels against its tab container (DS-OVERFLOW-3, UX-P3.fix-13)', () => {

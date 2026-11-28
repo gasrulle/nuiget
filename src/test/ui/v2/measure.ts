@@ -32,6 +32,8 @@ export interface CollapsibleButton {
     glyph: { w: number; h: number; inside: boolean; dx: number; dy: number } | undefined;
     labelShown: boolean;
     name: string;
+    /** A secondary button (`nuiget-button--secondary`, Select All) collapses at a wider pane than the primary (UX-P5.8). */
+    secondary?: boolean;
 }
 
 /**
@@ -92,6 +94,8 @@ export const COMPACT_BADGES_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
+/** §8's staged collapse: a secondary button gives way to its glyph at a pane of at most 300 px (UX-P5.8, design-advisor follow-up 2). */
+const SECONDARY_COLLAPSE_PANE = 300;
 
 /** The main split's panes against the panel (UX-P3.fix-15): the panel's and each shown pane's widths, the sash, the minimums. */
 export interface SplitFit {
@@ -243,14 +247,14 @@ export function secondYText(hits: ReadonlyArray<{ name: string; hit: string; ok:
     return { text: `second y: ${parts.join(', ')}`, pass: hits.every(hit => hit.ok) };
 }
 
-/** No toolbar button is cut; at a pane of at most 250 px the toolbar's controls share one line. */
+/** No toolbar button is cut, and the toolbar's controls share one line at every pane (UX-P5.8: the staged collapse keeps it so above 250). */
 export function toolbarFitClause(fits: readonly ToolbarFit[]): { text: string; pass: boolean } {
     const cut = fits.flatMap(fit => fit.cut);
-    const narrow = fits.filter(fit => fit.pane !== undefined && fit.pane <= COLLAPSE_PANE);
     const lines = Math.max(0, ...fits.map(fit => fit.lines));
+    // UX-P5.8 (design-advisor follow-up 2): one line at every pane, the staged collapse keeping it so above 250.
     return {
         text: `cut ${cut.length}${cut.length > 0 ? ` (${cut.join(', ')})` : ''}; lines ${lines}`,
-        pass: cut.length === 0 && narrow.every(fit => fit.lines <= 1),
+        pass: cut.length === 0 && fits.every(fit => fit.lines <= 1),
     };
 }
 
@@ -341,8 +345,9 @@ export function tabBadgesClause(tabs: TabBadges): { text: string; pass: boolean 
  * shows and the glyph does not (UX-P3.fix-12).
  */
 export function collapsedGlyphClause(buttons: readonly CollapsibleButton[]): { text: string; pass: boolean } {
-    const narrow = buttons.filter(button => button.pane !== undefined && button.pane <= COLLAPSE_PANE);
-    const wide = buttons.filter(button => !(button.pane !== undefined && button.pane <= COLLAPSE_PANE));
+    const collapses = (button: CollapsibleButton) => button.pane !== undefined && button.pane <= (button.secondary === true ? SECONDARY_COLLAPSE_PANE : COLLAPSE_PANE);
+    const narrow = buttons.filter(collapses);
+    const wide = buttons.filter(button => !collapses(button));
     const centred = (delta: number) => Math.abs(delta) <= TOLERANCES.containment;
     const collapsedOk = (button: CollapsibleButton) => button.glyph !== undefined && button.glyph.w === 16 && button.glyph.h === 16 && button.glyph.inside
         && centred(button.glyph.dx) && centred(button.glyph.dy) && !button.labelShown && button.name !== '';
@@ -2333,6 +2338,7 @@ const controlsIn = (kind, container) => {
             pane,
             glyph: g ? { w: round(g.width), h: round(g.height), inside: g.left >= b.left && g.right <= b.right && g.top >= b.top && g.bottom <= b.bottom, dx: round((g.left + g.right) / 2 - (b.left + b.right) / 2), dy: round((g.top + g.bottom) / 2 - (b.top + b.bottom) / 2) } : undefined,
             labelShown,
+            secondary: button.classList.contains('nuiget-button--secondary'),
             name: (labelRendered ? text.textContent : '').trim(),
         };
     });

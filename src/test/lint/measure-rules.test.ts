@@ -705,6 +705,12 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         // Above the breakpoint the label shows and the glyph does not.
         expect(collapsedGlyphClause([{ pane: 400, glyph: undefined, labelShown: true, name: 'Select All' }])).toEqual({ text: 'labelled 1: icon hidden, label shown', pass: true });
         expect(collapsedGlyphClause([{ pane: 400, glyph: fixed.glyph, labelShown: true, name: 'Select All' }]).pass).toBe(false);
+        // UX-P5.8 (design-advisor follow-up 2): a secondary button (Select All) collapses at a pane of 300 or less, the primary at 250.
+        const primaryLabelled = { pane: 280, glyph: undefined, labelShown: true, name: 'Uninstall Selected (0)' };
+        expect(collapsedGlyphClause([{ ...fixed, pane: 280, secondary: true }, primaryLabelled]))
+            .toEqual({ text: 'collapsed 1: glyph 16×16, centre dx 0 dy 0, name "Select All"; labelled 1: icon hidden, label shown', pass: true });
+        expect(collapsedGlyphClause([{ pane: 280, glyph: undefined, labelShown: true, name: 'Select All', secondary: true }, primaryLabelled]).pass).toBe(false);
+        expect(collapsedGlyphClause([{ pane: 320, glyph: undefined, labelShown: true, name: 'Select All', secondary: true }, { ...primaryLabelled, pane: 320 }]).pass).toBe(true);
         // The line keeps its reachability verdict and prints the clause with its status.
         const line = value('main-installed-single', facts({ controlsOut: [{ container: 'toolbars', label: '[installed-toolbar]', out: 0, hidden: 0, menu: false, total: 2, collapsible: [today] }] }), 'DS-OVERFLOW-3@main-installed-single/toolbars');
         const suffix = COLLAPSED_GLYPH_STATUS === 'hard' ? '' : ' (pending ' + COLLAPSED_GLYPH_STATUS.pending + ')';
@@ -762,7 +768,9 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(toolbarFitClause([today])).toEqual({ text: 'cut 1 (uninstall-selected-button); lines 2', pass: false });
         expect(toolbarFitClause([{ pane: 170, cut: [], lines: 1 }])).toEqual({ text: 'cut 0; lines 1', pass: true });
         expect(toolbarFitClause([{ pane: 170, cut: [], lines: 2 }]).pass).toBe(false);
-        expect(toolbarFitClause([{ pane: 400, cut: [], lines: 2 }]).pass).toBe(true);
+        // UX-P5.8 (design-advisor follow-up 2): one line at every pane, not only at or below 250.
+        expect(toolbarFitClause([{ pane: 400, cut: [], lines: 2 }]).pass).toBe(false);
+        expect(toolbarFitClause([{ pane: 280, cut: [], lines: 2 }]).pass).toBe(false);
         expect(toolbarFitClause([{ pane: 400, cut: ['b'], lines: 1 }]).pass).toBe(false);
         // Both collapsed buttons keep their names: Select All and the primary with its count.
         const glyph = { w: 16, h: 16, inside: true, dx: 0, dy: 0 };
