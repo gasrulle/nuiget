@@ -184,7 +184,7 @@ describe('the measurement rules (UX-P0.10, UX-P0.11)', () => {
         expect(RULES.find(rule => rule.id === 'DS-ROW-2')?.pendingStates).toBeUndefined();
         expect(scopes('DS-ROW-3')).toEqual({ 'main-installed': 'hard', details: 'hard', 'main-updates': 'hard', browse: 'hard', sidebar: 'hard' });
         // UX-P5.4: the side bar's narrow compact rows keep their severity badge and hide their other label badges.
-        expect(scopes('DS-ROW-6')).toEqual({ ...mainHard(), sidebar: { pending: 'P5.4' } });
+        expect(scopes('DS-ROW-6')).toEqual({ ...mainHard(), sidebar: 'hard' });
         expect(scopes('DS-ICON-3')).toEqual(mainHard());
         // UX-P1.4b: the two states whose readiness holds a Verified mark.
         expect(scopes('DS-ICON-4')).toEqual({ details: 'hard' });

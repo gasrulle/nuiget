@@ -85,9 +85,10 @@ export const COMPACT_VERSION_STATUS: RuleStatus = 'hard';
 
 /**
  * DS-ROW-5's compact-badge clause in the side bar (a compact row's badges keep their width and are never clipped by the option;
- * UX-P5.4, design-advisor opening ruling of 2026-11-28, DO 10 a). Pending until that item's closing commit.
+ * UX-P5.4, design-advisor opening ruling of 2026-11-28, DO 10 a). Hard since that item's closing commit (GOLDEN ruling of 2026-11-28, run
+ * 46086090162: `clipped 0` in every side bar line of both looks).
  */
-export const COMPACT_BADGES_STATUS: RuleStatus = { pending: 'P5.4' };
+export const COMPACT_BADGES_STATUS: RuleStatus = 'hard';
 
 /** The collapse breakpoint of §8 (`@container (max-width: 250px)` in primitives.css). */
 const COLLAPSE_PANE = 250;
@@ -820,7 +821,7 @@ export const RULES: readonly RuleDefinition[] = [
     // UX-P3.2: the quick-pick separator above every group but the first and the group's label in normal case (V62).
     rule('DS-DIVIDER-3', { helper: 6, scopes: { browse: 'hard' }, tolerance: TOLERANCES.containment, states: ['main-quicksearch-grouped'] }),
     rule('DS-COLOR-5', { helper: 6, scopes: { rows: 'hard', tabs: 'hard', sash: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: NO_ROW_STATES }),
-    rule('DS-ROW-6', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: { pending: 'P5.4' } }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
+    rule('DS-ROW-6', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-ICON-3', { helper: 3, scopes: inGroups('hard', ...MAIN), tolerance: TOLERANCES.containment, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     rule('DS-DENSITY-1', { helper: 3, scopes: { ...inGroups('hard', ...MAIN), sidebar: 'hard' }, tolerance: TOLERANCES.height, exceptStates: [...NO_ROW_STATES, ...SIDEBAR_NO_ROW_STATES] }),
     // UX-P3.7b (design trigger 6, design-advisor ruling): the sidebar's view-title actions, read by the capture suite in the top document.

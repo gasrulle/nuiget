@@ -1,0 +1,453 @@
+{
+  "item": "UX-P5.4",
+  "runs": [
+    {
+      "runId": "46086090162",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "4ac8edf3 (push 1)",
+      "look": "modern",
+      "workflow": "wf_d74a3344-386",
+      "mode": "screen",
+      "note": "Six side bar cells against main-installed-all.dark-modern.1200 (no side bar artboard; the P5.fix-5 pairing).",
+      "captures": {
+        "sidebar-sections": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-sections.dark-modern.300.png",
+          "sha256": "3cefd335ebfbce72ed1ff9a1c62ea29f65bbff93dcaaec5576438c47d23d55f7",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-hover": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-hover.dark-modern.300.png",
+          "sha256": "dc641e3cd335ab3157b98fb3a66d32d29d7bfdf8e0ad6465d15acdf485ab6911",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-installed-busy": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-installed-busy.dark-modern.300.png",
+          "sha256": "031e4d93a99005c36adb2cef00c5b1652f057fa4045c3612b1035ecd1bf3b40a",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-narrow-200px": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-narrow-200px.dark-modern.200.png",
+          "sha256": "16819931ae27db88b6fa2f47c80b5bec77a7d0866d35e46a0a0aa65f63e876fc",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-uninstall-dialog": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-uninstall-dialog.dark-modern.300.png",
+          "sha256": "6d43236734b8d82a2960297ad92ba56ebb47d5536f96c22cf4a5a1c9f697e010",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-all-projects": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-all-projects.dark-modern.300.png",
+          "sha256": "ad356299b049e7c2ce98300849eb825ad6384335203c6f87ef5d6dbaa509a38c",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "states": 6,
+        "candidates": 8,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 4,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "sidebar-narrow-200px#D1",
+          "state": "sidebar-narrow-200px",
+          "finding": "[native] The search box's placeholder is hard-cut mid-word as 'Search or type @ to filt' (text x 15-162, clipped 9 px before the Filter glyph at x 172-185) with no ellipsis, while the overflow table (§8, 'Sidebar header (search box)', minimum 170) declares that the placeholder fits by its copy and holds; at 200 px it does not, so the word 'filter' is lost and a native view whose own placeholder copy fits would not show it.",
+          "severity": "blocking",
+          "box": [
+            15,
+            32,
+            148,
+            13
+          ],
+          "rule": "DS-OVERFLOW-3",
+          "disposition": "fixed",
+          "owner": "planning row (GOLDEN ruling DO 4): the side bar search placeholder cut without an ellipsis at 200; not this item's change, also in the pre-item 170 crop",
+          "ruling": "docs/plans/handoff/P5.4.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-28 (DO 4)"
+        }
+      ],
+      "findings": [
+        {
+          "id": "sidebar-narrow-200px#D2",
+          "state": "sidebar-narrow-200px",
+          "finding": "[native] In the Installed list's Newtonsoft.Json row the name ellipsizes to 'Newtons...' (x 28-96) while 18 px of empty space separates it from the High severity badge (x 115-163), against the 7 px name-to-text gap of every other compact row (Polly 57 to 64, System.Text.Json 136 to 144): the zero-wide version still adds both of its gaps, so the name gives up roughly one more character than it needs and the badge floats away from it, unlike a native tree row where a decoration follows its label. | [geometry] In the Installed list's Newtonsoft.Json compact row the version is collapsed to zero width but its slot still takes space: the name's ellipsis ends at x 96 and the High severity badge starts at x 115, an 18 px empty gap, against the 6 px name-to-version gap of every other row (Dapper 75 to 82). The name is cut to 'Newtons...' while about 12 px stay empty, so it does not truncate last. The Updates row at y 653 shows the same gap. | [states] In the Installed list's vulnerable Newtonsoft.Json row the name is cut to 'Newtons...' (ellipsis ends at x 98) while a 16 px empty run separates it from the High severity badge (x 115-163), against the 6 px name-to-version gap of every other compact row (Dapper: name ends 81, version starts 88), so the collapsed version's slot keeps eating space the name should get before it truncates (DS-ROW-5: the name truncates last, the version collapses before it).",
+          "severity": "major",
+          "box": [
+            28,
+            302,
+            136,
+            22
+          ],
+          "rule": "judge-only, DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry",
+            "states"
+          ],
+          "disposition": "fixed",
+          "owner": "planning row before the P5 gate (GOLDEN ruling DO 3): \"A compact row whose version is zero-wide pays one gap before its badges\"",
+          "evidence": "predates UX-P5.4: golden-era capture captures/46075759480/ui-screenshots/sidebar-all-projects.dark-modern.300.png (sha256 e7d49c35…16d0) shows the same ~19 px from \"Microsoft.AspNetCore…\" to its CPM badge; the side bar marks make it visible on more rows",
+          "ruling": "docs/plans/handoff/P5.4.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-28 (DO 2, 3)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-sections",
+          "finding": "The Newtonsoft.Json row's 'High' severity badge ends at x 264, 25 px short of the trailing column that the section header's count badge ends on (x 289). That leaves an empty slot at the row's end, where a native tree such as the SCM view or the Explorer puts a row decoration flush at the end, with hover actions before it. The same offset appears on the Updates row at y 652.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            216,
+            302,
+            80,
+            22
+          ],
+          "reason": "The crop (200,286 100x54, clamped at the 300 px edge) shows the High severity pill right after the 12.0.1 version, ending near x 264, with the rest of the row empty. That is the declared compact-row anatomy: the badge slot follows the name and version (DS-ROW-5, DS-ROW-7) and the row's end is the hover-action slot (DS-ROW-4 reads 'visible actions per row 0 ×29'). No rule, spec element or artboard element puts a row badge flush with the header count badge: DS-INSET-3 (b) applies to section-header trailing items, measured at 'section headers 6 ×2 (target 6)', and the cited artboard is the main panel's, which has no side-bar row. The hard measurements DS-ROW-7 'label 1/1 ×2' and DS-ROW-5 'badges 2, clipped 0' pass, so under rubric §6 this is taste with no rule to cite.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "native-1",
+          "state": "sidebar-installed-busy",
+          "finding": "The severity badge in the Newtonsoft.Json row ends at x 263, 33 px inside the row's right end, with an empty column after it. The FluentValidation row's busy spinner ends at x 284 and the header count badges end at x 289, so the trailing marks in the list do not share one end edge. In the workbench's Explorer and Source Control tree rows, a row decoration sits at the row's end and hover actions open to its left. The same offset shows on the Updates row at y 654.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            215,
+            302,
+            81,
+            22
+          ],
+          "reason": "The crop shows the High pill ending at about x 263, and the empty column after it is the row's reserved action slot. That slot is declared: DS-ROW-1 says actions sit inside the band at its end, and DECISIONS 2026-11-01 says every product row reserves the action slot. The FluentValidation spinner occupies the same slot (hard DS-STATE-6: 'spinner 16×16 in the action slot (end 6)'). The badge and the slot are separate elements with their own end insets by design (T-5), and hard DS-INSET-3 reads 'row actions 6 ×2 (target 6)' and 'section headers 6 ×2'. Both severity pills (Installed and Updates) end on the same x, so the trailing marks do not disagree.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "native-1",
+          "state": "sidebar-all-projects",
+          "finding": "The package rows' trailing badges (CPM pills and the High severity badge) end at x 255, 26 px short of the project count badges in the same tree (Catalog.csproj 13, Gateway.csproj 15 end at x 281), so the tree has two ragged trailing columns with an empty reserved strip at rest that also costs the names width; a native side-bar tree (SCM, Explorer decorations) keeps a row's trailing decoration at the row end and shows hover actions beside it.",
+          "severity": "major",
+          "rule": "judge-only",
+          "box": [
+            220,
+            104,
+            62,
+            329
+          ],
+          "reason": "The crop does show the CPM pills ending about 26 px left of the 13 and 15 counts. That gap is the row's action slot, which the Design System places on purpose: DS-INSET-3 ends a sidebar group row's count 6 px inside the band 'as a row's action', and the measurement holds it ('DS-INSET-3@sidebar-all-projects: group rows 6 ×5 (target 6) (hard)', counts 255.3–282 in a box ending at 288). No rule, artboard element or redline asks for a label badge to end at the row's edge, so this is a choice made by the system, not a defect.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "geometry-1",
+          "state": "sidebar-all-projects",
+          "finding": "The trailing count badges of the tree's group rows (Catalog.csproj 13, Gateway.csproj 15, Empty.csproj 0) end at x 282, 8 px left of the Installed section header's count (46), which ends at x 290. The list's 8 px scrollbar gutter narrows the row band to 4..288. Without it, DS-INSET-3's numbers would put both counts at 290: the header's count 10 px from the pane edge, and a group row's count 6 px inside a band inset 4 px. As drawn, the two count columns visibly disagree. The main-panel artboard cannot settle this: it shows a different surface, so there was no positional comparison.",
+          "severity": "minor",
+          "rule": "DS-INSET-3",
+          "box": [
+            255,
+            58,
+            35,
+            67
+          ],
+          "reason": "The crop shows the 46 count ending at about 290 and the 13 count at about 282. The hard measurements say both are on target: 'DS-INSET-3@sidebar-all-projects: section headers 6 (target 6); group rows 6 ×5 (target 6) (hard)' and DS-OVERFLOW-2 'installed \"46\" 263.3–290 (box right 296); project-catalog.csproj \"13\" 255.3–282 (box right 288)'. The 8 px difference is the declared scrollbar gutter (DS-SCROLL-1: 8), and no rule asks the two columns to coincide. The 16 px padded box was clamped at the PNG's right edge (x 239–300).",
+          "verdict": "refuted"
+        }
+      ]
+    },
+    {
+      "runId": "46086090162",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "4ac8edf3 (push 1)",
+      "look": "modern",
+      "workflow": "wf_b0cdfe5d-046",
+      "mode": "screen",
+      "note": "sidebar-all-projects-tools, sidebar-installed-revalidating and the new sidebar-installed-deprecated at 300 against main-installed-all.dark-modern.1200. The single-judge sidebar-all-projects-tools#D1 (the message leaf colour) is recorded only, for the P5 design review (GOLDEN ruling DO 4).",
+      "captures": {
+        "sidebar-all-projects-tools": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-all-projects-tools.dark-modern.300.png",
+          "sha256": "3d49483d4bdebfa2ac5c3fcda96039c50cf7f7cc2ff708a925a9296cee111045",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-installed-revalidating": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-installed-revalidating.dark-modern.300.png",
+          "sha256": "3da09e440c74fc1625ba1346ac2a8d6237ed5a2bcdf0acb4653fa938064dc5c5",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        },
+        "sidebar-installed-deprecated": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-installed-deprecated.dark-modern.300.png",
+          "sha256": "0d942f3fe5fe1570704bed9294766ae0334a023fac5bb67697068157ca88021a",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "states": 3,
+        "candidates": 11,
+        "standing": 1,
+        "blocking": 0,
+        "refuted": 7,
+        "singleJudge": 1,
+        "incomplete": 0
+      },
+      "singleJudge": [
+        {
+          "id": "sidebar-all-projects-tools#D1",
+          "state": "sidebar-all-projects-tools",
+          "finding": "[states] The unsupported message leaf 'Unsupported project: requires .NET SDK 10 or newer.' is drawn in the muted secondary-text colour (about #9d9d9d). The artboard's installed-unsupported-unsupported.csproj draws the same sentence in body foreground (#cccccc, the same colour as row names), so the message takes a different colour role from the artboard element. | [states] The empty message leaf 'No packages installed.' under Empty.csproj is drawn in the muted secondary-text colour (about #9d9d9d). The artboard's installed-empty-empty.csproj draws it in body foreground (#cccccc), so the message takes a different colour role from the artboard element.",
+          "severity": "major",
+          "box": [
+            45,
+            279,
+            228,
+            138
+          ],
+          "rule": "judge-only"
+        }
+      ],
+      "findings": [
+        {
+          "id": "sidebar-installed-deprecated#D1",
+          "state": "sidebar-installed-deprecated",
+          "finding": "[native] In the Installed Newtonsoft.Json row, the name is cut to 'Newtonsoft.J...' about 17 px before the High badge (ellipsis ends near x 122, badge starts at x 139). The Updates Newtonsoft.Json row keeps a gap of about 8 px between its text and the same High badge. The installed name truncates earlier than the space allows, and the gaps between text and first badge differ between the two sections. | [geometry] In the Installed list's Newtonsoft.Json row, the name's ellipsis ends at x 121 but the High badge starts at x 139, leaving a 17 px gap. In the Updates list's Newtonsoft.Json row, the version's ellipsis ends at x 207 and the same High badge starts at x 215, a gap of about 8 px. The collapsed, zero-wide version still takes up its spacing, so the name is cut about 9 px earlier than it needs to be, and two gaps with the same role differ.",
+          "severity": "major",
+          "box": [
+            104,
+            301,
+            84,
+            22
+          ],
+          "rule": "judge-only, DS-ROW-5",
+          "lenses": [
+            "native",
+            "geometry"
+          ],
+          "disposition": "fixed",
+          "owner": "planning row before the P5 gate (GOLDEN ruling DO 3): \"A compact row whose version is zero-wide pays one gap before its badges\"",
+          "evidence": "predates UX-P5.4: golden-era capture captures/46075759480/ui-screenshots/sidebar-all-projects.dark-modern.300.png (sha256 e7d49c35…16d0) shows the same ~19 px from \"Microsoft.AspNetCore…\" to its CPM badge; the side bar marks make it visible on more rows",
+          "ruling": "docs/plans/handoff/P5.4.md, Advisor decisions, design-advisor GOLDEN ruling of 2026-11-28 (DO 2, 3)"
+        }
+      ],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The count badges of the project group rows (0, 2, 3, 13) end at x 281, 18 px from the pane edge, while the Installed section header's 46 badge ends at x 289 (10 px, DS-INSET-3 b), so the trailing counts in one side-bar pane do not share an end edge as a native pane's counts do; DS-INSET-3 has a group row end its count 6 px inside the row band (inset 4), about x 290.",
+          "severity": "major",
+          "rule": "DS-INSET-3",
+          "box": [
+            262,
+            57,
+            28,
+            215
+          ],
+          "reason": "The crop does show the group-row counts ending at about x 282 and the 46 at about x 290. That offset comes from the nested group-row box (box right 288 against 296), not from a wrong inset: the hard DS-INSET-3 line reads 'section headers 6 (target 6); group rows 6 ×4 (target 6)', and DS-OVERFLOW-2 reads '\"0\" 261.6–282 (box right 288)', so each count keeps its 6 px end inset.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "native-2",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group header shows only the Provisional label badge and the count. The artboard draws an Unsupported badge before Provisional on the same group header. The state is still stated by the message leaf below, so no information is lost.",
+          "severity": "major",
+          "rule": "judge-only",
+          "box": [
+            10,
+            362,
+            272,
+            21
+          ],
+          "reason": "The crop shows Unsupported.csproj with only Provisional and 3. The artboard is the main panel at 1200, though, and its Unsupported badge (rendered only by main-panel InstalledProjectSection/AllProjectsUpdates) has no side-bar counterpart. Design-system §9 asks for 'the group row's badge stays' on the Main row only; the Sidebar row lists just the message leaf, which hard DS-STATE-1 finds present (sidebar-installed-unsupported-unsupported.csproj).",
+          "verdict": "refuted"
+        },
+        {
+          "id": "geometry-1",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj project group row (y 362-384) has only the Provisional pill (x 190-257) and the count 3 (x 262-281) in its badge slot. The artboard's section-header-project-unsupported.csproj draws three items there: an Unsupported pill (artboard x 221-299), then Provisional, then the count. The spec declares no exception for this, and DS-ROW-6 hides label badges only in lists of at most 250 px, while this pane is 300 px wide.",
+          "severity": "blocking",
+          "rule": "judge-only",
+          "box": [
+            180,
+            362,
+            104,
+            22
+          ],
+          "reason": "The crop shows Provisional (x 190–257) and 3 in the badge slot. The missing Unsupported pill is compared against the main panel's artboard, whose other elements (72 px rows, check boxes, icons) are also absent from the side bar by design, and §9's 'badge stays' clause covers the Main surface only. The side bar states unsupported through its message leaf (DS-STATE-1 hard: present, missing none). No side-bar rule or artboard calls for the badge.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "states-1",
+          "state": "sidebar-all-projects-tools",
+          "finding": "The Unsupported.csproj group row shows only the Provisional badge and the count 3. The artboard's section-header-project-unsupported.csproj draws an Unsupported badge before Provisional on the same project header, and design-system §9 says the group row's badge stays alongside the unsupported message leaf. This compares the same header across surfaces (artboard main panel at 1200, capture side bar at 300). No information is lost, because the message leaf below states that the project is unsupported.",
+          "severity": "major",
+          "rule": "judge-only",
+          "box": [
+            12,
+            361,
+            274,
+            22
+          ],
+          "reason": "The badge is absent in the crop as described, but the cited §9 clause ('the group row's badge stays') is in the 'Main · Installed (All Projects, per project)' row. The 'Sidebar · Installed' row asks only for sidebar-unsupported, and DS-STATE-1 (hard) reports that leaf present. The artboard comparison is across surfaces with no side-bar reference that draws the badge.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "native-1",
+          "state": "sidebar-installed-revalidating",
+          "finding": "The Newtonsoft.Json row's High severity badge ends at x 263, 33 px inside the row band (band end about 296), leaving an empty slot for a hidden action at rest. So it does not line up with the pane header's count badge, which ends at x 289, and a native tree row (for example an SCM decoration) draws its trailing mark at the row's end.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            215,
+            303,
+            81,
+            20
+          ],
+          "reason": "The crop (clamped to x 199-300) shows the High pill ending at about x 263 with the row's action slot after it. That slot is reserved on purpose: .nuiget-row-actions is visibility: hidden at rest and keeps its width, so the badge does not move when the actions appear on hover. DS-INSET-3 (a) sets the end inset only for a row's last action. No rule, redline or exemplar binds a compact row's badge to the row end or to the header count (DS-OVERFLOW-2 reads that count at 263.3-290, box right 296). The main-panel artboard is not this surface, so this falls under the §6 taste exclusion.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "geometry-1",
+          "state": "sidebar-installed-revalidating",
+          "finding": "The Newtonsoft.Json row's trailing severity badge (pill x 215-263) ends 33 px inside the row band (band end x 296), not at a row end inset: the section header's count badge in the same pane ends 6 px inside its header box (x 289), and DS-INSET-3 (a) puts a row's trailing element 6 px inside the band. The pane's two trailing marks therefore do not share an end edge, and the badge floats with about 21 px of empty space before it and 33 px after it.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            215,
+            302,
+            81,
+            22
+          ],
+          "reason": "The crop shows the badge ending at about x 263, before the compact row's reserved action slot (visibility: hidden at rest, DS-ROW-4 reads 0 visible actions). DS-INSET-3 (a) measures the row's last action, not a badge, and DS-INSET-3 (b) measures section headers, which read 6 (target 6, hard). DS-ROW-7 reads the badge centred 1/1 (hard). No rule asks the row badge and the header count to share an end edge.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "native-1",
+          "state": "sidebar-installed-deprecated",
+          "finding": "The trailing badges of the side bar compact rows (Newtonsoft.Json's High/Deprecated, Serilog's Deprecated, and the Updates row's High) end at x 263, 36 px from the pane edge, while the Installed and Updates pane headers' count badges end at x 289 (10 px, DS-INSET-3 b). The badges leave an empty 26 px gutter, so the trailing column looks ragged. A native tree row (Explorer or SCM decorations) puts its trailing decoration at the row's end inset.",
+          "severity": "major",
+          "rule": "judge-only",
+          "box": [
+            192,
+            57,
+            98,
+            310
+          ],
+          "reason": "In the crop the trailing column is not ragged: by ink columns every compact row's content ends at x 263 (both Deprecated badges, the Updates High badge, and the long names' ellipses at about 251 to 263), so the 36 px space is the row's shared end slot where row actions appear, not a misalignment. The header count badges are a different role and sit at 263.3 to 290 (DS-OVERFLOW-2, DS-INSET-2 hard), and the finding cites no rule (rubric §6, taste with no rule).",
+          "verdict": "refuted"
+        }
+      ]
+    },
+    {
+      "runId": "46086090162",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "4ac8edf3 (push 1)",
+      "look": "modern",
+      "workflow": "wf_fd516ab2-5df",
+      "mode": "screen",
+      "note": "The new sidebar-installed-deprecated at 250 against main-installed-all.dark-modern.1200 (one look and one name per call).",
+      "captures": {
+        "sidebar-installed-deprecated": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-installed-deprecated.dark-modern.250.png",
+          "sha256": "07263d981572f5cac5a4d17db8983069cf83711726c479de189b3fd3aff438ee",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern.1200.png",
+          "artboardSha256": "eecf1fb2eac24159a051b4cde5a704319c6322dc78d9cdfe533a6f578df05c9d"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 1,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 1,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-installed-deprecated",
+          "finding": "In the Installed list's compact rows, text stops about 30 px short of the row's end. Newtonsoft.Json's version is cut to '1...' and its High badge ends at x 213, leaving x 214 to 242 blank. The Microsoft.Extensions.* names ellipsize at about x 205 the same way. A VS Code side-bar tree row (the Explorer exemplar) keeps no hidden action slot at rest: its label runs to the band's end inset, and inline actions take space only on hover or focus. Here the rows read as loose and truncate earlier than the built-in view does.",
+          "severity": "major",
+          "rule": "judge-only",
+          "box": [
+            28,
+            302,
+            215,
+            22
+          ],
+          "reason": "The crop (clamped to x 12-249, the PNG is 250 wide) shows Newtonsoft.Json with '1...' and the High badge ending near x 213, then about 30 px of empty band. That empty band is the compact row's 32 px end slot (6 + 22 + 4), which the row's one action overlays. DECISIONS.md 2026-11-08 (UX-P3.7a, D47) declares it on purpose, and the padding-inline-end of .nuiget-row-option--compact implements it. The truncation follows the hard DS-ROW-5 rule ('29 rows, 10 names cut; versions cut 6, slivers 0; badges 2, clipped 0'). So this is a recorded design decision that differs from the exemplar, not a defect, and the main-panel artboard does not draw side bar compact rows to compare against.",
+          "verdict": "refuted"
+        }
+      ]
+    },
+    {
+      "runId": "46086090162",
+      "rubric": "9135b364764f2914fbfd78f68b8244a70315bcd0",
+      "tree": "4ac8edf3 (push 1)",
+      "look": "classic",
+      "workflow": "wf_57d98de5-780",
+      "mode": "screen",
+      "note": "The new sidebar-installed-deprecated in the classic look at 300 against main-installed-all.dark-modern-classic.1200.",
+      "captures": {
+        "sidebar-installed-deprecated": {
+          "png": "captures/46086090162/ui-screenshots/sidebar-installed-deprecated.dark-modern-classic.300.png",
+          "sha256": "ebf4e8d5e4913481b5679b293567bd82b91f4db78e800f84b7fa77cff8dad19e",
+          "artboard": "docs/design/artboards/main-installed-all.dark-modern-classic.1200.png",
+          "artboardSha256": "8ea1f0c8067170f0163618b9595e81b3bdfac0dff1c1b93b29fd9557bf3a0158"
+        }
+      },
+      "panel": {
+        "states": 1,
+        "candidates": 2,
+        "standing": 0,
+        "blocking": 0,
+        "refuted": 2,
+        "singleJudge": 0,
+        "incomplete": 0
+      },
+      "singleJudge": [],
+      "findings": [],
+      "refuted": [
+        {
+          "id": "native-1",
+          "state": "sidebar-installed-deprecated",
+          "finding": "The trailing label badges of the Installed rows (Newtonsoft.Json's High and Deprecated, Serilog's Deprecated) end at x 267, 32 px from the pane edge and 20 px short of the INSTALLED header's count badge end (x 287), leaving an empty column at rest. In a native side-bar tree (Explorer, SCM), a row's trailing decoration sits in the header's trailing column, and hover actions overlay it. The supplied artboard is a main-panel board and draws no side-bar row to compare.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            194,
+            57,
+            94,
+            302
+          ],
+          "reason": "The crop shows the High/Deprecated pills ending at x 267 and every compact row's ink, truncated names included, stopping at x 255-267. That is the compact row's declared 32 px end slot (6 + 22 + 4) under its overlaid action (DECISIONS 2026-11-08, D47), not a misplaced decoration. The header count ends at 288 by its own rule (DS-INSET-3 (b), measured 'section headers 12 ×2 (hard)'), so §6 excludes this declared difference.",
+          "verdict": "refuted"
+        },
+        {
+          "id": "geometry-1",
+          "state": "sidebar-installed-deprecated",
+          "finding": "The trailing label badges of the Installed rows (Newtonsoft.Json's High and Deprecated pills, Serilog's Deprecated pill) end at x 268, 32 px inside the pane edge, while the INSTALLED header's trailing count badge keeps the classic sidebar end inset and ends at x 288 (12 px, DS-INSET-3 (b)). The trailing column of the rows and the header's trailing edge are 20 px apart instead of sharing one end inset.",
+          "severity": "minor",
+          "rule": "judge-only",
+          "box": [
+            194,
+            56,
+            94,
+            305
+          ],
+          "reason": "In the crop the row pills end at x 267, 32 px from the edge, as all row content does (rightmost ink 255-267 per row). The header badge ends at 288 ('DS-INSET-3 … section headers 12 ×2 (target 12) (hard)'; 'badges: installed \"15\" 262–288'). Rows and headers have separate declared end rules: a row reserves the 32 px action slot (DECISIONS 2026-11-08, DS-INSET-3 (a)) and a header ends at C 12 (DS-INSET-3 (b)), so no rule requires one shared end inset.",
+          "verdict": "refuted"
+        }
+      ]
+    }
+  ]
+}
