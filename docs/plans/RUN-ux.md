@@ -244,7 +244,9 @@ the pass yields notes for a new named state, not evidence.
 
 ## 6. Phase boundaries
 
-When the last row of a phase (or of a P5.x feature mini-phase) is `done` and CI is green:
+When the last row of a phase (or of a P5.x feature mini-phase: its plan rows `P5.x`, or `P5.xa` and `P5.xb`, with the fix rows
+placed before its last one; a feature of one row is a boundary too, as UX-P5.4 and UX-P5.6 were) is `done` and CI is green,
+before §3 picks the next item:
 
 1. Run the plan's bold **P# gate** line. At every phase boundary P0–P7 (not after a P5.x mini-phase) also dispatch
    the full matrix, the 1.90.0 floor lane and the macOS lane:
