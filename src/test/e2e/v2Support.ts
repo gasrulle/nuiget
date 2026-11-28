@@ -15,7 +15,8 @@ export const CONTRIBUTED_COMMANDS = [
     'nuiget.openManager', 'nuiget.refreshPackages', 'nuiget.sidebar.selectSource', 'nuiget.sidebar.selectProject',
     'nuiget.sidebar.togglePrerelease', 'nuiget.sidebar.togglePrereleaseOff', 'nuiget.sidebar.toggleRestore',
     'nuiget.sidebar.toggleRestoreOff', 'nuiget.sidebar.refresh', 'nuiget.sidebar.openFullView', 'nuiget.clearHttpCache',
-    'nuiget.clearSdkVersionCache',
+    'nuiget.clearSdkVersionCache', 'nuiget.checkForUpdates', 'nuiget.updateAllPackages', 'nuiget.installPackage',
+    'nuiget.restorePackages',
     'nuiget.row.installLatest', 'nuiget.row.installVersion', 'nuiget.row.uninstall', 'nuiget.row.changeVersion',
     'nuiget.row.updateLatest', 'nuiget.row.updateVersion', 'nuiget.row.copyId', 'nuiget.row.viewDetails',
 ];
